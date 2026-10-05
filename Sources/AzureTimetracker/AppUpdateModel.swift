@@ -39,9 +39,10 @@ private actor UpdateDownload {
 
 enum AppUpdatePhase: Equatable { case idle, checking, available, downloading, ready, installing, failed }
 @MainActor final class AppUpdateModel: ObservableObject {
+    private static let automaticCheckInterval: TimeInterval = 60
     @Published private(set) var phase: AppUpdatePhase = .idle
     @Published private(set) var release: AppRelease?
-    @Published private(set) var message = "Checks for updates when the app opens and every six hours."
+    @Published private(set) var message = "Checks for updates when the app opens and every minute."
     @Published private(set) var downloaded = 0
     @Published private(set) var checkedAt: Date?
     @Published private(set) var installIssue: String?
@@ -77,14 +78,14 @@ enum AppUpdatePhase: Equatable { case idle, checking, available, downloading, re
         loop = Task { [weak self] in
             while !Task.isCancelled {
                 guard let self else { return }
-                if automaticChecks, Date().timeIntervalSince(lastAutomaticCheck) >= 6 * 3600 { check(manual: false) }
-                do { try await Task.sleep(for: .seconds(60)) } catch { return }
+                if automaticChecks { check(manual: false) }
+                do { try await Task.sleep(for: .seconds(Self.automaticCheckInterval)) } catch { return }
             }
         }
     }
     func check(manual: Bool = true) {
         guard !disabled, !inProgress, phase != .ready else { return }
-        if !manual, (!automaticChecks || Date().timeIntervalSince(lastAutomaticCheck) < 3600) { return }
+        if !manual, (!automaticChecks || Date().timeIntervalSince(lastAutomaticCheck) < Self.automaticCheckInterval) { return }
         lastAutomaticCheck = Date(); envelope = nil; release = nil; phase = .checking; message = "Checking GitHub for a new version…"
         let token = UUID(); attempt = token
         task = Task { [weak self] in

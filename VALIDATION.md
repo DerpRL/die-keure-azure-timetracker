@@ -1,3 +1,10 @@
+# Version 1.13.1 validation — 5 October 2026
+
+- Automatic GitHub update checks now run at startup and every 60 seconds. The loop and automatic-check throttle share the same interval; the former six-hour scheduler and one-hour throttle are removed. Download/install remain explicit user actions, and disabled checks or ongoing downloads/installation are still respected. Updated Settings text and current documentation; existing app styling is unchanged.
+- All **281 tests in 34 suites passed**. Both release architectures compiled. No new tests were added for this interval-only change; the shared constant and both call sites were reviewed directly.
+- The release verifier authenticated the 1.13.1/build 21 manifest and archive, checked universal app/helper binaries, bundle identity, entitlement, strict/deep signatures and payload allowlist, expanded the PKG, mounted the validated DMG read-only and confirmed matching app bytes across PKG/DMG/ZIP. Checksums passed and the image was detached. The installed application and timer were not restarted or changed.
+- The previous 1.13.0 installers are preserved in releases/archive/1.13.0. Its immutable update ZIP remains available for clients holding the previous feed. The new ZIP and JSON feed are published together with the installers. Distribution remains ad-hoc signed and not notarized; existing validation limits apply.
+
 # Version 1.13.0 validation — 5 October 2026
 
 - Added native update checks against the public GitHub JSON feed at startup/every six hours, optional in Settings → App. An overview/menu-panel notice opens release notes, a cancelable download and an explicit Install and restart action. Existing colors, typography, navigation and timer layout are unchanged. The running 7pace timer is not stopped; state is saved and ongoing account/time-edit/offline-write operations block restart.

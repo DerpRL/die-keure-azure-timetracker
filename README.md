@@ -244,6 +244,6 @@ That release did not include automatic update checks. Version 1.13.0 adds the up
 
 ## New in 1.13.0 — updates from GitHub
 
-Install 1.13.0 manually once. The app checks a signed JSON feed at startup and every six hours, with a manual **Check for updates** action in **Settings → App**. New releases appear in the overview and menu-bar panel. Read the release notes, choose **Download update**, then **Install and restart**. Downloads are verified before the app is replaced; the previous app is kept for recovery. The remote 7pace timer keeps running during restart.
+Install 1.13.0 manually once. From version 1.13.1, the app checks a signed JSON feed at startup and every minute, with a manual **Check for updates** action in **Settings → App**. New releases appear in the overview and menu-bar panel. Read the release notes, choose **Download update**, then **Install and restart**. Downloads are verified before the app is replaced; the previous app is kept for recovery. The remote 7pace timer keeps running during restart.
 
 Automatic checks can be disabled in Settings. Installation always requires your choice. Protected installation folders may require the DMG/PKG instead; a personal Applications folder supports updates without administrator access. The updater does not remove quarantine or modify macOS permissions. Ad-hoc builds can still prompt for Keychain/Calendar access. See [release and update instructions](releases/README.md) for publishing, signature verification and recovery details.

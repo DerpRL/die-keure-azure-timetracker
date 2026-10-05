@@ -12,7 +12,7 @@ Quit the app from its menu bar before a manual upgrade. Settings and Keychain da
 
 ## In-app updates
 
-Manually install **1.13.0 or later** once. The app then checks [updates/latest.json](../updates/latest.json) at startup and every six hours, with a manual check in Settings → App. The update banner offers release notes, Download update and Install and restart. Checking never downloads or installs a release automatically. Restarting leaves the 7pace timer running.
+Manually install **1.13.0 or later** once. From 1.13.1, the app checks [updates/latest.json](../updates/latest.json) at startup and every minute, with a manual check in Settings → App. The update banner offers release notes, Download update and Install and restart. Checking never downloads or installs a release automatically. Restarting leaves the 7pace timer running.
 
 The feed is signed with a separate Ed25519 release key. The app pins its public key and verifies signed release metadata, the ZIP's SHA-256 and size, archive paths, bundle identity/version and code signature. It accepts only a newer version/build, a compatible macOS version and this repository's versioned HTTPS download URLs. A separate bundled helper waits for the app to exit, re-verifies the archive, stages beside the installed app and swaps it with a recoverable backup. Failed replacement or a launch error restores the previous app where possible. This is not a watchdog for crashes after a successful launch.
 

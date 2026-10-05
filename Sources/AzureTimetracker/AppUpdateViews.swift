@@ -44,7 +44,7 @@ struct UpdateSettingsView: View {
         VStack(alignment: .leading, spacing: 18) {
             AppSectionHeading("App updates", subtitle: "Get new versions from the public GitHub repository.")
             Toggle("Check for updates automatically", isOn: $automatic)
-            Text("Checks at startup and every six hours. Downloading and restarting always require your choice.")
+            Text("Checks at startup and every minute. Downloading and restarting always require your choice.")
                 .font(.callout).foregroundStyle(Palette.secondary)
             Divider()
             UpdateDetailsView(model: model, updates: updates)
