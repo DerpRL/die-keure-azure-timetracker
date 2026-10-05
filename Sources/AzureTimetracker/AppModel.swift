@@ -23,9 +23,12 @@ struct TrackingDraft: Identifiable, Sendable {
     var figmaSuggestion: FigmaSuggestion? = nil
     var figmaFile: String? = nil
     var figmaScope: String? = nil
+    var figmaName: String? = nil
     var isFigma: Bool { figmaSuggestion != nil || figmaFile != nil }
-    var title: String { item?.title ?? attention?.title ?? resume?.remark ?? manual?.label ?? (standup ? "Daily standup" : "Meeting") }
-    var remark: String? { microphoneSession.map { standup ? StandupActivity.remark : "Meeting · " + $0.owner.name } ?? attention?.remark ?? resume?.remark }
+    var allowsNoTicket: Bool { resume == nil && attention == nil && meetingReturn == nil && microphoneSession == nil && manual == nil }
+    var title: String { item?.title ?? figmaName ?? meeting?.title ?? change?.branch ?? attention?.title ?? resume?.remark ?? manual?.label ?? (standup ? "Daily standup" : "Meeting") }
+    var remark: String? { figmaName ?? microphoneSession.map { standup ? StandupActivity.remark : "Meeting · " + $0.owner.name } ?? attention?.remark ?? resume?.remark ?? meeting?.title ?? change?.branch }
+    func trackingComment(includeTicket: Bool) -> String? { remark ?? (includeTicket ? nil : item?.title) }
     var meeting: MeetingEvent? = nil
     var resume: PausedSession? = nil
     var meetingReturn: MeetingReturn? = nil
@@ -680,6 +683,19 @@ struct TrackingDraft: Identifiable, Sendable {
         searchResults = []; searchError = nil; error = nil
     }
 
+    func chooseSuggestionTicket(_ draft: TrackingDraft) {
+        guard !busy, trackingDraft?.id == draft.id else { return }
+        selectedChange = draft.change; selectedMeeting = draft.meeting; selectedFigmaSuggestion = draft.figmaSuggestion
+        trackingDraft = nil; skipFigmaPrefill = true; searchResults = []; searchError = nil
+    }
+
+    var hasSelectedSuggestion: Bool { selectedChange != nil || selectedMeeting != nil || selectedFigmaSuggestion != nil }
+
+    func chooseSuggestionWithoutTicket(inMenuBar: Bool) async {
+        await chooseActivity(for: nil, change: selectedChange, inMenuBar: inMenuBar,
+                             meeting: selectedMeeting, figmaSuggestion: selectedFigmaSuggestion)
+    }
+
     func canStart(_ draft: TrackingDraft, activityID: String) -> Bool {
         guard activityTypesLoaded, !loadingActivities, !busy, connected,
               activityTypes.isEmpty || activityTypes.contains(where: { $0.id == activityID }) else { return false }
@@ -688,10 +704,10 @@ struct TrackingDraft: Identifiable, Sendable {
         return draft.microphoneSession.map { microphone.isActive($0) } ?? true
     }
 
-    func chooseActivity(for ticketID: Int, change: BranchChange? = nil, requiresIdle: Bool = false, inMenuBar: Bool = false, meeting: MeetingEvent? = nil, resume: PausedSession? = nil, meetingReturn: MeetingReturn? = nil, figmaSuggestion: FigmaSuggestion? = nil, figmaFile: String? = nil) async {
+    func chooseActivity(for ticketID: Int?, change: BranchChange? = nil, requiresIdle: Bool = false, inMenuBar: Bool = false, meeting: MeetingEvent? = nil, resume: PausedSession? = nil, meetingReturn: MeetingReturn? = nil, figmaSuggestion: FigmaSuggestion? = nil, figmaFile: String? = nil) async {
         guard !busy, trackingDraft == nil else { return }
         guard let state, connected else { error = "Connect and refresh 7pace before starting a timer."; page = .settings; return }
-        guard ticketID > 0, ticketID <= Int32.max else { error = "Enter a valid Azure ticket number."; return }
+        if let ticketID, ticketID <= 0 || ticketID > Int32.max { error = "Enter a valid Azure ticket number."; return }
         if requiresIdle && (state.running || showTicketPicker || menuTracking) { return }
         let proposal = figmaSuggestion ?? (inMenuBar ? selectedFigmaSuggestion : nil)
         let scope = figmaScope
@@ -708,12 +724,14 @@ struct TrackingDraft: Identifiable, Sendable {
             if let meetingReturn, self.meetingReturn != meetingReturn || !meetingReturn.isDue(state: state, workspace: workspaceIdentity, now: Date()) {
                 throw AppError.message("The meeting timer changed. Review your current tracking before returning.")
             }
-            let item: WorkItem
-            if preview {
-                guard let cached = workItems[ticketID] else { throw AppError.message("This ticket is not in the isolated preview.") }
-                item = cached
-            } else { item = try await lookup(ticketID) }
-            workItems[item.id] = item
+            var item: WorkItem?
+            if let ticketID {
+                if preview {
+                    guard let cached = workItems[ticketID] else { throw AppError.message("This ticket is not in the isolated preview.") }
+                    item = cached
+                } else { item = try await lookup(ticketID) }
+                workItems[ticketID] = item
+            }
             if let change { try await validate(change) }
             if !activityTypesLoaded { await refreshActivities() }
             guard connection == connectionGeneration,
@@ -725,17 +743,19 @@ struct TrackingDraft: Identifiable, Sendable {
             }
             // This step is read-only. The user chooses an activity and explicitly
             // confirms before either timer is changed.
-            trackingDraft = TrackingDraft(item: item, change: change, expectedIdentity: state.identity, figmaSuggestion: proposal, figmaFile: figmaFile, figmaScope: scope, meeting: meeting, resume: resume, meetingReturn: meetingReturn)
+            let figmaName = proposal?.name ?? figmaFile.flatMap { figmaLedger.files[$0]?.name }
+            trackingDraft = TrackingDraft(item: item, change: change, expectedIdentity: state.identity, figmaSuggestion: proposal, figmaFile: figmaFile, figmaScope: scope, figmaName: figmaName, meeting: meeting, resume: resume, meetingReturn: meetingReturn)
             selectedChange = change; selectedMeeting = meeting; menuTracking = inMenuBar; showTicketPicker = !inMenuBar; error = nil
         } catch { self.error = error.localizedDescription }
     }
 
-    func startTracking(_ draft: TrackingDraft, activityID: String, comment: String = "") async {
+    func startTracking(_ draft: TrackingDraft, activityID: String, comment: String = "", includeTicket: Bool = true) async {
         guard !busy, !preview, let api, connected, trackingDraft?.id == draft.id else { return }
         guard activityTypesLoaded else { error = "Load the activity types before starting your timer."; return }
         busy = true; defer { busy = false }
         do {
             let activity = try ActivityChoice.resolve(activityID, available: activityTypes)
+            let ticketID = includeTicket || !draft.allowsNoTicket ? draft.item?.id : nil
             if draft.isFigma && !activityTypes.contains(where: { $0.id == activityID && DesignActivity.matches($0) }) {
                 throw AppError.message("Choose Design to start tracking from Figma.")
             }
@@ -743,7 +763,8 @@ struct TrackingDraft: Identifiable, Sendable {
             if draft.standup && !activityTypes.contains(where: { $0.id == activityID && StandupActivity.matches($0) }) {
                 throw AppError.message("The Standup activity is required to track daily standup.")
             }
-            let remark = draft.manual.map { $0.remark(comment: comment, activity: activityTypes.first { $0.id == activityID }) } ?? draft.remark
+            let remark = draft.manual.map { $0.remark(comment: comment, activity: activityTypes.first { $0.id == activityID }) }
+                ?? draft.trackingComment(includeTicket: ticketID != nil)
             if let microphoneSession = draft.microphoneSession {
                 try microphone.validateCurrent(microphoneSession)
                 guard !draft.standup || activityTypes.contains(where: { $0.id == activityID && StandupActivity.matches($0) }) else {
@@ -758,7 +779,7 @@ struct TrackingDraft: Identifiable, Sendable {
             }
             let previous = state
             let previousReturn = meetingReturn
-            let next = try await TrackingTransaction.switchTo(draft.item?.id, expectedIdentity: draft.expectedIdentity,
+            let next = try await TrackingTransaction.switchTo(ticketID, expectedIdentity: draft.expectedIdentity,
                 activityType: activity, remark: remark, expectedAttention: draft.attention, service: api, validateContext: { [weak self] in
                     guard let self else { throw AppError.message("Tracking context is no longer available.") }
                     try await self.validateFigma(draft.figmaSuggestion, file: draft.figmaFile, ticket: draft.item?.id, scope: draft.figmaScope)
@@ -774,15 +795,15 @@ struct TrackingDraft: Identifiable, Sendable {
                 meetingReturn?.microphoneSessionID = microphoneSession.id
                 meetingReturn?.microphoneAppID = microphoneSession.owner.id
             } else { meetingReturn = nil }
-            completeFigmaTracking(draft)
-            if let id = draft.item?.id { quickTickets.remember(id) }
+            completeFigmaTracking(draft, ticketID: ticketID)
+            if let ticketID { quickTickets.remember(ticketID) }
             if let microphoneSession = draft.microphoneSession { dismissMicrophone(microphoneSession) }
             error = figmaStorageIssue; trackingDraft = nil; showTicketPicker = false; menuTracking = false
             if let change = draft.change { dismiss(change) }
             if let meeting = draft.meeting { dismissMeeting(meeting) }
             selectedMeeting = nil
             let activityName = activityTypes.first { $0.id == activity }?.name ?? "7pace default"
-            record("Tracking started", (draft.item.map { "#\($0.id) · " } ?? "") + draft.title + " · " + activityName)
+            record("Tracking started", (ticketID.map { "#\($0) · " } ?? "") + (ticketID == nil ? remark ?? draft.title : draft.title) + " · " + activityName)
             await loadHistory()
             await loadProgress()
         } catch {
@@ -1117,18 +1138,13 @@ struct TrackingDraft: Identifiable, Sendable {
         do { try validateMeeting(meeting) } catch { self.error = error.localizedDescription; return }
         beginMenuTracking(); selectedMeeting = meeting
         revealSuggestion?()
-        if useSuggestedTicket, let id = meetingTicket(meeting) {
-            Task { await chooseActivity(for: id, inMenuBar: true, meeting: meeting) }
+        if useSuggestedTicket {
+            Task { await chooseActivity(for: meetingTicket(meeting), inMenuBar: true, meeting: meeting) }
         }
     }
 
     func dismissMeeting(_ meeting: MeetingEvent) {
         pendingMeetings.removeAll { $0.id == meeting.id }
-    }
-
-    func chooseDifferentMeetingTicket() {
-        guard menuTracking, selectedMeeting != nil, !busy else { return }
-        trackingDraft = nil; searchResults = []; searchError = nil
     }
 
     private func validateMeeting(_ meeting: MeetingEvent) throws {

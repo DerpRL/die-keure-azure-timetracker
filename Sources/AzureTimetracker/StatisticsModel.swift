@@ -3,7 +3,6 @@ import Combine
 import AzureTimetrackerCore
 
 @MainActor final class StatisticsModel: ObservableObject {
-    let comparison = ComparisonModel()
     @Published var period: StatisticsPeriod = .week
     @Published var anchor = Date()
     @Published var filter = ExplorerFilter() { didSet { if filter != oldValue { rebuild() } } }
@@ -40,13 +39,13 @@ import AzureTimetrackerCore
     var ticketIDs: [Int] { Array(Set(dataset.records.compactMap(\.ticketID))).sorted() }
 
     func configure(_ client: SevenPaceAPI?, targets: WorkTargets = WorkTargets()) {
-        self.targets = targets; api = client; comparison.configure(client, targets: targets); generation = UUID(); connectionID = UUID()
+        self.targets = targets; api = client; generation = UUID(); connectionID = UUID()
         analysisTask?.cancel(); analysisGeneration = UUID(); analyzing = false
         loading = false; pendingRange = nil; issue = nil; dataset = ExplorerDataset(logs: [])
         analysis = nil; visuals = nil; loadedRange = nil; syncedAt = nil; lastAttempt = .distantPast; lastAttemptRange = nil
         focus = nil; zoomHistory = []; availableActivities = []; omitted = 0; titles = [:]; filter = ExplorerFilter()
     }
-    func invalidate() { lastAttempt = .distantPast; comparison.invalidate() }
+    func invalidate() { lastAttempt = .distantPast }
     func move(_ amount: Int) { anchor = range.shifted(amount).start }
     func current() { anchor = Date() }
     func updateTitles(_ values: [Int: WorkItem]) {
@@ -126,6 +125,6 @@ import AzureTimetrackerCore
         }
     }
     #if UI_PREVIEW
-    func useInterfacePreview(_ sample: [WorkLog]) { previewLogs = sample; comparison.preview(sample); install(ExplorerDataset(logs: sample), range: range) }
+    func useInterfacePreview(_ sample: [WorkLog]) { previewLogs = sample; install(ExplorerDataset(logs: sample), range: range) }
     #endif
 }

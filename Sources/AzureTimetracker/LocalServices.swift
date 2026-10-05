@@ -169,7 +169,7 @@ struct AgendaEvent: Identifiable {
         let figmaOther = UNNotificationAction(identifier: "figma-other", title: "Other ticket", options: [.foreground])
         center.setNotificationCategories([
             UNNotificationCategory(identifier: "figma-linked", actions: [UNNotificationAction(identifier: "figma-start", title: "Start Design", options: [.foreground]), figmaKeep, figmaOther], intentIdentifiers: [], options: []),
-            UNNotificationCategory(identifier: "figma-unlinked", actions: [UNNotificationAction(identifier: "figma-choose", title: "Choose ticket", options: [.foreground]), figmaKeep], intentIdentifiers: [], options: []),
+            UNNotificationCategory(identifier: "figma-unlinked", actions: [UNNotificationAction(identifier: "figma-choose", title: "Start Design", options: [.foreground]), figmaKeep], intentIdentifiers: [], options: []),
             UNNotificationCategory(identifier: "branch", actions: [keep, change], intentIdentifiers: [], options: []),
             UNNotificationCategory(identifier: "branch-break", actions: [keep, reviewBreak], intentIdentifiers: [], options: []),
             UNNotificationCategory(identifier: "tracking-attention", actions: [UNNotificationAction(identifier: "review-timer", title: "Review timer", options: [.foreground])], intentIdentifiers: [], options: []),
@@ -200,7 +200,7 @@ struct AgendaEvent: Identifiable {
         guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else { return }
         let content = UNMutableNotificationContent()
         content.title = "Figma file active"
-        content.body = proposal.name + (proposal.ticketID.map { "\n#" + String($0) + " · " + (ticketTitle ?? "Azure ticket") } ?? "\nChoose a ticket to track Design.")
+        content.body = proposal.name + (proposal.ticketID.map { "\n#" + String($0) + " · " + (ticketTitle ?? "Azure ticket") } ?? "\nTrack Design with the file name as the comment. No ticket needed.")
         content.categoryIdentifier = proposal.ticketID == nil ? "figma-unlinked" : "figma-linked"
         content.userInfo = ["figmaID": proposal.id.uuidString]; content.sound = .default
         do { try await center.add(UNNotificationRequest(identifier: proposal.id.uuidString, content: content, trigger: nil)) }

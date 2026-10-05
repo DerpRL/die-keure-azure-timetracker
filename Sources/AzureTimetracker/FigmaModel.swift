@@ -76,8 +76,8 @@ extension AppModel {
         guard !busy, trackingDraft == nil, !menuTracking, !showTicketPicker else { return }
         do { _ = try figmaLedger.validate(proposal.id, at: Date()) } catch { self.error = error.localizedDescription; return }
         beginMenuTracking(); selectedFigmaSuggestion = proposal; revealSuggestion?()
-        if useLinkedTicket, let ticket = proposal.ticketID {
-            Task { await chooseActivity(for: ticket, inMenuBar: true, figmaSuggestion: proposal) }
+        if useLinkedTicket {
+            Task { await chooseActivity(for: proposal.ticketID, inMenuBar: true, figmaSuggestion: proposal) }
         }
     }
     func prefillFigmaTracking(inMenuBar: Bool) async {
@@ -104,10 +104,10 @@ extension AppModel {
             error = nil; return true
         } catch { self.error = error.localizedDescription; return false }
     }
-    func completeFigmaTracking(_ draft: TrackingDraft) {
-        guard draft.figmaScope == figmaScope, let file = draft.figmaSuggestion?.file ?? draft.figmaFile, let ticket = draft.item?.id else { return }
+    func completeFigmaTracking(_ draft: TrackingDraft, ticketID: Int?) {
+        guard draft.figmaScope == figmaScope, let file = draft.figmaSuggestion?.file ?? draft.figmaFile else { return }
         let ids = figmaLedger.suggestions.filter { $0.file == file }.map(\.id)
-        do { try figmaLedger.link(file, to: ticket); notifications.remove(ids) }
+        do { try figmaLedger.completeTracking(file, ticketID: ticketID); notifications.remove(ids) }
         catch { self.error = error.localizedDescription }
         selectedFigmaSuggestion = nil
     }

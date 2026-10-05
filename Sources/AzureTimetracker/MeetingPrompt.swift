@@ -18,11 +18,11 @@ struct MeetingPrompt: View {
             if let id = model.meetingTicket(meeting) {
                 Text(meeting.ticketID == nil ? "Default meeting ticket #\(String(id))" : "Linked ticket #\(String(id))")
                     .font(.caption).foregroundStyle(palette.accent)
-            } else { Text("Choose an Azure ticket for this meeting.").font(.caption).foregroundStyle(palette.secondary) }
+            } else { Text("No ticket needed. The meeting title becomes the comment.").font(.caption).foregroundStyle(palette.secondary) }
             HStack {
                 Button(model.state?.running == true ? "Keep current" : "Dismiss") { model.dismissMeeting(meeting) }
                 Spacer()
-                Button(model.meetingTicket(meeting) == nil ? "Choose ticket…" : "Choose activity…") {
+                Button("Choose activity…") {
                     model.beginMeetingTracking(meeting)
                 }.buttonStyle(.borderedProminent).tint(palette.action).foregroundStyle(.white).disabled(model.busy || !model.connected)
             }

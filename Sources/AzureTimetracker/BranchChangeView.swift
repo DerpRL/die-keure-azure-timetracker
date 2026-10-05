@@ -34,7 +34,7 @@ struct BranchPrompt: View {
                         .font(.callout.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
                     Text("Choose an activity to switch. Your timer stays unchanged until you confirm.").font(.caption).foregroundStyle(palette.secondary)
                 } else {
-                    Text("No ticket number found. Choose a ticket or keep your timer.").font(.callout).foregroundStyle(palette.secondary)
+                    Text("No ticket number found. Track an activity without a ticket, or keep your timer.").font(.callout).foregroundStyle(palette.secondary)
                 }
                 if compact {
                     VStack(alignment: .leading, spacing: 10) { primaryActions; if change.ticketID != nil { anotherTicket } }
@@ -57,11 +57,9 @@ struct BranchPrompt: View {
     private var primaryActions: some View {
         HStack {
             Button(model.state?.running == true ? "Keep tracking" : "Dismiss") { model.keep(change) }.disabled(model.busy)
-            Button(change.ticketID.map { "Track #\(String($0))…" } ?? "Choose ticket…") {
+            Button(change.ticketID.map { "Track #\(String($0))…" } ?? "Choose activity…") {
                 if compact { model.beginMenuTracking(change) }
-                if let id = change.ticketID {
-                    Task { await model.chooseActivity(for: id, change: change, inMenuBar: compact) }
-                } else if !compact { model.selectedChange = change; model.showTicketPicker = true }
+                Task { await model.chooseActivity(for: change.ticketID, change: change, inMenuBar: compact) }
             }.buttonStyle(.borderedProminent).tint(palette.action).foregroundStyle(.white).disabled(model.busy || !model.connected)
         }
     }

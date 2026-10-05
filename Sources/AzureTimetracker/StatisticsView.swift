@@ -2,7 +2,7 @@ import SwiftUI
 import Charts
 import AzureTimetrackerCore
 
-private enum ExplorerPage: String, CaseIterable { case time = "Time explorer", tasks = "Tasks", patterns = "Work patterns", comparisons = "Compare periods" }
+private enum ExplorerPage: String, CaseIterable { case time = "Time explorer", tasks = "Tasks", patterns = "Work patterns" }
 private enum ExplorerGraph: String, CaseIterable {
     case activity = "Activity chart", heatmap = "Heatmaps", timeline = "Timeline", progress = "Progress"
     var title: String { switch self { case .activity: "Where your time went"; case .heatmap: "Your work at a glance"; case .timeline: "Your day’s task timeline"; case .progress: "Progress through the period" } }
@@ -46,7 +46,7 @@ struct StatisticsView: View {
                 }
                 if let data {
                     filters
-                    if page != .comparisons { scopeHeader(data); metrics(data) }
+                    scopeHeader(data); metrics(data)
                     Picker("Statistics section", selection: $page) {
                         ForEach(ExplorerPage.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                     }.pickerStyle(.segmented).labelsHidden().controlSize(.large)
@@ -55,13 +55,9 @@ struct StatisticsView: View {
                         case .time: timeExplorer(data)
                         case .tasks: taskExplorer(data)
                         case .patterns: workPatterns(data)
-                        case .comparisons:
-                            ComparisonView(statistics: statistics, comparison: statistics.comparison, titles: model.workItems, inspectTask: { id in
-                                statistics.filter.taskID = id; statistics.resetZoom(); page = .tasks
-                            }, loadTitle: { await model.loadTicketTitle($0) })
                         }
                     }.disabled(statistics.analyzing).opacity(statistics.analyzing ? 0.55 : 1)
-                    if page != .comparisons { sourceNotes(data) }
+                    sourceNotes(data)
                 } else if statistics.loading || statistics.analyzing {
                     Card { HStack(spacing: 12) { ProgressView().controlSize(.small); Text("Loading your recorded time…") }.frame(maxWidth: .infinity).padding(.vertical, 60) }
                 } else if statistics.issue == nil {

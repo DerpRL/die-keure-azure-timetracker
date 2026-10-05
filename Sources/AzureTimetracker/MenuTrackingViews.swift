@@ -17,8 +17,8 @@ struct MenuTicketPicker: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack { Text("Quick switch").font(.headline); Spacer(); Text("⌃⌥T").font(.caption).foregroundStyle(palette.secondary) }
             if let meeting = model.selectedMeeting { Text("For \(meeting.title)").font(.caption).foregroundStyle(palette.secondary).lineLimit(2) }
-            if model.selectedFigmaSuggestion == nil { ManualTrackingChoices(model: model, inMenuBar: true) }
-            else { Text("Choose a ticket for Design · " + (model.selectedFigmaSuggestion?.name ?? "")).font(.caption).foregroundStyle(palette.accent) }
+            if model.hasSelectedSuggestion { SuggestionWithoutTicket(model: model, inMenuBar: true) }
+            else { ManualTrackingChoices(model: model, inMenuBar: true) }
             HStack {
                 TextField("Ticket number or title", text: $query).textFieldStyle(.roundedBorder).focused($queryFocused)
                     .onSubmit { Task { await model.search(query) } }
@@ -69,6 +69,7 @@ struct MenuActivityPicker: View {
     let draft: TrackingDraft
     @ViewState<String> private var activityID = ""
     @ViewState<String> private var comment = ""
+    @ViewState private var includeTicket = true
 
     private var canStart: Bool { model.canStart(draft, activityID: activityID) }
 
@@ -76,14 +77,11 @@ struct MenuActivityPicker: View {
         VStack(alignment: .leading, spacing: 14) {
             if draft.meetingReturn != nil { Label("Return to your previous work", systemImage: "arrow.uturn.backward").font(.caption).foregroundStyle(palette.secondary) }
             if let meeting = draft.meeting { Label(meeting.title, systemImage: "calendar").font(.caption).foregroundStyle(palette.secondary).lineLimit(2) }
-            if let item = draft.item { Text("#\(String(item.id))").font(.caption.weight(.semibold)).foregroundStyle(palette.accent) }
+            if includeTicket, let item = draft.item { Text("#\(String(item.id))").font(.caption.weight(.semibold)).foregroundStyle(palette.accent) }
             else { Text("No Azure ticket").font(.caption.weight(.semibold)).foregroundStyle(palette.accent) }
-            if draft.manual == nil, let remark = draft.remark { Text("Comment: " + remark).font(.caption).foregroundStyle(palette.secondary) }
-            Text(draft.title).font(.headline).fixedSize(horizontal: false, vertical: true)
-            if draft.meeting != nil {
-                Button("Choose another ticket") { model.chooseDifferentMeetingTicket() }
-                    .font(.caption).foregroundStyle(palette.accent).disabled(model.busy)
-            }
+            if draft.manual == nil, let remark = draft.trackingComment(includeTicket: includeTicket) { Text("Comment: " + remark).font(.caption).foregroundStyle(palette.secondary) }
+            Text(includeTicket ? draft.title : draft.remark ?? draft.title).font(.headline).fixedSize(horizontal: false, vertical: true)
+            SuggestionTicketChoice(model: model, draft: draft, includeTicket: $includeTicket)
             if draft.standup && StandupActivity.selected(in: model.activityTypes) == nil && model.activityTypesLoaded {
                 Text("The Standup activity is missing in 7pace. Add or enable it before tracking this stand-up.").font(.caption).foregroundStyle(palette.warning)
             }
@@ -101,7 +99,7 @@ struct MenuActivityPicker: View {
                 }.pickerStyle(.menu)
             }
             if draft.isFigma { Button("Choose different work…") { model.chooseDifferentWork() }.disabled(model.busy) }
-            if draft.isFigma { Text("Design · linked to your Figma file after starting").font(.caption).foregroundStyle(palette.secondary) }
+            if draft.isFigma { Text("The Figma file name is saved as the 7pace comment.").font(.caption).foregroundStyle(palette.secondary) }
             if draft.manual != nil { ManualTrackingComment(comment: $comment, kind: draft.manual!) }
             Text((draft.resume != nil || draft.meetingReturn != nil) ? "Resume starts a new session. Paused time is not logged." : model.state?.running == true ? "Your current timer continues until you press Start." : "The timer starts when you press Start.")
                 .font(.caption).foregroundStyle(palette.secondary)
@@ -109,7 +107,7 @@ struct MenuActivityPicker: View {
             HStack {
                 Button("Cancel") { model.cancelMenuTracking() }.keyboardShortcut(.cancelAction).disabled(model.busy)
                 Spacer()
-                Button(draft.resume == nil && draft.meetingReturn == nil ? "Start" : "Resume") { Task { await model.startTracking(draft, activityID: activityID, comment: comment) } }
+                Button(draft.resume == nil && draft.meetingReturn == nil ? "Start" : "Resume") { Task { await model.startTracking(draft, activityID: activityID, comment: comment, includeTicket: includeTicket) } }
                     .buttonStyle(.borderedProminent).tint(palette.action).foregroundStyle(.white).disabled(!canStart)
             }
         }
@@ -122,6 +120,38 @@ struct MenuActivityPicker: View {
     private func selectDefault() {
         let saved = model.preferredActivityID(for: draft)
         activityID = model.activityTypes.contains { $0.id == saved } ? saved : ""
+    }
+}
+
+struct SuggestionWithoutTicket: View {
+    @ObservedObject var model: AppModel
+    var inMenuBar: Bool
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Button("Continue without a ticket…") { Task { await model.chooseSuggestionWithoutTicket(inMenuBar: inMenuBar) } }
+                .disabled(model.busy || !model.connected)
+            Text(model.selectedFigmaSuggestion.map { "Design · " + $0.name } ?? "Choose an activity and confirm Start. An Azure ticket is optional.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+}
+
+struct SuggestionTicketChoice: View {
+    @ObservedObject var model: AppModel
+    let draft: TrackingDraft
+    @Binding var includeTicket: Bool
+    var body: some View {
+        if draft.allowsNoTicket {
+            VStack(alignment: .leading, spacing: 6) {
+                if let item = draft.item {
+                    Toggle("Use Azure ticket #" + String(item.id), isOn: $includeTicket)
+                    Text("Optional. Turn off to track only the activity and comment.").font(.caption).foregroundStyle(.secondary)
+                }
+                if draft.figmaFile == nil {
+                    Button(draft.item == nil ? "Choose a ticket instead…" : "Choose another ticket…") { model.chooseSuggestionTicket(draft) }
+                }
+            }.disabled(model.busy)
+        }
     }
 }
 

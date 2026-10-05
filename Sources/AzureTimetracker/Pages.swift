@@ -435,7 +435,8 @@ struct TicketPicker: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack { SectionTitle(title: "Choose a ticket", subtitle: model.selectedChange.map { "For \($0.repositoryName) · \($0.branch)" } ?? "Search Azure tickets by number or title."); Spacer(); Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction) }
-            if model.selectedFigmaSuggestion == nil { ManualTrackingChoices(model: model, inMenuBar: false) }
+            if model.hasSelectedSuggestion { SuggestionWithoutTicket(model: model, inMenuBar: false) }
+            else { ManualTrackingChoices(model: model, inMenuBar: false) }
             HStack {
                 TextField("Ticket number or title", text: $query).textFieldStyle(.roundedBorder).onSubmit { Task { await model.search(query) } }
                 Button("Search") { Task { await model.search(query) } }.buttonStyle(.borderedProminent).tint(palette.action).foregroundStyle(.white).disabled(model.searching || !model.connected)
@@ -453,7 +454,7 @@ struct TicketPicker: View {
                                 if let project = item.teamProject { Text(project).font(.caption).foregroundStyle(palette.secondary) }
                             }
                             Spacer()
-                            Button("Choose activity…") { Task { await model.chooseActivity(for: item.id, change: model.selectedChange) } }.buttonStyle(.borderedProminent).tint(palette.action).foregroundStyle(.white).disabled(model.busy || !model.connected)
+                            Button("Choose activity…") { Task { await model.chooseActivity(for: item.id, change: model.selectedChange, meeting: model.selectedMeeting, figmaSuggestion: model.selectedFigmaSuggestion) } }.buttonStyle(.borderedProminent).tint(palette.action).foregroundStyle(.white).disabled(model.busy || !model.connected)
                         }.padding(17).background(palette.card, in: RoundedRectangle(cornerRadius: 12))
                     }
                     if model.searchResults.isEmpty && !model.searching {
@@ -475,6 +476,7 @@ struct ActivityPicker: View {
     let draft: TrackingDraft
     @ViewState<String> private var activityID = ""
     @ViewState<String> private var comment = ""
+    @ViewState private var includeTicket = true
     @Environment(\.dismiss) private var dismiss
     private var canStart: Bool { model.canStart(draft, activityID: activityID) }
 
@@ -482,12 +484,13 @@ struct ActivityPicker: View {
         VStack(alignment: .leading, spacing: 24) {
             SectionTitle(title: "Choose an activity", subtitle: "Review the activity before starting this session.")
             VStack(alignment: .leading, spacing: 8) {
-                Text(draft.item.map { "#\(String($0.id)) · \($0.type ?? "Work item")" } ?? "No Azure ticket").font(.caption.weight(.semibold)).foregroundStyle(palette.accent)
-                Text(draft.title).font(.system(size: 18, weight: .semibold)).fixedSize(horizontal: false, vertical: true)
-                if draft.manual == nil, let remark = draft.remark { Text("Comment: " + remark).font(.callout).foregroundStyle(palette.secondary) }
-                if let project = draft.item?.teamProject { Text(project).font(.callout).foregroundStyle(palette.secondary) }
+                Text((includeTicket ? draft.item : nil).map { "#\(String($0.id)) · \($0.type ?? "Work item")" } ?? "No Azure ticket").font(.caption.weight(.semibold)).foregroundStyle(palette.accent)
+                Text(includeTicket ? draft.title : draft.remark ?? draft.title).font(.system(size: 18, weight: .semibold)).fixedSize(horizontal: false, vertical: true)
+                if draft.manual == nil, let remark = draft.trackingComment(includeTicket: includeTicket) { Text("Comment: " + remark).font(.callout).foregroundStyle(palette.secondary) }
+                if includeTicket, let project = draft.item?.teamProject { Text(project).font(.callout).foregroundStyle(palette.secondary) }
             }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
                 .background(palette.card, in: RoundedRectangle(cornerRadius: 12))
+            SuggestionTicketChoice(model: model, draft: draft, includeTicket: $includeTicket)
             if draft.standup && StandupActivity.selected(in: model.activityTypes) == nil && model.activityTypesLoaded {
                 Text("The Standup activity is missing in 7pace. Add or enable it before tracking this stand-up.").foregroundStyle(palette.warning)
             }
@@ -510,7 +513,7 @@ struct ActivityPicker: View {
                 }
             }
             if draft.isFigma { Button("Choose different work…") { model.chooseDifferentWork() }.disabled(model.busy) }
-            if draft.isFigma { Text("Design · linked to your Figma file after starting").font(.caption).foregroundStyle(palette.secondary) }
+            if draft.isFigma { Text("The Figma file name is saved as the 7pace comment.").font(.caption).foregroundStyle(palette.secondary) }
             if draft.manual != nil { ManualTrackingComment(comment: $comment, kind: draft.manual!) }
             Text(draft.resume != nil ? "Resume starts a new session. Paused time is not logged." : model.state?.running == true
                  ? "Your current timer continues until you press Start tracking."
@@ -520,7 +523,7 @@ struct ActivityPicker: View {
             HStack {
                 Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction).disabled(model.busy)
                 Spacer()
-                Button(draft.resume == nil ? "Start tracking" : "Resume tracking") { Task { await model.startTracking(draft, activityID: activityID, comment: comment) } }
+                Button(draft.resume == nil ? "Start tracking" : "Resume tracking") { Task { await model.startTracking(draft, activityID: activityID, comment: comment, includeTicket: includeTicket) } }
                     .buttonStyle(.borderedProminent).tint(palette.action).foregroundStyle(.white).controlSize(.large).keyboardShortcut(.defaultAction).disabled(!canStart)
             }
         }.padding(28).frame(width: 540).tint(palette.accent)

@@ -84,7 +84,7 @@ extension AppModel {
             configuration.watchEnabled = true; configuration.figma.enabled = true
             let file = FigmaDocument(key: "PreviewA123", name: "Product workspace design")
             var ledger = FigmaLedger()
-            try? ledger.link(file.key, to: 33630)
+            if !ProcessInfo.processInfo.arguments.contains("--preview-figma-unlinked") { try? ledger.link(file.key, to: 33630) }
             _ = ledger.activate(file, at: Date(), activeTicket: nil, preferences: .init())
             figmaStore.workspaces[figmaScope] = ledger
             currentFigmaScope = figmaScope

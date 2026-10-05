@@ -93,6 +93,19 @@ final class MockURLProtocol: URLProtocol, @unchecked Sendable {
         #expect(parameters?["activityTypeId"] as? String == "standup")
         #expect(parameters?["remark"] as? String == "daily standup")
     }
+    @Test func figmaRequestOmitsTicketAndPreservesFileName() async throws {
+        let name = "Boeke — lesoverzicht / élève"
+        var active = try state(nil, activity: "design")
+        active.track?.trackingState = .text("tracking"); active.track?.remark = name
+        let (api, capture, _) = fixture([(200, try JSONEncoder().encode(active), [:])])
+        _ = try await api.start(ticketID: nil, activityType: "design", remark: name)
+        let request = try #require(capture.snapshot().first)
+        let body = try #require(request.httpBody)
+        let parameters = try #require(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        #expect(parameters["tfsId"] == nil)
+        #expect(parameters["activityTypeId"] as? String == "design")
+        #expect(parameters["remark"] as? String == name)
+    }
     @Test func slackTokensUseOnlyAuthorizationHeadersAndErrorsAreRedacted() async throws {
         let (_, capture, transport) = fixture([(200, Data(#"{"ok":true,"team_id":"TTEAM01","user_id":"UUSER01"}"#.utf8), [:]), (200, Data(#"{"ok":false,"error":"invalid_auth","detail":"secret-response"}"#.utf8), [:])])
         let api = SlackAPI(transport: transport)

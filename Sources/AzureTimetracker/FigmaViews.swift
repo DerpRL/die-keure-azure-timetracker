@@ -45,10 +45,10 @@ struct FigmaPrompt: View {
             Text(proposal.name).font(.callout.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
             if let ticket = proposal.ticketID {
                 Text("#" + String(ticket) + " · " + (model.workItems[ticket]?.title ?? "Azure ticket")).font(.callout)
-            } else { Text("Link a ticket when you start Design tracking.").font(.caption).foregroundStyle(palette.secondary) }
+            } else { Text("Track Design without a ticket. The file name becomes the comment.").font(.caption).foregroundStyle(palette.secondary) }
             if !compact { Text("An active file suggests context; it does not prove the design was edited.").font(.caption).foregroundStyle(palette.secondary) }
             HStack {
-                Button(proposal.ticketID == nil ? "Choose ticket…" : "Start Design…") { model.beginFigmaTracking(proposal) }
+                Button("Start Design…") { model.beginFigmaTracking(proposal) }
                     .buttonStyle(.borderedProminent).tint(palette.action).foregroundStyle(.white).disabled(model.busy || !model.connected)
                 if proposal.ticketID != nil { Button("Other ticket") { model.beginFigmaTracking(proposal, useLinkedTicket: false) }.disabled(model.busy || !model.connected) }
                 Button("Keep tracking") { model.keepFigma(proposal) }.disabled(model.busy)

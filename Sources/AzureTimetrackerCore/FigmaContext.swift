@@ -144,6 +144,10 @@ public struct FigmaLedger: Codable, Equatable, Sendable {
         links[key] = ticket; suggestions.removeAll { $0.file == key }
         dismissals = dismissals.filter { !$0.key.hasPrefix(key + "\u{0}") }
     }
+    public mutating func completeTracking(_ key: String, ticketID: Int?) throws {
+        if let ticketID { try link(key, to: ticketID) }
+        else { suggestions.removeAll { $0.file == key } }
+    }
 }
 public enum DesignActivity {
     public static func matches(_ activity: ActivityType) -> Bool { activity.name?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "design" }

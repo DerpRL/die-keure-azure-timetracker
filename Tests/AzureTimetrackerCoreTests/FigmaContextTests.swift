@@ -104,4 +104,26 @@ import Testing
         }
         #expect(await stub.calls == ["current"])
     }
+    @Test func ticketFreeCompletionClearsSuggestionAndPreservesSavedLinks() throws {
+        var ledger = FigmaLedger()
+        try ledger.link(a.key, to: 42)
+        _ = ledger.activate(a, at: now, activeTicket: nil, preferences: .init())
+        try ledger.completeTracking(a.key, ticketID: nil)
+        #expect(ledger.suggestions.isEmpty)
+        #expect(ledger.links[a.key] == 42)
+        _ = ledger.activate(b, at: now, activeTicket: nil, preferences: .init())
+        try ledger.completeTracking(b.key, ticketID: nil)
+        #expect(ledger.links[b.key] == nil && ledger.suggestions.isEmpty)
+        #expect(ledger.files[b.key]?.name == b.name)
+        try ledger.completeTracking(b.key, ticketID: 43)
+        #expect(ledger.links[b.key] == 43)
+    }
+    @Test(arguments: [false, true]) func ticketFreeDesignStartsWithFileComment(fromRunningTimer: Bool) async throws {
+        let old = try state(fromRunningTimer ? 100 : nil)
+        let stub = try StubTracker(initial: old, stopped: state())
+        let result = try await TrackingTransaction.switchTo(nil, expectedIdentity: old.identity, activityType: "design", remark: a.name, service: stub)
+        #expect(result.running && result.track?.ticketID == nil)
+        #expect(result.track?.remark == a.name && result.track?.activityTypeId == "design")
+        #expect(await stub.calls == (fromRunningTimer ? ["current", "stop", "start:unassigned"] : ["current", "start:unassigned"]))
+    }
 }
