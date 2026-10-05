@@ -50,11 +50,11 @@ extension AppModel {
         progressLastSync = Date(); progressWeek = TargetProgress.weekInterval(at: Date())
         previewTimer(.running, seconds: 3661)
         trackingAttention = nil
-        let session = MicrophoneSession(id: "preview-ended-call", owner: MicrophoneOwner(id: "com.tinyspeck.slackmacgap", name: "Slack"), started: Date().addingTimeInterval(-900))
-        let workspace = configuration.sevenPaceURL
-        let scope = (try? Endpoint.sevenPace(workspace).absoluteString.lowercased()) ?? workspace
-        microphoneTracking.observe(sessions: [session], inputAppIDs: [session.owner.id], ended: [], state: state, workspace: scope, fresh: true, confirmed: true)
-        microphoneTracking.observe(sessions: [], inputAppIDs: [], ended: [session.id], state: state, workspace: scope, fresh: true, confirmed: true)
+        configuration.organization = "preview"; hasAzurePAT = true
+        let scope = configuration.sevenPaceURL.lowercased() + "|preview"
+        ticketCompletion.observe(TicketWorkflowStatus(ticketID: 33984, title: "Improve product context", state: "Done", category: "Completed"), tracking: state, scope: scope, confirmed: true)
+        pending = [BranchChange(repository: Repository(path: "/preview/Campus"), branch: "feature/33630-user-journey-tracking", previousBranch: "feature/33984-product-context", ticketID: 33630)]
+
     }
 
     func previewTimer(_ status: TrackingIndicator, seconds: Double? = nil) {

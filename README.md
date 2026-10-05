@@ -220,3 +220,11 @@ New configurations enable Slack, Microsoft Teams, Zoom and Google Meet / web bro
 Both app and installer builds use the shared signing helper with Calendar resource access. A Developer ID certificate enables Hardened Runtime, secure timestamps and stable designated requirements; the bundle ID and Keychain service are unchanged. There is no valid Developer ID identity on the development Mac at validation time, so the supplied 1.10.0 artifacts remain ad-hoc and not notarized. Signing/notarization steps are documented in Resources/Signing.md; no private keys, TCC resets or permissive Keychain ACL changes are included.
 
 Choose **Repositories → Add from folder…** to scan a parent folder recursively, filter results and select which Git checkouts/worktrees to watch. Existing repositories are marked and never added twice. Cancel closes the dialog and stops the scan.
+
+## New in 1.11.0
+
+- **Ticket completion reminders:** enabled by default in Settings → Tracking. With an Azure PAT (Work Items read access), the active ticket is checked about once per minute using its project’s workflow categories. A completed ticket opens the menu panel with Keep tracking, Stop and Switch ticket. Keep applies to the current session; reopening and completing again permits another reminder. Stop rechecks Azure and the 7pace session before changing tracking. Ticket-free meetings are excluded, and Azure lookup problems do not mark a healthy 7pace connection offline.
+- **Simpler connection status:** one “7pace connected” indicator during normal use. Details contains timestamps and diagnostics; reconnection/setup actions appear when needed. The menu panel keeps unsent offline drafts visible.
+- **Prominent branch changes:** a shared amber card at the top of Overview and the menu panel shows repository, previous/new branch and suggested ticket. An Overview badge counts pending changes. Existing activity confirmation and develop/long-feature Pause/Stop behavior are preserved.
+
+Workflow detection uses the [Azure Work Item Type States API](https://learn.microsoft.com/en-us/rest/api/azure/devops/wit/work-item-type-states/list?view=azure-devops-rest-7.1) and its Completed category; names such as Done, Closed or custom state names are not guessed without the category mapping.

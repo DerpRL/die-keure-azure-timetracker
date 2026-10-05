@@ -4,37 +4,53 @@ import AzureTimetrackerCore
 struct ConnectionHealthView: View {
     @ObservedObject var model: AppModel
     var compact = false
+    @ViewState private var showDetails = false
+    private var needsSetup: Bool { [.unconfigured, .authentication, .accessDenied].contains(model.connectionHealth) }
+    private var hasDetailIssue: Bool { model.azureIssue != nil || model.progressIssue != nil || model.ticketCompletionIssue != nil }
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
+            HStack(spacing: 10) {
                 Label(model.connectionHealth.label, systemImage: model.connectionHealth.symbol)
-                    .foregroundStyle(model.connectionHealth == .confirmed ? Palette.accent : Palette.warning)
-                Spacer()
-                Button("Retry") { Task { await model.retryConnection() } }.disabled(model.busy)
-            }.font(compact ? .caption : .callout.weight(.medium))
-            LocalDraftStatusView(model: model, offline: model.offlineDrafts)
-            if let sync = model.lastSync {
-                Text("Timer confirmed " + sync.formatted(date: .abbreviated, time: .standard))
-                    .font(.caption).foregroundStyle(Palette.secondary)
-            } else { Text("No timer status confirmed yet").font(.caption).foregroundStyle(Palette.secondary) }
-            if model.connectionHealth != .confirmed {
-                Text(model.connectionIssue ?? "The displayed timer is not currently confirmed by 7pace.")
-                    .font(.caption).foregroundStyle(Palette.warning).fixedSize(horizontal: false, vertical: true)
+                    .foregroundStyle(model.connectionHealth == .confirmed || model.connectionHealth == .connecting ? Palette.accent : Palette.warning)
+                    .font(.caption.weight(.medium))
+                Spacer(minLength: 4)
+                if needsSetup {
+                    Button("Set up") { model.page = .settings; model.revealWindow?() }.font(.caption)
+                } else if model.connectionHealth != .confirmed && model.connectionHealth != .connecting {
+                    Button("Reconnect") { Task { await model.retryConnection() } }.disabled(model.busy).font(.caption)
+                }
+                Button("Details") { showDetails = true }.font(.caption).buttonStyle(.plain).foregroundStyle(Palette.accent)
+                    .accessibilityLabel("7pace connection details")
+                    .popover(isPresented: $showDetails) { ConnectionDetailsView(model: model).padding(20).frame(width: 370) }
             }
-            if let issue = model.azureIssue {
-                Text("Azure ticket lookup: " + issue).font(.caption).foregroundStyle(Palette.warning)
+            if model.connectionHealth != .confirmed && model.connectionHealth != .connecting && model.connectionHealth != .unconfigured {
+                Text("Showing the last known timer. Check 7pace before changing it.").font(.caption).foregroundStyle(Palette.warning)
+            } else if hasDetailIssue {
+                Button("Some details could not refresh") { showDetails = true }.buttonStyle(.plain).font(.caption).foregroundStyle(Palette.warning)
             }
-            if !compact, let sync = model.progressLastSync {
-                Text("Worklogs synced " + sync.formatted(date: .abbreviated, time: .standard))
-                    .font(.caption).foregroundStyle(Palette.secondary)
-            }
-            if let issue = model.progressIssue {
-                Text("Target totals could not refresh: " + issue).font(.caption).foregroundStyle(Palette.warning)
-            }
-            if let issue = model.shortcutIssue {
-                Text(issue).font(.caption).foregroundStyle(Palette.warning)
-            }
+            if compact { LocalDraftStatusView(model: model, offline: model.offlineDrafts) }
         }
+    }
+}
+
+struct ConnectionDetailsView: View {
+    @ObservedObject var model: AppModel
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Connection details", systemImage: "network").font(.headline)
+            Text(model.connectionHealth.label).font(.callout.weight(.medium))
+            if let sync = model.lastSync { Text("Timer checked " + sync.formatted(date: .abbreviated, time: .standard)) }
+            else { Text("The timer has not been checked yet.") }
+            if let sync = model.progressLastSync { Text("Time entries checked " + sync.formatted(date: .abbreviated, time: .standard)) }
+            if let issue = model.connectionIssue { Text(issue).foregroundStyle(Palette.warning) }
+            if let issue = model.azureIssue { Text("Azure tickets: " + issue).foregroundStyle(Palette.warning) }
+            if let issue = model.progressIssue { Text("Time totals: " + issue).foregroundStyle(Palette.warning) }
+            if let issue = model.ticketCompletionIssue { Text("Ticket completion check: " + issue).foregroundStyle(Palette.warning) }
+            if let issue = model.shortcutIssue { Text(issue).foregroundStyle(Palette.warning) }
+            if model.configuration.completionRemindersEnabled && !model.hasAzurePAT { Text("Add an Azure PAT in Accounts to enable ticket completion reminders.") }
+            LocalDraftStatusView(model: model, offline: model.offlineDrafts)
+            Button("Refresh connection") { Task { await model.retryConnection(); await model.checkTicketCompletion(force: true) } }.disabled(model.busy || model.preview)
+        }.font(.caption).foregroundStyle(Palette.secondary).fixedSize(horizontal: false, vertical: true)
     }
 }
 

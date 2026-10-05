@@ -16,7 +16,7 @@ import AzureTimetrackerCore
         // Watching and the status item must work before any overview is opened.
         model.start()
         #if UI_PREVIEW
-        model.page = .statistics
+        model.page = .overview
         showOverview()
         #endif
     }
@@ -105,7 +105,7 @@ struct RootView: View {
                         .font(.caption).foregroundStyle(Palette.accent)
                         .frame(maxWidth: .infinity).padding(8).background(Palette.accent.opacity(0.08))
                 }
-                if let error = model.error {
+                if let error = model.error, error != model.connectionIssue {
                     HStack(alignment: .top, spacing: 10) {
                         Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Palette.warning)
                         Text(error).font(.callout).textSelection(.enabled)
@@ -182,6 +182,10 @@ struct RootView: View {
                         Image(systemName: page.symbol).frame(width: 22).accessibilityHidden(true)
                         Text(page.rawValue).font(.system(size: 14, weight: model.page == page ? .semibold : .regular))
                         Spacer(minLength: 2)
+                        if page == .overview && !model.pending.isEmpty {
+                            Text(String(model.pending.count)).font(.caption.bold()).padding(.horizontal, 7).padding(.vertical, 3)
+                                .foregroundStyle(Palette.warning).background(Palette.warning.opacity(0.16), in: Capsule())
+                        }
                         if page == .dayReview && model.reviewPromptDay != nil {
                             Image(systemName: "circle.fill").font(.system(size: 7)).accessibilityHidden(true)
                         }
@@ -199,11 +203,7 @@ struct RootView: View {
         HStack {
             Text(model.page.rawValue).font(.system(size: 15, weight: .semibold))
             Spacer()
-            HStack(spacing: 6) {
-                Circle().fill(model.connected ? Palette.accent : Color.secondary).frame(width: 6, height: 6)
-                Text(model.connectionHealth.label)
-                    .font(.caption).foregroundStyle(Palette.secondary)
-            }
+            ConnectionHealthView(model: model).frame(maxWidth: 320)
             Button { Task { await model.refresh() } } label: {
                 Label("Refresh", systemImage: "arrow.clockwise")
             }.disabled(model.busy || !model.hasSevenPaceToken).help("Refresh 7pace")
@@ -281,20 +281,23 @@ struct OverviewView: View {
                         }
                     }
                 }
+                if !model.pending.isEmpty {
+                    ForEach(model.pending.reversed()) { change in BranchPrompt(model: model, change: change) }
+                }
+                if let prompt = model.ticketCompletionPrompt { TicketCompletionView(model: model, prompt: prompt) }
                 AppSectionHeading("Current tracking", subtitle: "Start, pause or finish your active work.")
                 timerCard
                 if let prompt = model.trackingAttention { Card { TrackingAttentionPrompt(model: model, prompt: prompt) } }
                 if model.reviewPromptDay != nil { Card { DayReviewPrompt(model: model) } }
                 AppSectionHeading("Progress", subtitle: "Your daily and weekly targets.")
                 TargetProgressView(model: model)
-                if model.microphoneEndPrompt != nil || model.meetingReturnReady || !model.pendingMicrophoneSessions.isEmpty || !model.pendingMeetings.isEmpty || !model.pending.isEmpty {
+                if model.microphoneEndPrompt != nil || model.meetingReturnReady || !model.pendingMicrophoneSessions.isEmpty || !model.pendingMeetings.isEmpty {
                     AppSectionHeading("Suggestions", subtitle: "Review a change before switching your timer.")
                 }
                 if let prompt = model.microphoneEndPrompt { Card { MicrophoneEndPromptView(model: model, prompt: prompt) } }
                 if model.meetingReturnReady { Card { MeetingReturnPrompt(model: model) } }
                 ForEach(model.pendingMicrophoneSessions) { microphoneSession in Card { MicrophonePrompt(model: model, microphoneSession: microphoneSession) } }
                 ForEach(model.pendingMeetings) { meeting in Card { MeetingPrompt(model: model, meeting: meeting) } }
-                ForEach(model.pending) { change in BranchPrompt(model: model, change: change) }
                 AppSectionHeading("Work and calendar")
                 HStack(alignment: .top, spacing: 18) {
                     VStack(alignment: .leading, spacing: 15) {
@@ -307,8 +310,6 @@ struct OverviewView: View {
                     }.frame(maxWidth: .infinity)
                     AgendaPreview(model: model, calendar: model.calendar).frame(width: 285)
                 }
-                AppSectionHeading("Connection")
-                ConnectionHealthView(model: model)
                 HStack {
                     Image(systemName: "checkmark.shield").foregroundStyle(Palette.accent)
                     Text("Tokens stay in Keychain. Your Git repositories stay untouched.").font(.caption).foregroundStyle(Palette.secondary)
@@ -361,38 +362,6 @@ struct OverviewView: View {
     }
 }
 
-struct BranchPrompt: View {
-    @ObservedObject var model: AppModel
-    let change: BranchChange
-    var body: some View {
-        VStack(alignment: .leading, spacing: 15) {
-            HStack(spacing: 9) {
-                Image(systemName: "arrow.triangle.branch").foregroundStyle(Palette.accent)
-                Text("You switched branches").font(.headline)
-                Spacer()
-                Text(change.repositoryName).font(.caption).foregroundStyle(Palette.secondary)
-            }
-            Text(change.branch).font(.system(.callout, design: .monospaced)).textSelection(.enabled)
-            Text(change.suggestsBreak ? "This branch suggests pausing or stopping your current timer." : change.ticketID.map { "Track Azure ticket #\($0)? Choose its activity type before starting." } ?? "No unique ticket number found. Choose a ticket or keep your current tracking.")
-                .font(.callout).foregroundStyle(Palette.secondary)
-            if change.suggestsBreak {
-                BranchBreakActions(model: model, change: change)
-            } else {
-            HStack {
-                Button("Keep current tracking") { model.keep(change) }.buttonStyle(.bordered)
-                Spacer()
-                Button("Choose another ticket") { model.selectedChange = change; model.showTicketPicker = true }.buttonStyle(.plain).foregroundStyle(Palette.accent)
-                if let id = change.ticketID {
-                    Button("Track #\(String(id))…") { Task { await model.chooseActivity(for: id, change: change) } }
-                        .buttonStyle(.borderedProminent).tint(Palette.action).foregroundStyle(.white).disabled(model.busy || !model.connected)
-                }
-            }
-            }
-        }.padding(21).background(Palette.accent.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Palette.accent.opacity(0.2), lineWidth: 1))
-    }
-}
-
 struct LogRow: View {
     @ObservedObject var model: AppModel
     let log: WorkLog
@@ -439,6 +408,13 @@ struct MenuPanel: View {
                 else { MenuTicketPicker(model: model) }
             } else {
                 Divider()
+                if let change = model.pending.last {
+                    BranchPrompt(model: model, change: change, compact: true)
+                    if model.pending.count > 1 {
+                        Button("Review \(model.pending.count - 1) more branch changes") { model.page = .overview; model.revealWindow?() }.font(.caption)
+                    }
+                }
+                if let prompt = model.ticketCompletionPrompt { TicketCompletionView(model: model, prompt: prompt, inMenuBar: true) }
                 Text("Current tracking").font(.headline).accessibilityAddTraits(.isHeader)
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     TimerDisplay(seconds: model.elapsed(at: context.date), indicator: model.trackingIndicator,
@@ -491,35 +467,9 @@ struct MenuPanel: View {
                         Text("\(model.pendingMeetings.count - 1) more meeting suggestions in Overview").font(.caption).foregroundStyle(Palette.secondary)
                     }
                 }
-                if let change = model.pending.last {
-                    Divider()
-                    VStack(alignment: .leading, spacing: 10) {
-                        Label("New branch suggestion", systemImage: "arrow.triangle.branch").font(.caption.weight(.semibold)).foregroundStyle(Palette.accent)
-                        Text(change.repositoryName + " · " + change.branch).font(.caption).foregroundStyle(Palette.secondary).lineLimit(2)
-                        if change.suggestsBreak {
-                            Text("Pause or stop for this branch.").font(.callout)
-                            BranchBreakActions(model: model, change: change)
-                        } else {
-                        if let id = change.ticketID {
-                            Text("#\(String(id))").font(.caption.weight(.semibold))
-                            if let item = model.workItems[id] { Text(item.title).font(.callout).lineLimit(3) }
-                        }
-                        HStack {
-                            Button("Keep current") { model.keep(change) }
-                            Spacer()
-                            Button(change.ticketID == nil ? "Choose ticket…" : "Choose activity…") {
-                                model.beginMenuTracking(change)
-                                if model.menuTracking, let id = change.ticketID {
-                                    Task { await model.chooseActivity(for: id, change: change, inMenuBar: true) }
-                                }
-                            }.buttonStyle(.borderedProminent).tint(Palette.action).foregroundStyle(.white).disabled(model.busy || !model.connected)
-                        }
-                        }
-                        if model.pending.count > 1 { Text("\(model.pending.count - 1) more in Overview").font(.caption).foregroundStyle(Palette.secondary) }
-                    }
-                }
+
             }
-            if let error = model.error { Text(error).font(.caption).foregroundStyle(Palette.warning).lineLimit(3) }
+            if let error = model.error, error != model.connectionIssue { Text(error).font(.caption).foregroundStyle(Palette.warning).lineLimit(3) }
             ConnectionHealthView(model: model, compact: true)
             Divider()
             Text("Open a section").font(.headline).accessibilityAddTraits(.isHeader)

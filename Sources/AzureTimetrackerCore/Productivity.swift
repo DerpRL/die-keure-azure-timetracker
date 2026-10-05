@@ -85,18 +85,18 @@ public enum ConnectionHealth: Equatable, Sendable {
     }
     public var label: String {
         switch self {
-        case .unconfigured: "Not connected"
-        case .connecting: "Connecting"
-        case .confirmed: "Confirmed by 7pace"
-        case .stale: "Status out of date"
-        case .offline: "Connection lost"
-        case .authentication: "Token needs attention"
-        case .accessDenied: "Access denied"
+        case .unconfigured: "Set up 7pace"
+        case .connecting: "Connecting to 7pace…"
+        case .confirmed: "7pace connected"
+        case .stale: "7pace status is out of date"
+        case .offline: "7pace offline"
+        case .authentication: "Sign in to 7pace"
+        case .accessDenied: "7pace access denied"
         }
     }
     public var symbol: String {
         switch self {
-        case .confirmed: "checkmark.shield.fill"
+        case .confirmed: "checkmark.circle.fill"
         case .connecting: "arrow.triangle.2.circlepath"
         case .authentication, .accessDenied: "key.fill"
         default: "exclamationmark.icloud"

@@ -93,6 +93,11 @@ struct TrackingDraft: Identifiable {
     let ticketContext = TicketContextModel()
     let weeklyReport = WeeklyReportModel()
     @Published var contextRequest: TicketContextRequest?
+    @Published var ticketCompletion = TicketCompletionMonitor()
+    @Published var ticketCompletionIssue: String?
+    @Published var ticketCompletionCheckedAt: Date?
+    private var lastCompletionCheck = Date.distantPast
+    private var checkingCompletion = false
     @Published var trackingAttention: TrackingAttention?
     private var attentionNotified: [String: Date] = [:]
     private var attentionDismissed: [String: Date] = [:]
@@ -156,6 +161,7 @@ struct TrackingDraft: Identifiable {
         configuration = initial.configuration; pending = initial.pending; audit = initial.audit
         pausedSession = initial.pausedSession
         meetingReturn = initial.meetingReturn
+        ticketCompletion = initial.ticketCompletion ?? TicketCompletionMonitor()
         microphoneTracking = initial.microphoneTracking ?? MicrophoneTrackingMonitor()
         if initial.microphoneTracking == nil, let plan = initial.meetingReturn,
            let sessionID = plan.microphoneSessionID, let appID = plan.microphoneAppID, plan.end == Date.distantFuture {
@@ -240,6 +246,8 @@ struct TrackingDraft: Identifiable {
                 checkMeetingSuggestions()
                 syncMicrophone()
                 checkMeetingReturn()
+                if !preview, !busy { await checkTicketCompletion() }
+                showTicketCompletionIfReady()
                 await checkDayReview()
                 if quickSwitchPending, !busy { quickSwitchPending = false; quickSwitch() }
                 if !preview, connected, !busy, !loadingProgress,
@@ -255,7 +263,7 @@ struct TrackingDraft: Identifiable {
 
     func persist() {
         guard canPersist, !preview else { return }
-        do { try store.save(SavedState(configuration: configuration, audit: audit, pending: pending, meetingReminders: meetingEngine.seen, pausedSession: pausedSession, meetingReturn: meetingReturn, microphoneTracking: microphoneTracking, quickTickets: quickTickets, slackReminders: slackReminders, dayReviews: dayReviews, attentionNotified: attentionNotified, attentionDismissed: attentionDismissed)) }
+        do { try store.save(SavedState(configuration: configuration, audit: audit, pending: pending, meetingReminders: meetingEngine.seen, pausedSession: pausedSession, meetingReturn: meetingReturn, ticketCompletion: ticketCompletion, microphoneTracking: microphoneTracking, quickTickets: quickTickets, slackReminders: slackReminders, dayReviews: dayReviews, attentionNotified: attentionNotified, attentionDismissed: attentionDismissed)) }
         catch { self.error = "Could not save local settings: \(error.localizedDescription)" }
     }
     func record(_ title: String, _ detail: String) {
@@ -273,6 +281,8 @@ struct TrackingDraft: Identifiable {
         ticketContext.configure(nil); contextRequest = nil; weeklyReport.configure(nil)
         timeEditor.configure(nil); trackingAttention = nil; attentionPopupPending = false; notifications.removeTrackingAttention()
         dayReview.configure(nil); reviewPromptDay = nil
+        if ticketCompletion.pending?.scope != completionScope || !configuration.completionRemindersEnabled { ticketCompletion.clearPrompt() }
+        ticketCompletionIssue = nil; ticketCompletionCheckedAt = nil; lastCompletionCheck = .distantPast
         api = nil; azure = nil; state = nil; connected = false; lastSync = nil
         logs = []; todayLogs = []; progressLogs = []; progressLastSync = nil; progressWeek = nil; loadingProgress = false; historyLoaded = false; workItems = [:]; activityTypes = []
         trackingDraft = nil; showTicketPicker = false; menuTracking = false; loadingTicketIDs = []; selectedMeeting = nil
@@ -339,6 +349,10 @@ struct TrackingDraft: Identifiable {
     private func apply(_ next: TrackingState) {
         if let old = state?.timestamp, let new = next.timestamp, new < old { return }
         if state?.identity != next.identity { statistics.invalidate(); dayReview.invalidate() }
+        if state?.identity != next.identity { ticketCompletionCheckedAt = nil; lastCompletionCheck = .distantPast }
+        let previousCompletion = ticketCompletion
+        ticketCompletion.reconcile(next, scope: completionScope)
+        if ticketCompletion != previousCompletion { persist() }
         state = next; connected = true; lastSync = Date()
         updateTrackingAttention(next)
         connectionFailure = nil; connectionIssue = nil; updateConnectionHealth()
@@ -354,6 +368,49 @@ struct TrackingDraft: Identifiable {
         if let id = next.track?.ticketID { Task { await loadTicketTitle(id) } }
         if let id = pausedSession?.ticketID { Task { await loadTicketTitle(id) } }
         if let warning = next.trackSettings?.responseMessage?.nonEmpty { notice = warning }
+    }
+
+    private var completionScope: String { workspaceIdentity + "|" + configuration.organization.lowercased() }
+    var ticketCompletionPrompt: TicketCompletionPrompt? {
+        guard configuration.completionRemindersEnabled, connected, connectionHealth == .confirmed,
+              let prompt = ticketCompletion.pending, prompt.matches(state, scope: completionScope),
+              preview || (ticketCompletionCheckedAt.map { Date().timeIntervalSince($0) < 150 } ?? false) else { return nil }
+        return prompt
+    }
+    func checkTicketCompletion(force: Bool = false) async {
+        guard !preview, configuration.completionRemindersEnabled, let azure, connected, connectionHealth == .confirmed,
+              let tracked = state, tracked.running, let id = tracked.track?.ticketID, id > 0, !checkingCompletion,
+              force || Date().timeIntervalSince(lastCompletionCheck) >= 60 else { return }
+        let generation = connectionGeneration, scope = completionScope
+        checkingCompletion = true; lastCompletionCheck = Date()
+        defer { checkingCompletion = false }
+        do {
+            let status = try await azure.ticketWorkflow(id: id)
+            guard generation == connectionGeneration, state?.identity == tracked.identity, state?.running == true,
+                  connected, configuration.completionRemindersEnabled else { return }
+            ticketCompletion.observe(status, tracking: state, scope: scope, confirmed: connectionHealth == .confirmed)
+            ticketCompletionIssue = nil; ticketCompletionCheckedAt = Date(); persist()
+        } catch {
+            guard generation == connectionGeneration, state?.identity == tracked.identity else { return }
+            ticketCompletionIssue = error.localizedDescription; ticketCompletionCheckedAt = nil
+        }
+    }
+    func showTicketCompletionIfReady() {
+        guard let prompt = ticketCompletionPrompt, !prompt.notified, !busy, !showTicketPicker, !menuTracking, trackingDraft == nil else { return }
+        ticketCompletion.markNotified(); persist(); revealSuggestion?()
+    }
+    func keepCompletedTicket() {
+        guard ticketCompletionPrompt != nil else { return }
+        ticketCompletion.keepTracking(); persist()
+    }
+    private func validateTicketCompletion(_ prompt: TicketCompletionPrompt) async throws {
+        guard let azure, ticketCompletionPrompt?.id == prompt.id else { throw AppError.remoteChanged }
+        let generation = connectionGeneration
+        let latest = try await azure.ticketWorkflow(id: prompt.ticketID)
+        guard generation == connectionGeneration, prompt.matches(state, scope: completionScope) else { throw AppError.remoteChanged }
+        ticketCompletion.observe(latest, tracking: state, scope: completionScope, confirmed: true)
+        ticketCompletionCheckedAt = Date(); persist()
+        guard latest.completed else { throw AppError.message("This ticket is no longer completed. Your timer is unchanged.") }
     }
 
     func loadTicketTitle(_ id: Int) async {
@@ -607,13 +664,14 @@ struct TrackingDraft: Identifiable {
         }
     }
 
-    func stopTracking(for change: BranchChange? = nil, afterMicrophone prompt: MicrophoneEndPrompt? = nil) async {
+    func stopTracking(for change: BranchChange? = nil, afterMicrophone prompt: MicrophoneEndPrompt? = nil, afterCompletion completion: TicketCompletionPrompt? = nil) async {
         guard !busy, !preview, let api, let state, connected else { return }
         busy = true; defer { busy = false }
         do {
+            if let completion { try await validateTicketCompletion(completion) }
             if let prompt { try validateMicrophoneEnd(prompt) }
             if let change { try await validate(change) }
-            apply(try await TrackingTransaction.stop(expectedIdentity: prompt?.trackingIdentity ?? state.identity, service: api))
+            apply(try await TrackingTransaction.stop(expectedIdentity: completion?.trackingIdentity ?? prompt?.trackingIdentity ?? state.identity, service: api))
             pausedSession = nil
             if let change { dismiss(change) }
             error = nil; record("Tracking stopped", "Stopped the active 7pace timer")

@@ -307,11 +307,15 @@ Card {
                 }
     }
     private var connectionSection: some View {
-        ConnectionHealthView(model: model)
+        Card { ConnectionDetailsView(model: model) }
     }
     private var branchSection: some View {
 Card {
                     VStack(alignment: .leading, spacing: 19) {
+                        Label("Ticket reminders", systemImage: "checkmark.circle").font(.headline)
+                        Toggle("Remind me when the tracked ticket is completed", isOn: $draft.completionRemindersEnabled)
+                        Text("Checks Azure about once a minute while tracking. Requires an Azure PAT with Work Items read access. Choose Keep tracking, Stop or Switch ticket when a ticket enters a completed workflow state.").font(.callout).foregroundStyle(Palette.secondary)
+                        Divider()
                         Label("Branch detection", systemImage: "arrow.triangle.branch").font(.headline)
                         Toggle("Watch repositories for branch changes", isOn: $draft.watchEnabled)
                         Toggle("Automatically open the activity chooser when no timer is running", isOn: $draft.autoStartWhenIdle)
@@ -379,7 +383,7 @@ Card { MicrophoneSettings(preferences: $draft.microphone, service: model.microph
                 Text("⌘1–⌘9 opens the matching navigation page; ⌘0 opens Offline drafts. ⌘⇧D opens today’s review. ⌃⌥T opens quick switch when enabled in Tracking settings. ⌘S saves Settings.")
                 Text("Buttons use visible labels and system focus indicators. Enable Keyboard navigation in macOS System Settings to use Tab across all controls.").foregroundStyle(Palette.secondary)
                 Divider()
-                Text("Azure timetracker 1.10.0").font(.headline)
+                Text("Azure timetracker 1.11.0").font(.headline)
                 Text("Credentials are kept in macOS Keychain. Day review status is stored only on this Mac.").foregroundStyle(Palette.secondary)
             }.font(.body)
         }

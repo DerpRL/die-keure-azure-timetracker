@@ -127,6 +127,38 @@ final class MockURLProtocol: URLProtocol, @unchecked Sendable {
         do { _ = try await api.current(); Issue.record("Expected authentication error") }
         catch { #expect(!error.localizedDescription.contains("secret-response")); #expect(error.localizedDescription.contains("Authentication")) }
     }
+    @Test func completionUsesTicketProjectAndWorkflowCategoryWithReadOnlyPATRequests() async throws {
+        let data = Data(#"{"id":123,"fields":{"System.Title":"Task","System.State":"Gereed","System.TeamProject":"Another Project","System.WorkItemType":"User Story"}}"#.utf8)
+        let categories = Data(#"{"value":[{"name":"Active","category":"InProgress"},{"name":"Gereed","category":"Completed"}]}"#.utf8)
+        let (_, capture, transport) = fixture([(200, data, [:]), (200, categories, [:])])
+        let api = try AzureAPI(organizationURL: Endpoint.azure("example"), project: "", pat: "fixture-pat", transport: transport)
+        let status = try await api.ticketWorkflow(id: 123)
+        #expect(status.completed && status.state == "Gereed")
+        let requests = capture.snapshot()
+        #expect(requests.count == 2)
+        #expect(requests[1].url?.path == "/example/Another Project/_apis/wit/workitemtypes/User Story/states")
+        for request in requests {
+            #expect(request.httpMethod == "GET")
+            #expect(request.value(forHTTPHeaderField: "Authorization") == "Basic " + Data(":fixture-pat".utf8).base64EncodedString())
+        }
+        let query = URLComponents(url: requests[0].url!, resolvingAgainstBaseURL: false)?.queryItems
+        #expect(query?.first(where: { $0.name == "fields" })?.value?.contains("System.State") == true)
+    }
+    @Test func completionRejectsWrongTicketWithoutFetchingStates() async throws {
+        let data = Data(#"{"id":456,"fields":{"System.State":"Done","System.TeamProject":"Project","System.WorkItemType":"Task"}}"#.utf8)
+        let (_, capture, transport) = fixture([(200, data, [:])])
+        let api = try AzureAPI(organizationURL: Endpoint.azure("example"), project: "", pat: "fixture-pat", transport: transport)
+        await #expect(throws: (any Error).self) { try await api.ticketWorkflow(id: 123) }
+        #expect(capture.snapshot().count == 1)
+    }
+    @Test func completionDoesNotGuessWhenCategoriesAreUnknownOrForbidden() async throws {
+        let data = Data(#"{"id":123,"fields":{"System.State":"Done","System.TeamProject":"Project","System.WorkItemType":"Task"}}"#.utf8)
+        for (code, response) in [(200, Data(#"{"value":[{"name":"Active","category":"InProgress"}]}"#.utf8)), (403, Data())] {
+            let (_, _, transport) = fixture([(200, data, [:]), (code, response, [:])])
+            let api = try AzureAPI(organizationURL: Endpoint.azure("example"), project: "", pat: "fixture-pat", transport: transport)
+            await #expect(throws: (any Error).self) { try await api.ticketWorkflow(id: 123) }
+        }
+    }
     @Test func azureUsesPATAndEncodesProject() async throws {
         let data = Data(#"{"id":123,"fields":{"System.Title":"Fix timer","System.TeamProject":"A Project","System.WorkItemType":"Bug"}}"#.utf8)
         let (_, capture, transport) = fixture([(200, data, [:])])

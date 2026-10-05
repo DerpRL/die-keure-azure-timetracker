@@ -191,6 +191,38 @@ public struct AzureAPI: Sendable {
     public init(organizationURL: URL, project: String, pat: String, transport: HTTPTransport = HTTPTransport()) {
         self.organizationURL = organizationURL; self.project = project; self.pat = pat; self.transport = transport
     }
+    /// Resolve the actual workflow category; state names vary by project/process.
+    public func ticketWorkflow(id: Int) async throws -> TicketWorkflowStatus {
+        guard id > 0, id <= Int32.max else { throw AppError.message("Enter a valid Azure ticket number.") }
+        func get(_ url: URL, fields: String? = nil) async throws -> Data {
+            var c = URLComponents(url: url, resolvingAgainstBaseURL: false)!
+            c.queryItems = [.init(name: "api-version", value: "7.1")]
+            if let fields { c.queryItems?.append(.init(name: "fields", value: fields)) }
+            var request = URLRequest(url: c.url!)
+            request.setValue("Basic " + Data(":\(pat)".utf8).base64EncodedString(), forHTTPHeaderField: "Authorization")
+            request.setValue("application/json", forHTTPHeaderField: "Accept")
+            return try await transport.data(for: request)
+        }
+        var base = organizationURL
+        if !project.isEmpty { base.appendPathComponent(project) }
+        struct Item: Decodable { let id: Int; let fields: [String: String] }
+        let item = try JSONDecoder().decode(Item.self, from: await get(base.appendingPathComponent("_apis/wit/workitems/\(id)"),
+            fields: "System.Title,System.State,System.TeamProject,System.WorkItemType"))
+        guard item.id == id, let state = item.fields["System.State"]?.nonEmpty,
+              let teamProject = item.fields["System.TeamProject"]?.nonEmpty,
+              let type = item.fields["System.WorkItemType"]?.nonEmpty else {
+            throw AppError.message("Azure returned incomplete ticket status. Try again shortly.")
+        }
+        let statesURL = organizationURL.appendingPathComponent(teamProject).appendingPathComponent("_apis/wit/workitemtypes")
+            .appendingPathComponent(type).appendingPathComponent("states")
+        struct WorkflowState: Decodable { let name: String; let category: String }
+        struct States: Decodable { let value: [WorkflowState] }
+        let states = try JSONDecoder().decode(States.self, from: await get(statesURL)).value
+        guard let category = states.first(where: { $0.name.caseInsensitiveCompare(state) == .orderedSame })?.category.nonEmpty else {
+            throw AppError.message("Azure could not classify this ticket’s workflow state. Try again shortly.")
+        }
+        return TicketWorkflowStatus(ticketID: id, title: item.fields["System.Title"] ?? "Azure ticket #\(id)", state: state, category: category)
+    }
     public func ticketContext(id: Int) async throws -> TicketContext {
         guard id > 0, id <= Int32.max else { throw AppError.message("Enter a valid Azure ticket number.") }
         var base = organizationURL

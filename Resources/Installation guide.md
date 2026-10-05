@@ -1,8 +1,8 @@
 # Install Azure timetracker
 
-Use the `Azure-timetracker-1.10.0-universal-unsigned.pkg` installer. It installs **Azure timetracker.app** in **/Applications** and supports both Apple Silicon and Intel, with a macOS 14 minimum deployment target. Direct runtime checks have been performed on Apple Silicon macOS 27.0.1; Intel and older macOS versions still need testing.
+Use the `Azure-timetracker-1.11.0-universal-unsigned.pkg` installer. It installs **Azure timetracker.app** in **/Applications** and supports both Apple Silicon and Intel, with a macOS 14 minimum deployment target. Direct runtime checks have been performed on Apple Silicon macOS 27.0.1; Intel and older macOS versions still need testing.
 
-For drag-and-drop installation, open `Azure-timetracker-1.10.0-universal-unsigned.dmg`, drag the app onto Applications, eject the disk image, then launch the installed app. Quit the old app before replacing it. The same signing limitations apply.
+For drag-and-drop installation, open `Azure-timetracker-1.11.0-universal-unsigned.dmg`, drag the app onto Applications, eject the disk image, then launch the installed app. Quit the old app before replacing it. The same signing limitations apply.
 
 ## Install and open
 
@@ -24,7 +24,7 @@ If you trust the sender and have reviewed the package, attempt to open it normal
 
 ## Verify and update
 
-The accompanying `.sha256` file contains the installer checksum. From the download directory, run `shasum -a 256 -c Azure-timetracker-1.10.0-universal-unsigned.pkg.sha256`. A matching checksum detects file changes; it does not authenticate the sender.
+The accompanying `.sha256` file contains the installer checksum. From the download directory, run `shasum -a 256 -c Azure-timetracker-1.11.0-universal-unsigned.pkg.sha256`. A matching checksum detects file changes; it does not authenticate the sender.
 
 The installer replaces only the app bundle in /Applications. Your per-user settings and Keychain credentials are preserved. It does not install launch daemons, change Git repositories, alter system security settings, start timers or launch the app as root. The payload contains no developer account settings, worklogs, calendar data or credentials.
 
@@ -46,3 +46,9 @@ To remove the app, disable launch at login in its Settings, quit it, and move th
 ### Add multiple repositories
 
 Open Repositories → Add from folder…, choose a parent folder and wait for the scan. Search the results and check the repositories to watch, then select Add selected. The scan includes nested Git checkouts and worktrees, skips Git metadata, application packages and linked folders, and reports unreadable folders. Existing watched/paused repositories are preserved.
+
+## New in 1.11.0: ticket completion reminders and clearer suggestions
+
+Ticket completion reminders are enabled in Settings → Tracking and require your Azure PAT with Work Items read access. While a ticket is tracked, the app checks its Azure workflow state about once a minute. A completed ticket offers Keep tracking, Stop or Switch ticket. Stopping and switching require your choice; a state change alone never modifies tracking.
+
+Branch changes now appear in an amber card above the timer, including the previous/new branch and ticket. The normal 7pace status is compact; open Details for check times and connection errors. Offline draft reminders remain visible in the menu panel.

@@ -37,6 +37,11 @@ public struct Configuration: Codable, Equatable, Sendable {
     }
     public var meetingSuggestions: MeetingPreferences?
     public var workTargets: WorkTargets?
+    public var ticketCompletionReminders: Bool?
+    public var completionRemindersEnabled: Bool {
+        get { ticketCompletionReminders ?? true }
+        set { ticketCompletionReminders = newValue }
+    }
     public var quickSwitchEnabled: Bool?
     public var endOfDayReview: DayReviewPreferences?
     public var dayReview: DayReviewPreferences {
