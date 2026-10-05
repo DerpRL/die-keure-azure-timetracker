@@ -1,0 +1,15 @@
+{
+  "release" : {
+    "build" : 20,
+    "bundleID" : "be.yarne.azure-timetracker",
+    "minimumMacOS" : "14.0.0",
+    "notes" : "Updates from GitHub\n\n• Check for new versions at startup and every six hours, or manually in Settings → App.\n• See an update notice in the overview and menu-bar panel, with release notes and download progress.\n• Download a verified update, then choose Install and restart when ready. Your 7pace timer keeps running.\n• Invalid downloads are rejected. The installer preserves the previous app and restores it if replacement or launching fails.\n\nInstall version 1.13.0 manually once to enable this update system. Later versions can be installed from the app when its installation folder is writable. Protected locations can still require the regular DMG/PKG installer.\n\nThe app remains ad-hoc signed and is not Apple-notarized. Release verification authenticates our updates; it does not replace Apple Developer ID signing or guarantee that macOS permission prompts disappear.\n",
+    "publishedAt" : "2026-10-05T11:18:10Z",
+    "sha256" : "23feac372d082b530c7c552a8d9e10c77d5b7547ed0ba7110a8e86d3016a1c33",
+    "size" : 7540948,
+    "url" : "https://raw.githubusercontent.com/DerpRL/die-keure-azure-timetracker/main/releases/updates/1.13.0/Azure-timetracker-1.13.0-universal-update.zip",
+    "version" : "1.13.0"
+  },
+  "schemaVersion" : 1,
+  "signature" : "GVaBVsHWqlIV2rBj8Vfl+u38ycog3awrbsoZpS6594DHBMX85O/oVQyMGMYfB6hiEPzyroJg09g3hZ4jrea2DQ=="
+}

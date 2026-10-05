@@ -12,16 +12,20 @@ VERSION="$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$SOURC
 STAGE="$(mktemp -d "$BUILD_DIR/stage.XXXXXX")"
 trap 'rm -rf "$STAGE"' EXIT
 APP="$STAGE/root/Applications/Azure timetracker.app"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$STAGE/packages"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Helpers" "$STAGE/packages"
 BINS=()
+HELPERS=()
 for ARCH in arm64 x86_64; do
     FLAGS=(--package-path "$SOURCE_DIR" --scratch-path "$BUILD_DIR/$ARCH/package" --cache-path "$BUILD_DIR/cache" --disable-sandbox --build-system native --triple "$ARCH-apple-macosx14.0" -c release)
     swift build "${FLAGS[@]}"
     BIN_DIR="$(swift build "${FLAGS[@]}" --show-bin-path)"
     BINS+=("$BIN_DIR/AzureTimetracker")
+    HELPERS+=("$BIN_DIR/AzureTimetrackerUpdater")
 done
 xcrun lipo -create "${BINS[@]}" -output "$APP/Contents/MacOS/AzureTimetracker"
 xcrun strip -S "$APP/Contents/MacOS/AzureTimetracker"
+xcrun lipo -create "${HELPERS[@]}" -output "$APP/Contents/Helpers/AzureTimetrackerUpdater"
+xcrun strip -S "$APP/Contents/Helpers/AzureTimetrackerUpdater"
 cp "$SOURCE_DIR/Resources/Info.plist" "$APP/Contents/Info.plist"
 swift "$SOURCE_DIR/scripts/draw-icon.swift" "$STAGE/AppIcon.iconset"
 iconutil --convert icns "$STAGE/AppIcon.iconset" --output "$APP/Contents/Resources/AppIcon.icns"

@@ -22,9 +22,19 @@ interface-preview-state.json
 .env
 .env.*
 
-# Published installers are intentionally versioned in Azure Repos.
+# Published installers are intentionally versioned in the public GitHub repository.
 !releases/**/*.dmg
 !releases/**/*.pkg
 !releases/**/*.sha256
 
 __pycache__/
+
+# Deployment and update-signing secrets stay outside Git.
+*.ed25519
+*.pem
+*.pub
+id_rsa*
+id_ed25519*
+.keys/
+
+!releases/updates/**/*.zip

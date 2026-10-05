@@ -1,8 +1,8 @@
 # Install Azure timetracker
 
-Use the `Azure-timetracker-1.12.0-universal-unsigned.pkg` installer. It installs **Azure timetracker.app** in **/Applications** and supports both Apple Silicon and Intel, with a macOS 14 minimum deployment target. Direct runtime checks have been performed on Apple Silicon macOS 27.0.1; Intel and older macOS versions still need testing.
+Use the `Azure-timetracker-1.13.0-universal-unsigned.pkg` installer. It installs **Azure timetracker.app** in **/Applications** and supports both Apple Silicon and Intel, with a macOS 14 minimum deployment target. Direct runtime checks have been performed on Apple Silicon macOS 27.0.1; Intel and older macOS versions still need testing.
 
-For drag-and-drop installation, open `Azure-timetracker-1.12.0-universal-unsigned.dmg`, drag the app onto Applications, eject the disk image, then launch the installed app. Quit the old app before replacing it. The same signing limitations apply.
+For drag-and-drop installation, open `Azure-timetracker-1.13.0-universal-unsigned.dmg`, drag the app onto Applications, eject the disk image, then launch the installed app. Quit the old app before replacing it. The same signing limitations apply.
 
 ## Install and open
 
@@ -24,7 +24,7 @@ If you trust the sender and have reviewed the package, attempt to open it normal
 
 ## Verify and update
 
-The accompanying `.sha256` file contains the installer checksum. From the download directory, run `shasum -a 256 -c Azure-timetracker-1.12.0-universal-unsigned.pkg.sha256`. A matching checksum detects file changes; it does not authenticate the sender.
+The accompanying `.sha256` file contains the installer checksum. From the download directory, run `shasum -a 256 -c Azure-timetracker-1.13.0-universal-unsigned.pkg.sha256`. A matching checksum detects file changes; it does not authenticate the sender.
 
 The installer replaces only the app bundle in /Applications. Your per-user settings and Keychain credentials are preserved. It does not install launch daemons, change Git repositories, alter system security settings, start timers or launch the app as root. The payload contains no developer account settings, worklogs, calendar data or credentials.
 
@@ -35,7 +35,7 @@ To remove the app, disable launch at login in its Settings, quit it, and move th
 - Statistics → Compare periods: compare days, weeks, months or years, use shared filters, select bars for dates, and inspect task changes. The current period defaults to matching elapsed days/time; full-period mode includes future target hours.
 - Settings → Tracking → Holidays & leave: the ten Belgian statutory public holidays are enabled by default. Enter employer-specific replacement dates and leave, half-days, or custom target hours. Save changes to apply. Holidays and leave adjust targets, not recorded time. Historical targets use the currently saved weekday schedule and exceptions.
 - Offline drafts (⌘0): start/stop a separate local timer or add past time. Drafts and cached activities survive restarts in a private local file. Review after reconnecting, then upload explicitly. Overlaps are advisory. A lost response requires reconciliation; it is never retried automatically. A running 7pace timer can continue independently while offline.
-- Automatic app updates are deferred. Install later releases manually.
+- From 1.13.0, update checks run at startup and every six hours. Open Settings → App or the update notice to download, verify and install a later version. Restarting keeps the remote 7pace timer running. Installation is always your choice. A protected app folder may require the DMG/PKG instead.
 
 ## New in 1.10.0
 
@@ -60,3 +60,7 @@ Branch changes now appear in an amber card above the timer, including the previo
 - Time editor → Gaps & overlaps: inspect possible gaps, extend a neighboring task, trim overlaps or set a shared boundary. Review the before/after timeline, explicitly apply the correction and undo from Recent edits. Overlap warnings still do not block ordinary saves.
 
 These settings default on and can be disabled separately. Reading without input can appear idle; this is a suggestion, not proof of absence. No keystrokes, window contents or audio are collected. Screen-lock notifications are supplemented by macOS sleep/session notifications; actual lock/wake behavior should be checked on your Mac.
+
+## New in 1.13.0
+
+Public GitHub delivery with a signed JSON feed, update notices, release notes, progress and an Install and restart button. Install this version manually once to enable the updater. Future downloads are authenticated with a separate release key and checked before installation; a previous-app backup is retained. Signing an update archive does not confer Apple trust. This release remains ad-hoc signed and not notarized, so macOS security and account permission prompts remain possible.

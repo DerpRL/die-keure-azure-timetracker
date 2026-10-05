@@ -99,6 +99,7 @@ struct RootView: View {
             Rectangle().fill(Palette.line).frame(width: 1)
             VStack(spacing: 0) {
                 header
+                AppUpdateBanner(model: model, updates: model.updates)
                 Divider().opacity(0.6)
                 if model.preview {
                     Text("Preview mode · account changes and tracking are disabled")
@@ -474,6 +475,7 @@ struct MenuPanel: View {
             if let error = model.error, error != model.connectionIssue { Text(error).font(.caption).foregroundStyle(Palette.warning).lineLimit(3) }
             ConnectionHealthView(model: model, compact: true)
             Divider()
+            AppUpdateBanner(model: model, updates: model.updates, compact: true)
             Text("Open a section").font(.headline).accessibilityAddTraits(.isHeader)
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                 Button { model.page = .overview; model.revealWindow?() } label: { Label("Overview", systemImage: "square.grid.2x2").frame(maxWidth: .infinity, minHeight: 26) }

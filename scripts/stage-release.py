@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """Copy verified installers into Git and archive the previous latest release.
 
-Usage: python3 scripts/stage-release.py /path/to/installers
+Usage: python3 scripts/stage-release.py /path/to/installers /path/to/AzureTimetrackerRelease
 Build/sign/notarize first, then regenerate checksums before running this script.
 """
 import hashlib
+import json
 import plistlib
 import re
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -28,6 +30,29 @@ for package in packages:
     if checksum.read_text().split() != [expected, package.name]:
         raise SystemExit('Checksum mismatch: ' + package.name)
     incoming.extend([package, checksum])
+# Immutable update archives remain at their versioned URL when installers are archived.
+if len(sys.argv) != 3:
+    raise SystemExit('Pass the artifact folder and the AzureTimetrackerRelease executable for signature verification.')
+manifest_path = artifacts / 'latest.json'
+manifest = json.loads(manifest_path.read_text())
+release = manifest['release']
+with (source / 'Resources/Info.plist').open('rb') as stream:
+    build = int(plistlib.load(stream)['CFBundleVersion'])
+update = artifacts / f'Azure-timetracker-{version}-universal-update.zip'
+expected_url = f'https://raw.githubusercontent.com/DerpRL/die-keure-azure-timetracker/main/releases/updates/{version}/{update.name}'
+if (manifest.get('schemaVersion') != 1 or release['version'] != version or release['build'] != build
+        or release['url'] != expected_url or release['size'] != update.stat().st_size
+        or release['sha256'] != hashlib.sha256(update.read_bytes()).hexdigest()):
+    raise SystemExit('The update manifest does not match the release archive.')
+update_checksum = update.with_name(update.name + '.sha256')
+if update_checksum.read_text().split() != [release['sha256'], update.name]:
+    raise SystemExit('Update archive checksum mismatch.')
+subprocess.run([str(Path(sys.argv[2]).resolve()), 'verify', str(manifest_path), str(update)], check=True)
+update_target = release_root / 'updates' / version
+for item in [update, update_checksum]:
+    target = update_target / item.name
+    if target.exists() and target.read_bytes() != item.read_bytes():
+        raise SystemExit('Published update archives are immutable. Increment the version first.')
 # Preflight everything before moving any existing release.
 moves = []
 for previous in sorted(latest.iterdir()) if latest.exists() else []:
@@ -51,4 +76,9 @@ for previous, archived in moves:
 latest.mkdir(parents=True, exist_ok=True)
 for item in incoming:
     shutil.copy2(item, latest / item.name)
+update_target.mkdir(parents=True, exist_ok=True)
+for item in [update, update_checksum]:
+    shutil.copy2(item, update_target / item.name)
+(source / 'updates').mkdir(exist_ok=True)
+shutil.copy2(manifest_path, source / 'updates/latest.json')
 print('Staged ' + version + ' in releases/latest; previous release moved to releases/archive.')

@@ -42,6 +42,11 @@ public struct Configuration: Codable, Equatable, Sendable {
         get { ticketCompletionReminders ?? true }
         set { ticketCompletionReminders = newValue }
     }
+    public var automaticUpdateChecks: Bool?
+    public var checksForUpdates: Bool {
+        get { automaticUpdateChecks ?? true }
+        set { automaticUpdateChecks = newValue }
+    }
     public var quickSwitchEnabled: Bool?
     public var workAwareness: WorkAwarenessPreferences?
     public var awareness: WorkAwarenessPreferences {

@@ -85,6 +85,7 @@ struct TrackingDraft: Identifiable {
     @Published var hasAzurePAT = false
     @Published var hasSevenPaceToken = false
     let calendar = CalendarService()
+    let updates = AppUpdateModel()
     let statistics = StatisticsModel()
     let offlineDrafts = OfflineDraftModel()
     let dayReview = DayReviewModel()
@@ -222,6 +223,7 @@ struct TrackingDraft: Identifiable {
 
     func start() {
         guard loop == nil else { return }
+        updates.start(preview: preview, automatic: configuration.checksForUpdates)
         if discoverOnStart {
             discoverOnStart = false
             // Documents access can wait for a macOS permission dialog. Never
@@ -272,6 +274,15 @@ struct TrackingDraft: Identifiable {
         guard canPersist, !preview else { return false }
         do { try store.save(SavedState(configuration: configuration, audit: audit, pending: pending, meetingReminders: meetingEngine.seen, pausedSession: pausedSession, meetingReturn: meetingReturn, workAwareness: workAwareness, ticketCompletion: ticketCompletion, microphoneTracking: microphoneTracking, quickTickets: quickTickets, slackReminders: slackReminders, dayReviews: dayReviews, attentionNotified: attentionNotified, attentionDismissed: attentionDismissed)); return true }
         catch { self.error = "Could not save local settings: \(error.localizedDescription)"; return false }
+    }
+    func installUpdate() {
+        guard !busy, !timeEditor.working, !offlineDrafts.working, !pinPairing.busy, !preview else {
+            updates.reportInstallFailure(AppError.message("Wait for the current save or connection operation to finish before restarting.")); return
+        }
+        guard persist() else {
+            updates.reportInstallFailure(AppError.message("Local settings could not be saved. Resolve the storage error before updating.")); return
+        }
+        do { try updates.installAndRestart() } catch { updates.reportInstallFailure(error) }
     }
     func record(_ title: String, _ detail: String) {
         audit.insert(AuditEntry(title, detail: detail), at: 0)
@@ -465,6 +476,7 @@ struct TrackingDraft: Identifiable {
                 try SecretStore.save(token, account: SecretStore.account(kind: "7pace", scope: url.host!))
             }
             configuration = draft
+            updates.automaticChecks = draft.checksForUpdates
             // Saving account settings invalidates previous decisions and snapshots.
             notifications.remove(pending.map(\.id)); pending = []; debouncer = BranchDebouncer()
             persist(); refreshCalendar(); configureMicrophone()

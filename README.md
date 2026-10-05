@@ -239,4 +239,11 @@ Forgotten-timer reminders require a confirmed stopped remote timer, recent input
 
 **Time editor → Gaps & overlaps** and the Day review link inspect the elapsed configured workday using the union of recorded intervals, including overnight entries. The gap threshold follows Day review. A running timer crossing the review window must be paused/stopped first. Gaps can be extended from a neighboring task; overlaps can be removed from either entry while retaining both remaining sides, or resolved with a shared boundary between staggered entries. A before/after chart previews every affected interval before **Apply correction**. Corrections do not silently remove whole entries, automatically fill breaks or change the existing advisory-only overlap policy. A day without entries has no neighboring task to extend; use Offline drafts → Add past time for a new entry. Explicit billable time is apportioned when removing/splitting intervals. Confirmed corrections are undoable from Recent edits.
 
-Automatic updating remains deferred. Distribution is still ad-hoc signed and not notarized unless Developer ID credentials are provided at build time.
+That release did not include automatic update checks. Version 1.13.0 adds the update system described below.
+
+
+## New in 1.13.0 — updates from GitHub
+
+Install 1.13.0 manually once. The app checks a signed JSON feed at startup and every six hours, with a manual **Check for updates** action in **Settings → App**. New releases appear in the overview and menu-bar panel. Read the release notes, choose **Download update**, then **Install and restart**. Downloads are verified before the app is replaced; the previous app is kept for recovery. The remote 7pace timer keeps running during restart.
+
+Automatic checks can be disabled in Settings. Installation always requires your choice. Protected installation folders may require the DMG/PKG instead; a personal Applications folder supports updates without administrator access. The updater does not remove quarantine or modify macOS permissions. Ad-hoc builds can still prompt for Keychain/Calendar access. See [release and update instructions](releases/README.md) for publishing, signature verification and recovery details.

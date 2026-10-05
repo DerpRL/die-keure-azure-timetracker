@@ -52,3 +52,7 @@ spctl --assess --type open --context context:primary-signature --verbose /path/t
 For PKG distribution, submit and staple the signed PKG instead. Regenerate SHA-256 checksums and any archive that includes the deliverable after stapling changes it. Test the first migration and then an upgrade between two builds from the same Developer ID team, verifying access to the existing Keychain entries and selected calendars. Do not promise that an ad-hoc build will preserve approvals.
 
 Sources: [Apple code signing requirements](https://developer.apple.com/documentation/technotes/tn3127-inside-code-signing-requirements), [code signing policies and Keychain](https://developer.apple.com/library/archive/technotes/tn2206/), [Calendar entitlement](https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.security.personal-information.calendars), [notarization](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution).
+
+## Update-feed signing (version 1.13.0+)
+
+The in-app updater uses a separate Ed25519 key to authenticate the release JSON and its ZIP hash. This works with an ad-hoc-signed application but does not grant Apple Developer ID trust or promise stable Keychain/Calendar approvals. It does not remove quarantine, reset TCC or weaken Keychain access controls. Keep the private update-signing key outside Git and back it up securely; only the public verification key is compiled into the app. See [release instructions](../releases/README.md).

@@ -7,6 +7,7 @@ import AzureTimetrackerCore
 extension AppModel {
     func prepareInterfacePreview() {
         configuration = Configuration(); configuration.watchEnabled = false
+        if ProcessInfo.processInfo.arguments.contains("--preview-update") { updates.previewAvailable() }
         configuration.sevenPaceURL = "https://preview.timehub.7pace.com/"
         let calendar = Calendar.current, today = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
         let start = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: today)!
