@@ -1,0 +1,16 @@
+{
+  "display_information": {
+    "name": "Azure timetracker huddles",
+    "description": "Stand-up huddle suggestions for your local Mac time tracker",
+    "background_color": "#09615c"
+  },
+  "oauth_config": {
+    "scopes": { "user": ["users:read", "channels:history", "groups:history"] }
+  },
+  "settings": {
+    "event_subscriptions": { "user_events": ["user_huddle_changed", "message.channels", "message.groups"] },
+    "socket_mode_enabled": true,
+    "org_deploy_enabled": false,
+    "token_rotation_enabled": false
+  }
+}

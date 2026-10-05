@@ -1,0 +1,23 @@
+.build/
+.swiftpm/
+.DS_Store
+.build-local/
+
+# Generated installers and local application state
+*.app/
+*.dmg
+*.pkg
+*.zip
+*.sha256
+state.json
+offline-drafts.json
+time-edit-history.json
+interface-preview-state.json
+# Signing material and local environment values
+.signing/
+*.p12
+*.pfx
+*.key
+*.mobileprovision
+.env
+.env.*
