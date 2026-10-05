@@ -43,6 +43,11 @@ public struct Configuration: Codable, Equatable, Sendable {
         set { ticketCompletionReminders = newValue }
     }
     public var quickSwitchEnabled: Bool?
+    public var workAwareness: WorkAwarenessPreferences?
+    public var awareness: WorkAwarenessPreferences {
+        get { workAwareness ?? WorkAwarenessPreferences() }
+        set { workAwareness = newValue }
+    }
     public var endOfDayReview: DayReviewPreferences?
     public var dayReview: DayReviewPreferences {
         get { endOfDayReview ?? DayReviewPreferences() }

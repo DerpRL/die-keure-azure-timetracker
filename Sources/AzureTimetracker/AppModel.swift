@@ -93,6 +93,11 @@ struct TrackingDraft: Identifiable {
     let ticketContext = TicketContextModel()
     let weeklyReport = WeeklyReportModel()
     @Published var contextRequest: TicketContextRequest?
+    @Published var workAwareness = WorkAwarenessLedger()
+    @Published var forgottenTimer = ForgottenTimerMonitor()
+    private let presence = WorkPresenceService()
+    private var awarenessAnnounced: UUID?
+    private var forgottenAnnounced: UUID?
     @Published var ticketCompletion = TicketCompletionMonitor()
     @Published var ticketCompletionIssue: String?
     @Published var ticketCompletionCheckedAt: Date?
@@ -161,6 +166,7 @@ struct TrackingDraft: Identifiable {
         configuration = initial.configuration; pending = initial.pending; audit = initial.audit
         pausedSession = initial.pausedSession
         meetingReturn = initial.meetingReturn
+        workAwareness = initial.workAwareness ?? WorkAwarenessLedger()
         ticketCompletion = initial.ticketCompletion ?? TicketCompletionMonitor()
         microphoneTracking = initial.microphoneTracking ?? MicrophoneTrackingMonitor()
         if initial.microphoneTracking == nil, let plan = initial.meetingReturn,
@@ -230,6 +236,7 @@ struct TrackingDraft: Identifiable {
             }
         }
         configureMicrophone()
+        if !preview { presence.changed = { [weak self] in self?.checkWorkAwareness() }; presence.start() }
         loop = Task { [weak self] in
             guard let self else { return }
             if !preview { await connect() }
@@ -261,10 +268,10 @@ struct TrackingDraft: Identifiable {
         }
     }
 
-    func persist() {
-        guard canPersist, !preview else { return }
-        do { try store.save(SavedState(configuration: configuration, audit: audit, pending: pending, meetingReminders: meetingEngine.seen, pausedSession: pausedSession, meetingReturn: meetingReturn, ticketCompletion: ticketCompletion, microphoneTracking: microphoneTracking, quickTickets: quickTickets, slackReminders: slackReminders, dayReviews: dayReviews, attentionNotified: attentionNotified, attentionDismissed: attentionDismissed)) }
-        catch { self.error = "Could not save local settings: \(error.localizedDescription)" }
+    @discardableResult func persist() -> Bool {
+        guard canPersist, !preview else { return false }
+        do { try store.save(SavedState(configuration: configuration, audit: audit, pending: pending, meetingReminders: meetingEngine.seen, pausedSession: pausedSession, meetingReturn: meetingReturn, workAwareness: workAwareness, ticketCompletion: ticketCompletion, microphoneTracking: microphoneTracking, quickTickets: quickTickets, slackReminders: slackReminders, dayReviews: dayReviews, attentionNotified: attentionNotified, attentionDismissed: attentionDismissed)); return true }
+        catch { self.error = "Could not save local settings: \(error.localizedDescription)"; return false }
     }
     func record(_ title: String, _ detail: String) {
         audit.insert(AuditEntry(title, detail: detail), at: 0)
@@ -283,6 +290,7 @@ struct TrackingDraft: Identifiable {
         dayReview.configure(nil); reviewPromptDay = nil
         if ticketCompletion.pending?.scope != completionScope || !configuration.completionRemindersEnabled { ticketCompletion.clearPrompt() }
         ticketCompletionIssue = nil; ticketCompletionCheckedAt = nil; lastCompletionCheck = .distantPast
+        workAwareness.scope(to: workspaceIdentity); forgottenTimer.reset()
         api = nil; azure = nil; state = nil; connected = false; lastSync = nil
         logs = []; todayLogs = []; progressLogs = []; progressLastSync = nil; progressWeek = nil; loadingProgress = false; historyLoaded = false; workItems = [:]; activityTypes = []
         trackingDraft = nil; showTicketPicker = false; menuTracking = false; loadingTicketIDs = []; selectedMeeting = nil
@@ -353,6 +361,10 @@ struct TrackingDraft: Identifiable {
         let previousCompletion = ticketCompletion
         ticketCompletion.reconcile(next, scope: completionScope)
         if ticketCompletion != previousCompletion { persist() }
+        let previousAwareness = workAwareness
+        workAwareness.idle.reconcile(IdleTrackingSession(state: next, confirmedAt: Date()))
+        if previousAwareness != workAwareness { persist() }
+        if next.running { if forgottenTimer.pending != nil { notifications.removeAwareness() }; forgottenTimer.reset() }
         state = next; connected = true; lastSync = Date()
         updateTrackingAttention(next)
         connectionFailure = nil; connectionIssue = nil; updateConnectionHealth()
@@ -433,6 +445,7 @@ struct TrackingDraft: Identifiable {
     func saveSettings(_ draft: Configuration, pat: String, token: String) async -> Bool {
         guard !busy, !offlineDrafts.working, !preview else { return false }
         do {
+            guard draft.awareness.isValid else { throw AppError.message("Choose idle and forgotten-timer thresholds between 1 and 120 minutes.") }
             guard draft.dayReview.isValid else { throw AppError.message("Day review needs a finish time after the workday start, at least one selected day, and valid gap/long-entry thresholds.") }
             guard draft.targets.isValid else { throw AppError.message("Each daily target must be between 0 and 24 hours. Use 0 for a day off.") }
             if !draft.meetings.defaultTicket.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -779,10 +792,98 @@ struct TrackingDraft: Identifiable {
             menuTracking = true; revealSuggestion?(); error = nil
         } catch { self.error = error.localizedDescription }
     }
+    func checkWorkAwareness(now: Date = Date()) {
+        guard !preview else { return }
+        updateConnectionHealth(now: now)
+        let old = workAwareness
+        workAwareness.scope(to: workspaceIdentity)
+        let preferences = configuration.awareness
+        guard preferences.idleEnabled || preferences.lockEnabled || preferences.forgottenEnabled else {
+            workAwareness.idle.dismiss(); forgottenTimer.reset()
+            if old != workAwareness { persist() }
+            return
+        }
+        let confirmed = connected && connectionHealth == .confirmed && !connecting
+        let meeting = (microphone.fresh && !microphone.selectedInputAppIDs.isEmpty) ||
+            (configuration.calendarEnabled && configuration.meetings.enabled && calendar.meetingEvents.contains { $0.isActive(at: now) })
+        // Retain pending evidence through a temporary connection outage, but never act on it without revalidation.
+        if confirmed {
+            workAwareness.idle.observe(now: now, idleSeconds: presence.idleSeconds,
+                unavailableSince: presence.unavailableSince, reason: presence.reason,
+                session: IdleTrackingSession(state: state, confirmedAt: lastSync), preferences: preferences, meeting: meeting)
+        }
+        let review = configuration.dayReview
+        let workingHours = now >= review.time(review.startMinute, on: now) && now < review.time(review.finishMinute, on: now) &&
+            configuration.targets.dailySeconds(on: now, calendar: .current) > 0
+        let eligible = preferences.forgottenEnabled && confirmed && state?.running == false && pausedSession == nil &&
+            offlineDrafts.active == nil && !meeting && workingHours && presence.unavailableSince == nil && workAwareness.correction == nil
+        let app = presence.foregroundApp
+        if forgottenTimer.pending == nil || !eligible {
+            forgottenTimer.observe(now: now, eligible: eligible && presence.idleSeconds < 60 && preferences.watches(app?.bundleIdentifier),
+                appName: app?.localizedName ?? "your work app", minutes: preferences.forgottenMinutes, deferral: workAwareness.deferral)
+        }
+        if old != workAwareness { persist() }
+        guard !busy, !showTicketPicker, !menuTracking, !timeEditor.working, timeEditor.selected == nil,
+              !timeEditor.showCorrections, presence.unavailableSince == nil else { return }
+        if let prompt = workAwareness.idle.pending, awarenessAnnounced != prompt.id {
+            awarenessAnnounced = prompt.id; revealSuggestion?()
+            if configuration.notificationsEnabled { Task { await notifications.postAwareness(title: "Review time away", detail: "Keep the recorded time, or pause and review the detected idle interval.") } }
+        } else if let prompt = forgottenTimer.pending, forgottenAnnounced != prompt.id {
+            forgottenAnnounced = prompt.id; revealSuggestion?()
+            if configuration.notificationsEnabled { Task { await notifications.postAwareness(title: "Working without a timer?", detail: "Choose a ticket to start tracking, snooze, or ignore today.") } }
+        }
+    }
+    func keepIdleTime() {
+        if workAwareness.correction?.id == workAwareness.idle.pending?.id { workAwareness.correction = nil }
+        workAwareness.idle.dismiss(); notifications.removeAwareness(); persist()
+    }
+    func deferForgottenTimer(untilTomorrow: Bool) {
+        if untilTomorrow { workAwareness.deferral.ignoredDay = Date() }
+        else { workAwareness.deferral.until = Date().addingTimeInterval(15 * 60) }
+        forgottenTimer.reset(); notifications.removeAwareness(); persist()
+    }
+    var forgottenTickets: [(repository: String, ticket: Int)] {
+        configuration.repositories.filter(\.enabled).compactMap { repo in
+            guard let branch = branches[repo.id]?.branch,
+                  !BranchPolicy.suggestsBreak(branch),
+                  let ticket = try? BranchTicket.extract(from: branch, pattern: configuration.branchPattern) else { return nil }
+            return (repo.name, ticket)
+        }
+    }
+    func reviewIdleTime(_ prompt: IdlePeriod) async {
+        guard !busy, !preview, let api, let state, connected, connectionHealth == .confirmed,
+              workAwareness.idle.pending?.id == prompt.id, state.identity == prompt.session.identity else { return }
+        busy = true; defer { busy = false }
+        let paused = PausedSession(ticketID: state.track?.ticketID, activityID: state.track?.activityTypeId,
+            workspace: workspaceIdentity, pausedAt: Date(), elapsedSeconds: elapsed(at: Date()), remark: state.track?.remark)
+        do {
+            // Save the review before stopping: an interrupted request must not lose the idle interval.
+            workAwareness.correction = prompt
+            guard persist() else { throw AppError.message("The idle review could not be saved locally. Your timer has not been stopped.") }
+            apply(try await TrackingTransaction.stop(expectedIdentity: prompt.session.identity, service: api))
+            pausedSession = paused; persist()
+            await openIdleCorrection(prompt)
+            await loadHistory(); await loadProgress()
+        } catch {
+            let message = error.localizedDescription
+            do { apply(try await api.current()) } catch { fail(error) }
+            self.error = message + " Check the timer before continuing; no correction was applied."
+        }
+    }
+    func openIdleCorrection(_ prompt: IdlePeriod) async {
+        guard workAwareness.correction?.id == prompt.id, let end = prompt.end else { return }
+        cancelMenuTracking(); dismissMenuPanel?(); page = .timeEditor; revealWindow?()
+        timeEditor.day = prompt.start
+        await timeEditor.prepareIdleCorrection(id: prompt.session.workLogID, start: prompt.start, end: end)
+    }
+    func discardIdleCorrection() { workAwareness.correction = nil; persist() }
+
     func saveTimeEdit() async {
         guard !busy, !preview else { return }
         busy = true; defer { busy = false }
+        let idleReviewID = timeEditor.idleInterval != nil ? workAwareness.correction?.id : nil
         if await timeEditor.save() {
+            if let idleReviewID, workAwareness.correction?.id == idleReviewID { workAwareness.correction = nil; persist() }
             statistics.invalidate(); dayReview.invalidate()
             weeklyReport.invalidate()
             record("Tracked time updated", "Saved a time correction in 7pace")

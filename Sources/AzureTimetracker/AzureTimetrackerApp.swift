@@ -284,6 +284,7 @@ struct OverviewView: View {
                 if !model.pending.isEmpty {
                     ForEach(model.pending.reversed()) { change in BranchPrompt(model: model, change: change) }
                 }
+                WorkAwarenessPrompts(model: model)
                 if let prompt = model.ticketCompletionPrompt { TicketCompletionView(model: model, prompt: prompt) }
                 AppSectionHeading("Current tracking", subtitle: "Start, pause or finish your active work.")
                 timerCard
@@ -414,6 +415,7 @@ struct MenuPanel: View {
                         Button("Review \(model.pending.count - 1) more branch changes") { model.page = .overview; model.revealWindow?() }.font(.caption)
                     }
                 }
+                WorkAwarenessPrompts(model: model)
                 if let prompt = model.ticketCompletionPrompt { TicketCompletionView(model: model, prompt: prompt, inMenuBar: true) }
                 Text("Current tracking").font(.headline).accessibilityAddTraits(.isHeader)
                 TimelineView(.periodic(from: .now, by: 1)) { context in

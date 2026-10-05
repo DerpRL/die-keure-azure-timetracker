@@ -144,6 +144,10 @@ struct DayReviewView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     if data.sessions.isEmpty { Text("No entries recorded for this day.").foregroundStyle(Palette.secondary) }
                     ForEach(data.sessions) { session in sessionRow(session); if session.id != data.sessions.last?.id { Divider() } }
+                    Button("Review gaps & overlaps in Time editor…") {
+                        model.timeEditor.day = review.day; model.page = .timeEditor
+                        Task { await model.timeEditor.loadCorrections(preferences: model.configuration.dayReview) }
+                    }.disabled(model.busy)
                     Button { model.showReviewHistory(review.day) } label: { Label("Open this day in History", systemImage: "clock.arrow.circlepath") }
                 }
             }

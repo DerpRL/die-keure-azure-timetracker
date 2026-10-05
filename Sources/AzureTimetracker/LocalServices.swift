@@ -48,6 +48,7 @@ struct SavedState: Codable {
     var meetingReminders: [String: Date]? = nil
     var pausedSession: PausedSession? = nil
     var meetingReturn: MeetingReturn? = nil
+    var workAwareness: WorkAwarenessLedger?
     var ticketCompletion: TicketCompletionMonitor?
     var microphoneTracking: MicrophoneTrackingMonitor? = nil
     var quickTickets: QuickTickets? = nil
@@ -212,6 +213,18 @@ struct AgendaEvent: Identifiable {
         content.categoryIdentifier = "tracking-attention"; content.sound = .default
         do { try await center.add(UNNotificationRequest(identifier: "tracking-attention", content: content, trigger: nil)) }
         catch { issue?("Timer notification could not be delivered: \(error.localizedDescription)") }
+    }
+    func postAwareness(title: String, detail: String) async {
+        let settings = await center.notificationSettings()
+        guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else { return }
+        let content = UNMutableNotificationContent(); content.title = title; content.body = detail
+        content.categoryIdentifier = "tracking-attention"; content.sound = .default
+        do { try await center.add(UNNotificationRequest(identifier: "work-awareness", content: content, trigger: nil)) }
+        catch { issue?("Time awareness notification could not be delivered: " + error.localizedDescription) }
+    }
+    func removeAwareness() {
+        center.removeDeliveredNotifications(withIdentifiers: ["work-awareness"])
+        center.removePendingNotificationRequests(withIdentifiers: ["work-awareness"])
     }
     func removeTrackingAttention() {
         attentionRequestID = nil

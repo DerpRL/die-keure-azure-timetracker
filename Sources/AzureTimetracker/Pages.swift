@@ -219,7 +219,7 @@ struct SettingsPage: View {
                 VStack(alignment: .leading, spacing: 22) {
                     switch category {
                     case .accounts: accountSection; connectionSection
-                    case .tracking: targetSection; Card { HolidaySettingsView(targets: $draft.targets) }; branchSection
+                    case .tracking: Card { WorkAwarenessSettings(preferences: $draft.awareness) }; targetSection; Card { HolidaySettingsView(targets: $draft.targets) }; branchSection
                     case .meetings: calendarSection; meetingSection; microphoneSection
                     case .dayReview: Card { DayReviewSettings(preferences: $draft.dayReview) }
                     case .app: appSection
@@ -383,7 +383,7 @@ Card { MicrophoneSettings(preferences: $draft.microphone, service: model.microph
                 Text("⌘1–⌘9 opens the matching navigation page; ⌘0 opens Offline drafts. ⌘⇧D opens today’s review. ⌃⌥T opens quick switch when enabled in Tracking settings. ⌘S saves Settings.")
                 Text("Buttons use visible labels and system focus indicators. Enable Keyboard navigation in macOS System Settings to use Tab across all controls.").foregroundStyle(Palette.secondary)
                 Divider()
-                Text("Azure timetracker 1.11.0").font(.headline)
+                Text("Azure timetracker 1.12.0").font(.headline)
                 Text("Credentials are kept in macOS Keychain. Day review status is stored only on this Mac.").foregroundStyle(Palette.secondary)
             }.font(.body)
         }

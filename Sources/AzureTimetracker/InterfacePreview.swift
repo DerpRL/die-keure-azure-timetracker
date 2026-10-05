@@ -10,7 +10,7 @@ extension AppModel {
         configuration.sevenPaceURL = "https://preview.timehub.7pace.com/"
         let calendar = Calendar.current, today = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
         let start = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: today)!
-        let data: [[String: Any]] = [
+        var data: [[String: Any]] = [
             ["id": "sample-a", "isCanEdit": true, "isCanDelete": true, "timestamp": WireDate.localString(start), "length": 7200, "workItemId": 33984,
              "comment": "Sample feature work", "activityType": ["id": "development", "name": "Development"]],
             ["id": "sample-adjacent", "isCanEdit": true, "isCanDelete": true, "timestamp": WireDate.localString(start.addingTimeInterval(2 * 3600)), "length": 3600, "workItemId": 33984,
@@ -18,6 +18,10 @@ extension AppModel {
             ["id": "sample-b", "isCanEdit": true, "isCanDelete": true, "timestamp": WireDate.localString(start.addingTimeInterval(3 * 3600)), "length": 12600,
              "comment": "Sample planning session", "activityType": ["id": "planning", "name": "Planning"]]
         ]
+        if ProcessInfo.processInfo.arguments.contains("--preview-awareness") {
+            data[1]["timestamp"] = WireDate.localString(start.addingTimeInterval(5400))
+            data[2]["timestamp"] = WireDate.localString(start.addingTimeInterval(4 * 3600))
+        }
         if let encoded = try? JSONSerialization.data(withJSONObject: data), let logs = try? JSONDecoder().decode([WorkLog].self, from: encoded) {
             dayReview.useInterfacePreview(logs)
             timeEditor.day = today; timeEditor.useInterfacePreview(logs)
@@ -55,6 +59,21 @@ extension AppModel {
         ticketCompletion.observe(TicketWorkflowStatus(ticketID: 33984, title: "Improve product context", state: "Done", category: "Completed"), tracking: state, scope: scope, confirmed: true)
         pending = [BranchChange(repository: Repository(path: "/preview/Campus"), branch: "feature/33630-user-journey-tracking", previousBranch: "feature/33984-product-context", ticketID: 33630)]
 
+        if ProcessInfo.processInfo.arguments.contains("--preview-awareness") {
+            pending = []; ticketCompletion = TicketCompletionMonitor()
+            let instant = Date(), idleStart = instant.addingTimeInterval(-900)
+            let sample: [String: Any] = ["track": ["trackingState": "tracking", "workLogId": "sample-a", "tfsId": 33984, "remark": "Improve product context", "currentTrackLength": 3600,
+                "currentTrackStartedDateTime": WireDate.localString(instant.addingTimeInterval(-3600))]]
+            state = try? JSONDecoder().decode(TrackingState.self, from: JSONSerialization.data(withJSONObject: sample))
+            workAwareness.idle.observe(now: idleStart, idleSeconds: 0, unavailableSince: idleStart, reason: "Screen locked", session: IdleTrackingSession(state: state), preferences: .init(), meeting: false)
+            workAwareness.idle.observe(now: instant, idleSeconds: 0, unavailableSince: nil, reason: "", session: IdleTrackingSession(state: state), preferences: .init(), meeting: false)
+        }
+        if ProcessInfo.processInfo.arguments.contains("--preview-forgotten") {
+            pending = []; ticketCompletion = TicketCompletionMonitor(); previewTimer(.stopped, seconds: 0)
+            for offset in stride(from: -600, through: 0, by: 2) {
+                forgottenTimer.observe(now: Date().addingTimeInterval(Double(offset)), eligible: true, appName: "Visual Studio Code", minutes: 10, deferral: .init())
+            }
+        }
     }
 
     func previewTimer(_ status: TrackingIndicator, seconds: Double? = nil) {

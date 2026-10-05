@@ -1,8 +1,8 @@
 # Install Azure timetracker
 
-Use the `Azure-timetracker-1.11.0-universal-unsigned.pkg` installer. It installs **Azure timetracker.app** in **/Applications** and supports both Apple Silicon and Intel, with a macOS 14 minimum deployment target. Direct runtime checks have been performed on Apple Silicon macOS 27.0.1; Intel and older macOS versions still need testing.
+Use the `Azure-timetracker-1.12.0-universal-unsigned.pkg` installer. It installs **Azure timetracker.app** in **/Applications** and supports both Apple Silicon and Intel, with a macOS 14 minimum deployment target. Direct runtime checks have been performed on Apple Silicon macOS 27.0.1; Intel and older macOS versions still need testing.
 
-For drag-and-drop installation, open `Azure-timetracker-1.11.0-universal-unsigned.dmg`, drag the app onto Applications, eject the disk image, then launch the installed app. Quit the old app before replacing it. The same signing limitations apply.
+For drag-and-drop installation, open `Azure-timetracker-1.12.0-universal-unsigned.dmg`, drag the app onto Applications, eject the disk image, then launch the installed app. Quit the old app before replacing it. The same signing limitations apply.
 
 ## Install and open
 
@@ -24,7 +24,7 @@ If you trust the sender and have reviewed the package, attempt to open it normal
 
 ## Verify and update
 
-The accompanying `.sha256` file contains the installer checksum. From the download directory, run `shasum -a 256 -c Azure-timetracker-1.11.0-universal-unsigned.pkg.sha256`. A matching checksum detects file changes; it does not authenticate the sender.
+The accompanying `.sha256` file contains the installer checksum. From the download directory, run `shasum -a 256 -c Azure-timetracker-1.12.0-universal-unsigned.pkg.sha256`. A matching checksum detects file changes; it does not authenticate the sender.
 
 The installer replaces only the app bundle in /Applications. Your per-user settings and Keychain credentials are preserved. It does not install launch daemons, change Git repositories, alter system security settings, start timers or launch the app as root. The payload contains no developer account settings, worklogs, calendar data or credentials.
 
@@ -52,3 +52,11 @@ Open Repositories → Add from folder…, choose a parent folder and wait for th
 Ticket completion reminders are enabled in Settings → Tracking and require your Azure PAT with Work Items read access. While a ticket is tracked, the app checks its Azure workflow state about once a minute. A completed ticket offers Keep tracking, Stop or Switch ticket. Stopping and switching require your choice; a state change alone never modifies tracking.
 
 Branch changes now appear in an amber card above the timer, including the previous/new branch and ticket. The normal 7pace status is compact; open Details for check times and connection errors. Offline draft reminders remain visible in the menu panel.
+
+## New in 1.12.0
+
+- Settings → Tracking → Time awareness: review idle time after 5 minutes (configurable), or after screen lock/sleep. When you return, keep recorded time or choose Pause & review to preview removing the interval or separating it into another entry. Time before and after the interval is retained. The pause happens when you choose it; recorded time changes only after Apply correction.
+- Forgotten-timer reminders: after 10 active minutes in selected work apps during configured work hours, choose a branch ticket or another ticket, snooze 15 minutes, or ignore today. Paused tracking, detected meetings and a running local draft suppress reminders. No earlier time is backfilled automatically.
+- Time editor → Gaps & overlaps: inspect possible gaps, extend a neighboring task, trim overlaps or set a shared boundary. Review the before/after timeline, explicitly apply the correction and undo from Recent edits. Overlap warnings still do not block ordinary saves.
+
+These settings default on and can be disabled separately. Reading without input can appear idle; this is a suggestion, not proof of absence. No keystrokes, window contents or audio are collected. Screen-lock notifications are supplemented by macOS sleep/session notifications; actual lock/wake behavior should be checked on your Mac.

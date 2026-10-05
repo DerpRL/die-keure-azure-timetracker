@@ -19,6 +19,8 @@ struct TimeEditorView: View {
                     Text("Select adjacent entries using the checkboxes or ⌘-click.").font(.callout).foregroundStyle(Palette.secondary)
                     Spacer()
                     Button("Merge selected…") { Task { await editor.beginMerge() } }.disabled(editor.selection.count < 2 || editor.working || model.busy)
+                    Button("Gaps & overlaps…") { Task { await editor.loadCorrections(preferences: model.configuration.dayReview) } }
+                        .disabled(editor.working || editor.loading || model.busy)
                     Button("Recent edits") { showHistory = true }
                 }
                 if editor.requiresReview { Label("An earlier change needs review. Open Recent edits before making another change.", systemImage: "exclamationmark.triangle.fill").foregroundStyle(Palette.warning) }
@@ -53,8 +55,9 @@ struct TimeEditorView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .buttonStyle(.bordered).controlSize(.large)
-        .sheet(isPresented: Binding(get: { editor.selected != nil || showHistory }, set: { if !$0 { editor.cancel(); showHistory = false } })) {
-            if showHistory { recentEdits }
+        .sheet(isPresented: Binding(get: { editor.selected != nil || showHistory || editor.showCorrections }, set: { if !$0 { editor.cancel(); showHistory = false; editor.showCorrections = false } })) {
+            if editor.showCorrections { TimeCorrectionReview(model: model, editor: editor).interactiveDismissDisabled(editor.working) }
+            else if showHistory { recentEdits }
             else if let log = editor.selected {
                 editSheet(log).interactiveDismissDisabled(editor.working || model.busy)
             }
@@ -199,6 +202,25 @@ struct TimeEditorView: View {
                             Text("Split entry").tag(TimeEditMode.split)
                         }.pickerStyle(.segmented)
                     }
+                    if editor.mode == .guided, let interval = editor.idleInterval {
+                        AppSectionHeading("Idle interval", subtitle: interval.start.formatted(date: .abbreviated, time: .shortened) + " → " + interval.end.formatted(date: .abbreviated, time: .shortened))
+                        Picker("How to handle idle time", selection: $editor.separateIdle) {
+                            Text("Remove idle time").tag(false)
+                            Text("Separate into its own entry").tag(true)
+                        }.pickerStyle(.segmented)
+                        Text("Work before and after the interval stays recorded. The timer is paused; resume it when you are ready.").font(.callout).foregroundStyle(Palette.secondary)
+                        if editor.separateIdle {
+                            TextField("Ticket number (optional)", text: $editor.secondTicket).textFieldStyle(.roundedBorder)
+                            TextField("Comment for the separate entry", text: $editor.secondComment).textFieldStyle(.roundedBorder)
+                            Picker("Activity", selection: $editor.secondActivity) {
+                                Text("7pace default").tag("")
+                                if let originalID = log.activityType?.id, !model.activityTypes.contains(where: { $0.id == originalID }) {
+                                    Text(log.activityType?.name ?? "Original activity").tag(originalID)
+                                }
+                                ForEach(model.activityTypes) { Text($0.name ?? "Activity").tag($0.id) }
+                            }
+                        }
+                    }
                     if editor.mode == .edit {
                         HStack(spacing: 24) {
                             DatePicker("Start", selection: $editor.start, displayedComponents: [.date, .hourAndMinute])
@@ -218,6 +240,7 @@ struct TimeEditorView: View {
                         }
                     }
                     if let plan = try? editor.proposedPlan() {
+                        if editor.mode == .guided { CorrectionPlanPreview(plan: plan) }
                         AppSectionHeading("Result", subtitle: "Total: " + DurationText.short(Double(plan.desired.reduce(0) { $0 + $1.seconds })))
                         ForEach(Array(plan.desired.enumerated()), id: \.offset) { _, draft in
                             VStack(alignment: .leading, spacing: 4) {
@@ -255,7 +278,7 @@ struct TimeEditorView: View {
                 Spacer()
                 Button("Check overlaps") { Task { await editor.checkChanges() } }
                     .disabled(model.busy || editor.working || editor.needsReload || editor.validationIssue != nil)
-                Button(editor.mode == .edit ? "Save time changes" : editor.mode == .split ? "Split entry" : editor.mode == .merge ? "Merge entries" : "Undo change") { Task { await model.saveTimeEdit() } }
+                Button(editor.mode == .guided ? "Apply correction" : editor.mode == .edit ? "Save time changes" : editor.mode == .split ? "Split entry" : editor.mode == .merge ? "Merge entries" : "Undo change") { Task { await model.saveTimeEdit() } }
                     .buttonStyle(.borderedProminent).tint(Palette.action).foregroundStyle(.white).keyboardShortcut(.defaultAction)
                     .disabled(model.preview || model.busy || editor.working || editor.needsReload || editor.requiresReview || editor.journalIssue != nil || editor.validationIssue != nil)
             }.padding(24)

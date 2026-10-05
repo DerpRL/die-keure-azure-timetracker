@@ -2,9 +2,16 @@ import Foundation
 import Combine
 import AzureTimetrackerCore
 
-enum TimeEditMode: String, CaseIterable, Identifiable { case edit = "Edit time", split = "Split", merge = "Merge", undo = "Undo"; var id: Self { self } }
+enum TimeEditMode: String, CaseIterable, Identifiable { case guided = "Guided correction", edit = "Edit time", split = "Split", merge = "Merge", undo = "Undo"; var id: Self { self } }
 
 @MainActor final class TimeEditorModel: ObservableObject {
+    @Published var showCorrections = false
+    @Published private(set) var correctionIssues: [TimeCorrectionIssue] = []
+    @Published private(set) var correctionIssue: String?
+    @Published private(set) var correctionLoading = false
+    @Published private(set) var guidedPlan: WorkLogPlan?
+    @Published private(set) var idleInterval: DateInterval?
+    @Published var separateIdle = false { didSet { review = nil } }
     @Published var day = Date()
     @Published var filter = ""
     @Published var selection = Set<String>()
@@ -55,6 +62,15 @@ enum TimeEditMode: String, CaseIterable, Identifiable { case edit = "Edit time",
     func proposedPlan() throws -> WorkLogPlan {
         guard let selected else { throw AppError.message("Choose an entry.") }
         switch mode {
+        case .guided:
+            if let interval = idleInterval {
+                let ticket = secondTicket.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard ticket.isEmpty || Int(ticket).map({ $0 > 0 && $0 <= Int32.max }) == true else { throw AppError.message("Enter a valid ticket number or leave it blank.") }
+                let separate = separateIdle ? try WorkLogDraft(start: interval.start, end: interval.end, ticketID: Int(ticket),
+                    comment: secondComment.nonEmpty, activityID: secondActivity.nonEmpty) : nil
+                return try TimeCorrections.removeInterval(selected, start: interval.start, end: interval.end, separate: separate)
+            }
+            guard let guidedPlan else { throw AppError.message("Choose a correction to preview.") }; return guidedPlan
         case .edit: return try .edit(selected, time: edit)
         case .split:
             let text = secondTicket.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -66,12 +82,13 @@ enum TimeEditMode: String, CaseIterable, Identifiable { case edit = "Edit time",
         }
     }
     func configure(_ client: SevenPaceAPI?) {
+        showCorrections = false; correctionIssues = []; correctionIssue = nil; correctionLoading = false; guidedPlan = nil; idleInterval = nil
         api = client; workspace = client?.baseURL.absoluteString.lowercased() ?? ""; generation = UUID(); connectionID = UUID(); logs = []; selected = nil; review = nil; selection = []
         issue = nil; message = nil; savedConflicts = []; savedOverlapIssue = nil; loading = false; working = false; needsReload = false; mergeLogs = []; undoRecord = nil
     }
-    func cancel() { guard !working else { return }; generation = UUID(); selected = nil; review = nil; issue = nil; needsReload = false; undoRecord = nil; mergeLogs = [] }
+    func cancel() { guard !working else { return }; generation = UUID(); selected = nil; review = nil; issue = nil; needsReload = false; undoRecord = nil; mergeLogs = []; guidedPlan = nil; idleInterval = nil }
     func load() async {
-        guard let api, !working else { return }
+        guard let api, !working, !correctionLoading, !showCorrections, selected == nil else { return }
         let request = UUID(); generation = request; loading = true; selected = nil; review = nil; issue = nil; selection = []
         let date = Calendar.current.startOfDay(for: day)
         defer { if generation == request { loading = false } }
@@ -99,7 +116,7 @@ enum TimeEditMode: String, CaseIterable, Identifiable { case edit = "Edit time",
             let draft = try WorkLogDraft(current)
             start = draft.start; end = draft.edit.end; splitAt = draft.start.addingTimeInterval(Double(draft.seconds / 2))
             secondTicket = draft.ticketID.map(String.init) ?? ""; secondComment = draft.comment ?? ""; secondActivity = draft.activityID ?? ""
-            needsReload = false; mode = .edit; undoRecord = nil; mergeLogs = []; selected = current
+            needsReload = false; idleInterval = nil; guidedPlan = nil; mode = .edit; undoRecord = nil; mergeLogs = []; selected = current
         } catch { if generation == request { issue = error.localizedDescription } }
     }
     func beginMerge() async {
@@ -125,6 +142,70 @@ enum TimeEditMode: String, CaseIterable, Identifiable { case edit = "Edit time",
         do { _ = try WorkLogPlan.undo(record); undoRecord = record; mode = .undo; review = nil; issue = nil; needsReload = false; selected = record.after.first }
         catch { issue = error.localizedDescription }
     }
+    func loadCorrections(preferences: DayReviewPreferences, now: Date = Date()) async {
+        guard !working else { return }
+        showCorrections = true; loading = false; correctionLoading = true; correctionIssue = nil; correctionIssues = []
+        let request = UUID(); generation = request
+        defer { if request == generation { correctionLoading = false } }
+        do {
+            let end = min(now, preferences.time(preferences.finishMinute, on: day))
+            let start = preferences.time(preferences.startMinute, on: day)
+            guard end > start else { throw AppError.message("There is no elapsed workday to review for this date.") }
+            let entries: [WorkLog]
+            #if UI_PREVIEW
+            entries = logs
+            #else
+            guard let api else { throw AppError.message("Connect to 7pace first.") }
+            entries = try await api.workLogs(before: Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: day))!)
+            let state = try await api.current().checked()
+            if state.running {
+                let activeStart = state.track?.currentTrackStartedDateTime.flatMap { WireDate.parse($0, localIfUnspecified: true) }
+                guard let activeStart, activeStart >= end else {
+                    throw AppError.message("Pause or stop the timer that crosses this review window, so its boundaries are confirmed.")
+                }
+            }
+            #endif
+            guard request == generation else { return }
+            correctionIssues = try TimeCorrections.issues(logs: entries, window: DateInterval(start: start, end: end), minimumGap: Double(preferences.gapMinutes * 60))
+        } catch { if request == generation { correctionIssue = error.localizedDescription } }
+    }
+    func prepareCorrection(_ plan: WorkLogPlan) async {
+        guard !working else { return }
+        working = true; correctionIssue = nil; let request = generation
+        defer { if request == generation { working = false } }
+        do {
+            #if !UI_PREVIEW
+            guard let api else { throw AppError.message("Connect to 7pace first.") }
+            for original in plan.before {
+                let actual = try await api.workLog(id: original.id)
+                guard WorkLogOperations.unchanged(actual, original) else { throw AppError.message("An entry changed. Refresh the correction review.") }
+            }
+            #endif
+            guard request == generation else { return }
+            guidedPlan = plan; idleInterval = nil; mode = .guided; selected = plan.before.first
+            review = nil; issue = nil; needsReload = false; showCorrections = false
+        } catch { if request == generation { correctionIssue = error.localizedDescription } }
+    }
+    func prepareIdleCorrection(id: String, start: Date, end: Date) async {
+        guard !working else { return }
+        working = true; selected = nil; issue = nil; let request = generation
+        defer { if request == generation { working = false } }
+        do {
+            guard let api else { throw AppError.message("Connect to 7pace first.") }
+            let log = try await api.workLog(id: id)
+            let state = try await api.current().checked()
+            try WorkLogOverlap.validateEditableEntry(id: id, state: state)
+            guard log.isCanEdit == true else { throw AppError.message("7pace does not allow editing this entry.") }
+            let draft = try WorkLogDraft(log)
+            let lower = max(draft.start, start), upper = min(draft.edit.end, end)
+            guard upper > lower else { throw AppError.message("The idle interval is no longer inside this entry. Check its recorded time.") }
+            guard request == generation else { return }
+            idleInterval = DateInterval(start: lower, end: upper); guidedPlan = nil; separateIdle = false
+            secondTicket = ""; secondComment = "Idle time"; secondActivity = draft.activityID ?? ""
+            mode = .guided; selected = log; review = nil; needsReload = false; showCorrections = false
+        } catch { if request == generation { issue = error.localizedDescription } }
+    }
+
     private func check(_ plan: WorkLogPlan) async throws -> WorkLogEditReview {
         let historical: [WorkLog], state: TrackingState
         do {
@@ -173,7 +254,7 @@ enum TimeEditMode: String, CaseIterable, Identifiable { case edit = "Edit time",
             guard request == generation else { return false }
             savedConflicts = overlaps.conflicts; savedOverlapIssue = overlaps.overlapIssue
             message = result.title + " confirmed by 7pace. You can undo this from Recent edits."
-            selected = nil; review = nil; selection = []; return true
+            selected = nil; review = nil; selection = []; idleInterval = nil; guidedPlan = nil; return true
         } catch {
             if request == generation { review = nil; needsReload = true; issue = error.localizedDescription }
             return false
