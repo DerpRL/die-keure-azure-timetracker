@@ -1,8 +1,8 @@
 # Install Azure timetracker
 
-Use the `Azure-timetracker-1.14.1-universal-local-signed-app.pkg` installer. It installs **Azure timetracker.app** in **/Applications** and supports both Apple Silicon and Intel, with a macOS 14 minimum deployment target. Direct runtime checks have been performed on Apple Silicon macOS 27.0.1; Intel and older macOS versions still need testing.
+Use the `Azure-timetracker-1.14.2-universal-local-signed-app.pkg` installer. It installs **Azure timetracker.app** in **/Applications** and supports both Apple Silicon and Intel, with a macOS 14 minimum deployment target. Direct runtime checks have been performed on Apple Silicon macOS 27.0.1; Intel and older macOS versions still need testing.
 
-For drag-and-drop installation, open `Azure-timetracker-1.14.1-universal-local-signed.dmg`, drag the app onto Applications, eject the disk image, then launch the installed app. Quit the old app before replacing it. The same signing limitations apply.
+For drag-and-drop installation, open `Azure-timetracker-1.14.2-universal-local-signed.dmg`, drag the app onto Applications, eject the disk image, then launch the installed app. Quit the old app before replacing it. The same signing limitations apply.
 
 ## Install and open
 
@@ -24,7 +24,7 @@ If you trust the sender and have reviewed the package, attempt to open it normal
 
 ## Verify and update
 
-The accompanying `.sha256` file contains the installer checksum. From the download directory, run `shasum -a 256 -c Azure-timetracker-1.14.1-universal-local-signed-app.pkg.sha256`. A matching checksum detects file changes; it does not authenticate the sender.
+The accompanying `.sha256` file contains the installer checksum. From the download directory, run `shasum -a 256 -c Azure-timetracker-1.14.2-universal-local-signed-app.pkg.sha256`. A matching checksum detects file changes; it does not authenticate the sender.
 
 The installer replaces only the app bundle in /Applications. Your per-user settings and Keychain credentials are preserved. It does not install launch daemons, change Git repositories, alter system security settings, start timers or launch the app as root. The payload contains no developer account settings, worklogs, calendar data or credentials.
 
@@ -75,3 +75,7 @@ Public GitHub delivery with a signed JSON feed, update notices, release notes, p
 ## New in 1.14.1
 
 Figma, calendar and branch suggestions can track without a ticket. Turn off **Use Azure ticket** when a ticket is suggested, or choose **Continue without a ticket** from a suggestion’s ticket search. Figma saves the design file name as the 7pace comment; calendar meetings use the event title. Choose the activity and confirm Start. Statistics now contains Time explorer, Tasks and Work patterns; Compare periods has been removed.
+
+## Fixed in 1.14.2
+
+Pausing an Azure/7pace timer while a local timer is running keeps the paused session visible in Overview and the menu panel, including Resume. The local timer keeps running and supplies the top-bar clock until Azure tracking resumes.

@@ -107,6 +107,8 @@ struct TrackingDraft: Identifiable, Sendable {
     let offlineDrafts = OfflineDraftModel()
     private var offlineObservation: AnyCancellable?
     var showsLocalTimer: Bool { LocalTimerDisplay.isPrimary(local: offlineDrafts.active, remoteRunning: state?.running == true, remoteConfirmed: connected && connectionHealth == .confirmed) }
+    // A local clock can lead the menu bar while the Azure session stays available to resume.
+    var showsRemoteTimer: Bool { !showsLocalTimer || pausedSession != nil }
     func menuElapsed(at date: Date) -> Double {
         if showsLocalTimer, let draft = offlineDrafts.active { return LocalTimerDisplay.elapsed(draft, at: date) }
         return elapsed(at: date)

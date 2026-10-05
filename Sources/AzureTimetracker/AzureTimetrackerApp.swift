@@ -316,7 +316,7 @@ struct OverviewView: View {
                 WorkAwarenessPrompts(model: model)
                 if let prompt = model.ticketCompletionPrompt { TicketCompletionView(model: model, prompt: prompt) }
                 AppSectionHeading("Current tracking", subtitle: "Start, pause or finish your active work.")
-                if !model.showsLocalTimer { timerCard }
+                if model.showsRemoteTimer { timerCard }
                 LocalTimerView(model: model, offline: model.offlineDrafts)
                 if let prompt = model.trackingAttention { Card { TrackingAttentionPrompt(model: model, prompt: prompt) } }
                 if model.reviewPromptDay != nil { Card { DayReviewPrompt(model: model) } }
@@ -453,7 +453,7 @@ struct MenuPanel: View {
                 if let proposal = model.figmaSuggestions.last { FigmaPrompt(model: model, proposal: proposal, compact: true) }
                 WorkAwarenessPrompts(model: model)
                 if let prompt = model.ticketCompletionPrompt { TicketCompletionView(model: model, prompt: prompt, inMenuBar: true) }
-                if !model.showsLocalTimer {
+                if model.showsRemoteTimer {
                 Text("Current tracking").font(.headline).accessibilityAddTraits(.isHeader)
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     TimerDisplay(seconds: model.elapsed(at: context.date), indicator: model.trackingIndicator,

@@ -79,6 +79,7 @@ extension AppModel {
         if ProcessInfo.processInfo.arguments.contains("--preview-local") {
             pending = []; ticketCompletion = TicketCompletionMonitor(); previewTimer(.stopped, seconds: 0)
             _ = offlineDrafts.save(OfflineDraft(workspace: offlineDrafts.workspace, start: Date().addingTimeInterval(-1234), comment: "Daily standup", activityID: "standup"))
+            if ProcessInfo.processInfo.arguments.contains("--preview-local-paused") { previewTimer(.paused, seconds: 3661) }
         }
         if ProcessInfo.processInfo.arguments.contains("--preview-figma") {
             configuration.watchEnabled = true; configuration.figma.enabled = true

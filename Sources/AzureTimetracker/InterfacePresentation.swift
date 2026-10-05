@@ -59,6 +59,12 @@ struct AppWindowContent: View {
                         if ProcessInfo.processInfo.arguments.contains("--preview-menu") {
                             VStack {
                                 Button("Quick switch preview") { model.beginMenuTracking() }
+                                if ProcessInfo.processInfo.arguments.contains("--preview-local") {
+                                    HStack {
+                                        Button("Start Azure sample") { model.previewTimer(.running, seconds: 3661) }
+                                        Button("Pause Azure sample") { model.previewTimer(.paused) }
+                                    }
+                                }
                                 MenuPanel(model: model).frame(width: 420)
                             }.padding(20)
                         } else if model.showAppearanceOnboarding { AppearanceOnboardingView(model: model, interface: interface) }

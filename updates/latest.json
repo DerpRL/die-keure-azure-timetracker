@@ -1,15 +1,15 @@
 {
   "release" : {
-    "build" : 23,
+    "build" : 24,
     "bundleID" : "be.yarne.azure-timetracker",
     "minimumMacOS" : "14.0.0",
-    "notes" : "# Azure timetracker 1.14.1\n\n- Track Figma designs, calendar meetings and branch suggestions without an Azure ticket. Unlinked suggestions open the activity chooser directly; suggested tickets can be switched off before Start.\n- Figma uses the design file name as the 7pace comment, whether or not a ticket is selected. Ticket-free tracking preserves any saved file-to-ticket link.\n- Suggestion ticket searches include Continue without a ticket. Meeting titles and branch names supply the comment for these suggestions. Activity selection and Start confirmation remain required.\n- Removed Compare periods from Statistics. Time explorer, Tasks, Work patterns, heatmaps, timelines and the other charts remain available.\n\nUpdate checks remain every minute. No tracking changes occur until you confirm them.\n",
-    "publishedAt" : "2026-10-05T13:06:24Z",
-    "sha256" : "9600bf16f883d9987c6b60b583fe5058f42e1b8c77c5c8a56c1e5b55f0dbb891",
-    "size" : 8242917,
-    "url" : "https://raw.githubusercontent.com/DerpRL/die-keure-azure-timetracker/main/releases/updates/1.14.1/Azure-timetracker-1.14.1-universal-update.zip",
-    "version" : "1.14.1"
+    "notes" : "# Azure timetracker 1.14.2\n\n- Fixed paused Azure/7pace tracking disappearing when a local timer is still running. The paused ticket, elapsed time and Resume action stay visible in both Overview and the menu panel.\n- Local tracking continues independently. You can resume Azure tracking without stopping the local timer.\n\nUpdate checks remain every minute. This update does not change tracked time or automatically start, pause or stop timers.\n",
+    "publishedAt" : "2026-10-05T14:48:05Z",
+    "sha256" : "ed276cc266bf176a94ddc3e0f786f3338ed8622c434137c29a5779e1958a94dd",
+    "size" : 8244002,
+    "url" : "https://raw.githubusercontent.com/DerpRL/die-keure-azure-timetracker/main/releases/updates/1.14.2/Azure-timetracker-1.14.2-universal-update.zip",
+    "version" : "1.14.2"
   },
   "schemaVersion" : 1,
-  "signature" : "u+gVJOit8++ZZOOpXJOQHsDs+ttvMktXQ2QT/VCEbB5AhlQ8uzjTtPbKzHotiJW2BL3c/rmB+qtITyZSMt74Cw=="
+  "signature" : "ub9zdHY1D/B/lIuk4g3Zxik3tGSMgDpFt8uoFbiCI30TcLn44ffxCHXBt+++wRlZh+bqXRkq1pzJVSezC86ZDA=="
 }

@@ -271,3 +271,7 @@ The public 1.14.0 app uses a persistent local certificate. It is not Developer I
 ## New in 1.14.1
 
 Figma, calendar and branch suggestions support tracking without an Azure ticket. Choose the activity and confirm Start; suggested tickets can be switched off in the activity chooser, and ticket searches offer **Continue without a ticket**. Figma uses the design file name as the 7pace comment, calendar meetings use the event title, and branch suggestions use the branch name. Resuming or extending an existing timer keeps its original ticket. Integration branches still offer Pause/Stop/Keep. **Compare periods** has been removed from Statistics.
+
+## Fixed in 1.14.2
+
+A paused Azure/7pace session remains visible alongside a running local timer in Overview and the menu panel. Resume and Clear pause remain available in the menu panel, and Overview retains Resume tracking. The top-bar clock continues showing the running local timer until the remote timer resumes.
