@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 SOURCE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+source "$SOURCE_DIR/scripts/signing-config.sh"
 APP="${1:-$(dirname "$SOURCE_DIR")/Azure timetracker.app}"
 DELIVERY_DIR="${2:-$(dirname "$SOURCE_DIR")}"
 BUILD_DIR="${AZURE_TIME_BUILD_DIR:-$SOURCE_DIR/.build-dmg}"
@@ -22,6 +23,9 @@ if [[ "$SIGNATURE" == *'Authority=Developer ID Application:'* ]]; then
     codesign --verify --strict -R='anchor apple generic' "$APP"
     SIGN_LABEL="developer-id"
     SIGNING_NOTE="The app is Developer ID signed. Notarization is a separate release step; verify it before sharing this image. The first transition from a development build can require permission approval again."
+elif [[ "$SIGNATURE" == *'Authority='* && "$SIGNATURE" != *'Signature=adhoc'* ]]; then
+    SIGN_LABEL="local-signed"
+    SIGNING_NOTE="The app uses a persistent local signing certificate. It is not Apple Developer ID signed or notarized. macOS may require Open Anyway on first installation and permission approval when migrating from an older signature."
 fi
 if [[ -n "${AZURE_TIME_SIGN_IDENTITY:-}" && "$SIGN_LABEL" == unsigned ]]; then
     echo 'Rebuild and sign the app with Developer ID before creating a signed disk image.' >&2; exit 1
@@ -48,7 +52,7 @@ Optional meeting detection uses local microphone status (macOS 14.2+), with no S
 Supports Apple Silicon and Intel; requires macOS 14 or later.
 
 $SIGNING_NOTE
-Use the same app bundle ID and Developer ID team for future releases.
+Use the same app bundle ID and signing certificate for future releases.
 See the source repository's Resources/Signing.md for the release steps.
 EOF
 
@@ -56,7 +60,9 @@ IMAGE="$DELIVERY_DIR/Azure-timetracker-$VERSION-universal-$SIGN_LABEL.dmg"
 hdiutil create -volname "Azure timetracker $VERSION" -srcfolder "$STAGE" \
     -fs HFS+ -format UDZO -nospotlight -ov "$IMAGE"
 if [[ -n "${AZURE_TIME_SIGN_IDENTITY:-}" ]]; then
-    codesign --force --timestamp --sign "$AZURE_TIME_SIGN_IDENTITY" "$IMAGE"
+    TIMESTAMP=(--timestamp)
+    if [[ "$AZURE_TIME_SIGN_KIND" == local ]]; then TIMESTAMP=(--timestamp=none); fi
+    codesign --force "${TIMESTAMP[@]}" --sign "$AZURE_TIME_SIGN_IDENTITY" "$IMAGE"
     codesign --verify --strict "$IMAGE"
 fi
 hdiutil verify "$IMAGE"

@@ -2,6 +2,8 @@ import SwiftUI
 import AzureTimetrackerCore
 
 struct TimeCorrectionReview: View {
+    @Environment(\.interfacePalette) private var palette
+
     @ObservedObject var model: AppModel
     @ObservedObject var editor: TimeEditorModel
     var body: some View {
@@ -14,12 +16,12 @@ struct TimeCorrectionReview: View {
             Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    Text("Gaps may be lunch, breaks or leave. Choose only the corrections you want; each action opens a preview and can be undone after saving.").foregroundStyle(Palette.secondary)
+                    Text("Gaps may be lunch, breaks or leave. Choose only the corrections you want; each action opens a preview and can be undone after saving.").foregroundStyle(palette.secondary)
                     if editor.correctionLoading { ProgressView("Checking recorded time…") }
-                    if let issue = editor.correctionIssue { Label(issue, systemImage: "exclamationmark.triangle").foregroundStyle(Palette.warning) }
+                    if let issue = editor.correctionIssue { Label(issue, systemImage: "exclamationmark.triangle").foregroundStyle(palette.warning) }
                     if !editor.correctionLoading, editor.correctionIssue == nil, editor.correctionIssues.isEmpty {
-                        Label("No gaps or overlaps found in the elapsed workday.", systemImage: "checkmark.circle").foregroundStyle(Palette.accent)
-                        Text("Gaps use the minimum duration configured in Day review. A day without entries has no neighboring task to extend.").font(.callout).foregroundStyle(Palette.secondary)
+                        Label("No gaps or overlaps found in the elapsed workday.", systemImage: "checkmark.circle").foregroundStyle(palette.accent)
+                        Text("Gaps use the minimum duration configured in Day review. A day without entries has no neighboring task to extend.").font(.callout).foregroundStyle(palette.secondary)
                     }
                     ForEach(editor.correctionIssues) { issue in
                         CorrectionIssueCard(issue: issue, model: model, editor: editor)
@@ -31,13 +33,15 @@ struct TimeCorrectionReview: View {
                 Button("Refresh review") { Task { await editor.loadCorrections(preferences: model.configuration.dayReview) } }
                     .disabled(editor.correctionLoading || editor.working || model.busy)
                 Spacer()
-                Text("Overlap warnings still allow ordinary edits.").font(.caption).foregroundStyle(Palette.secondary)
+                Text("Overlap warnings still allow ordinary edits.").font(.caption).foregroundStyle(palette.secondary)
             }.padding(24)
-        }.frame(width: 800, height: 650).background(Palette.background).buttonStyle(.bordered).controlSize(.large)
+        }.frame(width: 800, height: 650).background(palette.background).buttonStyle(.bordered).controlSize(.large)
     }
 }
 
 private struct CorrectionIssueCard: View {
+    @Environment(\.interfacePalette) private var palette
+
     let issue: TimeCorrectionIssue
     @ObservedObject var model: AppModel
     @ObservedObject var editor: TimeEditorModel
@@ -51,7 +55,7 @@ private struct CorrectionIssueCard: View {
             VStack(alignment: .leading, spacing: 12) {
                 Label((issue.kind == .gap ? "Possible gap · " : "Overlapping time · ") + DurationText.short(issue.seconds),
                       systemImage: issue.kind == .gap ? "clock.badge.questionmark" : "rectangle.on.rectangle")
-                    .font(.headline).foregroundStyle(Palette.warning)
+                    .font(.headline).foregroundStyle(palette.warning)
                 Text(issue.start.formatted(date: .omitted, time: .shortened) + " – " + issue.end.formatted(date: .omitted, time: .shortened)).monospacedDigit()
                 if let log = issue.earlier { Text("Earlier: " + title(log)).font(.callout) }
                 if let log = issue.later { Text("Later: " + title(log)).font(.callout) }
@@ -70,7 +74,7 @@ private struct CorrectionIssueCard: View {
                         option("Preview boundary…", plan: try? TimeCorrections.moveBoundary(issue, to: boundary))
                     }
                     Text("A trim keeps work before and after the overlap. A shared boundary assigns the first part to the earlier task and the rest to the later one. Options that would remove a whole entry are unavailable.")
-                        .font(.caption).foregroundStyle(Palette.secondary)
+                        .font(.caption).foregroundStyle(palette.secondary)
                 }
             }
         }
@@ -85,6 +89,8 @@ private struct CorrectionIssueCard: View {
 }
 
 struct CorrectionPlanPreview: View {
+    @Environment(\.interfacePalette) private var palette
+
     let plan: WorkLogPlan
     private var lower: Date { (plan.before.compactMap(\.date) + plan.desired.map(\.start)).min() ?? Date() }
     private var upper: Date { (plan.before.compactMap { $0.date?.addingTimeInterval($0.length) } + plan.desired.map(\.edit.end)).max() ?? Date() }
@@ -93,14 +99,14 @@ struct CorrectionPlanPreview: View {
             AppSectionHeading("Before → after", subtitle: "Review every affected interval before applying this correction.")
             Text("Before · " + DurationText.short(plan.before.reduce(0) { $0 + $1.length })).font(.headline)
             ForEach(plan.before) { log in
-                if let start = log.date { row(start: start, end: start.addingTimeInterval(log.length), ticket: log.workItemId, comment: log.comment, color: Palette.warning) }
+                if let start = log.date { row(start: start, end: start.addingTimeInterval(log.length), ticket: log.workItemId, comment: log.comment, color: palette.warning) }
             }
             Divider()
             Text("After · " + DurationText.short(Double(plan.desired.reduce(0) { $0 + $1.seconds }))).font(.headline)
             ForEach(Array(plan.desired.enumerated()), id: \.offset) { _, draft in
-                row(start: draft.start, end: draft.edit.end, ticket: draft.ticketID, comment: draft.comment, color: Palette.accent)
+                row(start: draft.start, end: draft.edit.end, ticket: draft.ticketID, comment: draft.comment, color: palette.accent)
             }
-            Text("You can undo this correction from Recent edits. Overlap warnings do not block saving.").font(.callout).foregroundStyle(Palette.secondary)
+            Text("You can undo this correction from Recent edits. Overlap warnings do not block saving.").font(.callout).foregroundStyle(palette.secondary)
         }
     }
     private func row(start: Date, end: Date, ticket: Int?, comment: String?, color: Color) -> some View {

@@ -4,6 +4,8 @@ import AzureTimetrackerCore
 
 /// One interaction surface supports pointer inspection and drag-to-zoom without moving the chart's layout.
 struct ExplorerTimeChart: View {
+    @Environment(\.interfacePalette) private var palette
+
     let data: ExplorerAnalysis
     @Binding var selected: Date?
     let colors: [String: Color]
@@ -22,16 +24,16 @@ struct ExplorerTimeChart: View {
             HStack {
                 if let inspected {
                     Text(label(inspected)).fontWeight(.medium)
-                    Text(DurationText.short(inspected.seconds)).fontWeight(.semibold).foregroundStyle(Palette.accent)
+                    Text(DurationText.short(inspected.seconds)).fontWeight(.semibold).foregroundStyle(palette.accent)
                 } else { Text("Point to a bar for its total · drag to zoom · use controls below to inspect with the keyboard") }
-            }.font(.caption).foregroundStyle(Palette.secondary).frame(height: 18, alignment: .leading)
+            }.font(.caption).foregroundStyle(palette.secondary).frame(height: 18, alignment: .leading)
             Chart {
                 ForEach(data.buckets) { bucket in
                     ForEach(bucket.segments) { segment in
                         RectangleMark(xStart: .value("From", bucket.start.addingTimeInterval(bucket.interval.duration * 0.06)),
                                       xEnd: .value("To", bucket.end.addingTimeInterval(-bucket.interval.duration * 0.06)),
                                       yStart: .value("Start", segment.bottom / divisor), yEnd: .value("Recorded", segment.top / divisor))
-                            .foregroundStyle(colors[segment.activityID] ?? Palette.accent)
+                            .foregroundStyle(colors[segment.activityID] ?? palette.accent)
                             .opacity(selected == nil || selected == bucket.start ? 1 : 0.55)
                             .accessibilityLabel(label(bucket) + ", " + segment.name)
                             .accessibilityValue(DurationText.short(segment.top - segment.bottom))
@@ -39,11 +41,11 @@ struct ExplorerTimeChart: View {
                 }
                 if let bucket = inspected {
                     RuleMark(x: .value("Inspected", bucket.start.addingTimeInterval(bucket.interval.duration / 2)))
-                        .foregroundStyle(Palette.secondary.opacity(0.7)).lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                        .foregroundStyle(palette.secondary.opacity(0.7)).lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
                 }
                 if let start = dragStart, let end = dragEnd {
                     RectangleMark(xStart: .value("Selection start", min(start, end)), xEnd: .value("Selection end", max(start, end)))
-                        .foregroundStyle(Palette.accent.opacity(0.15))
+                        .foregroundStyle(palette.accent.opacity(0.15))
                 }
             }
             .chartLegend(.hidden)

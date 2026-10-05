@@ -22,6 +22,7 @@ extension TrackingIndicator {
     private let model: AppModel
     private var statusSubscription: AnyCancellable?
     private var timerSubscription: AnyCancellable?
+    private var interfaceSubscription: AnyCancellable?
     private var lastStatusDescription = ""
 
     init(model: AppModel) {
@@ -38,12 +39,15 @@ extension TrackingIndicator {
             button.target = self
             button.action = #selector(toggle)
         }
-        let content = NSHostingController(rootView: MenuPanel(model: model)
-            .frame(width: 420).fixedSize(horizontal: false, vertical: true).tint(Palette.accent).controlSize(.large).buttonStyle(.bordered))
+        let content = NSHostingController(rootView: AppMenuContent(model: model, interface: model.interface))
         content.sizingOptions = [.preferredContentSize]
         popover.contentViewController = content
         popover.behavior = .transient
         popover.delegate = self
+        popover.appearance = model.interface.appearance
+        interfaceSubscription = model.interface.objectWillChange.receive(on: RunLoop.main).sink { [weak self] in
+            guard let self else { return }; popover.appearance = model.interface.appearance
+        }
         model.revealSuggestion = { [weak self] in self?.show() }
         model.dismissMenuPanel = { [weak self] in self?.popover.performClose(nil) }
         statusSubscription = Publishers.CombineLatest4(model.$connected, model.$connecting, model.$state, model.$workItems)
@@ -69,10 +73,16 @@ extension TrackingIndicator {
         timerSubscription = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
             .sink { [weak self] date in
                 guard let self, let button = statusItem.button else { return }
-                let elapsed = model.elapsed(at: date)
+                let elapsed = model.menuElapsed(at: date)
                 let clock = DurationText.clock(elapsed.isFinite ? min(max(0, elapsed), Double(Int32.max)) : 0)
                 button.title = " " + clock
                 button.setAccessibilityValue(clock)
+                if model.showsLocalTimer, let draft = model.offlineDrafts.active {
+                    let label = "Azure timetracker — Local tracking · " + draft.title + " · Not uploaded to 7pace"
+                    button.toolTip = label; button.setAccessibilityLabel(label)
+                } else {
+                    button.toolTip = lastStatusDescription; button.setAccessibilityLabel(lastStatusDescription)
+                }
             }
     }
 
@@ -94,10 +104,12 @@ extension TrackingIndicator {
     }
 
     @objc private func toggle() {
+        if model.showAppearanceOnboarding { model.revealWindow?(); return }
         if popover.isShown { popover.performClose(nil) } else { show() }
     }
 
     private func show() {
+        guard !model.showAppearanceOnboarding else { model.revealWindow?(); return }
         guard !popover.isShown, let button = statusItem.button else { return }
         // Give the panel keyboard focus even when a branch changed in another app.
         NSApp.activate(ignoringOtherApps: true)

@@ -2,6 +2,8 @@ import SwiftUI
 import AzureTimetrackerCore
 
 struct HolidaySettingsView: View {
+    @Environment(\.interfacePalette) private var palette
+
     @Binding var targets: WorkTargets
     @ViewState private var year = Calendar.current.component(.year, from: Date())
     @ViewState private var date = Date()
@@ -30,11 +32,11 @@ struct HolidaySettingsView: View {
                     Text(holiday.date, format: .dateTime.day().month(.wide).weekday(.abbreviated)).frame(width: 180, alignment: .leading)
                     Text(holiday.name); Spacer()
                     if targets.hours(weekday: Calendar.current.component(.weekday, from: holiday.date)) == 0 {
-                        Text("Set replacement date below").font(.caption).foregroundStyle(Palette.secondary)
+                        Text("Set replacement date below").font(.caption).foregroundStyle(palette.secondary)
                     }
                 }.font(.callout)
             }
-            Text("Replacement dates follow your employer’s arrangements. Add them below; the app does not assume the following Monday. Regional or company days off can also be added.").font(.callout).foregroundStyle(Palette.secondary)
+            Text("Replacement dates follow your employer’s arrangements. Add them below; the app does not assume the following Monday. Regional or company days off can also be added.").font(.callout).foregroundStyle(palette.secondary)
             Link("Belgian public holiday rules", destination: URL(string: "https://employment.belgium.be/en/themes/international/posting/working-conditions-be-respected-case-posting-belgium/public-holidays")!)
             Divider()
             Text("Add a date exception").font(.headline)
@@ -52,16 +54,16 @@ struct HolidaySettingsView: View {
                     let keys = Set(additions.map(\.id))
                     targets.exceptions.removeAll { keys.contains($0.id) }; targets.exceptions += additions
                 }.disabled(days.isEmpty || !hours.isFinite || !(0...24).contains(hours))
-                Text("Save changes below to apply.").font(.caption).foregroundStyle(Palette.secondary)
+                Text("Save changes below to apply.").font(.caption).foregroundStyle(palette.secondary)
             }
-            Text("Half-day leave halves your normal weekday hours. Custom hours override holidays too. Exceptions take priority over the weekly schedule.").font(.callout).foregroundStyle(Palette.secondary)
+            Text("Half-day leave halves your normal weekday hours. Custom hours override holidays too. Exceptions take priority over the weekly schedule.").font(.callout).foregroundStyle(palette.secondary)
             if !targets.exceptions.isEmpty {
                 Divider()
                 ForEach(targets.exceptions.sorted { $0.id < $1.id }) { item in
                     HStack {
                         Text(item.id).monospacedDigit(); Text(item.kind.rawValue)
                         if item.kind == .custom { Text(DurationText.short(item.hours * 3600)) }
-                        Text(item.note).foregroundStyle(Palette.secondary); Spacer()
+                        Text(item.note).foregroundStyle(palette.secondary); Spacer()
                         Button("Remove") { targets.exceptions.removeAll { $0.id == item.id } }.accessibilityLabel("Remove exception on " + item.id)
                     }.font(.callout)
                 }

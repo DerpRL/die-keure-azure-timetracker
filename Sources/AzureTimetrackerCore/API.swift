@@ -253,13 +253,14 @@ public struct AzureAPI: Sendable {
 /// A switch is stop → verified idle → start. No writes are retried: if a
 /// response is lost the caller must reconcile from the server first.
 public enum TrackingTransaction {
-    public static func switchTo(_ id: Int?, expectedIdentity: String, activityType: String?, remark: String?, expectedAttention: TrackingAttention? = nil, service: any TrackingService) async throws -> TrackingState {
+    public static func switchTo(_ id: Int?, expectedIdentity: String, activityType: String?, remark: String?, expectedAttention: TrackingAttention? = nil, service: any TrackingService, validateContext: @Sendable () async throws -> Void = {}) async throws -> TrackingState {
         guard id.map({ $0 > 0 && $0 <= Int32.max }) ?? (remark?.nonEmpty != nil) else {
             throw AppError.message("Choose a valid ticket or supply a tracking comment.")
         }
         let actual = try await service.current().checked()
         guard actual.identity == expectedIdentity else { throw AppError.remoteChanged }
         if let expectedAttention, TrackingAttention.from(actual)?.id != expectedAttention.id { throw AppError.remoteChanged }
+        try await validateContext()
         if actual.running, (actual.track?.tfsId.flatMap { $0 > 0 ? $0 : nil }) == id,
            activityType == nil || actual.track?.activityTypeId == activityType,
            remark == nil || actual.track?.remark == remark { return actual }
@@ -270,6 +271,7 @@ public enum TrackingTransaction {
             let stopped = try await service.stop().checked()
             guard !stopped.running else { throw AppError.message("7pace did not confirm that the current timer stopped. The new timer was not started.") }
         }
+        try await validateContext()
         let started = try await service.start(ticketID: id, activityType: activityType, remark: remark).checked()
         guard started.running, (started.track?.tfsId.flatMap { $0 > 0 ? $0 : nil }) == id else { throw AppError.message("7pace did not confirm the requested timer. Refresh before trying again.") }
         if let activityType, started.track?.activityTypeId != activityType {

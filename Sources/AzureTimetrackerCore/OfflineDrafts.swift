@@ -97,3 +97,13 @@ public enum OfflineSync {
         return pending
     }
 }
+
+/// Display policy only. Local time never participates in confirmed 7pace totals.
+public enum LocalTimerDisplay {
+    public static func isPrimary(local: OfflineDraft?, remoteRunning: Bool, remoteConfirmed: Bool) -> Bool {
+        local?.running == true && !(remoteRunning && remoteConfirmed)
+    }
+    public static func elapsed(_ draft: OfflineDraft, at now: Date) -> Double {
+        max(0, (draft.end ?? now).timeIntervalSince(draft.start))
+    }
+}

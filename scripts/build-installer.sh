@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 SOURCE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+source "$SOURCE_DIR/scripts/signing-config.sh"
 DELIVERY_DIR="${1:-$(dirname "$SOURCE_DIR")}"
 BUILD_DIR="${AZURE_TIME_BUILD_DIR:-$SOURCE_DIR/.build-distribution}"
 mkdir -p "$BUILD_DIR" "$DELIVERY_DIR"
@@ -36,6 +37,7 @@ fi
 bash "$SOURCE_DIR/scripts/sign-app.sh" "$APP"
 if [[ -n "${AZURE_TIME_SIGN_IDENTITY:-}" ]]; then
     SIGN_LABEL="signed-app"
+    if [[ "$AZURE_TIME_SIGN_KIND" == local ]]; then SIGN_LABEL="local-signed-app"; fi
     if [[ -n "${AZURE_TIME_INSTALLER_IDENTITY:-}" ]]; then SIGN_LABEL="signed"; fi
 fi
 plutil -lint "$APP/Contents/Info.plist"

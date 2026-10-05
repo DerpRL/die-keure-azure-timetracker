@@ -2,6 +2,8 @@ import SwiftUI
 import AzureTimetrackerCore
 
 struct TimeEditorView: View {
+    @Environment(\.interfacePalette) private var palette
+
     @ObservedObject var model: AppModel
     @ObservedObject var editor: TimeEditorModel
     @ViewState private var showHistory = false
@@ -16,51 +18,51 @@ struct TimeEditorView: View {
                     Button { Task { await editor.load() } } label: { Label("Refresh", systemImage: "arrow.clockwise") }
                 }.disabled(editor.working || editor.loading || model.busy)
                 HStack {
-                    Text("Select adjacent entries using the checkboxes or ⌘-click.").font(.callout).foregroundStyle(Palette.secondary)
+                    Text("Select adjacent entries using the checkboxes or ⌘-click.").font(.callout).foregroundStyle(palette.secondary)
                     Spacer()
                     Button("Merge selected…") { Task { await editor.beginMerge() } }.disabled(editor.selection.count < 2 || editor.working || model.busy)
                     Button("Gaps & overlaps…") { Task { await editor.loadCorrections(preferences: model.configuration.dayReview) } }
                         .disabled(editor.working || editor.loading || model.busy)
                     Button("Recent edits") { showHistory = true }
                 }
-                if editor.requiresReview { Label("An earlier change needs review. Open Recent edits before making another change.", systemImage: "exclamationmark.triangle.fill").foregroundStyle(Palette.warning) }
-                if let issue = editor.journalIssue { Label(issue, systemImage: "exclamationmark.triangle.fill").foregroundStyle(Palette.warning) }
+                if editor.requiresReview { Label("An earlier change needs review. Open Recent edits before making another change.", systemImage: "exclamationmark.triangle.fill").foregroundStyle(palette.warning) }
+                if let issue = editor.journalIssue { Label(issue, systemImage: "exclamationmark.triangle.fill").foregroundStyle(palette.warning) }
             }.padding(.horizontal, 28).padding(.vertical, 20)
             Divider()
             timeTable
                 .disabled(editor.loading)
                 .overlay {
-                    if editor.loading { ProgressView("Loading tracked time…").padding(24).background(Palette.background, in: RoundedRectangle(cornerRadius: 12)) }
+                    if editor.loading { ProgressView("Loading tracked time…").padding(24).background(palette.background, in: RoundedRectangle(cornerRadius: 12)) }
                     else if editor.visibleLogs.isEmpty {
                         Text(editor.configured || model.preview ? "No entries match this date or filter." : "Connect to 7pace in Settings to edit your recorded time.")
-                            .foregroundStyle(Palette.secondary).padding(32)
+                            .foregroundStyle(palette.secondary).padding(32)
                     }
                 }
             if editor.message != nil || editor.savedOverlapIssue != nil || !editor.savedConflicts.isEmpty || (editor.issue != nil && editor.selected == nil) {
                 Divider()
                 VStack(alignment: .leading, spacing: 10) {
-                    if let message = editor.message { Label(message, systemImage: "checkmark.circle.fill").foregroundStyle(Palette.accent) }
+                    if let message = editor.message { Label(message, systemImage: "checkmark.circle.fill").foregroundStyle(palette.accent) }
                     if !editor.savedConflicts.isEmpty || editor.savedOverlapIssue != nil {
                         DisclosureGroup {
                             ScrollView { overlapNotice(editor.savedConflicts, issue: editor.savedOverlapIssue, saved: true).frame(maxWidth: .infinity, alignment: .leading) }
                                 .frame(maxHeight: 150)
                         } label: {
                             Label(editor.savedConflicts.isEmpty ? "Overlap check incomplete" : "Saved with overlapping time", systemImage: "exclamationmark.triangle.fill")
-                                .foregroundStyle(Palette.warning)
+                                .foregroundStyle(palette.warning)
                         }
                     }
-                    if editor.selected == nil, let issue = editor.issue { Label(issue, systemImage: "exclamationmark.triangle.fill").foregroundStyle(Palette.warning).textSelection(.enabled) }
+                    if editor.selected == nil, let issue = editor.issue { Label(issue, systemImage: "exclamationmark.triangle.fill").foregroundStyle(palette.warning).textSelection(.enabled) }
                 }.padding(.horizontal, 28).padding(.vertical, 14)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .buttonStyle(.bordered).controlSize(.large)
         .sheet(isPresented: Binding(get: { editor.selected != nil || showHistory || editor.showCorrections }, set: { if !$0 { editor.cancel(); showHistory = false; editor.showCorrections = false } })) {
-            if editor.showCorrections { TimeCorrectionReview(model: model, editor: editor).interactiveDismissDisabled(editor.working) }
-            else if showHistory { recentEdits }
-            else if let log = editor.selected {
-                editSheet(log).interactiveDismissDisabled(editor.working || model.busy)
-            }
+            InterfaceSheet(interface: model.interface) {
+                if editor.showCorrections { TimeCorrectionReview(model: model, editor: editor) }
+                else if showHistory { recentEdits }
+                else if let log = editor.selected { editSheet(log) }
+            }.interactiveDismissDisabled(editor.working || model.busy)
         }
         .task(id: editor.connectionID) { if !model.preview { await editor.load() } }
         .onChange(of: editor.filter) { _, _ in editor.selection = [] }
@@ -78,7 +80,7 @@ struct TimeEditorView: View {
             TableColumn("Task") { log in
                 if let id = log.workItemId, id > 0 {
                     Button { model.showContext(id) } label: { Text(title(log)).lineLimit(2) }
-                        .buttonStyle(.plain).foregroundStyle(Palette.accent).help("Show ticket context")
+                        .buttonStyle(.plain).foregroundStyle(palette.accent).help("Show ticket context")
                         .accessibilityLabel("Show context for " + title(log))
                 } else { Text(title(log)).lineLimit(2) }
             }.width(min: 140, ideal: 190)
@@ -100,9 +102,9 @@ struct TimeEditorView: View {
             }.width(min: 100, ideal: 160)
             TableColumn("Action") { log in
                 if log.id == model.state?.track?.workLogId && model.state?.running == true {
-                    Label("Running", systemImage: "play.circle").foregroundStyle(Palette.warning)
+                    Label("Running", systemImage: "play.circle").foregroundStyle(palette.warning)
                 } else if log.isCanEdit == false {
-                    Label("Locked", systemImage: "lock").foregroundStyle(Palette.secondary).help("Locked by 7pace")
+                    Label("Locked", systemImage: "lock").foregroundStyle(palette.secondary).help("Locked by 7pace")
                 } else {
                     Button("Edit") { Task { await editor.select(log) } }
                         .disabled(editor.working || model.busy).accessibilityLabel("Edit time for " + title(log))
@@ -133,18 +135,18 @@ struct TimeEditorView: View {
         VStack(alignment: .leading, spacing: 10) {
             if !conflicts.isEmpty {
                 Label(saved ? "Saved with overlapping time" : "Overlapping time", systemImage: "exclamationmark.triangle.fill")
-                    .font(.headline).foregroundStyle(Palette.warning)
+                    .font(.headline).foregroundStyle(palette.warning)
                 ForEach(conflicts) { conflict in
                     VStack(alignment: .leading, spacing: 4) {
                         Text((conflict.ticketID.map { "#\($0) · " } ?? "") + conflict.title).font(.callout.weight(.semibold))
                         Text(conflict.start.formatted(date: .abbreviated, time: .shortened) + " → " + (conflict.active ? "still running" : conflict.end.formatted(date: .abbreviated, time: .shortened)) + " · " + DurationText.short(conflict.overlap) + " overlap")
-                            .font(.callout).foregroundStyle(Palette.secondary)
+                            .font(.callout).foregroundStyle(palette.secondary)
                     }
                 }
             }
-            if let issue { Label(issue, systemImage: "exclamationmark.triangle").foregroundStyle(Palette.warning) }
+            if let issue { Label(issue, systemImage: "exclamationmark.triangle").foregroundStyle(palette.warning) }
             Text(saved ? (conflicts.isEmpty ? "Your changes were saved. Check nearby entries in 7pace if needed." : "Your changes were saved. Overlapping entries were kept.") : "Overlaps are informational. You can still save without extra confirmation.")
-                .font(.callout).foregroundStyle(Palette.secondary)
+                .font(.callout).foregroundStyle(palette.secondary)
         }.fixedSize(horizontal: false, vertical: true)
     }
     private var recentEdits: some View {
@@ -153,16 +155,16 @@ struct TimeEditorView: View {
             Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    if editor.recentChanges.isEmpty { Text("Your confirmed edits, splits and merges will appear here.").foregroundStyle(Palette.secondary) }
+                    if editor.recentChanges.isEmpty { Text("Your confirmed edits, splits and merges will appear here.").foregroundStyle(palette.secondary) }
                     ForEach(editor.recentChanges) { change in
                         Card {
                             VStack(alignment: .leading, spacing: 10) {
                                 HStack {
                                     Text(change.title).font(.headline); Spacer()
-                                    Text(change.date.formatted(date: .abbreviated, time: .shortened)).font(.caption).foregroundStyle(Palette.secondary)
+                                    Text(change.date.formatted(date: .abbreviated, time: .shortened)).font(.caption).foregroundStyle(palette.secondary)
                                 }
                                 Text(change.status == .complete ? "Ready to undo" : change.status == .undone ? "Undone" : change.status == .reviewed ? "Reviewed" : "Needs review")
-                                    .foregroundStyle(change.status == .needsReview ? Palette.warning : Palette.accent)
+                                    .foregroundStyle(change.status == .needsReview ? palette.warning : palette.accent)
                                 Text(change.detail).font(.callout).textSelection(.enabled)
                                 DisclosureGroup("Affected entries") {
                                     ForEach(change.before) { entry in
@@ -179,7 +181,7 @@ struct TimeEditorView: View {
                                 if change.status == .complete {
                                     Button("Undo…") { editor.beginUndo(change); showHistory = false }.disabled(editor.requiresReview || editor.working || model.busy)
                                 } else if change.status == .needsReview || change.status == .applying {
-                                    Text("Compare the affected entries in 7pace before acknowledging. This acknowledgment does not undo or retry anything.").font(.caption).foregroundStyle(Palette.secondary)
+                                    Text("Compare the affected entries in 7pace before acknowledging. This acknowledgment does not undo or retry anything.").font(.caption).foregroundStyle(palette.secondary)
                                     if let url = try? Endpoint.sevenPace(model.configuration.sevenPaceURL) { Link("Open 7pace", destination: url) }
                                     Button("I checked the entries in 7pace") { editor.acknowledge(change) }.disabled(editor.working || model.busy)
                                 }
@@ -188,7 +190,7 @@ struct TimeEditorView: View {
                     }
                 }.padding(24)
             }
-        }.frame(width: 780, height: 620).background(Palette.background).buttonStyle(.bordered).controlSize(.large)
+        }.frame(width: 780, height: 620).background(palette.background).buttonStyle(.bordered).controlSize(.large)
     }
     private func editSheet(_ log: WorkLog) -> some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -208,7 +210,7 @@ struct TimeEditorView: View {
                             Text("Remove idle time").tag(false)
                             Text("Separate into its own entry").tag(true)
                         }.pickerStyle(.segmented)
-                        Text("Work before and after the interval stays recorded. The timer is paused; resume it when you are ready.").font(.callout).foregroundStyle(Palette.secondary)
+                        Text("Work before and after the interval stays recorded. The timer is paused; resume it when you are ready.").font(.callout).foregroundStyle(palette.secondary)
                         if editor.separateIdle {
                             TextField("Ticket number (optional)", text: $editor.secondTicket).textFieldStyle(.roundedBorder)
                             TextField("Comment for the separate entry", text: $editor.secondComment).textFieldStyle(.roundedBorder)
@@ -246,26 +248,26 @@ struct TimeEditorView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text((draft.ticketID.map { "#\($0)" } ?? "No Azure ticket") + " · " + DurationText.short(Double(draft.seconds))).font(.headline)
                                 Text(draft.start.formatted(date: .abbreviated, time: .shortened) + " → " + draft.edit.end.formatted(date: .abbreviated, time: .shortened)).font(.callout)
-                                Text("Billable: " + DurationText.short(Double(draft.billableSeconds))).font(.caption).foregroundStyle(Palette.secondary)
+                                Text("Billable: " + DurationText.short(Double(draft.billableSeconds))).font(.caption).foregroundStyle(palette.secondary)
                             }
                         }
-                        if editor.mode == .merge { Text("The first entry is extended and the other selected entries are removed. Total recorded and billable time stay the same.").font(.callout).foregroundStyle(Palette.secondary) }
-                        if editor.mode == .undo { Text("Restores the previous values after checking for newer changes. Removed entries are recreated with new IDs; their original server audit timestamps cannot be restored.").font(.callout).foregroundStyle(Palette.secondary) }
+                        if editor.mode == .merge { Text("The first entry is extended and the other selected entries are removed. Total recorded and billable time stay the same.").font(.callout).foregroundStyle(palette.secondary) }
+                        if editor.mode == .undo { Text("Restores the previous values after checking for newer changes. Removed entries are recreated with new IDs; their original server audit timestamps cannot be restored.").font(.callout).foregroundStyle(palette.secondary) }
                     }
                     if let issue = editor.validationIssue {
-                        Label(issue, systemImage: "exclamationmark.triangle").foregroundStyle(Palette.warning)
+                        Label(issue, systemImage: "exclamationmark.triangle").foregroundStyle(palette.warning)
                     } else if let review = editor.review {
                         Divider()
                         if review.conflicts.isEmpty && review.overlapIssue == nil {
-                            Label("No overlapping entries found", systemImage: "checkmark.circle").foregroundStyle(Palette.accent)
+                            Label("No overlapping entries found", systemImage: "checkmark.circle").foregroundStyle(palette.accent)
                         } else { overlapNotice(review.conflicts, issue: review.overlapIssue) }
                     } else if !loadedConflicts.isEmpty {
                         Divider()
                         overlapNotice(loadedConflicts, issue: nil)
                     }
                     Text("Overlaps are checked again when saving. Check overlaps is optional and also includes entries from other dates.")
-                        .font(.callout).foregroundStyle(Palette.secondary)
-                    if let issue = editor.issue { Label(issue, systemImage: "exclamationmark.triangle.fill").foregroundStyle(Palette.warning).textSelection(.enabled) }
+                        .font(.callout).foregroundStyle(palette.secondary)
+                    if let issue = editor.issue { Label(issue, systemImage: "exclamationmark.triangle.fill").foregroundStyle(palette.warning).textSelection(.enabled) }
                     if editor.working || model.busy { ProgressView("Checking 7pace…") }
                 }.disabled(editor.working || model.busy || editor.needsReload).padding(24).frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -279,26 +281,28 @@ struct TimeEditorView: View {
                 Button("Check overlaps") { Task { await editor.checkChanges() } }
                     .disabled(model.busy || editor.working || editor.needsReload || editor.validationIssue != nil)
                 Button(editor.mode == .guided ? "Apply correction" : editor.mode == .edit ? "Save time changes" : editor.mode == .split ? "Split entry" : editor.mode == .merge ? "Merge entries" : "Undo change") { Task { await model.saveTimeEdit() } }
-                    .buttonStyle(.borderedProminent).tint(Palette.action).foregroundStyle(.white).keyboardShortcut(.defaultAction)
+                    .buttonStyle(.borderedProminent).tint(palette.action).foregroundStyle(.white).keyboardShortcut(.defaultAction)
                     .disabled(model.preview || model.busy || editor.working || editor.needsReload || editor.requiresReview || editor.journalIssue != nil || editor.validationIssue != nil)
             }.padding(24)
         }
         .frame(width: 780, height: 620)
-        .background(Palette.background)
+        .background(palette.background)
         .buttonStyle(.bordered).controlSize(.large)
     }
 
 }
 
 struct TrackingAttentionPrompt: View {
+    @Environment(\.interfacePalette) private var palette
+
     @ObservedObject var model: AppModel
     let prompt: TrackingAttention
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label(prompt.heading, systemImage: "clock.badge.exclamationmark").font(.headline).foregroundStyle(Palette.warning)
+            Label(prompt.heading, systemImage: "clock.badge.exclamationmark").font(.headline).foregroundStyle(palette.warning)
             Text((prompt.ticketID.map { "#\($0) · " } ?? "") + (prompt.ticketID.flatMap { model.workItems[$0]?.title } ?? prompt.title))
                 .font(.callout.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
-            Text(prompt.detail).font(.callout).foregroundStyle(Palette.secondary)
+            Text(prompt.detail).font(.callout).foregroundStyle(palette.secondary)
             HStack {
                 Button(prompt.stopped ? "Keep stopped" : "Stop tracking") {
                     if prompt.stopped { model.keepAttentionStopped() }
@@ -306,7 +310,7 @@ struct TrackingAttentionPrompt: View {
                 }
                 Spacer()
                 Button(prompt.stopped ? "Continue…" : "Continue tracking") { Task { await model.continueTrackingAttention() } }
-                    .buttonStyle(.borderedProminent).tint(Palette.action).foregroundStyle(.white)
+                    .buttonStyle(.borderedProminent).tint(palette.action).foregroundStyle(.white)
             }.disabled(model.busy || !model.connected)
         }
     }

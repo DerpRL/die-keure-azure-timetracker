@@ -3,6 +3,8 @@ import Charts
 import AzureTimetrackerCore
 
 struct TicketContextView: View {
+    @Environment(\.interfacePalette) private var palette
+
     @ObservedObject var model: AppModel
     @ObservedObject var context: TicketContextModel
     let ticketID: Int
@@ -19,7 +21,7 @@ struct TicketContextView: View {
                 VStack(alignment: .leading, spacing: 22) {
                     if context.loading { ProgressView("Loading ticket details…") }
                     if let issue = context.issue {
-                        Label(issue, systemImage: "exclamationmark.triangle").foregroundStyle(Palette.warning)
+                        Label(issue, systemImage: "exclamationmark.triangle").foregroundStyle(palette.warning)
                         Button("Retry") { Task { await context.load(ticketID) } }
                     }
                     if let details = context.details, details.id == ticketID {
@@ -39,12 +41,12 @@ struct TicketContextView: View {
                     }
                 }.padding(24).frame(maxWidth: .infinity, alignment: .leading)
             }
-        }.frame(width: 780, height: 620).background(Palette.background)
+        }.frame(width: 780, height: 620).background(palette.background)
             .buttonStyle(.bordered).controlSize(.large)
             .task(id: ticketID) { await context.load(ticketID) }
     }
     private func contextRow(_ name: String, _ value: String) -> some View {
-        GridRow { Text(name).foregroundStyle(Palette.secondary); Text(value.nonEmpty ?? "Not set").textSelection(.enabled) }
+        GridRow { Text(name).foregroundStyle(palette.secondary); Text(value.nonEmpty ?? "Not set").textSelection(.enabled) }
     }
     private func section(_ title: String, _ text: String) -> some View {
         VStack(alignment: .leading, spacing: 10) { AppSectionHeading(title); Text(text.nonEmpty ?? "No details provided.").textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
@@ -52,6 +54,8 @@ struct TicketContextView: View {
 }
 
 struct ContextInsightsView: View {
+    @Environment(\.interfacePalette) private var palette
+
     let data: ContextInsights
     var period: StatisticsPeriod = .week
     private var chartDays: [ContextDay] {
@@ -70,21 +74,23 @@ struct ContextInsightsView: View {
                 }
                 if period != .day { Chart(chartDays) { day in
                     BarMark(x: .value("Day", day.date, unit: period == .year ? .month : .day), y: .value("Switches", day.switches))
-                        .foregroundStyle(Palette.accent).cornerRadius(4)
+                        .foregroundStyle(palette.accent).cornerRadius(4)
                         .accessibilityLabel(day.date.formatted(date: .abbreviated, time: .omitted)).accessibilityValue("\(day.switches) task switches")
                 }.frame(height: 150).chartYAxis { AxisMarks(values: .automatic(desiredCount: 4)) } }
                 Text("Inferred from recorded entries, not a measure of concentration. A switch changes ticket (or ticket-free activity/comment) within 15 minutes. Adjacent entries on the same task form one block; longer breaks and overlapping entries interrupt the sequence.")
-                    .font(.caption).foregroundStyle(Palette.secondary)
-                if data.ambiguousEntries > 0 { Label("\(data.ambiguousEntries) invalid or overlapping segments excluded.", systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(Palette.warning) }
+                    .font(.caption).foregroundStyle(palette.secondary)
+                if data.ambiguousEntries > 0 { Label("\(data.ambiguousEntries) invalid or overlapping segments excluded.", systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(palette.warning) }
             }
         }
     }
     private func metric(_ title: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 5) { Text(value).font(.title2.weight(.semibold)).monospacedDigit(); Text(title).font(.caption).foregroundStyle(Palette.secondary) }
+        VStack(alignment: .leading, spacing: 5) { Text(value).font(.title2.weight(.semibold)).monospacedDigit(); Text(title).font(.caption).foregroundStyle(palette.secondary) }
     }
 }
 
 struct WeeklyReportView: View {
+    @Environment(\.interfacePalette) private var palette
+
     @ObservedObject var model: AppModel
     @ObservedObject var report: WeeklyReportModel
     @ViewState private var confirmReplace = false
@@ -102,20 +108,20 @@ struct WeeklyReportView: View {
             HStack {
                 Button(report.text.isEmpty ? "Generate draft" : "Regenerate draft…") {
                     if report.text.isEmpty { generate() } else { confirmReplace = true }
-                }.buttonStyle(.borderedProminent).tint(Palette.action).disabled(!report.hasData || report.loading)
+                }.buttonStyle(.borderedProminent).tint(palette.action).disabled(!report.hasData || report.loading)
                 if report.loading { ProgressView().controlSize(.small) }
-                if let date = report.syncedAt { Text("Time loaded " + date.formatted(date: .omitted, time: .shortened)).font(.caption).foregroundStyle(Palette.secondary) }
+                if let date = report.syncedAt { Text("Time loaded " + date.formatted(date: .omitted, time: .shortened)).font(.caption).foregroundStyle(palette.secondary) }
                 Spacer()
                 Button("Copy") { report.copy() }.disabled(report.text.isEmpty)
                 Button("Export Markdown…") { report.export() }.disabled(report.text.isEmpty)
             }
-            if let issue = report.issue { Label(issue, systemImage: "exclamationmark.triangle").foregroundStyle(Palette.warning) }
-            if let issue = report.storageIssue { Label(issue, systemImage: "exclamationmark.triangle").foregroundStyle(Palette.warning) }
-            if !report.configured && !model.preview { Text("Connect to 7pace in Settings to generate a draft.").foregroundStyle(Palette.secondary) }
+            if let issue = report.issue { Label(issue, systemImage: "exclamationmark.triangle").foregroundStyle(palette.warning) }
+            if let issue = report.storageIssue { Label(issue, systemImage: "exclamationmark.triangle").foregroundStyle(palette.warning) }
+            if !report.configured && !model.preview { Text("Connect to 7pace in Settings to generate a draft.").foregroundStyle(palette.secondary) }
             TextEditor(text: $report.text).font(.system(.body, design: .monospaced))
-                .padding(10).background(Palette.card).overlay(RoundedRectangle(cornerRadius: 10).stroke(Palette.line))
+                .padding(10).background(palette.card).overlay(RoundedRectangle(cornerRadius: 10).stroke(palette.line))
                 .accessibilityLabel("Editable weekly status report")
-            Text(report.message ?? "Edits are saved locally as you type. Copy or export when ready; nothing is sent automatically.").font(.callout).foregroundStyle(Palette.secondary)
+            Text(report.message ?? "Edits are saved locally as you type. Copy or export when ready; nothing is sent automatically.").font(.callout).foregroundStyle(palette.secondary)
         }.padding(28).frame(maxWidth: .infinity, maxHeight: .infinity)
             .task(id: report.range) { await report.load() }
             .task(id: report.syncedAt) {

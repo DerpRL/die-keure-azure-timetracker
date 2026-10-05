@@ -11,6 +11,17 @@ public struct Repository: Codable, Identifiable, Equatable, Sendable {
 }
 
 public struct Configuration: Codable, Equatable, Sendable {
+    public var figmaDetection: FigmaPreferences?
+    public var figma: FigmaPreferences {
+        get { figmaDetection ?? FigmaPreferences() }
+        set { figmaDetection = newValue }
+    }
+    public var interfacePreferences: InterfacePreferences?
+    public var interfaceSetupCompleted: Bool?
+    public var interface: InterfacePreferences {
+        get { interfacePreferences ?? InterfacePreferences() }
+        set { interfacePreferences = newValue }
+    }
     public var organization = ""
     public var project = ""
     public var sevenPaceURL = ""

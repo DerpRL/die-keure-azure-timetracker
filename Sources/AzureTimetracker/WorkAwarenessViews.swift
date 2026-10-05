@@ -4,16 +4,18 @@ import UniformTypeIdentifiers
 import AzureTimetrackerCore
 
 struct WorkAwarenessPrompts: View {
+    @Environment(\.interfacePalette) private var palette
+
     @ObservedObject var model: AppModel
     var body: some View {
         if let prompt = model.workAwareness.idle.pending {
             Card {
                 VStack(alignment: .leading, spacing: 12) {
-                    Label("Review time away", systemImage: "moon.zzz.fill").font(.headline).foregroundStyle(Palette.warning)
+                    Label("Review time away", systemImage: "moon.zzz.fill").font(.headline).foregroundStyle(palette.warning)
                     Text(prompt.session.title).font(.callout.weight(.semibold))
                     Text(prompt.reason + " · " + DurationText.short(prompt.seconds)).font(.callout)
                     Text(prompt.start.formatted(date: .omitted, time: .shortened) + " – " + (prompt.end ?? prompt.start).formatted(date: .omitted, time: .shortened)).monospacedDigit()
-                    Text("Keep the recorded time, or pause now and preview removing or separating this interval. Nothing is edited until you save.").font(.callout).foregroundStyle(Palette.secondary)
+                    Text("Keep the recorded time, or pause now and preview removing or separating this interval. Nothing is edited until you save.").font(.callout).foregroundStyle(palette.secondary)
                     ViewThatFits {
                         HStack { idleActions(prompt) }
                         VStack(alignment: .leading) { idleActions(prompt) }
@@ -25,7 +27,7 @@ struct WorkAwarenessPrompts: View {
             Card {
                 VStack(alignment: .leading, spacing: 10) {
                     Label("Saved idle-time review", systemImage: "clock.badge.exclamationmark").font(.headline)
-                    Text("Review the detected interval before changing recorded time. Your timer may already be paused.").font(.callout).foregroundStyle(Palette.secondary)
+                    Text("Review the detected interval before changing recorded time. Your timer may already be paused.").font(.callout).foregroundStyle(palette.secondary)
                     Button("Open correction preview…") { Task { await model.openIdleCorrection(pending) } }.disabled(model.busy || !model.connected)
                     Button("Keep recorded time") { model.discardIdleCorrection() }.disabled(model.busy)
                 }
@@ -34,10 +36,10 @@ struct WorkAwarenessPrompts: View {
         if let reminder = model.forgottenTimer.pending {
             Card {
                 VStack(alignment: .leading, spacing: 12) {
-                    Label("Working without a timer?", systemImage: "timer").font(.headline).foregroundStyle(Palette.warning)
+                    Label("Working without a timer?", systemImage: "timer").font(.headline).foregroundStyle(palette.warning)
                     Text("You’ve been active in selected work apps, including " + reminder.appName + ", with no timer running.").font(.callout)
                     if !model.forgottenTickets.isEmpty {
-                        Text("Tickets on your watched branches").font(.caption).foregroundStyle(Palette.secondary)
+                        Text("Tickets on your watched branches").font(.caption).foregroundStyle(palette.secondary)
                         ForEach(Array(model.forgottenTickets.prefix(4).enumerated()), id: \.offset) { _, item in
                             Button(item.repository + " · #" + String(item.ticket)) {
                                 Task { await model.chooseActivity(for: item.ticket, requiresIdle: true, inMenuBar: true) }
@@ -49,7 +51,7 @@ struct WorkAwarenessPrompts: View {
                         Button("Snooze 15 min") { model.deferForgottenTimer(untilTomorrow: false) }
                         Button("Ignore today") { model.deferForgottenTimer(untilTomorrow: true) }
                     }
-                    Text("Starting tracks from now. Use the Time editor to review earlier gaps.").font(.caption).foregroundStyle(Palette.secondary)
+                    Text("Starting tracks from now. Use the Time editor to review earlier gaps.").font(.caption).foregroundStyle(palette.secondary)
                 }
             }
         }
@@ -57,12 +59,14 @@ struct WorkAwarenessPrompts: View {
     @ViewBuilder private func idleActions(_ prompt: IdlePeriod) -> some View {
         Button("Keep time") { model.keepIdleTime() }.disabled(model.busy)
         Button("Pause & review…") { Task { await model.reviewIdleTime(prompt) } }
-            .buttonStyle(.borderedProminent).tint(Palette.action).foregroundStyle(.white)
+            .buttonStyle(.borderedProminent).tint(palette.action).foregroundStyle(.white)
             .disabled(model.busy || model.connectionHealth != .confirmed || model.timeEditor.working)
     }
 }
 
 struct WorkAwarenessSettings: View {
+    @Environment(\.interfacePalette) private var palette
+
     @Binding var preferences: WorkAwarenessPreferences
     @ViewState private var appIssue: String?
     var body: some View {
@@ -73,17 +77,17 @@ struct WorkAwarenessSettings: View {
                 .disabled(!preferences.idleEnabled)
             Toggle("Detect screen lock, sleep and inactive sessions", isOn: $preferences.lockEnabled)
             Text("A prompt appears when you return. Reading without input may count as idle; detected meetings suppress passive inactivity prompts. Your timer keeps running until you choose an action.")
-                .font(.callout).foregroundStyle(Palette.secondary)
+                .font(.callout).foregroundStyle(palette.secondary)
             Divider()
             Toggle("Remind me when I work without a timer", isOn: $preferences.forgottenEnabled)
             Stepper("Remind after \(preferences.forgottenMinutes) active minutes", value: $preferences.forgottenMinutes, in: 1...120)
                 .disabled(!preferences.forgottenEnabled)
             Text("Uses the workday start/end times in Day review and your scheduled working days. Paused tracking, detected meetings and a running offline draft suppress reminders.")
-                .font(.callout).foregroundStyle(Palette.secondary)
+                .font(.callout).foregroundStyle(palette.secondary)
             Text("Work applications").font(.headline)
             ForEach(preferences.workAppIDs, id: \.self) { id in
                 HStack {
-                    VStack(alignment: .leading) { Text(appName(id)); Text(NSWorkspace.shared.urlForApplication(withBundleIdentifier: id) == nil ? "Not currently installed" : "Included in work detection").font(.caption).foregroundStyle(Palette.secondary) }
+                    VStack(alignment: .leading) { Text(appName(id)); Text(NSWorkspace.shared.urlForApplication(withBundleIdentifier: id) == nil ? "Not currently installed" : "Included in work detection").font(.caption).foregroundStyle(palette.secondary) }
                     Spacer()
                     Button { preferences.workAppIDs.removeAll { $0 == id } } label: { Label("Remove", systemImage: "minus.circle") }
                         .accessibilityLabel("Remove " + appName(id) + " from work apps")
@@ -99,9 +103,9 @@ struct WorkAwarenessSettings: View {
                     }
                 }
             }
-            if let appIssue { Text(appIssue).foregroundStyle(Palette.warning) }
+            if let appIssue { Text(appIssue).foregroundStyle(palette.warning) }
             Text("Only elapsed input inactivity and the foreground app’s identity are read. No keystrokes, window titles, documents or screenshots are collected. Lock events use macOS notifications with sleep/session fallback.")
-                .font(.callout).foregroundStyle(Palette.secondary)
+                .font(.callout).foregroundStyle(palette.secondary)
         }
     }
     private func appName(_ id: String) -> String {

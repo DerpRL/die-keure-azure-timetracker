@@ -4,14 +4,14 @@ import Combine
 import ServiceManagement
 
 enum AppPage: String, CaseIterable, Identifiable {
-    case overview = "Overview", dayReview = "Day review", agenda = "Agenda", statistics = "Statistics", weeklyReport = "Weekly report", history = "History", timeEditor = "Time editor", repositories = "Repositories", settings = "Settings", offlineDrafts = "Offline drafts"
+    case overview = "Overview", dayReview = "Day review", agenda = "Agenda", statistics = "Statistics", weeklyReport = "Weekly report", history = "History", timeEditor = "Time editor", repositories = "Repositories", settings = "Settings", figma = "Figma", offlineDrafts = "Offline drafts"
     var id: String { rawValue }
     var symbol: String {
-        switch self { case .overview: "square.grid.2x2"; case .dayReview: "checklist"; case .statistics: "chart.bar.xaxis"; case .history: "clock.arrow.circlepath"; case .timeEditor: "square.and.pencil"; case .weeklyReport: "doc.text"; case .agenda: "calendar"; case .repositories: "point.3.connected.trianglepath.dotted"; case .settings: "gearshape"; case .offlineDrafts: "internaldrive" }
+        switch self { case .overview: "square.grid.2x2"; case .dayReview: "checklist"; case .statistics: "chart.bar.xaxis"; case .history: "clock.arrow.circlepath"; case .timeEditor: "square.and.pencil"; case .weeklyReport: "doc.text"; case .agenda: "calendar"; case .repositories: "point.3.connected.trianglepath.dotted"; case .settings: "gearshape"; case .figma: "square.stack.3d.up"; case .offlineDrafts: "internaldrive" }
     }
 }
 
-struct TrackingDraft: Identifiable {
+struct TrackingDraft: Identifiable, Sendable {
     let id = UUID()
     let item: WorkItem?
     let change: BranchChange?
@@ -19,7 +19,12 @@ struct TrackingDraft: Identifiable {
     var microphoneSession: MicrophoneSession? = nil
     var attention: TrackingAttention? = nil
     var standup = false
-    var title: String { item?.title ?? attention?.title ?? resume?.remark ?? (standup ? "Daily standup" : "Meeting") }
+    var manual: ManualTrackingKind? = nil
+    var figmaSuggestion: FigmaSuggestion? = nil
+    var figmaFile: String? = nil
+    var figmaScope: String? = nil
+    var isFigma: Bool { figmaSuggestion != nil || figmaFile != nil }
+    var title: String { item?.title ?? attention?.title ?? resume?.remark ?? manual?.label ?? (standup ? "Daily standup" : "Meeting") }
     var remark: String? { microphoneSession.map { standup ? StandupActivity.remark : "Meeting · " + $0.owner.name } ?? attention?.remark ?? resume?.remark }
     var meeting: MeetingEvent? = nil
     var resume: PausedSession? = nil
@@ -71,6 +76,13 @@ struct TrackingDraft: Identifiable {
     @Published var selectedMeeting: MeetingEvent?
     @Published var pendingMeetings: [MeetingEvent] = []
     @Published var pendingMicrophoneSessions: [MicrophoneSession] = []
+    let figma = FigmaService()
+    @Published var figmaStore = FigmaStore()
+    @Published var figmaStorageIssue: String?
+    @Published var selectedFigmaSuggestion: FigmaSuggestion?
+    var skipFigmaPrefill = false
+    var figmaActivation = FigmaActivation()
+    var currentFigmaScope = ""
     let microphone = MicrophoneService()
     @Published var microphoneTracking = MicrophoneTrackingMonitor()
     private var slackReminders: [String: Date] = [:]
@@ -85,9 +97,17 @@ struct TrackingDraft: Identifiable {
     @Published var hasAzurePAT = false
     @Published var hasSevenPaceToken = false
     let calendar = CalendarService()
+    let interface = InterfaceController()
+    @Published private(set) var showAppearanceOnboarding = false
     let updates = AppUpdateModel()
     let statistics = StatisticsModel()
     let offlineDrafts = OfflineDraftModel()
+    private var offlineObservation: AnyCancellable?
+    var showsLocalTimer: Bool { LocalTimerDisplay.isPrimary(local: offlineDrafts.active, remoteRunning: state?.running == true, remoteConfirmed: connected && connectionHealth == .confirmed) }
+    func menuElapsed(at date: Date) -> Double {
+        if showsLocalTimer, let draft = offlineDrafts.active { return LocalTimerDisplay.elapsed(draft, at: date) }
+        return elapsed(at: date)
+    }
     let dayReview = DayReviewModel()
     let pinPairing = PinPairingModel()
     let timeEditor = TimeEditorModel()
@@ -157,14 +177,19 @@ struct TrackingDraft: Identifiable {
     init() {
         var initial = SavedState()
         var loadError: String?
+        var hasSavedSettings = false
         do {
-            if let saved = try store.load() { initial = saved }
+            if let saved = try store.load() { initial = saved; hasSavedSettings = true }
             else { discoverOnStart = true }
         } catch {
             loadError = "Saved settings could not be read. The original file has been preserved: \(error.localizedDescription)"
             canPersist = false
         }
         configuration = initial.configuration; pending = initial.pending; audit = initial.audit
+        showAppearanceOnboarding = loadError == nil && InterfacePreferences.needsOnboarding(hasSavedSettings: hasSavedSettings, completed: configuration.interfaceSetupCompleted)
+        configuration.interfaceSetupCompleted = !showAppearanceOnboarding
+        interface.apply(configuration.interface)
+        if preview { showAppearanceOnboarding = false }
         pausedSession = initial.pausedSession
         meetingReturn = initial.meetingReturn
         workAwareness = initial.workAwareness ?? WorkAwarenessLedger()
@@ -185,9 +210,12 @@ struct TrackingDraft: Identifiable {
         dayReviews = initial.dayReviews ?? [:]
         attentionNotified = initial.attentionNotified ?? [:]
         attentionDismissed = initial.attentionDismissed ?? [:]
+        figmaStore = initial.figmaStore ?? FigmaStore()
+        figma.observed = { [weak self] result, date in self?.observeFigma(result, at: date) }
         microphone.changed = { [weak self] in self?.syncMicrophone() }
         error = loadError
         offlineDrafts.configure(nil, workspace: workspaceIdentity)
+        offlineObservation = offlineDrafts.objectWillChange.receive(on: RunLoop.main).sink { [weak self] in self?.objectWillChange.send() }
         offlineDrafts.didSync = { [weak self] in
             guard let self else { return }
             self.statistics.invalidate(); self.dayReview.invalidate()
@@ -202,6 +230,11 @@ struct TrackingDraft: Identifiable {
                 if change.ticketID == nil && !change.suggestsBreak { self.showTicketPicker = true }
             }
         }
+        notifications.figmaAction = { [weak self] action, id in
+            guard let self, let proposal = self.figmaSuggestions.first(where: { $0.id == id }) else { return }
+            if action == "figma-keep" { self.keepFigma(proposal) }
+            else { self.beginFigmaTracking(proposal, useLinkedTicket: action != "figma-other") }
+        }
         notifications.issue = { [weak self] message in self?.error = message }
         notifications.openDayReview = { [weak self] in self?.openDayReview() }
         notifications.openTrackingAttention = { [weak self] in
@@ -210,6 +243,8 @@ struct TrackingDraft: Identifiable {
         if preview { notice = "Preview mode · no network requests or tracking changes" }
         #if UI_PREVIEW
         prepareInterfacePreview()
+        showAppearanceOnboarding = ProcessInfo.processInfo.arguments.contains("--preview-onboarding")
+        interface.apply(configuration.interface)
         discoverOnStart = false
         #endif
     }
@@ -222,7 +257,7 @@ struct TrackingDraft: Identifiable {
     }
 
     func start() {
-        guard loop == nil else { return }
+        guard loop == nil, !showAppearanceOnboarding else { return }
         updates.start(preview: preview, automatic: configuration.checksForUpdates)
         if discoverOnStart {
             discoverOnStart = false
@@ -237,7 +272,7 @@ struct TrackingDraft: Identifiable {
                 persist()
             }
         }
-        configureMicrophone()
+        configureMicrophone(); configureFigma()
         if !preview { presence.changed = { [weak self] in self?.checkWorkAwareness() }; presence.start() }
         loop = Task { [weak self] in
             guard let self else { return }
@@ -272,8 +307,23 @@ struct TrackingDraft: Identifiable {
 
     @discardableResult func persist() -> Bool {
         guard canPersist, !preview else { return false }
-        do { try store.save(SavedState(configuration: configuration, audit: audit, pending: pending, meetingReminders: meetingEngine.seen, pausedSession: pausedSession, meetingReturn: meetingReturn, workAwareness: workAwareness, ticketCompletion: ticketCompletion, microphoneTracking: microphoneTracking, quickTickets: quickTickets, slackReminders: slackReminders, dayReviews: dayReviews, attentionNotified: attentionNotified, attentionDismissed: attentionDismissed)); return true }
+        do { try store.save(SavedState(configuration: configuration, audit: audit, pending: pending, meetingReminders: meetingEngine.seen, pausedSession: pausedSession, meetingReturn: meetingReturn, workAwareness: workAwareness, ticketCompletion: ticketCompletion, microphoneTracking: microphoneTracking, quickTickets: quickTickets, slackReminders: slackReminders, dayReviews: dayReviews, attentionNotified: attentionNotified, attentionDismissed: attentionDismissed, figmaStore: figmaStore)); return true }
         catch { self.error = "Could not save local settings: \(error.localizedDescription)"; return false }
+    }
+    func setInterfacePreferences(_ preferences: InterfacePreferences) {
+        let previous = configuration.interface
+        configuration.interface = preferences
+        if !preview, !persist() { configuration.interface = previous; return }
+        interface.apply(preferences)
+    }
+    func finishAppearanceOnboarding() {
+        figma.refreshPermission()
+        guard !configuration.figma.enabled || figma.hasAccess else { error = "Allow Accessibility for Figma detection, or turn Figma detection off to continue."; return }
+        configuration.interfaceSetupCompleted = true
+        if !preview, !persist() { configuration.interfaceSetupCompleted = false; return }
+        showAppearanceOnboarding = false
+        page = .settings
+        start()
     }
     func installUpdate() {
         guard !busy, !timeEditor.working, !offlineDrafts.working, !pinPairing.busy, !preview else {
@@ -305,6 +355,7 @@ struct TrackingDraft: Identifiable {
         api = nil; azure = nil; state = nil; connected = false; lastSync = nil
         logs = []; todayLogs = []; progressLogs = []; progressLastSync = nil; progressWeek = nil; loadingProgress = false; historyLoaded = false; workItems = [:]; activityTypes = []
         trackingDraft = nil; showTicketPicker = false; menuTracking = false; loadingTicketIDs = []; selectedMeeting = nil
+        selectedFigmaSuggestion = nil; skipFigmaPrefill = false
         microphoneTracking.restrict(to: configuration.microphone.apps, workspace: workspaceIdentity)
         if pausedSession?.workspace != workspaceIdentity { pausedSession = nil; persist() }
         if meetingReturn?.workspace != workspaceIdentity { meetingReturn = nil; persist() }
@@ -475,11 +526,16 @@ struct TrackingDraft: Identifiable {
                 let url = try Endpoint.sevenPace(draft.sevenPaceURL)
                 try SecretStore.save(token, account: SecretStore.account(kind: "7pace", scope: url.host!))
             }
-            configuration = draft
+            var updated = draft
+            // Appearance choices apply immediately; an older Settings draft must not overwrite them.
+            updated.figma = configuration.figma
+            updated.interface = configuration.interface
+            updated.interfaceSetupCompleted = configuration.interfaceSetupCompleted
+            configuration = updated
             updates.automaticChecks = draft.checksForUpdates
             // Saving account settings invalidates previous decisions and snapshots.
             notifications.remove(pending.map(\.id)); pending = []; debouncer = BranchDebouncer()
-            persist(); refreshCalendar(); configureMicrophone()
+            persist(); refreshCalendar(); configureMicrophone(); configureFigma()
             if draft.notificationsEnabled { notificationAuthorized = await notifications.enable() }
             await connect()
             return true
@@ -591,27 +647,60 @@ struct TrackingDraft: Identifiable {
     func beginMenuTracking(_ change: BranchChange? = nil) {
         guard change?.suggestsBreak != true else { return }
         guard !busy, trackingDraft == nil, !showTicketPicker else { revealWindow?(); return }
-        menuTrackingGeneration = UUID()
-        selectedChange = change; selectedMeeting = nil; searchResults = []; searchError = nil; menuTracking = true
+        menuTrackingGeneration = UUID(); skipFigmaPrefill = false
+        selectedChange = change; selectedMeeting = nil; selectedFigmaSuggestion = nil; searchResults = []; searchError = nil; menuTracking = true
     }
 
     func cancelMenuTracking() {
         guard menuTracking else { return }
         menuTrackingGeneration = UUID()
-        menuTracking = false; trackingDraft = nil; selectedChange = nil; selectedMeeting = nil
+        menuTracking = false; trackingDraft = nil; selectedChange = nil; selectedMeeting = nil; selectedFigmaSuggestion = nil
         searchGeneration = UUID(); searching = false; searchResults = []; searchError = nil
     }
 
-    func chooseActivity(for ticketID: Int, change: BranchChange? = nil, requiresIdle: Bool = false, inMenuBar: Bool = false, meeting: MeetingEvent? = nil, resume: PausedSession? = nil, meetingReturn: MeetingReturn? = nil) async {
-        guard !busy, !preview, trackingDraft == nil else { return }
+    func chooseManualActivity(_ kind: ManualTrackingKind, inMenuBar: Bool) async {
+        guard !busy, trackingDraft == nil else { return }
+        guard let state, connected else { error = "Connect and refresh 7pace before starting a timer."; return }
+        let connection = connectionGeneration, menuGeneration = menuTrackingGeneration
+        busy = true; defer { busy = false }
+        if !activityTypesLoaded { await refreshActivities() }
+        guard connection == connectionGeneration,
+              !inMenuBar || (menuTracking && menuGeneration == menuTrackingGeneration),
+              inMenuBar || showTicketPicker else { return }
+        // Explicitly choosing no ticket must never inherit a branch, meeting or Figma ticket.
+        selectedChange = nil; selectedMeeting = nil; selectedFigmaSuggestion = nil
+        trackingDraft = TrackingDraft(item: nil, change: nil, expectedIdentity: state.identity,
+                                      standup: kind == .standup, manual: kind)
+        menuTracking = inMenuBar; showTicketPicker = !inMenuBar; error = nil
+    }
+
+    func chooseDifferentWork() {
+        guard !busy else { return }
+        trackingDraft = nil; selectedFigmaSuggestion = nil; skipFigmaPrefill = true
+        searchResults = []; searchError = nil; error = nil
+    }
+
+    func canStart(_ draft: TrackingDraft, activityID: String) -> Bool {
+        guard activityTypesLoaded, !loadingActivities, !busy, connected,
+              activityTypes.isEmpty || activityTypes.contains(where: { $0.id == activityID }) else { return false }
+        if draft.isFigma && !activityTypes.contains(where: { $0.id == activityID && DesignActivity.matches($0) }) { return false }
+        if draft.standup && !activityTypes.contains(where: { $0.id == activityID && StandupActivity.matches($0) }) { return false }
+        return draft.microphoneSession.map { microphone.isActive($0) } ?? true
+    }
+
+    func chooseActivity(for ticketID: Int, change: BranchChange? = nil, requiresIdle: Bool = false, inMenuBar: Bool = false, meeting: MeetingEvent? = nil, resume: PausedSession? = nil, meetingReturn: MeetingReturn? = nil, figmaSuggestion: FigmaSuggestion? = nil, figmaFile: String? = nil) async {
+        guard !busy, trackingDraft == nil else { return }
         guard let state, connected else { error = "Connect and refresh 7pace before starting a timer."; page = .settings; return }
         guard ticketID > 0, ticketID <= Int32.max else { error = "Enter a valid Azure ticket number."; return }
         if requiresIdle && (state.running || showTicketPicker || menuTracking) { return }
+        let proposal = figmaSuggestion ?? (inMenuBar ? selectedFigmaSuggestion : nil)
+        let scope = figmaScope
         let connection = connectionGeneration
         let menuGeneration = menuTrackingGeneration
         if inMenuBar { menuTracking = true }
         busy = true; defer { busy = false }
         do {
+            try validateFigma(proposal, file: figmaFile, ticket: ticketID, scope: scope)
             if change?.suggestsBreak == true { throw AppError.message("This branch suggests pausing or stopping your current timer.") }
             if let change { try await validate(change) }
             if let meeting { refreshCalendar(); try validateMeeting(meeting) }
@@ -619,26 +708,42 @@ struct TrackingDraft: Identifiable {
             if let meetingReturn, self.meetingReturn != meetingReturn || !meetingReturn.isDue(state: state, workspace: workspaceIdentity, now: Date()) {
                 throw AppError.message("The meeting timer changed. Review your current tracking before returning.")
             }
-            let item = try await lookup(ticketID)
+            let item: WorkItem
+            if preview {
+                guard let cached = workItems[ticketID] else { throw AppError.message("This ticket is not in the isolated preview.") }
+                item = cached
+            } else { item = try await lookup(ticketID) }
             workItems[item.id] = item
             if let change { try await validate(change) }
             if !activityTypesLoaded { await refreshActivities() }
             guard connection == connectionGeneration,
                   !inMenuBar || (menuTracking && menuGeneration == menuTrackingGeneration) else { return }
             if let meeting { try validateMeeting(meeting) }
+            try validateFigma(proposal, file: figmaFile, ticket: ticketID, scope: scope)
+            if (proposal != nil || figmaFile != nil), DesignActivity.selected(in: activityTypes) == nil {
+                throw AppError.message("The Design activity is missing in 7pace. Add or enable Design before starting from Figma.")
+            }
             // This step is read-only. The user chooses an activity and explicitly
             // confirms before either timer is changed.
-            trackingDraft = TrackingDraft(item: item, change: change, expectedIdentity: state.identity, meeting: meeting, resume: resume, meetingReturn: meetingReturn)
+            trackingDraft = TrackingDraft(item: item, change: change, expectedIdentity: state.identity, figmaSuggestion: proposal, figmaFile: figmaFile, figmaScope: scope, meeting: meeting, resume: resume, meetingReturn: meetingReturn)
             selectedChange = change; selectedMeeting = meeting; menuTracking = inMenuBar; showTicketPicker = !inMenuBar; error = nil
         } catch { self.error = error.localizedDescription }
     }
 
-    func startTracking(_ draft: TrackingDraft, activityID: String) async {
+    func startTracking(_ draft: TrackingDraft, activityID: String, comment: String = "") async {
         guard !busy, !preview, let api, connected, trackingDraft?.id == draft.id else { return }
         guard activityTypesLoaded else { error = "Load the activity types before starting your timer."; return }
         busy = true; defer { busy = false }
         do {
             let activity = try ActivityChoice.resolve(activityID, available: activityTypes)
+            if draft.isFigma && !activityTypes.contains(where: { $0.id == activityID && DesignActivity.matches($0) }) {
+                throw AppError.message("Choose Design to start tracking from Figma.")
+            }
+            try validateFigma(draft.figmaSuggestion, file: draft.figmaFile, ticket: draft.item?.id, scope: draft.figmaScope)
+            if draft.standup && !activityTypes.contains(where: { $0.id == activityID && StandupActivity.matches($0) }) {
+                throw AppError.message("The Standup activity is required to track daily standup.")
+            }
+            let remark = draft.manual.map { $0.remark(comment: comment, activity: activityTypes.first { $0.id == activityID }) } ?? draft.remark
             if let microphoneSession = draft.microphoneSession {
                 try microphone.validateCurrent(microphoneSession)
                 guard !draft.standup || activityTypes.contains(where: { $0.id == activityID && StandupActivity.matches($0) }) else {
@@ -654,7 +759,10 @@ struct TrackingDraft: Identifiable {
             let previous = state
             let previousReturn = meetingReturn
             let next = try await TrackingTransaction.switchTo(draft.item?.id, expectedIdentity: draft.expectedIdentity,
-                activityType: activity, remark: draft.remark, expectedAttention: draft.attention, service: api)
+                activityType: activity, remark: remark, expectedAttention: draft.attention, service: api, validateContext: { [weak self] in
+                    guard let self else { throw AppError.message("Tracking context is no longer available.") }
+                    try await self.validateFigma(draft.figmaSuggestion, file: draft.figmaFile, ticket: draft.item?.id, scope: draft.figmaScope)
+                })
             apply(next)
             if let meeting = draft.meeting, let previous {
                 meetingReturn = MeetingReturn.afterStarting(meeting: meeting, previous: previous, next: next,
@@ -666,9 +774,10 @@ struct TrackingDraft: Identifiable {
                 meetingReturn?.microphoneSessionID = microphoneSession.id
                 meetingReturn?.microphoneAppID = microphoneSession.owner.id
             } else { meetingReturn = nil }
+            completeFigmaTracking(draft)
             if let id = draft.item?.id { quickTickets.remember(id) }
             if let microphoneSession = draft.microphoneSession { dismissMicrophone(microphoneSession) }
-            error = nil; trackingDraft = nil; showTicketPicker = false; menuTracking = false
+            error = figmaStorageIssue; trackingDraft = nil; showTicketPicker = false; menuTracking = false
             if let change = draft.change { dismiss(change) }
             if let meeting = draft.meeting { dismissMeeting(meeting) }
             selectedMeeting = nil
@@ -972,7 +1081,7 @@ struct TrackingDraft: Identifiable {
     func toggleWatching() {
         configuration.watchEnabled.toggle()
         if !configuration.watchEnabled { notifications.remove(pending.map(\.id)); pending = [] }
-        debouncer = BranchDebouncer(); persist()
+        debouncer = BranchDebouncer(); configureFigma(); persist()
     }
     func refreshCalendar() {
         calendar.refresh(selectedIDs: configuration.selectedCalendarIDs, enabled: configuration.calendarEnabled && !preview,
@@ -1031,8 +1140,9 @@ struct TrackingDraft: Identifiable {
     }
 
     func preferredActivityID(for draft: TrackingDraft) -> String {
+        if draft.isFigma { return DesignActivity.selected(in: activityTypes) ?? "" }
         if draft.standup { return StandupActivity.selected(in: activityTypes) ?? "" }
-        if draft.microphoneSession != nil {
+        if draft.microphoneSession != nil || draft.manual == .meeting {
             return MeetingActivity.suggestedID(title: "Meeting", preferredID: configuration.meetings.activityTypeID, available: activityTypes) ?? ""
         }
         if let plan = draft.meetingReturn { return plan.activityID ?? "" }
@@ -1117,6 +1227,7 @@ struct TrackingDraft: Identifiable {
         if !menuTracking { beginMenuTracking() }
         revealSuggestion?()
         Task {
+            await prefillFigmaTracking(inMenuBar: true)
             for id in quickTickets.orderedIDs.prefix(12) { await loadTicketTitle(id) }
         }
     }

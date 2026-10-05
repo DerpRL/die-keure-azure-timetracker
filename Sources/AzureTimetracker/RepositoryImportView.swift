@@ -3,6 +3,8 @@ import SwiftUI
 import AzureTimetrackerCore
 
 struct RepositoryImportView: View {
+    @Environment(\.interfacePalette) private var palette
+
     @ObservedObject var model: AppModel
     let folder: URL
     @Environment(\.dismiss) private var dismiss
@@ -22,10 +24,10 @@ struct RepositoryImportView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             SectionTitle(title: "Choose repositories", subtitle: "Select the Git repositories you want to watch.")
-            Text(folder.path).font(.caption).foregroundStyle(Palette.secondary).textSelection(.enabled)
+            Text(folder.path).font(.caption).foregroundStyle(palette.secondary).textSelection(.enabled)
             Text("Includes subfolders and Git worktrees. Git metadata, application packages and linked folders are skipped.")
-                .font(.caption).foregroundStyle(Palette.secondary)
-            if let failure { Label(failure, systemImage: "exclamationmark.triangle").foregroundStyle(Palette.warning) }
+                .font(.caption).foregroundStyle(palette.secondary)
+            if let failure { Label(failure, systemImage: "exclamationmark.triangle").foregroundStyle(palette.warning) }
             else if let scan {
                 HStack {
                     TextField("Search by name or path", text: $query).textFieldStyle(.roundedBorder)
@@ -41,20 +43,20 @@ struct RepositoryImportView: View {
                                 Toggle(isOn: Binding(get: { existing.contains(repo.path) || selected.contains(repo.path) }, set: { if $0 { selected.insert(repo.path) } else { selected.remove(repo.path) } })) {
                                     VStack(alignment: .leading, spacing: 5) {
                                         HStack { Text(repo.name).font(.headline); Spacer(); if existing.contains(repo.path) { Text("Already added").font(.caption) } }
-                                        Text(repo.path).font(.caption).foregroundStyle(Palette.secondary).lineLimit(2)
-                                        Label(repo.branch, systemImage: "arrow.triangle.branch").font(.caption).foregroundStyle(Palette.secondary)
+                                        Text(repo.path).font(.caption).foregroundStyle(palette.secondary).lineLimit(2)
+                                        Label(repo.branch, systemImage: "arrow.triangle.branch").font(.caption).foregroundStyle(palette.secondary)
                                     }.frame(maxWidth: .infinity, alignment: .leading)
                                 }.toggleStyle(.checkbox).disabled(existing.contains(repo.path)).padding(12)
                                     .accessibilityLabel("Watch " + repo.name + ", " + repo.path)
                                 Divider()
                             }
                         }
-                    }.background(Palette.card).clipShape(RoundedRectangle(cornerRadius: 10))
+                    }.background(palette.card).clipShape(RoundedRectangle(cornerRadius: 10))
                 }
                 if !scan.issues.isEmpty {
                     DisclosureGroup("\(scan.issues.count) folders could not be read", isExpanded: $issuesExpanded) {
                         ScrollView { Text(scan.issues.joined(separator: "\n")).font(.caption).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }.frame(maxHeight: 90)
-                    }.foregroundStyle(Palette.warning)
+                    }.foregroundStyle(palette.warning)
                 }
                 Text("\(scan.repositories.count) found · \(additions.count) selected to add").font(.callout)
             } else {
@@ -66,7 +68,7 @@ struct RepositoryImportView: View {
                 Spacer()
                 Button("Add selected (\(additions.count))") {
                     model.addRepositories(additions.sorted()); dismiss()
-                }.buttonStyle(.borderedProminent).tint(Palette.action).foregroundStyle(.white)
+                }.buttonStyle(.borderedProminent).tint(palette.action).foregroundStyle(.white)
                     .keyboardShortcut(.defaultAction).disabled(scan == nil || additions.isEmpty)
             }
         }.padding(24).frame(width: 780, height: 590)

@@ -44,8 +44,14 @@ with tempfile.TemporaryDirectory(prefix='azure-release-check-') as temporary:
         binary = app / relative
         for architecture in ['arm64', 'x86_64']:
             run('xcrun', 'lipo', str(binary), '-verify_arch', architecture)
-        assert b'--preview-update' not in binary.read_bytes(), 'Preview fixtures in production'
+        data = binary.read_bytes()
+        for fixture in (b'--preview-update', b'--preview-onboarding', b'--preview-menu', b'--preview-local', b'--preview-figma'):
+            assert fixture not in data, 'Preview fixtures in production'
     run('codesign', '--verify', '--deep', '--strict', str(app))
+    if 'local-signed' in pkg.name:
+        result = subprocess.run(['codesign', '-d', '-r-', str(app)], check=True, capture_output=True)
+        requirement = result.stdout + result.stderr
+        assert b'certificate leaf' in requirement and b'cdhash' not in requirement, 'Local signature must use a stable certificate requirement'
     entitlements = run('codesign', '-d', '--entitlements', ':-', str(app))
     assert plistlib.loads(entitlements)['com.apple.security.personal-information.calendars']
     with zipfile.ZipFile(archive) as zipped:

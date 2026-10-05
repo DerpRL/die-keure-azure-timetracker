@@ -56,6 +56,7 @@ struct SavedState: Codable {
     var dayReviews: [String: DayReviewRecord]? = nil
     var attentionNotified: [String: Date]? = nil
     var attentionDismissed: [String: Date]? = nil
+    var figmaStore: FigmaStore? = nil
 }
 
 struct LocalStore {
@@ -153,6 +154,7 @@ struct AgendaEvent: Identifiable {
 
 @MainActor final class NotificationService: NSObject, UNUserNotificationCenterDelegate {
     var action: ((String, UUID) -> Void)?
+    var figmaAction: ((String, UUID) -> Void)?
     var openDayReview: (() -> Void)?
     var openTrackingAttention: (() -> Void)?
     private var attentionRequestID: String?
@@ -163,7 +165,11 @@ struct AgendaEvent: Identifiable {
         let keep = UNNotificationAction(identifier: "keep", title: "Keep tracking", options: [])
         let change = UNNotificationAction(identifier: "switch", title: "Review & switch", options: [.foreground])
         let reviewBreak = UNNotificationAction(identifier: "reviewBreak", title: "Review pause / stop", options: [.foreground])
+        let figmaKeep = UNNotificationAction(identifier: "figma-keep", title: "Keep tracking", options: [])
+        let figmaOther = UNNotificationAction(identifier: "figma-other", title: "Other ticket", options: [.foreground])
         center.setNotificationCategories([
+            UNNotificationCategory(identifier: "figma-linked", actions: [UNNotificationAction(identifier: "figma-start", title: "Start Design", options: [.foreground]), figmaKeep, figmaOther], intentIdentifiers: [], options: []),
+            UNNotificationCategory(identifier: "figma-unlinked", actions: [UNNotificationAction(identifier: "figma-choose", title: "Choose ticket", options: [.foreground]), figmaKeep], intentIdentifiers: [], options: []),
             UNNotificationCategory(identifier: "branch", actions: [keep, change], intentIdentifiers: [], options: []),
             UNNotificationCategory(identifier: "branch-break", actions: [keep, reviewBreak], intentIdentifiers: [], options: []),
             UNNotificationCategory(identifier: "tracking-attention", actions: [UNNotificationAction(identifier: "review-timer", title: "Review timer", options: [.foreground])], intentIdentifiers: [], options: []),
@@ -188,6 +194,17 @@ struct AgendaEvent: Identifiable {
         content.userInfo = ["changeID": change.id.uuidString]
         do { try await center.add(UNNotificationRequest(identifier: change.id.uuidString, content: content, trigger: nil)) }
         catch { issue?("Notification could not be delivered: \(error.localizedDescription)") }
+    }
+    func postFigma(_ proposal: FigmaSuggestion, ticketTitle: String?) async {
+        let settings = await center.notificationSettings()
+        guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else { return }
+        let content = UNMutableNotificationContent()
+        content.title = "Figma file active"
+        content.body = proposal.name + (proposal.ticketID.map { "\n#" + String($0) + " · " + (ticketTitle ?? "Azure ticket") } ?? "\nChoose a ticket to track Design.")
+        content.categoryIdentifier = proposal.ticketID == nil ? "figma-unlinked" : "figma-linked"
+        content.userInfo = ["figmaID": proposal.id.uuidString]; content.sound = .default
+        do { try await center.add(UNNotificationRequest(identifier: proposal.id.uuidString, content: content, trigger: nil)) }
+        catch { issue?("Figma notification could not be delivered.") }
     }
     func remove(_ ids: [UUID]) {
         center.removeDeliveredNotifications(withIdentifiers: ids.map(\.uuidString))
@@ -245,6 +262,10 @@ struct AgendaEvent: Identifiable {
         if let raw = response.notification.request.content.userInfo["changeID"] as? String, let id = UUID(uuidString: raw) {
             let actionID = response.actionIdentifier
             Task { @MainActor in self.action?(actionID, id) }
+        }
+        if let raw = response.notification.request.content.userInfo["figmaID"] as? String, let id = UUID(uuidString: raw), response.actionIdentifier != UNNotificationDismissActionIdentifier {
+            let action = response.actionIdentifier
+            Task { @MainActor in self.figmaAction?(action, id) }
         }
         completionHandler()
     }

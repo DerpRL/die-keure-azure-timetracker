@@ -68,6 +68,8 @@ struct ComparisonRequest: Equatable {
 }
 
 struct ComparisonView: View {
+    @Environment(\.interfacePalette) private var palette
+
     @ObservedObject var statistics: StatisticsModel
     @ObservedObject var comparison: ComparisonModel
     let titles: [Int: WorkItem]
@@ -92,14 +94,14 @@ struct ComparisonView: View {
                     Button("Refresh comparison") { Task { await comparison.load(request, force: true) } }.disabled(comparison.loading)
                 }
                 Toggle("Match elapsed days and time for the current period", isOn: $elapsed)
-                Text("Compares the selected periods using the same filters. Explorer zoom is ignored. Targets cover the included calendar days and reflect holidays and leave. More recorded time does not necessarily mean more productive work.").font(.callout).foregroundStyle(Palette.secondary)
+                Text("Compares the selected periods using the same filters. Explorer zoom is ignored. Targets cover the included calendar days and reflect holidays and leave. More recorded time does not necessarily mean more productive work.").font(.callout).foregroundStyle(palette.secondary)
             }
             if comparison.loading { ProgressView("Comparing recorded time…").padding() }
-            if let issue = comparison.issue { SectionCard { Label(issue, systemImage: "exclamationmark.triangle").foregroundStyle(Palette.warning) } }
+            if let issue = comparison.issue { SectionCard { Label(issue, systemImage: "exclamationmark.triangle").foregroundStyle(palette.warning) } }
             if let result = comparison.result {
                 SectionCard {
                     HStack(alignment: .top) {
-                        periodSummary("Selected", result.current, color: Palette.accent)
+                        periodSummary("Selected", result.current, color: palette.accent)
                         Spacer(); Image(systemName: "arrow.left.arrow.right"); Spacer()
                         periodSummary("Comparison", result.previous, color: .blue)
                     }
@@ -113,7 +115,7 @@ struct ComparisonView: View {
                 }
                 SectionCard {
                     Text("Time through each period").font(.headline)
-                    Text("Aligned by hour, day or month position. Select a bar to see its exact dates.").font(.caption).foregroundStyle(Palette.secondary)
+                    Text("Aligned by hour, day or month position. Select a bar to see its exact dates.").font(.caption).foregroundStyle(palette.secondary)
                     Chart(result.buckets) { bucket in
                         if let a = bucket.current {
                             BarMark(x: .value("Position", String(bucket.id + 1)), y: .value("Hours", a.seconds / 3600), width: .ratio(0.7))
@@ -125,7 +127,7 @@ struct ComparisonView: View {
                                 .foregroundStyle(by: .value("Period", "Comparison")).position(by: .value("Period", "Comparison"))
                                 .accessibilityLabel("Comparison " + label(b)).accessibilityValue(DurationText.short(b.seconds))
                         }
-                    }.chartForegroundStyleScale(["Selected": Palette.accent, "Comparison": Color.blue])
+                    }.chartForegroundStyleScale(["Selected": palette.accent, "Comparison": Color.blue])
                         .chartXSelection(value: $selected).chartXAxisLabel(statistics.period == .year ? "Month of year" : statistics.period == .day ? "Hour position (1 = start of day)" : "Day of period")
                         .chartYAxisLabel("Hours").frame(height: 250)
                     Picker("Inspect interval", selection: $selected) {
@@ -167,16 +169,16 @@ struct ComparisonView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title).font(.headline).foregroundStyle(color)
             Text(data.window.start.formatted(date: .abbreviated, time: .shortened) + " → " + data.window.end.formatted(date: .abbreviated, time: .shortened)).font(.callout)
-            Text("\(data.count) entries · \(data.tasks.count) tasks · \(data.trackedDays) tracked days").font(.caption).foregroundStyle(Palette.secondary)
-            if data.window.end > Date() { Text("Incomplete period · includes future target hours").font(.caption).foregroundStyle(Palette.warning) }
+            Text("\(data.count) entries · \(data.tasks.count) tasks · \(data.trackedDays) tracked days").font(.caption).foregroundStyle(palette.secondary)
+            if data.window.end > Date() { Text("Incomplete period · includes future target hours").font(.caption).foregroundStyle(palette.warning) }
         }
     }
-    private var columnHeadings: some View { HStack { Text("Activity / task"); Spacer(); Text("Selected").frame(width: 95); Text("Comparison").frame(width: 95); Text("Change").frame(width: 155) }.font(.caption).foregroundStyle(Palette.secondary) }
+    private var columnHeadings: some View { HStack { Text("Activity / task"); Spacer(); Text("Selected").frame(width: 95); Text("Comparison").frame(width: 95); Text("Change").frame(width: 155) }.font(.caption).foregroundStyle(palette.secondary) }
     private func deltaRow(_ row: ComparisonDelta) -> some View {
         HStack { Text(row.title).textSelection(.enabled); Spacer(); Text(DurationText.short(row.current)).frame(width: 95); Text(DurationText.short(row.previous)).frame(width: 95); Text(delta(row)).frame(width: 155) }.font(.callout).monospacedDigit().padding(.vertical, 5)
     }
     private func metric(_ title: String, a: Double, b: Double) -> some View {
-        VStack(alignment: .leading, spacing: 5) { Text(title).font(.caption); Text(DurationText.short(a)).font(.title2).monospacedDigit(); Text(delta(ComparisonDelta(id: title, title: title, current: a, previous: b))).font(.caption).foregroundStyle(Palette.secondary) }
+        VStack(alignment: .leading, spacing: 5) { Text(title).font(.caption); Text(DurationText.short(a)).font(.title2).monospacedDigit(); Text(delta(ComparisonDelta(id: title, title: title, current: a, previous: b))).font(.caption).foregroundStyle(palette.secondary) }
     }
     private func delta(_ row: ComparisonDelta) -> String {
         if abs(row.difference) < 1 { return "No change" }

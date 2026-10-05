@@ -10,6 +10,8 @@ private enum ExplorerGraph: String, CaseIterable {
 private enum TaskOrder: String, CaseIterable { case time = "Most time", entries = "Most entries", recent = "Recently worked" }
 
 struct StatisticsView: View {
+    @Environment(\.interfacePalette) private var palette
+
     @ObservedObject var model: AppModel
     @ObservedObject var statistics: StatisticsModel
     @ViewState private var page = ExplorerPage.time
@@ -34,7 +36,7 @@ struct StatisticsView: View {
                 if let issue = statistics.issue {
                     Card {
                         HStack(alignment: .top) {
-                            Label("Could not refresh worklogs", systemImage: "exclamationmark.triangle.fill").foregroundStyle(Palette.warning)
+                            Label("Could not refresh worklogs", systemImage: "exclamationmark.triangle.fill").foregroundStyle(palette.warning)
                             Text(issue).textSelection(.enabled)
                             Spacer()
                             Button("Retry") { Task { await statistics.load(force: true) } }.disabled(statistics.loading)
@@ -106,10 +108,10 @@ struct StatisticsView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
                 HStack {
-                    Image(systemName: "magnifyingglass").foregroundStyle(Palette.secondary)
+                    Image(systemName: "magnifyingglass").foregroundStyle(palette.secondary)
                     TextField("Search ticket, title or comment", text: $statistics.filter.query).textFieldStyle(.plain)
                     if !statistics.filter.query.isEmpty { Button { statistics.filter.query = "" } label: { Image(systemName: "xmark.circle.fill") }.buttonStyle(.plain).accessibilityLabel("Clear search") }
-                }.padding(10).background(Palette.line.opacity(0.45), in: RoundedRectangle(cornerRadius: 8))
+                }.padding(10).background(palette.line.opacity(0.45), in: RoundedRectangle(cornerRadius: 8))
                 Picker("Activity", selection: $statistics.filter.activityID) {
                     Text("All activities").tag(nil as String?)
                     ForEach(statistics.availableActivities) { Text($0.name).tag(Optional($0.id)) }
@@ -136,7 +138,7 @@ struct StatisticsView: View {
                 Text(statistics.isZoomed ? "Selected window · " + dateRange(statistics.window, includeTime: true) : "Whole " + statistics.period.rawValue.lowercased())
                     .font(.headline)
                 Text(statistics.filter.isActive ? "All totals and charts below use your active filters." : "All activities and tasks · recorded time only")
-                    .font(.caption).foregroundStyle(Palette.secondary)
+                    .font(.caption).foregroundStyle(palette.secondary)
             }
             Spacer()
             if statistics.analyzing { ProgressView().controlSize(.small); Text("Updating…").font(.caption) }
@@ -158,9 +160,9 @@ struct StatisticsView: View {
     private func metric(_ title: String, _ value: String, _ note: String, icon: String) -> some View {
         Card {
             VStack(alignment: .leading, spacing: 10) {
-                Label(title, systemImage: icon).font(.caption.weight(.semibold)).foregroundStyle(Palette.secondary)
+                Label(title, systemImage: icon).font(.caption.weight(.semibold)).foregroundStyle(palette.secondary)
                 Text(value).font(.system(size: 25, weight: .bold, design: .rounded)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
-                Text(note).font(.caption).foregroundStyle(Palette.secondary).frame(height: 32, alignment: .topLeading)
+                Text(note).font(.caption).foregroundStyle(palette.secondary).frame(height: 32, alignment: .topLeading)
             }.frame(maxWidth: .infinity, alignment: .leading)
         }
     }
@@ -172,10 +174,10 @@ struct StatisticsView: View {
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 5) {
                             Text(graph.title).font(.headline)
-                            if graph == .activity { Text("Click a bar to inspect it. Drag across the chart to zoom into a range.").font(.callout).foregroundStyle(Palette.secondary) }
+                            if graph == .activity { Text("Click a bar to inspect it. Drag across the chart to zoom into a range.").font(.callout).foregroundStyle(palette.secondary) }
                         }
                         Spacer()
-                        Text(data.resolution.rawValue).font(.caption.weight(.semibold)).padding(7).background(Palette.line.opacity(0.5), in: Capsule())
+                        Text(data.resolution.rawValue).font(.caption.weight(.semibold)).padding(7).background(palette.line.opacity(0.5), in: Capsule())
                     }
                     Picker("Chart type", selection: $graph) {
                         ForEach(ExplorerGraph.allCases, id: \.self) { Text($0.rawValue).tag($0) }
@@ -234,25 +236,27 @@ struct StatisticsView: View {
             Spacer()
             Button("Choose range…") { customStart = statistics.window.start; customEnd = statistics.window.end; customRange = true }
                 .popover(isPresented: $customRange) {
+                    InterfaceSheet(interface: model.interface) {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Zoom to a time range").font(.headline)
                         DatePicker("From", selection: $customStart, in: statistics.bounds.start...statistics.bounds.end)
                         DatePicker("To", selection: $customEnd, in: statistics.bounds.start...statistics.bounds.end)
-                        Text("Minimum window: 15 minutes. Ranges stay inside the selected period.").font(.caption).foregroundStyle(Palette.secondary)
+                        Text("Minimum window: 15 minutes. Ranges stay inside the selected period.").font(.caption).foregroundStyle(palette.secondary)
                         HStack { Button("Cancel") { customRange = false }; Spacer(); Button("Apply range") { statistics.zoom(to: DateInterval(start: customStart, end: customEnd)); customRange = false }.disabled(customEnd <= customStart) }
                     }.padding(22).frame(width: 420)
+                    }
                 }
         }.controlSize(.regular)
     }
     private var colors: [String: Color] {
-        let palette: [Color] = [Palette.accent, .blue, .orange, .purple, .pink, .indigo, .brown, .gray]
+        let palette: [Color] = [palette.accent, .blue, .orange, .purple, .pink, .indigo, .brown, .gray]
         return Dictionary(uniqueKeysWithValues: statistics.availableActivities.sorted { $0.id < $1.id }.enumerated().map { ($0.element.id, palette[$0.offset % palette.count]) })
     }
     private func activityLegend(_ data: ExplorerAnalysis) -> some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), alignment: .leading)], alignment: .leading, spacing: 8) {
             ForEach(data.activities) { activity in
                 Button { toggleActivity(activity.id) } label: {
-                    HStack(spacing: 6) { Circle().fill(colors[activity.id] ?? Palette.accent).frame(width: 8, height: 8); Text(activity.name).lineLimit(1); Text(DurationText.short(activity.seconds)).foregroundStyle(Palette.secondary) }.font(.caption)
+                    HStack(spacing: 6) { Circle().fill(colors[activity.id] ?? palette.accent).frame(width: 8, height: 8); Text(activity.name).lineLimit(1); Text(DurationText.short(activity.seconds)).foregroundStyle(palette.secondary) }.font(.caption)
                 }.buttonStyle(.plain).help("Filter by " + activity.name).accessibilityLabel("Filter by " + activity.name + ", " + DurationText.short(activity.seconds))
             }
         }
@@ -265,9 +269,9 @@ struct StatisticsView: View {
     private func entryList(_ entries: [ExplorerEntry], title: String, detail: String, clip: DateInterval? = nil) -> some View {
         Card {
             VStack(alignment: .leading, spacing: 14) {
-                HStack { Text(title).font(.headline); Spacer(); Text("\(entries.count) segments").font(.caption).foregroundStyle(Palette.secondary) }
-                Text(detail).font(.caption).foregroundStyle(Palette.secondary)
-                if entries.isEmpty { Text("No matching entries. Try a different interval or clear your filters.").foregroundStyle(Palette.secondary).padding(.vertical, 15) }
+                HStack { Text(title).font(.headline); Spacer(); Text("\(entries.count) segments").font(.caption).foregroundStyle(palette.secondary) }
+                Text(detail).font(.caption).foregroundStyle(palette.secondary)
+                if entries.isEmpty { Text("No matching entries. Try a different interval or clear your filters.").foregroundStyle(palette.secondary).padding(.vertical, 15) }
                 ForEach(Array(entries.prefix(entryLimit))) { entry in
                     entryRow(entry, clip: clip)
                     if entry.id != entries.prefix(entryLimit).last?.id { Divider() }
@@ -280,19 +284,19 @@ struct StatisticsView: View {
         let start = max(entry.start, clip?.start ?? entry.start), end = min(entry.end, clip?.end ?? entry.end)
         let record = entry.record
         return HStack(alignment: .top, spacing: 14) {
-            RoundedRectangle(cornerRadius: 2).fill(colors[record.activityID] ?? Palette.accent).frame(width: 4, height: 45)
+            RoundedRectangle(cornerRadius: 2).fill(colors[record.activityID] ?? palette.accent).frame(width: 4, height: 45)
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 7) {
-                    if let id = record.ticketID { Text("#" + String(id)).foregroundStyle(Palette.accent) }
+                    if let id = record.ticketID { Text("#" + String(id)).foregroundStyle(palette.accent) }
                     Text(record.ticketID.flatMap { model.workItems[$0]?.title } ?? record.fallbackTitle).fontWeight(.semibold).lineLimit(2)
                 }
-                Text(start.formatted(.dateTime.day().month(.abbreviated).hour().minute()) + " – " + end.formatted(.dateTime.hour().minute()) + " · " + record.activityName).font(.caption).foregroundStyle(Palette.secondary)
+                Text(start.formatted(.dateTime.day().month(.abbreviated).hour().minute()) + " – " + end.formatted(.dateTime.hour().minute()) + " · " + record.activityName).font(.caption).foregroundStyle(palette.secondary)
                 if let comment = record.log.comment, !comment.isEmpty { Text(comment).font(.caption).lineLimit(2).textSelection(.enabled) }
             }
             Spacer(minLength: 4)
             VStack(alignment: .trailing, spacing: 4) {
                 Text(DurationText.short(end.timeIntervalSince(start))).font(.callout.weight(.semibold)).monospacedDigit()
-                if start != record.start || end != record.end { Text("in selection").font(.caption2).foregroundStyle(Palette.secondary) }
+                if start != record.start || end != record.end { Text("in selection").font(.caption2).foregroundStyle(palette.secondary) }
             }.frame(minWidth: 70, alignment: .trailing)
             if let id = record.ticketID { Button { model.showContext(id) } label: { Image(systemName: "sidebar.right") }.help("Open ticket context").accessibilityLabel("Open context for ticket " + String(id)) }
             Button { model.timeEditor.day = record.start; model.timeEditor.filter = record.ticketID.map(String.init) ?? record.log.comment ?? ""; model.page = .timeEditor } label: { Image(systemName: "square.and.pencil") }
@@ -305,18 +309,18 @@ struct StatisticsView: View {
             Card {
                 VStack(alignment: .leading, spacing: 14) {
                     HStack {
-                        VStack(alignment: .leading, spacing: 5) { Text("Tasks you worked on").font(.headline); Text("Select a task to explore its timeline and entries.").font(.callout).foregroundStyle(Palette.secondary) }
+                        VStack(alignment: .leading, spacing: 5) { Text("Tasks you worked on").font(.headline); Text("Select a task to explore its timeline and entries.").font(.callout).foregroundStyle(palette.secondary) }
                         Spacer(); Picker("Sort", selection: $taskOrder) { ForEach(TaskOrder.allCases, id: \.self) { Text($0.rawValue).tag($0) } }.frame(width: 210)
                     }
                     HStack { Text("TASK / SHARE OF SELECTED TIME").frame(maxWidth: .infinity, alignment: .leading); Text("TIME").frame(width: 85, alignment: .trailing); Text("ENTRIES").frame(width: 60, alignment: .trailing); Text("DAYS").frame(width: 40, alignment: .trailing); Text("AVG / ENTRY").frame(width: 95, alignment: .trailing) }
-                        .font(.system(size: 10, weight: .semibold)).foregroundStyle(Palette.secondary).padding(.horizontal, 10)
+                        .font(.system(size: 10, weight: .semibold)).foregroundStyle(palette.secondary).padding(.horizontal, 10)
                     Divider()
-                    if data.tasks.isEmpty { Text("No tasks match these filters.").foregroundStyle(Palette.secondary).padding() }
+                    if data.tasks.isEmpty { Text("No tasks match these filters.").foregroundStyle(palette.secondary).padding() }
                     ForEach(Array(orderedTasks(data).prefix(taskLimit))) { task in
                         taskRow(task, total: data.total)
                     }
                     if data.tasks.count > taskLimit { Button("Show 20 more tasks") { taskLimit += 20 } }
-                    Text("Work without an Azure ticket is grouped by activity and comment. Entry averages use only the selected time window.").font(.caption).foregroundStyle(Palette.secondary)
+                    Text("Work without an Azure ticket is grouped by activity and comment. Entry averages use only the selected time window.").font(.caption).foregroundStyle(palette.secondary)
                 }
             }
             activityBreakdown(data)
@@ -331,14 +335,14 @@ struct StatisticsView: View {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text((task.ticketID.map { "#" + String($0) + " · " } ?? "") + task.title).font(.callout.weight(.semibold)).lineLimit(2)
-                    HStack { ExplorerShareBar(value: share); Text(percentage).font(.caption).foregroundStyle(Palette.secondary).frame(width: 36, alignment: .trailing) }
+                    HStack { ExplorerShareBar(value: share); Text(percentage).font(.caption).foregroundStyle(palette.secondary).frame(width: 36, alignment: .trailing) }
                 }.frame(maxWidth: .infinity, alignment: .leading)
                 Text(DurationText.short(task.seconds)).frame(width: 85, alignment: .trailing)
                 Text(String(task.count)).frame(width: 60, alignment: .trailing)
                 Text(String(task.days)).frame(width: 40, alignment: .trailing)
                 Text(DurationText.short(task.seconds / Double(task.count))).frame(width: 95, alignment: .trailing)
             }.monospacedDigit().padding(10).contentShape(Rectangle())
-        }.buttonStyle(.plain).accessibilityElement(children: .ignore).accessibilityAddTraits(.isButton).background(Palette.line.opacity(0.2), in: RoundedRectangle(cornerRadius: 8))
+        }.buttonStyle(.plain).accessibilityElement(children: .ignore).accessibilityAddTraits(.isButton).background(palette.line.opacity(0.2), in: RoundedRectangle(cornerRadius: 8))
             .help("Explore " + task.title).accessibilityLabel("Explore " + task.title + ", " + DurationText.short(task.seconds) + ", \(task.count) entries")
     }
     private func orderedTasks(_ data: ExplorerAnalysis) -> [ExplorerTask] {
@@ -352,19 +356,19 @@ struct StatisticsView: View {
         Card {
             VStack(alignment: .leading, spacing: 14) {
                 Text("Time by activity").font(.headline)
-                Text("Select an activity to filter every chart and task in this period.").font(.callout).foregroundStyle(Palette.secondary)
+                Text("Select an activity to filter every chart and task in this period.").font(.callout).foregroundStyle(palette.secondary)
                 ForEach(data.activities) { activity in
                     Button { toggleActivity(activity.id) } label: {
                         HStack(spacing: 14) {
                             Text(activity.name).frame(width: 140, alignment: .leading).lineLimit(2)
-                            GeometryReader { geo in RoundedRectangle(cornerRadius: 4).fill(Palette.line.opacity(0.5)); RoundedRectangle(cornerRadius: 4).fill(colors[activity.id] ?? Palette.accent).frame(width: max(3, geo.size.width * activity.seconds / max(1, data.total))) }.frame(height: 16)
+                            GeometryReader { geo in RoundedRectangle(cornerRadius: 4).fill(palette.line.opacity(0.5)); RoundedRectangle(cornerRadius: 4).fill(colors[activity.id] ?? palette.accent).frame(width: max(3, geo.size.width * activity.seconds / max(1, data.total))) }.frame(height: 16)
                             Text(DurationText.short(activity.seconds)).monospacedDigit().frame(width: 95, alignment: .trailing)
-                            Text((activity.seconds / max(1, data.total)).formatted(.percent.precision(.fractionLength(0)))).foregroundStyle(Palette.secondary).frame(width: 40, alignment: .trailing)
-                            Image(systemName: statistics.filter.activityID == activity.id ? "checkmark.circle.fill" : "line.3.horizontal.decrease.circle").foregroundStyle(Palette.accent)
+                            Text((activity.seconds / max(1, data.total)).formatted(.percent.precision(.fractionLength(0)))).foregroundStyle(palette.secondary).frame(width: 40, alignment: .trailing)
+                            Image(systemName: statistics.filter.activityID == activity.id ? "checkmark.circle.fill" : "line.3.horizontal.decrease.circle").foregroundStyle(palette.accent)
                         }.padding(.vertical, 7).contentShape(Rectangle())
                     }.buttonStyle(.plain).help("Filter by " + activity.name)
                 }
-                if data.activities.isEmpty { Text("No activities in this selection.").foregroundStyle(Palette.secondary) }
+                if data.activities.isEmpty { Text("No activities in this selection.").foregroundStyle(palette.secondary) }
             }
         }
     }
@@ -381,25 +385,25 @@ struct StatisticsView: View {
                 Card {
                     VStack(alignment: .leading, spacing: 14) {
                         Text("Time by weekday").font(.headline)
-                        Text("Total recorded time. Select a day to filter.").font(.caption).foregroundStyle(Palette.secondary)
+                        Text("Total recorded time. Select a day to filter.").font(.caption).foregroundStyle(palette.secondary)
                         ForEach(data.weekdays) { item in patternRow(item, maxValue: data.weekdays.map(\.seconds).max() ?? 1, selected: statistics.filter.weekday == item.id) { statistics.filter.weekday = statistics.filter.weekday == item.id ? nil : item.id } }
                     }
                 }
                 Card {
                     VStack(alignment: .leading, spacing: 14) {
                         Text("Entry lengths").font(.headline)
-                        Text("Original entry duration. Select a band to filter.").font(.caption).foregroundStyle(Palette.secondary)
+                        Text("Original entry duration. Select a band to filter.").font(.caption).foregroundStyle(palette.secondary)
                         ForEach(data.lengths) { item in patternRow(item, maxValue: data.lengths.map(\.seconds).max() ?? 1, selected: statistics.filter.lengthBand == item.id, showCount: true) { statistics.filter.lengthBand = statistics.filter.lengthBand == item.id ? nil : item.id } }
-                        Text("Long entries are not a measure of concentration. Filters keep the original duration band when you zoom.").font(.caption).foregroundStyle(Palette.secondary)
+                        Text("Long entries are not a measure of concentration. Filters keep the original duration band when you zoom.").font(.caption).foregroundStyle(palette.secondary)
                     }
                 }
             }
             Card {
                 VStack(alignment: .leading, spacing: 14) {
                     Text("When you record work").font(.headline)
-                    Text("Hours by time of day, summed across this selection in your Mac’s time zone.").font(.callout).foregroundStyle(Palette.secondary)
+                    Text("Hours by time of day, summed across this selection in your Mac’s time zone.").font(.callout).foregroundStyle(palette.secondary)
                     Chart(data.hours) { hour in
-                        BarMark(x: .value("Hour", hour.id), y: .value("Recorded hours", hour.seconds / 3600)).foregroundStyle(Palette.accent).cornerRadius(3)
+                        BarMark(x: .value("Hour", hour.id), y: .value("Recorded hours", hour.seconds / 3600)).foregroundStyle(palette.accent).cornerRadius(3)
                             .accessibilityLabel(hour.label).accessibilityValue(DurationText.short(hour.seconds))
                     }.chartXScale(domain: -1...24).chartXAxis { AxisMarks(values: [0, 4, 8, 12, 16, 20, 23]) { value in AxisValueLabel { if let hour = value.as(Int.self) { Text(String(format: "%02d:00", hour)) } } } }
                         .chartYAxisLabel("Recorded hours").frame(height: 200)
@@ -414,7 +418,7 @@ struct StatisticsView: View {
                     Text("\(DurationText.short(data.covered)) of clock time is covered by matching entries. Overlapping entries remain in recorded totals, but are excluded from context-switch and continuous-block calculations.")
                     Text("Billable time: " + (data.billableKnownCount > 0 ? DurationText.short(data.billable) + " · supplied by 7pace for \(data.billableKnownCount) of \(data.count) entries." : "Not supplied by 7pace for these entries."))
                     Text("Switches and blocks describe recorded entries, not attention or productivity. Applying filters can hide intervening tasks; clear filters for the complete sequence.")
-                }.font(.callout).foregroundStyle(Palette.secondary)
+                }.font(.callout).foregroundStyle(palette.secondary)
             }
             entryList(data.entries, title: "Entries behind these patterns", detail: "Open an entry’s day to review or correct it in Time editor.")
         }
@@ -422,7 +426,7 @@ struct StatisticsView: View {
     private func patternRow(_ item: ExplorerPattern, maxValue: Double, selected: Bool, showCount: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 6) {
-                HStack { Text(item.label); Spacer(); if showCount { Text("\(item.count) entries ·").foregroundStyle(Palette.secondary) }; Text(DurationText.short(item.seconds)).monospacedDigit(); Image(systemName: selected ? "checkmark.circle.fill" : "line.3.horizontal.decrease.circle").foregroundStyle(Palette.accent) }.font(.caption)
+                HStack { Text(item.label); Spacer(); if showCount { Text("\(item.count) entries ·").foregroundStyle(palette.secondary) }; Text(DurationText.short(item.seconds)).monospacedDigit(); Image(systemName: selected ? "checkmark.circle.fill" : "line.3.horizontal.decrease.circle").foregroundStyle(palette.accent) }.font(.caption)
                 ExplorerShareBar(value: item.seconds / max(1, maxValue))
             }.padding(.vertical, 4).contentShape(Rectangle())
         }.buttonStyle(.plain).accessibilityElement(children: .ignore).accessibilityAddTraits(.isButton).help("Filter by " + item.label).accessibilityLabel("Filter by " + item.label + ", " + DurationText.short(item.seconds))
@@ -432,8 +436,8 @@ struct StatisticsView: View {
             if let sync = statistics.syncedAt { Label("Synced " + sync.formatted(date: .abbreviated, time: .shortened), systemImage: "arrow.clockwise").fontWeight(.medium) }
             Text("7pace worklogs only; the live timer is not added. Entries are clipped to your selected window and split at midnight. Weeks start on Monday. Refresh after editing time.")
             Text("One preceding day is downloaded to include overnight work. Entries that started earlier are not included. Targets use your current daily schedule; holidays and leave are not deducted.")
-            if statistics.omitted > 0 { Text("\(statistics.omitted) entries were omitted because their date or duration is invalid.").foregroundStyle(Palette.warning) }
-        }.font(.caption).foregroundStyle(Palette.secondary)
+            if statistics.omitted > 0 { Text("\(statistics.omitted) entries were omitted because their date or duration is invalid.").foregroundStyle(palette.warning) }
+        }.font(.caption).foregroundStyle(palette.secondary)
     }
     private func bucketLabel(_ bucket: ExplorerBucket) -> String { dateRange(bucket.interval, includeTime: bucket.interval.duration < 36 * 3600 && data?.resolution != .day) }
     private func dateRange(_ interval: DateInterval, includeTime: Bool = false) -> String {
@@ -449,12 +453,14 @@ struct StatisticsView: View {
 
 /// Decorative bars inside buttons must not replace the button's accessibility role.
 private struct ExplorerShareBar: View {
+    @Environment(\.interfacePalette) private var palette
+
     let value: Double
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .leading) {
-                Capsule().fill(Palette.line.opacity(0.6))
-                Capsule().fill(Palette.accent).frame(width: geometry.size.width * min(1, max(0, value)))
+                Capsule().fill(palette.line.opacity(0.6))
+                Capsule().fill(palette.accent).frame(width: geometry.size.width * min(1, max(0, value)))
             }
         }.frame(height: 7).accessibilityHidden(true)
     }

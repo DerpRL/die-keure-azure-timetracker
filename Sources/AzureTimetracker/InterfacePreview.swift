@@ -40,7 +40,8 @@ extension AppModel {
             }
             statistics.period = .week; statistics.anchor = today
             statistics.useInterfacePreview(statisticsLogs)
-            activityTypes = (try? JSONDecoder().decode([ActivityType].self, from: Data(#"[{"id":"development","name":"Development"},{"id":"review","name":"Code review"},{"id":"standup","name":"Standup"}]"#.utf8))) ?? []
+            activityTypes = (try? JSONDecoder().decode([ActivityType].self, from: Data(#"[{"id":"development","name":"Development"},{"id":"review","name":"Code review"},{"id":"standup","name":"Standup"},{"id":"meeting","name":"Meeting"},{"id":"design","name":"Design"}]"#.utf8))) ?? []
+            activityTypesLoaded = true
             offlineDrafts.preview(workspace: "https://preview.timehub.7pace.com/", activities: activityTypes)
         }
         configuration.pollSeconds = 300
@@ -75,6 +76,19 @@ extension AppModel {
                 forgottenTimer.observe(now: Date().addingTimeInterval(Double(offset)), eligible: true, appName: "Visual Studio Code", minutes: 10, deferral: .init())
             }
         }
+        if ProcessInfo.processInfo.arguments.contains("--preview-local") {
+            pending = []; ticketCompletion = TicketCompletionMonitor(); previewTimer(.stopped, seconds: 0)
+            _ = offlineDrafts.save(OfflineDraft(workspace: offlineDrafts.workspace, start: Date().addingTimeInterval(-1234), comment: "Daily standup", activityID: "standup"))
+        }
+        if ProcessInfo.processInfo.arguments.contains("--preview-figma") {
+            configuration.watchEnabled = true; configuration.figma.enabled = true
+            let file = FigmaDocument(key: "PreviewA123", name: "Product workspace design")
+            var ledger = FigmaLedger()
+            try? ledger.link(file.key, to: 33630)
+            _ = ledger.activate(file, at: Date(), activeTicket: nil, preferences: .init())
+            figmaStore.workspaces[figmaScope] = ledger
+            currentFigmaScope = figmaScope
+        }
     }
 
     func previewTimer(_ status: TrackingIndicator, seconds: Double? = nil) {
@@ -105,6 +119,8 @@ extension EnvironmentValues {
 }
 
 struct TimerAnimationPreview: View {
+    @Environment(\.interfacePalette) private var palette
+
     @ObservedObject var model: AppModel
     @ViewState private var reduceMotion = false
     @ViewState private var lightAppearance = false
@@ -128,7 +144,7 @@ struct TimerAnimationPreview: View {
                 .environment(\.timerPreviewReduceMotion, reduceMotion)
                 .environment(\.colorScheme, lightAppearance ? .light : .dark)
         }.padding(40).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(Palette.background).buttonStyle(.bordered).controlSize(.large).tint(Palette.accent)
+            .background(palette.background).buttonStyle(.bordered).controlSize(.large).tint(palette.accent)
     }
 }
 #endif

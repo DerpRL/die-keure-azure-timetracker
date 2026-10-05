@@ -1,8 +1,8 @@
 # Install Azure timetracker
 
-Use the `Azure-timetracker-1.13.1-universal-unsigned.pkg` installer. It installs **Azure timetracker.app** in **/Applications** and supports both Apple Silicon and Intel, with a macOS 14 minimum deployment target. Direct runtime checks have been performed on Apple Silicon macOS 27.0.1; Intel and older macOS versions still need testing.
+Use the `Azure-timetracker-1.14.0-universal-local-signed-app.pkg` installer. It installs **Azure timetracker.app** in **/Applications** and supports both Apple Silicon and Intel, with a macOS 14 minimum deployment target. Direct runtime checks have been performed on Apple Silicon macOS 27.0.1; Intel and older macOS versions still need testing.
 
-For drag-and-drop installation, open `Azure-timetracker-1.13.1-universal-unsigned.dmg`, drag the app onto Applications, eject the disk image, then launch the installed app. Quit the old app before replacing it. The same signing limitations apply.
+For drag-and-drop installation, open `Azure-timetracker-1.14.0-universal-local-signed.dmg`, drag the app onto Applications, eject the disk image, then launch the installed app. Quit the old app before replacing it. The same signing limitations apply.
 
 ## Install and open
 
@@ -16,15 +16,15 @@ Default targets are 38 hours per week and 7h 36m per weekday. Settings → Track
 
 Version 1.6 adds ticket context, split/merge, recent-edit undo, weekly status drafts and context-switch insights. Undo history starts with changes made on this Mac in this version. The app also prompts when 7pace stops a session at its configured time limit. Use **Insights → Time editor** to correct recorded start/end times in a table, with informational overlap warnings that never block a valid save.
 
-## This release is unsigned and not notarized
+## Persistent local signature; not notarized
 
-No Developer ID signing identity is available on the build Mac. The app uses an ad-hoc signature for integrity, and the installer has no Developer ID Installer signature. macOS can warn or block the first opening; this package will not pass normal Gatekeeper assessment as a notarized release.
+The app uses a persistent local signing certificate. It is not Apple Developer ID signed, and the PKG has no Developer ID Installer signature. macOS can warn or block the first opening; this package will not pass normal Gatekeeper assessment as a notarized release.
 
 If you trust the sender and have reviewed the package, attempt to open it normally, then use **System Settings → Privacy & Security → Open Anyway** if macOS offers that option. You may need to approve the app separately after installation. Follow [Apple's instructions for software from an unidentified developer](https://support.apple.com/102445). Managed Macs may prohibit overrides; in that case ask your administrator for a signed, notarized build. Do not disable Gatekeeper or remove quarantine as a workaround.
 
 ## Verify and update
 
-The accompanying `.sha256` file contains the installer checksum. From the download directory, run `shasum -a 256 -c Azure-timetracker-1.13.1-universal-unsigned.pkg.sha256`. A matching checksum detects file changes; it does not authenticate the sender.
+The accompanying `.sha256` file contains the installer checksum. From the download directory, run `shasum -a 256 -c Azure-timetracker-1.14.0-universal-local-signed-app.pkg.sha256`. A matching checksum detects file changes; it does not authenticate the sender.
 
 The installer replaces only the app bundle in /Applications. Your per-user settings and Keychain credentials are preserved. It does not install launch daemons, change Git repositories, alter system security settings, start timers or launch the app as root. The payload contains no developer account settings, worklogs, calendar data or credentials.
 
@@ -41,7 +41,7 @@ To remove the app, disable launch at login in its Settings, quit it, and move th
 
 - When selected apps stop using the microphone for one minute, the menu-bar panel offers Keep tracking, Pause or Stop, including for meetings started without a previous ticket. Muting can also trigger this suggestion; your timer changes only after your choice.
 - New installations enable Slack, Google Meet / web browsers, Microsoft Teams and Zoom by default. Saved preferences are respected.
-- Stable Developer ID signing is prepared. This package is still ad-hoc and not notarized because no signing identity is installed on the build Mac. Permissions can be requested again on an ad-hoc update. A properly signed release requires the organization's Developer ID Application certificate; see Signing.md in the source repository.
+- Version 1.14.0 uses a persistent local signing certificate. A first migration from an ad-hoc build can require approving Keychain, Calendar and Accessibility again. Subsequent builds keep the same certificate, but permission retention remains subject to macOS policy. Developer ID and notarization are separate; see Signing.md.
 
 ### Add multiple repositories
 
@@ -63,4 +63,11 @@ These settings default on and can be disabled separately. Reading without input 
 
 ## New in 1.13.0
 
-Public GitHub delivery with a signed JSON feed, update notices, release notes, progress and an Install and restart button. Install this version manually once to enable the updater. Future downloads are authenticated with a separate release key and checked before installation; a previous-app backup is retained. Signing an update archive does not confer Apple trust. This release remains ad-hoc signed and not notarized, so macOS security and account permission prompts remain possible.
+Public GitHub delivery with a signed JSON feed, update notices, release notes, progress and an Install and restart button. Install this version manually once to enable the updater. Future downloads are authenticated with a separate release key and checked before installation; a previous-app backup is retained. Signing an update archive does not confer Apple trust. Version 1.13.0 used an ad-hoc signature; 1.14.0 uses persistent local signing. Neither is notarized, and macOS security and account permission prompts remain possible.
+
+## New in 1.14.0
+
+- First-run onboarding asks for Light, Dark or System, UI scale and contrast. Existing users find these immediately saved choices under **Settings → Appearance**.
+- **Switch ticket** includes **Meeting**, **Stand-up** and **Other activity**, without a ticket number or title. Choose the activity, optionally edit the comment, then confirm Start. Stand-up defaults to `daily standup` and requires the Standup activity in 7pace.
+- Running local/offline drafts now show their timer in the overview and menu panel, and in the menu bar when there is no confirmed remote timer. Stop local timer saves a draft for later review; it does not stop a remote timer or upload time.
+- **Figma** under Setup offers optional Figma Desktop detection, file-to-ticket links, Design suggestions and local context history. Enable **Observe Figma files**, allow Accessibility for the installed app, then focus a file in Figma Desktop for a few seconds. It reads only file URLs and window titles. Browser Figma is not supported. Starting a suggestion requires the Design activity in 7pace and explicit confirmation. Pause watching pauses Git and Figma together.

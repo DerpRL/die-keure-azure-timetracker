@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 SOURCE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+source "$SOURCE_DIR/scripts/signing-config.sh"
 DELIVERY_DIR="${1:-$(dirname "$SOURCE_DIR")}"
 BUILD_DIR="${AZURE_TIME_BUILD_DIR:-$SOURCE_DIR/.build-local}"
 APP_DIR="$DELIVERY_DIR/Azure timetracker.app"
