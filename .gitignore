@@ -1,4 +1,4 @@
-.build/
+.build*/
 .swiftpm/
 .DS_Store
 .build-local/
@@ -21,3 +21,10 @@ interface-preview-state.json
 *.mobileprovision
 .env
 .env.*
+
+# Published installers are intentionally versioned in Azure Repos.
+!releases/**/*.dmg
+!releases/**/*.pkg
+!releases/**/*.sha256
+
+__pycache__/

@@ -287,9 +287,10 @@ struct OverviewView: View {
                 if model.reviewPromptDay != nil { Card { DayReviewPrompt(model: model) } }
                 AppSectionHeading("Progress", subtitle: "Your daily and weekly targets.")
                 TargetProgressView(model: model)
-                if model.meetingReturnReady || !model.pendingMicrophoneSessions.isEmpty || !model.pendingMeetings.isEmpty || !model.pending.isEmpty {
+                if model.microphoneEndPrompt != nil || model.meetingReturnReady || !model.pendingMicrophoneSessions.isEmpty || !model.pendingMeetings.isEmpty || !model.pending.isEmpty {
                     AppSectionHeading("Suggestions", subtitle: "Review a change before switching your timer.")
                 }
+                if let prompt = model.microphoneEndPrompt { Card { MicrophoneEndPromptView(model: model, prompt: prompt) } }
                 if model.meetingReturnReady { Card { MeetingReturnPrompt(model: model) } }
                 ForEach(model.pendingMicrophoneSessions) { microphoneSession in Card { MicrophonePrompt(model: model, microphoneSession: microphoneSession) } }
                 ForEach(model.pendingMeetings) { meeting in Card { MeetingPrompt(model: model, meeting: meeting) } }
@@ -477,6 +478,7 @@ struct MenuPanel: View {
                 if let prompt = model.trackingAttention { TrackingAttentionPrompt(model: model, prompt: prompt) }
                 TargetProgressView(model: model, compact: true)
                 if model.reviewPromptDay != nil { Divider(); DayReviewPrompt(model: model) }
+                if let prompt = model.microphoneEndPrompt { Divider(); MicrophoneEndPromptView(model: model, prompt: prompt) }
                 if model.meetingReturnReady {
                     Divider()
                     MeetingReturnPrompt(model: model)

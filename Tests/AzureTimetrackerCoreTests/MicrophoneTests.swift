@@ -81,6 +81,15 @@ import Testing
         #expect(MicrophoneApp.classify("com.microsoft.teamsunexpected") == .other)
         #expect(!MicrophonePreferences(enabled: true).apps.contains(.other))
     }
+    @Test func requestedMeetingAppsAreEnabledByDefaultWithoutChangingSavedPreferences() throws {
+        let defaults = MicrophonePreferences()
+        #expect(defaults.enabled && defaults.apps == [.slack, .teams, .zoom, .browsers])
+        #expect(MicrophoneApp.browsers.label.contains("Google Meet"))
+        let old = try JSONDecoder().decode(MicrophonePreferences.self, from: Data(#"{"enabled":false,"apps":["Slack","Discord"]}"#.utf8))
+        #expect(!old.enabled && old.apps == [.slack, .discord])
+        var settings = Configuration(); settings.microphone = old
+        #expect(try JSONDecoder().decode(Configuration.self, from: JSONEncoder().encode(settings)).microphone == old)
+    }
     @Test func legacySlackSettingsMigrateWithoutRequiringIDsOrTokens() throws {
         var old = Configuration(); var slack = SlackPreferences(); slack.enabled = true
         old.slack = slack
@@ -89,6 +98,6 @@ import Testing
         #expect(decoded.microphone.enabled)
         decoded.microphone = MicrophonePreferences(enabled: false)
         #expect(!decoded.microphone.enabled)
-        #expect(!Configuration().microphone.enabled)
+        #expect(Configuration().microphone.enabled)
     }
 }

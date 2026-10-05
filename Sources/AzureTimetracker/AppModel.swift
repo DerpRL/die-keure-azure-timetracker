@@ -72,6 +72,7 @@ struct TrackingDraft: Identifiable {
     @Published var pendingMeetings: [MeetingEvent] = []
     @Published var pendingMicrophoneSessions: [MicrophoneSession] = []
     let microphone = MicrophoneService()
+    @Published var microphoneTracking = MicrophoneTrackingMonitor()
     private var slackReminders: [String: Date] = [:]
     private var microphonePopupPending = false
     @Published var searchResults: [WorkItem] = []
@@ -155,6 +156,13 @@ struct TrackingDraft: Identifiable {
         configuration = initial.configuration; pending = initial.pending; audit = initial.audit
         pausedSession = initial.pausedSession
         meetingReturn = initial.meetingReturn
+        microphoneTracking = initial.microphoneTracking ?? MicrophoneTrackingMonitor()
+        if initial.microphoneTracking == nil, let plan = initial.meetingReturn,
+           let sessionID = plan.microphoneSessionID, let appID = plan.microphoneAppID, plan.end == Date.distantFuture {
+            let session = MicrophoneSession(id: sessionID, owner: MicrophoneOwner(id: appID, name: MicrophoneApp.classify(appID).label), started: Date())
+            microphoneTracking.restore(MicrophoneTrackingLink(session: session, workspace: plan.workspace, trackingIdentity: plan.meetingIdentity))
+        }
+        microphoneTracking.restrict(to: configuration.microphone.apps, workspace: workspaceIdentity)
         quickTickets = initial.quickTickets ?? QuickTickets(workspace: workspaceIdentity)
         if quickTickets.workspace != workspaceIdentity { quickTickets = QuickTickets(workspace: workspaceIdentity) }
         if meetingReturn?.workspace != workspaceIdentity { meetingReturn = nil }
@@ -247,7 +255,7 @@ struct TrackingDraft: Identifiable {
 
     func persist() {
         guard canPersist, !preview else { return }
-        do { try store.save(SavedState(configuration: configuration, audit: audit, pending: pending, meetingReminders: meetingEngine.seen, pausedSession: pausedSession, meetingReturn: meetingReturn, quickTickets: quickTickets, slackReminders: slackReminders, dayReviews: dayReviews, attentionNotified: attentionNotified, attentionDismissed: attentionDismissed)) }
+        do { try store.save(SavedState(configuration: configuration, audit: audit, pending: pending, meetingReminders: meetingEngine.seen, pausedSession: pausedSession, meetingReturn: meetingReturn, microphoneTracking: microphoneTracking, quickTickets: quickTickets, slackReminders: slackReminders, dayReviews: dayReviews, attentionNotified: attentionNotified, attentionDismissed: attentionDismissed)) }
         catch { self.error = "Could not save local settings: \(error.localizedDescription)" }
     }
     func record(_ title: String, _ detail: String) {
@@ -268,6 +276,7 @@ struct TrackingDraft: Identifiable {
         api = nil; azure = nil; state = nil; connected = false; lastSync = nil
         logs = []; todayLogs = []; progressLogs = []; progressLastSync = nil; progressWeek = nil; loadingProgress = false; historyLoaded = false; workItems = [:]; activityTypes = []
         trackingDraft = nil; showTicketPicker = false; menuTracking = false; loadingTicketIDs = []; selectedMeeting = nil
+        microphoneTracking.restrict(to: configuration.microphone.apps, workspace: workspaceIdentity)
         if pausedSession?.workspace != workspaceIdentity { pausedSession = nil; persist() }
         if meetingReturn?.workspace != workspaceIdentity { meetingReturn = nil; persist() }
         if quickTickets.workspace != workspaceIdentity { quickTickets = QuickTickets(workspace: workspaceIdentity); persist() }
@@ -336,6 +345,10 @@ struct TrackingDraft: Identifiable {
         if let plan = meetingReturn, !plan.isValid(state: next, workspace: workspaceIdentity, now: Date()) {
             meetingReturn = nil; persist()
         }
+        let previousMicrophone = microphoneTracking
+        microphoneTracking.reconcile(state: next, workspace: workspaceIdentity)
+        if previousMicrophone != microphoneTracking { persist() }
+        syncMicrophone()
         if next.running, pausedSession != nil { pausedSession = nil; persist() }
         if let item = next.track?.workItem { workItems[item.id] = item }
         if let id = next.track?.ticketID { Task { await loadTicketTitle(id) } }
@@ -594,12 +607,13 @@ struct TrackingDraft: Identifiable {
         }
     }
 
-    func stopTracking(for change: BranchChange? = nil) async {
+    func stopTracking(for change: BranchChange? = nil, afterMicrophone prompt: MicrophoneEndPrompt? = nil) async {
         guard !busy, !preview, let api, let state, connected else { return }
         busy = true; defer { busy = false }
         do {
+            if let prompt { try validateMicrophoneEnd(prompt) }
             if let change { try await validate(change) }
-            apply(try await TrackingTransaction.stop(expectedIdentity: state.identity, service: api))
+            apply(try await TrackingTransaction.stop(expectedIdentity: prompt?.trackingIdentity ?? state.identity, service: api))
             pausedSession = nil
             if let change { dismiss(change) }
             error = nil; record("Tracking stopped", "Stopped the active 7pace timer")
@@ -612,14 +626,15 @@ struct TrackingDraft: Identifiable {
         }
     }
 
-    func pauseTracking(for change: BranchChange? = nil) async {
+    func pauseTracking(for change: BranchChange? = nil, afterMicrophone prompt: MicrophoneEndPrompt? = nil) async {
         guard !busy, !preview, let api, let state, state.running, connected else { return }
         let paused = PausedSession(ticketID: state.track?.ticketID.flatMap { $0 > 0 ? $0 : nil }, activityID: state.track?.activityTypeId, workspace: workspaceIdentity,
                                    pausedAt: Date(), elapsedSeconds: elapsed(at: Date()), remark: state.track?.remark)
         busy = true; defer { busy = false }
         do {
+            if let prompt { try validateMicrophoneEnd(prompt) }
             if let change { try await validate(change) }
-            apply(try await TrackingTransaction.stop(expectedIdentity: state.identity, service: api))
+            apply(try await TrackingTransaction.stop(expectedIdentity: prompt?.trackingIdentity ?? state.identity, service: api))
             pausedSession = paused; error = nil
             if let change { dismiss(change) }
             record("Tracking paused", "No time is logged until you resume")
@@ -753,18 +768,20 @@ struct TrackingDraft: Identifiable {
         } catch { if searchGeneration == generation { searchError = error.localizedDescription } }
     }
 
-    func addRepository() {
+    func chooseRepositoryFolder() -> URL? {
         let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false
-        panel.allowsMultipleSelection = true; panel.prompt = "Watch repositories"
+        panel.allowsMultipleSelection = false; panel.prompt = "Scan folder"
+        panel.message = "Choose a repository or a parent folder. You will select which repositories to watch after the scan."
         panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/repositories")
-        guard panel.runModal() == .OK else { return }
-        for url in panel.urls {
-            do {
-                _ = try GitProbe.read(path: url.path)
-                let path = url.resolvingSymlinksInPath().path
-                if !configuration.repositories.contains(where: { $0.path == path }) { configuration.repositories.append(Repository(path: path)) }
-            } catch { self.error = error.localizedDescription }
+        return panel.runModal() == .OK ? panel.url : nil
+    }
+    func addRepositories(_ paths: [String]) {
+        var valid: [String] = []
+        for path in paths {
+            do { _ = try GitProbe.read(path: path); valid.append(path) }
+            catch { self.error = error.localizedDescription }
         }
+        configuration.repositories = RepositoryDiscovery.adding(valid, to: configuration.repositories)
         persist()
     }
     func setRepository(_ id: UUID, enabled: Bool) {
@@ -894,7 +911,7 @@ struct TrackingDraft: Identifiable {
     }
 
     var meetingReturnReady: Bool {
-        meetingReturn?.isDue(state: state, workspace: workspaceIdentity, now: Date()) == true
+        microphoneEndPrompt == nil && meetingReturn?.isDue(state: state, workspace: workspaceIdentity, now: Date()) == true
     }
 
     func checkMeetingReturn(now: Date = Date()) {
@@ -909,14 +926,14 @@ struct TrackingDraft: Identifiable {
             meetingReturn = nil; persist(); return
         }
         if plan.isDue(state: state, workspace: workspaceIdentity, now: now), !plan.notified,
-           connectionHealth == .confirmed, !busy, !showTicketPicker, !menuTracking {
+           connectionHealth == .confirmed, microphoneEndPrompt == nil, !busy, !showTicketPicker, !menuTracking {
             plan.notified = true; meetingReturn = plan; persist(); revealSuggestion?()
             Task { await loadTicketTitle(plan.ticketID) }
         }
     }
 
     func returnAfterMeeting() {
-        guard let plan = meetingReturn, meetingReturnReady, !busy, connected, !showTicketPicker, trackingDraft == nil else { return }
+        guard let plan = meetingReturn, plan.isDue(state: state, workspace: workspaceIdentity, now: Date()), !busy, connected, !showTicketPicker, trackingDraft == nil else { return }
         beginMenuTracking(); revealSuggestion?()
         Task { await chooseActivity(for: plan.ticketID, inMenuBar: true, meetingReturn: plan) }
     }
@@ -935,14 +952,31 @@ struct TrackingDraft: Identifiable {
 
     func toggleFavorite(_ id: Int) { quickTickets.toggleFavorite(id); persist() }
 
+    var microphoneEndPrompt: MicrophoneEndPrompt? {
+        guard configuration.microphone.enabled, let prompt = microphoneTracking.pending,
+              prompt.isValid(state: state, workspace: workspaceIdentity) else { return nil }
+        if !preview && (!microphone.fresh || !microphone.selectedInputAppIDs.isEmpty || !microphone.engine.sessions.isEmpty) { return nil }
+        return prompt
+    }
+    var canReturnAfterMicrophone: Bool { meetingReturn?.isDue(state: state, workspace: workspaceIdentity, now: Date()) == true }
+    private func validateMicrophoneEnd(_ prompt: MicrophoneEndPrompt) throws {
+        guard microphoneEndPrompt?.id == prompt.id, connectionHealth == .confirmed else {
+            throw AppError.message("This microphone reminder is no longer current. Check the active timer before changing it.")
+        }
+    }
+    func keepTrackingAfterMicrophone() {
+        guard microphoneEndPrompt != nil else { return }
+        microphoneTracking.dismiss()
+        if meetingReturn?.microphoneSessionID != nil { meetingReturn = nil }
+        persist()
+    }
     func configureMicrophone() {
         guard !preview else { return }
-        if !configuration.microphone.enabled { pendingMicrophoneSessions = []; microphonePopupPending = false }
-        let restoring: MicrophoneSession?
-        if let id = meetingReturn?.microphoneSessionID, let app = meetingReturn?.microphoneAppID, meetingReturn?.end == Date.distantFuture {
-            restoring = MicrophoneSession(id: id, owner: MicrophoneOwner(id: app, name: app), started: Date())
-        } else { restoring = nil }
-        microphone.configure(configuration.microphone, restoring: restoring)
+        if !configuration.microphone.enabled {
+            pendingMicrophoneSessions = []; microphonePopupPending = false; microphoneTracking.reset(); persist()
+        }
+        microphoneTracking.restrict(to: configuration.microphone.apps, workspace: workspaceIdentity)
+        microphone.configure(configuration.microphone, restoring: microphoneTracking.links.values.map(\.session))
     }
 
     func syncMicrophone() {
@@ -957,6 +991,15 @@ struct TrackingDraft: Identifiable {
            microphone.engine.ended.contains(session), meetingReturn?.end == Date.distantFuture {
             meetingReturn?.end = Date(); persist()
         }
+        let previousMonitor = microphoneTracking
+        microphoneTracking.observe(sessions: Array(microphone.engine.sessions.values), inputAppIDs: microphone.selectedInputAppIDs,
+                                   ended: microphone.engine.ended, state: state, workspace: workspaceIdentity,
+                                   fresh: microphone.fresh, confirmed: connected && connectionHealth == .confirmed)
+        if let prompt = microphoneEndPrompt, !prompt.notified, connected, connectionHealth == .confirmed,
+           !busy, !showTicketPicker, !menuTracking {
+            microphoneTracking.markNotified(); revealSuggestion?()
+        }
+        if microphoneTracking != previousMonitor { persist() }
         if microphonePopupPending, !busy, !showTicketPicker, !menuTracking {
             microphonePopupPending = false
             if !pendingMicrophoneSessions.isEmpty { revealSuggestion?() }

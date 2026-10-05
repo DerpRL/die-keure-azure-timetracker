@@ -32,7 +32,7 @@ public struct Configuration: Codable, Equatable, Sendable {
     }
     public var microphoneMeetings: MicrophonePreferences?
     public var microphone: MicrophonePreferences {
-        get { microphoneMeetings ?? MicrophonePreferences(enabled: slackHuddles?.enabled == true) }
+        get { microphoneMeetings ?? MicrophonePreferences() }
         set { microphoneMeetings = newValue }
     }
     public var meetingSuggestions: MeetingPreferences?

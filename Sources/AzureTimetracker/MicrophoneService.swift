@@ -69,12 +69,12 @@ enum MicrophoneReader {
     private var preferences = MicrophonePreferences()
     private var task: Task<Void, Never>?
     private var generation = UUID()
-    func configure(_ preferences: MicrophonePreferences, restoring: MicrophoneSession? = nil) {
+    func configure(_ preferences: MicrophonePreferences, restoring: [MicrophoneSession] = []) {
         guard task == nil || self.preferences != preferences else { return }
         task?.cancel(); task = nil; generation = UUID(); engine = MicrophoneMeetingEngine()
         self.preferences = preferences; connected = false; owners = []; lastConfirmed = nil; checking = false
         guard preferences.enabled else { status = "Microphone meeting suggestions are off"; changed?(); return }
-        if let restoring { engine.restore(restoring) }
+        for session in restoring where preferences.apps.contains(session.owner.category) { engine.restore(session) }
         let current = generation
         task = Task { [weak self] in
             while !Task.isCancelled {
@@ -101,6 +101,7 @@ enum MicrophoneReader {
             engine.sample(nil, at: Date()); connected = false; status = error.localizedDescription
         }
     }
+    var selectedInputAppIDs: Set<String> { Set(owners.filter { preferences.apps.contains($0.category) }.map(\.id)) }
     var enabled: Bool { preferences.enabled }
     var fresh: Bool { connected && (lastConfirmed.map { Date().timeIntervalSince($0) < 10 } ?? false) }
     func suggestions() -> [MicrophoneSession] { fresh ? engine.suggestions() : [] }

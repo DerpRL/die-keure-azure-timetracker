@@ -7,6 +7,7 @@ import AzureTimetrackerCore
 extension AppModel {
     func prepareInterfacePreview() {
         configuration = Configuration(); configuration.watchEnabled = false
+        configuration.sevenPaceURL = "https://preview.timehub.7pace.com/"
         let calendar = Calendar.current, today = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
         let start = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: today)!
         let data: [[String: Any]] = [
@@ -48,6 +49,12 @@ extension AppModel {
         progressLogs = (try? JSONDecoder().decode([WorkLog].self, from: JSONSerialization.data(withJSONObject: [data[0]]))) ?? []
         progressLastSync = Date(); progressWeek = TargetProgress.weekInterval(at: Date())
         previewTimer(.running, seconds: 3661)
+        trackingAttention = nil
+        let session = MicrophoneSession(id: "preview-ended-call", owner: MicrophoneOwner(id: "com.tinyspeck.slackmacgap", name: "Slack"), started: Date().addingTimeInterval(-900))
+        let workspace = configuration.sevenPaceURL
+        let scope = (try? Endpoint.sevenPace(workspace).absoluteString.lowercased()) ?? workspace
+        microphoneTracking.observe(sessions: [session], inputAppIDs: [session.owner.id], ended: [], state: state, workspace: scope, fresh: true, confirmed: true)
+        microphoneTracking.observe(sessions: [], inputAppIDs: [], ended: [session.id], state: state, workspace: scope, fresh: true, confirmed: true)
     }
 
     func previewTimer(_ status: TrackingIndicator, seconds: Double? = nil) {

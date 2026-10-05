@@ -15,6 +15,17 @@ xcrun lipo "$APP/Contents/MacOS/AzureTimetracker" -verify_arch arm64
 xcrun lipo "$APP/Contents/MacOS/AzureTimetracker" -verify_arch x86_64
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$APP/Contents/Info.plist")"
 [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid app version" >&2; exit 1; }
+SIGN_LABEL="unsigned"
+SIGNING_NOTE="This app has an ad-hoc development signature and is not notarized. Permission approvals may be requested again after an update."
+SIGNATURE="$(codesign -dvv "$APP" 2>&1)"
+if [[ "$SIGNATURE" == *'Authority=Developer ID Application:'* ]]; then
+    codesign --verify --strict -R='anchor apple generic' "$APP"
+    SIGN_LABEL="developer-id"
+    SIGNING_NOTE="The app is Developer ID signed. Notarization is a separate release step; verify it before sharing this image. The first transition from a development build can require permission approval again."
+fi
+if [[ -n "${AZURE_TIME_SIGN_IDENTITY:-}" && "$SIGN_LABEL" == unsigned ]]; then
+    echo 'Rebuild and sign the app with Developer ID before creating a signed disk image.' >&2; exit 1
+fi
 STAGE="$(mktemp -d "$BUILD_DIR/dmg-stage.XXXXXX")"
 trap 'rm -rf "$STAGE"' EXIT
 ditto "$APP" "$STAGE/Azure timetracker.app"
@@ -36,15 +47,18 @@ Optional meeting detection uses local microphone status (macOS 14.2+), with no S
 
 Supports Apple Silicon and Intel; requires macOS 14 or later.
 
-This distribution is unsigned and not notarized. The app has an ad-hoc
-integrity signature, not a Developer ID signature. macOS may block opening it.
-If your Mac requires a signed, notarized release, ask for that release.
-Changing the package format to DMG does not change its signing status.
+$SIGNING_NOTE
+Use the same app bundle ID and Developer ID team for future releases.
+See the source repository's Resources/Signing.md for the release steps.
 EOF
 
-IMAGE="$DELIVERY_DIR/Azure-timetracker-$VERSION-universal-unsigned.dmg"
+IMAGE="$DELIVERY_DIR/Azure-timetracker-$VERSION-universal-$SIGN_LABEL.dmg"
 hdiutil create -volname "Azure timetracker $VERSION" -srcfolder "$STAGE" \
     -fs HFS+ -format UDZO -nospotlight -ov "$IMAGE"
+if [[ -n "${AZURE_TIME_SIGN_IDENTITY:-}" ]]; then
+    codesign --force --timestamp --sign "$AZURE_TIME_SIGN_IDENTITY" "$IMAGE"
+    codesign --verify --strict "$IMAGE"
+fi
 hdiutil verify "$IMAGE"
 (cd "$DELIVERY_DIR" && shasum -a 256 "$(basename "$IMAGE")" > "$(basename "$IMAGE").sha256")
 echo "Disk image created: $IMAGE"

@@ -1,8 +1,8 @@
 # Install Azure timetracker
 
-Use the `Azure-timetracker-1.9.0-universal-unsigned.pkg` installer. It installs **Azure timetracker.app** in **/Applications** and supports both Apple Silicon and Intel, with a macOS 14 minimum deployment target. Direct runtime checks have been performed on Apple Silicon macOS 27.0.1; Intel and older macOS versions still need testing.
+Use the `Azure-timetracker-1.10.0-universal-unsigned.pkg` installer. It installs **Azure timetracker.app** in **/Applications** and supports both Apple Silicon and Intel, with a macOS 14 minimum deployment target. Direct runtime checks have been performed on Apple Silicon macOS 27.0.1; Intel and older macOS versions still need testing.
 
-For drag-and-drop installation, open `Azure-timetracker-1.9.0-universal-unsigned.dmg`, drag the app onto Applications, eject the disk image, then launch the installed app. Quit the old app before replacing it. The same signing limitations apply.
+For drag-and-drop installation, open `Azure-timetracker-1.10.0-universal-unsigned.dmg`, drag the app onto Applications, eject the disk image, then launch the installed app. Quit the old app before replacing it. The same signing limitations apply.
 
 ## Install and open
 
@@ -24,7 +24,7 @@ If you trust the sender and have reviewed the package, attempt to open it normal
 
 ## Verify and update
 
-The accompanying `.sha256` file contains the installer checksum. From the download directory, run `shasum -a 256 -c Azure-timetracker-1.9.0-universal-unsigned.pkg.sha256`. A matching checksum detects file changes; it does not authenticate the sender.
+The accompanying `.sha256` file contains the installer checksum. From the download directory, run `shasum -a 256 -c Azure-timetracker-1.10.0-universal-unsigned.pkg.sha256`. A matching checksum detects file changes; it does not authenticate the sender.
 
 The installer replaces only the app bundle in /Applications. Your per-user settings and Keychain credentials are preserved. It does not install launch daemons, change Git repositories, alter system security settings, start timers or launch the app as root. The payload contains no developer account settings, worklogs, calendar data or credentials.
 
@@ -36,3 +36,13 @@ To remove the app, disable launch at login in its Settings, quit it, and move th
 - Settings → Tracking → Holidays & leave: the ten Belgian statutory public holidays are enabled by default. Enter employer-specific replacement dates and leave, half-days, or custom target hours. Save changes to apply. Holidays and leave adjust targets, not recorded time. Historical targets use the currently saved weekday schedule and exceptions.
 - Offline drafts (⌘0): start/stop a separate local timer or add past time. Drafts and cached activities survive restarts in a private local file. Review after reconnecting, then upload explicitly. Overlaps are advisory. A lost response requires reconciliation; it is never retried automatically. A running 7pace timer can continue independently while offline.
 - Automatic app updates are deferred. Install later releases manually.
+
+## New in 1.10.0
+
+- When selected apps stop using the microphone for one minute, the menu-bar panel offers Keep tracking, Pause or Stop, including for meetings started without a previous ticket. Muting can also trigger this suggestion; your timer changes only after your choice.
+- New installations enable Slack, Google Meet / web browsers, Microsoft Teams and Zoom by default. Saved preferences are respected.
+- Stable Developer ID signing is prepared. This package is still ad-hoc and not notarized because no signing identity is installed on the build Mac. Permissions can be requested again on an ad-hoc update. A properly signed release requires the organization's Developer ID Application certificate; see Signing.md in the source repository.
+
+### Add multiple repositories
+
+Open Repositories → Add from folder…, choose a parent folder and wait for the scan. Search the results and check the repositories to watch, then select Add selected. The scan includes nested Git checkouts and worktrees, skips Git metadata, application packages and linked folders, and reports unreadable folders. Existing watched/paused repositories are preserved.

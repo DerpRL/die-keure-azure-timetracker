@@ -158,11 +158,13 @@ struct AgendaView: View {
 
 struct RepositoriesView: View {
     @ObservedObject var model: AppModel
+    @ViewState private var scanFolder: URL?
+    @ViewState private var showImport = false
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                HStack { SectionTitle(title: "Repositories", subtitle: "Choose which local Git repositories to watch."); Spacer(); Button { model.addRepository() } label: { Label("Add repository", systemImage: "plus") }.buttonStyle(.borderedProminent).tint(Palette.action).foregroundStyle(.white) }
-                if model.configuration.repositories.isEmpty { Card { EmptyState(symbol: "folder.badge.plus", title: "Choose your repositories", detail: "Add each repository root to watch branch changes, including Git worktrees.") } }
+                HStack { SectionTitle(title: "Repositories", subtitle: "Choose which local Git repositories to watch."); Spacer(); Button { if let folder = model.chooseRepositoryFolder() { scanFolder = folder; showImport = true } } label: { Label("Add from folder…", systemImage: "folder.badge.plus") }.buttonStyle(.borderedProminent).tint(Palette.action).foregroundStyle(.white) }
+                if model.configuration.repositories.isEmpty { Card { EmptyState(symbol: "folder.badge.plus", title: "Choose your repositories", detail: "Choose a parent folder, scan its subfolders and select the repositories you want to watch.") } }
                 ForEach(model.configuration.repositories) { repo in
                     Card {
                         HStack(alignment: .top, spacing: 16) {
@@ -180,6 +182,9 @@ struct RepositoriesView: View {
                     }
                 }
             }.padding(28)
+        }
+        .sheet(isPresented: $showImport) {
+            if let scanFolder { RepositoryImportView(model: model, folder: scanFolder) }
         }
     }
 }
@@ -374,7 +379,7 @@ Card { MicrophoneSettings(preferences: $draft.microphone, service: model.microph
                 Text("⌘1–⌘9 opens the matching navigation page; ⌘0 opens Offline drafts. ⌘⇧D opens today’s review. ⌃⌥T opens quick switch when enabled in Tracking settings. ⌘S saves Settings.")
                 Text("Buttons use visible labels and system focus indicators. Enable Keyboard navigation in macOS System Settings to use Tab across all controls.").foregroundStyle(Palette.secondary)
                 Divider()
-                Text("Azure timetracker 1.9.0").font(.headline)
+                Text("Azure timetracker 1.10.0").font(.headline)
                 Text("Credentials are kept in macOS Keychain. Day review status is stored only on this Mac.").foregroundStyle(Palette.secondary)
             }.font(.body)
         }

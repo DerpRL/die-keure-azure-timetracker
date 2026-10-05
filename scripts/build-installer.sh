@@ -26,15 +26,14 @@ cp "$SOURCE_DIR/Resources/Info.plist" "$APP/Contents/Info.plist"
 swift "$SOURCE_DIR/scripts/draw-icon.swift" "$STAGE/AppIcon.iconset"
 iconutil --convert icns "$STAGE/AppIcon.iconset" --output "$APP/Contents/Resources/AppIcon.icns"
 SIGN_LABEL="unsigned"
-if [[ -n "${AZURE_TIME_SIGN_IDENTITY:-}" || -n "${AZURE_TIME_INSTALLER_IDENTITY:-}" ]]; then
-    : "${AZURE_TIME_SIGN_IDENTITY:?Set a Developer ID Application identity}"
-    : "${AZURE_TIME_INSTALLER_IDENTITY:?Set a Developer ID Installer identity}"
-    codesign --force --options runtime --timestamp --sign "$AZURE_TIME_SIGN_IDENTITY" "$APP"
-    SIGN_LABEL="signed"
-else
-    codesign --force --sign - --identifier be.yarne.azure-timetracker "$APP"
+if [[ -n "${AZURE_TIME_INSTALLER_IDENTITY:-}" && -z "${AZURE_TIME_SIGN_IDENTITY:-}" ]]; then
+    echo "Set AZURE_TIME_SIGN_IDENTITY as well as the installer identity." >&2; exit 1
 fi
-codesign --verify --deep --strict "$APP"
+bash "$SOURCE_DIR/scripts/sign-app.sh" "$APP"
+if [[ -n "${AZURE_TIME_SIGN_IDENTITY:-}" ]]; then
+    SIGN_LABEL="signed-app"
+    if [[ -n "${AZURE_TIME_INSTALLER_IDENTITY:-}" ]]; then SIGN_LABEL="signed"; fi
+fi
 plutil -lint "$APP/Contents/Info.plist"
 xcrun lipo "$APP/Contents/MacOS/AzureTimetracker" -verify_arch arm64
 xcrun lipo "$APP/Contents/MacOS/AzureTimetracker" -verify_arch x86_64

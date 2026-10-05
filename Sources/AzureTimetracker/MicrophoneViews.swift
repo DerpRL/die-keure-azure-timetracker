@@ -12,12 +12,12 @@ struct MicrophoneSettings: View {
                 .font(.callout).foregroundStyle(Palette.secondary).fixedSize(horizontal: false, vertical: true)
             LazyVGrid(columns: [GridItem(.flexible(), alignment: .leading), GridItem(.flexible(), alignment: .leading)], alignment: .leading, spacing: 10) {
                 ForEach(MicrophoneApp.allCases) { app in
-                    Toggle(app.rawValue, isOn: Binding(get: { preferences.apps.contains(app) }, set: { if $0 { preferences.apps.insert(app) } else { preferences.apps.remove(app) } }))
+                    Toggle(app.label, isOn: Binding(get: { preferences.apps.contains(app) }, set: { if $0 { preferences.apps.insert(app) } else { preferences.apps.remove(app) } }))
                 }
             }.disabled(!preferences.enabled)
-            Text("Browser calls appear as Chrome, Safari, Edge, etc. Some appear as WebKit (browser or web view). Microphone use cannot identify a meeting, tab, Slack channel, or stand-up by itself. Dictation and recordings can also trigger a suggestion. Calls started while muted may not be detected until input becomes active.")
+            Text("Google Meet and other browser calls appear as Chrome, Safari, Edge, etc. Some appear as WebKit (browser or web view). Microphone use cannot identify a meeting, tab, Slack channel, or stand-up by itself. Dictation and recordings can also trigger a suggestion. Calls started while muted may not be detected until input becomes active.")
                 .font(.caption).foregroundStyle(Palette.secondary).fixedSize(horizontal: false, vertical: true)
-            Text("After 60 seconds without microphone use, the app offers to return to your previous ticket. Muting can also cause this reminder; the timer only changes when you confirm.")
+            Text("After 60 seconds without microphone use in the selected apps, the app offers to pause or stop tracking, even if there is no previous ticket. Returning to previous work is also available when applicable. Muting can also cause this reminder; the timer only changes when you confirm.")
                 .font(.caption).foregroundStyle(Palette.secondary).fixedSize(horizontal: false, vertical: true)
             Divider()
             Label(service.status, systemImage: service.connected ? "checkmark.circle" : "info.circle").font(.callout)
@@ -50,6 +50,32 @@ struct MicrophonePrompt: View {
                 Spacer()
                 Button("Meeting…") { Task { await model.chooseMicrophoneActivity(microphoneSession, standup: false) } }.disabled(model.busy || !model.connected)
                 Button("Daily standup…") { Task { await model.chooseMicrophoneActivity(microphoneSession, standup: true) } }.disabled(model.busy || !model.connected)
+            }
+        }
+    }
+}
+
+struct MicrophoneEndPromptView: View {
+    @ObservedObject var model: AppModel
+    let prompt: MicrophoneEndPrompt
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Microphone use stopped", systemImage: "mic.slash.fill").font(.headline).foregroundStyle(Palette.accent)
+            Text(prompt.appNames.joined(separator: ", ") + " has not used the microphone for at least a minute. Has your meeting finished?")
+                .font(.callout).fixedSize(horizontal: false, vertical: true)
+            Text("Your timer is still running: " + model.currentTicketTitle).font(.callout.weight(.medium)).fixedSize(horizontal: false, vertical: true)
+            Text("If you only muted, keep tracking. Pause saves this task for resuming; Stop finishes tracking.").font(.caption).foregroundStyle(Palette.secondary).fixedSize(horizontal: false, vertical: true)
+            HStack {
+                Button("Keep tracking") { model.keepTrackingAfterMicrophone() }.disabled(model.busy)
+                Spacer()
+                Button("Pause") { Task { await model.pauseTracking(afterMicrophone: prompt) } }
+                    .disabled(model.busy || !model.connected || model.preview)
+                Button("Stop") { Task { await model.stopTracking(afterMicrophone: prompt) } }
+                    .disabled(model.busy || !model.connected || model.preview)
+            }
+            if model.canReturnAfterMicrophone {
+                Button("Resume previous ticket…") { model.returnAfterMeeting() }
+                    .disabled(model.busy || !model.connected || model.preview)
             }
         }
     }

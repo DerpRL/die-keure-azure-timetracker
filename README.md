@@ -1,5 +1,7 @@
 # Azure timetracker
 
+Download the current macOS installer from [releases/latest](releases/latest). Older versions are in [releases/archive](releases/archive). See [release instructions](releases/README.md).
+
 A native SwiftUI menu bar app for macOS. It watches your local Git branches and helps you keep your 7pace timer on the right Azure DevOps ticket.
 
 ## First run
@@ -9,7 +11,7 @@ A native SwiftUI menu bar app for macOS. It watches your local Git branches and 
 3. Add your **Azure DevOps PAT**, with **Work Items → Read** permission. It is used to verify ticket details.
 4. Under **7pace sign-in**, choose **Mobile PIN pairing** and **Generate pairing PIN**. Enter the displayed PIN within one minute on **7pace → Apps → Pair Mobile App** in Azure DevOps, then save your settings. The app stores the resulting access and refresh credentials in Keychain and renews access automatically. Alternatively, choose **API token** and use a token from **7pace → Settings → Reporting & API**. An Azure PAT cannot authenticate the 7pace tracking API. If you omit the Azure PAT, the app can also look up tickets through 7pace.
 5. Choose **Save changes**. Allow macOS notifications when asked. The connection check only reads account data; it does not start or stop a timer.
-6. Check **Repositories**. On first launch, the app discovers immediate Git repositories in `~/Documents/repositories`. Add worktrees or other folders using **Add repository**, and disable anything you do not want watched.
+6. Check **Repositories**. On first launch, the app discovers immediate Git repositories in `~/Documents/repositories`. Use **Add from folder…** to scan a parent folder and select nested repositories or worktrees, and disable anything you do not want watched.
 7. In **Agenda**, choose **Allow calendar access**. Your mail account must be connected to Apple Calendar through macOS Internet Accounts with Calendars enabled. The app only reads events.
 
 Tokens are entered only into the app, saved in macOS Keychain, and bound to their account/workspace. Blank token fields preserve the saved token for that same account. To rotate a token, paste its replacement and save.
@@ -161,11 +163,11 @@ Requires macOS and Apple Command Line Tools with Swift 6. The app targets macOS 
 ./scripts/build-installer.sh
 ```
 
-The build script creates an app beside the source directory and signs it ad hoc for local use. It is not Developer ID signed or notarized for distribution. Use `AZURE_TIME_BUILD_DIR` to choose the scratch directory. The test script explicitly supplies the Swift Testing macro plugin where the command-line toolchain requires it. `ViewState` aliases SwiftUI’s existing property wrapper because this macOS 27 Command Line Tools installation does not include the newer SwiftUI macro plugin.
+The build script creates an app beside the source directory. It uses a Developer ID Application identity when AZURE_TIME_SIGN_IDENTITY is set, otherwise an ad-hoc development signature. See [Signing and stable permissions](Resources/Signing.md) before distributing updates. Use `AZURE_TIME_BUILD_DIR` to choose the scratch directory. The test script explicitly supplies the Swift Testing macro plugin where the command-line toolchain requires it. `ViewState` aliases SwiftUI’s existing property wrapper because this macOS 27 Command Line Tools installation does not include the newer SwiftUI macro plugin.
 
 The installer script cross-compiles both architectures and creates a `.pkg`, checksum, installation guide beside the source folder (or in its first argument). It installs only the app in `/Applications`, preserving per-user settings and Keychain credentials. The default installer is unsigned and not notarized; see [the installation guide](Resources/Installation%20guide.md) for macOS approval details. To produce a signed build, set both `AZURE_TIME_SIGN_IDENTITY` to a Developer ID Application identity and `AZURE_TIME_INSTALLER_IDENTITY` to a Developer ID Installer identity. Notarization remains a separate release step; signing alone is not notarization.
 
-For drag-and-drop distribution, `bash scripts/build-dmg.sh /path/to/Azure\ timetracker.app /path/to/output` packages an existing verified universal app into a compressed, read-only `.dmg` with an Applications shortcut and installation instructions. It also writes a SHA-256 checksum. The script does not rebuild or install the app; both architecture slices must already be present. `AZURE_TIME_BUILD_DIR` controls its staging directory. The DMG remains unsigned and does not add notarization to the application.
+For drag-and-drop distribution, `bash scripts/build-dmg.sh /path/to/Azure\ timetracker.app /path/to/output` packages an existing verified universal app into a compressed, read-only `.dmg` with an Applications shortcut and installation instructions. It also writes a SHA-256 checksum. The script does not rebuild or install the app; both architecture slices must already be present. `AZURE_TIME_BUILD_DIR` controls its staging directory. The DMG script detects Developer ID app signatures, signs the image when a signing identity is provided, and labels its status accurately. It does not add notarization.
 
 Architecture:
 
@@ -207,3 +209,14 @@ Belgian public holidays use Gregorian computus for Easter Monday, Ascension and 
 Offline drafts are separate from the remote timer and are stored in `offline-drafts.json` beside `state.json` (directory 0700, file 0600). Activity choices are cached per normalized workspace URL. There can be one local timer across workspaces; it survives sleep/restart and can be stopped even after changing workspace. Draft uploads belong to the currently authenticated 7pace user. A review reads all potentially overlapping worklogs and current tracking status; warnings do not forbid upload. An explicit upload rechecks overlaps, exact duplicates, workspace and live activity choices. Changed warnings require a refreshed review. The sending checkpoint is durable before POST; a lost response, unexpected confirmation or failed final checkpoint leaves the draft flagged for reconciliation. Such a draft cannot be replayed or edited until linked to an existing matching entry or manually cleared after checking 7pace. Successful creates retain the returned ID. No automatic upload, retry, remote timer stop, or inclusion in confirmed totals occurs. Preview builds use synthetic data and never persist drafts or access accounts. Unit tests simulate remote writes; live production writes are not used for validation.
 
 Automatic updates were explicitly deferred for this release. No updater framework or release feed was added.
+
+
+## Version 1.10.0 — microphone ending suggestions and release signing
+
+After 60 seconds of confirmed absence in all selected microphone apps, a separate suggestion offers Keep tracking, Pause and Stop. It also works for a ticket-free standup started while idle, or an existing ticket kept running during a call. It binds the actual microphone session to a confirmed 7pace timer; a stale reminder cannot change a different timer. Brief muting, HAL read failures and gaps caused by sleep do not establish an ending. New microphone input dismisses an outdated prompt, and overlapping app use defers it until all watched input sessions end. Keep dismisses that occurrence without repeating it. Pause stops the remote timer and retains a local resume choice; neither action is automatic. Previous-ticket return remains available when there is a previous ticket. The session associations and prompt acknowledgment survive restart.
+
+New configurations enable Slack, Microsoft Teams, Zoom and Google Meet / web browsers. Existing explicit enabled/app choices are preserved. Google Meet is detected through the browser's microphone owner; the app cannot identify an individual tab or distinguish Meet from another browser call or recording.
+
+Both app and installer builds use the shared signing helper with Calendar resource access. A Developer ID certificate enables Hardened Runtime, secure timestamps and stable designated requirements; the bundle ID and Keychain service are unchanged. There is no valid Developer ID identity on the development Mac at validation time, so the supplied 1.10.0 artifacts remain ad-hoc and not notarized. Signing/notarization steps are documented in Resources/Signing.md; no private keys, TCC resets or permissive Keychain ACL changes are included.
+
+Choose **Repositories → Add from folder…** to scan a parent folder recursively, filter results and select which Git checkouts/worktrees to watch. Existing repositories are marked and never added twice. Cancel closes the dialog and stops the scan.

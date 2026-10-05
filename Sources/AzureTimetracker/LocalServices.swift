@@ -48,6 +48,7 @@ struct SavedState: Codable {
     var meetingReminders: [String: Date]? = nil
     var pausedSession: PausedSession? = nil
     var meetingReturn: MeetingReturn? = nil
+    var microphoneTracking: MicrophoneTrackingMonitor? = nil
     var quickTickets: QuickTickets? = nil
     var slackReminders: [String: Date]? = nil
     var dayReviews: [String: DayReviewRecord]? = nil

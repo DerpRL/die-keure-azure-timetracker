@@ -3,6 +3,7 @@ import Foundation
 public enum MicrophoneApp: String, CaseIterable, Codable, Identifiable, Sendable {
     case slack = "Slack", teams = "Microsoft Teams", zoom = "Zoom", browsers = "Web browsers", webex = "Webex", discord = "Discord", faceTime = "FaceTime", other = "Other apps"
     public var id: Self { self }
+    public var label: String { self == .browsers ? "Google Meet / web browsers" : rawValue }
     public static func classify(_ bundleID: String) -> Self {
         let id = bundleID.lowercased()
         func matches(_ prefix: String) -> Bool { id == prefix || id.hasPrefix(prefix + ".") }
@@ -18,9 +19,9 @@ public enum MicrophoneApp: String, CaseIterable, Codable, Identifiable, Sendable
     }
 }
 public struct MicrophonePreferences: Codable, Equatable, Sendable {
-    public var enabled = false
-    public var apps: Set<MicrophoneApp> = [.slack, .teams, .zoom, .browsers, .webex, .discord, .faceTime]
-    public init(enabled: Bool = false) { self.enabled = enabled }
+    public var enabled = true
+    public var apps: Set<MicrophoneApp> = [.slack, .teams, .zoom, .browsers]
+    public init(enabled: Bool = true) { self.enabled = enabled }
 }
 public struct MicrophoneOwner: Equatable, Identifiable, Sendable {
     public let id: String
@@ -35,7 +36,7 @@ public struct MicrophoneSession: Equatable, Identifiable, Sendable {
     public init(id: String, owner: MicrophoneOwner, started: Date) { self.id = id; self.owner = owner; self.started = started }
 }
 
-/// Input use is a suggestion signal, never proof of a meeting or a reason to stop a timer.
+/// Input use is a suggestion signal, never proof of a meeting or a reason to stop a timer automatically.
 /// Requires consecutive successful samples; errors and sleep cannot establish an ending.
 public struct MicrophoneMeetingEngine: Sendable {
     public private(set) var sessions: [String: MicrophoneSession] = [:]
