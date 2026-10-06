@@ -86,10 +86,14 @@ fn address_details_follow_foundation_parsing() {
     // A blank title falls back to the slug, a blank slug to the key; titles are kept as given.
     assert_eq!(name("https://figma.com/file/D4/---", "   "), pair("D4", "Figma file · D4"));
     assert_eq!(name("https://figma.com/file/D4/plan", " Plan "), pair("D4", " Plan "));
+    // macOS 14+ `URLComponents(string:)` percent-encodes invalid characters instead of failing,
+    // so these parse in 1.14.x too (names confirmed with Swift 6.4).
+    assert_eq!(name("https://figma.com/file/A1/My File", ""), pair("A1", "My File"));
+    assert_eq!(name("https://figma.com/file/A1/x%zz", ""), pair("A1", "x%zz"));
+    assert_eq!(name("https://figma.com/file/A1/Café-plan", ""), pair("A1", "Café plan"));
+    assert_eq!(name("https://figma.com/file/A1/Caf%C3%A9-plan", ""), pair("A1", "Café plan"));
     for url in [
         "www.figma.com/file/A1/x",
-        "https://figma.com/file/A1/My File",
-        "https://figma.com/file/A1/x%zz",
         "https://:@figma.com/file/A1/x",
         "https://[::1]/file/A1/x",
         "https://figma.com/File/A1/x",

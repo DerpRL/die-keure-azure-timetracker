@@ -79,25 +79,15 @@ impl FigmaDocument {
         if address.to_lowercase().starts_with("figma.com/") {
             address = format!("https://{address}");
         }
-        let url = Components::parse(&address)?;
-        let host = url.host.to_lowercase();
-        if !url.scheme.eq_ignore_ascii_case("https")
-            || !(host == "figma.com" || host == "www.figma.com")
-            || url.user_info
-            || url.port.is_some_and(|port| port != 443)
-        {
-            return None;
-        }
-        let parts: Vec<&str> = url.path.split('/').filter(|part| !part.is_empty()).collect();
+        let parts = figma_path(&address)?;
         if parts.len() < 3
-            || !["design", "file", "board", "slides"].contains(&parts[0])
-            || !Self::valid_key(parts[1])
+            || !["design", "file", "board", "slides"].contains(&parts[0].as_str())
+            || !Self::valid_key(&parts[1])
         {
             return None;
         }
-        let key = parts[1];
-        let slug =
-            percent_decode(parts[2]).unwrap_or_else(|| parts[2].to_string()).replace('-', " ");
+        let key = parts[1].as_str();
+        let slug = percent_decode(&parts[2]).unwrap_or_else(|| parts[2].clone()).replace('-', " ");
         let name = match (title.non_empty(), slug.non_empty()) {
             (Some(title), _) => title.to_string(),
             (None, Some(slug)) => slug.to_string(),
@@ -588,71 +578,50 @@ fn prefix_characters(text: &str, limit: usize) -> String {
     text.to_string()
 }
 
-/// The parts of an address read by [`FigmaDocument::parse`], parsed like Foundation's strict
-/// `URLComponents(string:)`: only RFC 3986 characters and valid percent-escapes are accepted.
-struct Components<'a> {
-    scheme: &'a str,
-    user_info: bool,
-    /// Percent-decoded.
-    host: String,
-    port: Option<u64>,
-    /// Still percent-encoded.
-    path: &'a str,
+/// The path segments `FigmaDocument.parse` reads from `URLComponents(string:)`.
+///
+/// Since macOS 14, Foundation percent-encodes invalid characters instead of rejecting the
+/// string, so spaces, non-ASCII text, stray `%` and similar characters in the slug, query or
+/// fragment are accepted. Returns `None` unless the address is `https` on `figma.com` or
+/// `www.figma.com` (host percent-decoded, case-insensitive), without user info, with the port
+/// absent or 443 (an empty or overflowing port reads as absent, as in Foundation). Query and
+/// fragment are ignored; empty path segments are skipped. Verified against Swift 6.4.
+fn figma_path(address: &str) -> Option<Vec<String>> {
+    let rest = address.get(..8).filter(|scheme| scheme.eq_ignore_ascii_case("https://"))?;
+    let rest = &address[rest.len()..];
+    let authority_end = rest.find(['/', '?', '#']).unwrap_or(rest.len());
+    let (authority, tail) = rest.split_at(authority_end);
+    if authority.contains('@') {
+        // Any user info, even empty, makes `url.user` non-nil.
+        return None;
+    }
+    let (host, port) = match authority.rfind(':') {
+        Some(colon) if !authority.starts_with('[') => {
+            (&authority[..colon], Some(&authority[colon + 1..]))
+        }
+        _ => (authority, None),
+    };
+    if port.is_some_and(|port| !port_accepted(port)) {
+        return None;
+    }
+    let host = percent_decode(host)?.to_lowercase();
+    if host != "figma.com" && host != "www.figma.com" {
+        return None;
+    }
+    let path_end = tail.find(['?', '#']).unwrap_or(tail.len());
+    Some(tail[..path_end].split('/').filter(|part| !part.is_empty()).map(str::to_string).collect())
 }
 
-impl<'a> Components<'a> {
-    fn parse(address: &'a str) -> Option<Self> {
-        let bytes = address.as_bytes();
-        for (index, &b) in bytes.iter().enumerate() {
-            let allowed = b.is_ascii_alphanumeric() || b"-._~:/?#[]@!$&'()*+,;=%".contains(&b);
-            let escape_ok = b != b'%'
-                || bytes
-                    .get(index + 1..index + 3)
-                    .is_some_and(|hex| hex.iter().all(u8::is_ascii_hexdigit));
-            if !allowed || !escape_ok {
-                return None;
-            }
-        }
-        let (scheme, rest) = address.split_once(':')?;
-        let mut scheme_chars = scheme.bytes();
-        if !scheme_chars.next().is_some_and(|b| b.is_ascii_alphabetic())
-            || !scheme_chars.all(|b| b.is_ascii_alphanumeric() || b"+-.".contains(&b))
-        {
-            return None;
-        }
-        // A file address always has a host, so it needs "//".
-        let rest = rest.strip_prefix("//")?;
-        let (authority, tail) = rest.split_at(rest.find(['/', '?', '#']).unwrap_or(rest.len()));
-        let (path, query_and_fragment) = tail.split_at(tail.find(['?', '#']).unwrap_or(tail.len()));
-        // Brackets only delimit IP literals in the host; '#' starts the only fragment.
-        let fragment = query_and_fragment.split_once('#').map_or("", |(_, fragment)| fragment);
-        if tail.contains(['[', ']']) || fragment.contains('#') {
-            return None;
-        }
-        let (user_info, host_and_port) = match authority.rsplit_once('@') {
-            Some((user_info, host_and_port)) => {
-                if user_info.contains(['@', '[', ']']) {
-                    return None;
-                }
-                (true, host_and_port)
-            }
-            None => (false, authority),
-        };
-        // An IP literal can never be a Figma host.
-        if host_and_port.contains(['[', ']']) {
-            return None;
-        }
-        let (host, port) = match host_and_port.split_once(':') {
-            Some((host, "")) => (host, None),
-            Some((host, port)) if port.bytes().all(|b| b.is_ascii_digit()) => {
-                (host, Some(port.parse::<u64>().ok()?))
-            }
-            Some(_) => return None,
-            None => (host_and_port, None),
-        };
-        let host = percent_decode(host)?;
-        Some(Self { scheme, user_info, host, port, path })
+/// `url.port == nil || url.port == 443`: digits that overflow read as nil in Foundation; any
+/// other non-digit port fails to parse.
+fn port_accepted(port: &str) -> bool {
+    if port.is_empty() {
+        return true;
     }
+    if !port.bytes().all(|byte| byte.is_ascii_digit()) {
+        return false;
+    }
+    port.parse::<i64>().map_or(true, |value| value == 443)
 }
 
 #[cfg(test)]
@@ -675,18 +644,116 @@ mod tests {
         assert_eq!(prefix_characters("\r\nx", 1), "\r\n");
     }
 
+    /// `(address, FigmaDocument.parse(address) != nil)` printed by Swift 6.4 on macOS 27.
+    const SWIFT_PARSE: &[(&str, bool)] = &[
+        ("https://www.figma.com/design/AbC123/My-File?node-id=1-2", true),
+        ("https://figma.com/file/KEY/x", true),
+        ("  https://www.figma.com/board/KEY/x \n", true),
+        ("figma.com/design/KEY/Name", true),
+        ("FIGMA.com/design/KEY/Name", true),
+        ("www.figma.com/design/KEY/Name", false),
+        ("HTTPS://WWW.FIGMA.COM/design/KEY/Name", true),
+        ("https://www.figma.com/Design/KEY/Name", false),
+        ("https://www.figma.com/slides/KEY/Name", true),
+        ("https://www.figma.com/proto/KEY/Name", false),
+        ("https://www.figma.com/design/KEY", false),
+        ("https://www.figma.com/design/KEY/", false),
+        ("https://www.figma.com//design//KEY//Name", true),
+        ("https://www.figma.com/design/K-EY/Name", false),
+        ("https://www.figma.com/design/K\u{c9}Y/Name", false),
+        ("https://www.figma.com:443/design/KEY/Name", true),
+        ("https://www.figma.com:8443/design/KEY/Name", false),
+        ("https://www.figma.com:/design/KEY/Name", true),
+        ("https://user@www.figma.com/design/KEY/Name", false),
+        ("https://:pw@www.figma.com/design/KEY/Name", false),
+        ("https://@www.figma.com/design/KEY/Name", false),
+        ("http://www.figma.com/design/KEY/Name", false),
+        ("https://evil.com/design/KEY/Name", false),
+        ("https://www.figma.com.evil.com/design/KEY/Name", false),
+        ("https://www%2Efigma.com/design/KEY/Name", true),
+        ("https://www.figma.com/design/KEY/My File", true),
+        ("https://www.figma.com/design/KEY/Caf%C3%A9", true),
+        ("https://www.figma.com/design/KEY/Caf\u{e9}", true),
+        ("https://www.figma.com/design/KEY/Name#frag", true),
+        ("https://www.figma.com/design/KEY/Name?x=<y>", true),
+        ("https://www.figma.com/design/KEY/Na%zzme", true),
+        ("https://www.figma.com/design/KEY/Name|x", true),
+        ("https://www.figma.com/design/KEY/Name\\x", true),
+        ("https://www.figma.com/design/KEY/Name^x", true),
+        ("https://www.figma.com/design/KEY/Name`x", true),
+        ("https://www.figma.com/design/KEY/Name{x}", true),
+        ("https://www.figma.com/design/KEY/Name\"x", true),
+        ("https://www.figma.com/design/KEY/Name[x]", true),
+        ("https://[::1]/design/KEY/Name", false),
+        ("https:www.figma.com/design/KEY/Name", false),
+        ("https:/www.figma.com/design/KEY/Name", false),
+        ("https:///design/KEY/Name", false),
+        ("about:blank", false),
+        ("", false),
+        ("file:///Users/x/Name.fig", false),
+        ("https://www.figma.com/design/%4BEY/Name", false),
+        ("https://www.figma.com/%64esign/KEY/Name", false),
+        ("https://www.figma.com/design/KEY/Name/extra", true),
+        ("https://www.figma.com./design/KEY/Name", false),
+        ("https://www.figma.com/design/KEY/Name?", true),
+        ("https://WWW.Figma.Com/file/KEY/Name", true),
+        ("\u{a0}https://www.figma.com/design/KEY/Name\u{2028}", true),
+        ("https://www.figma.com/design/KEY/Name%", true),
+        ("https://www.figma.com/design/KEY/Name\u{7f}", true),
+        ("https://www.figma.com/design/KEY/Name\t", true),
+        ("https://www.figma.com:0443/design/KEY/Name", true),
+        ("https://www.figma.com:abc/design/KEY/Name", false),
+        ("https://www.figma.com:99999999999999999999/design/KEY/Name", true),
+        ("https ://www.figma.com/design/KEY/Name", false),
+        ("1https://www.figma.com/design/KEY/Name", false),
+        ("h+t.t-p://www.figma.com/design/KEY/Name", false),
+        ("https://www.fig ma.com/design/KEY/Name", false),
+        ("https://www.figma.com/design/KEY/Name?q=a b", true),
+        ("https://www.figma.com/design/KEY/Name#a#b", true),
+        ("https://www.figma.com/design/KEY/Name?a?b", true),
+        ("https://www.figma.com/design/KEY/N%41me", true),
+        ("https://www.figma.com/design/KEY/Name?a=%zz", true),
+        ("https://www.figma.com/design/KEY/Name#%zz", true),
+        ("https://ww%zzw.figma.com/design/KEY/Name", false),
+        ("https://www.figma.com/design/KEY/@Name", true),
+        ("https://www.figma.com/design/KEY/Name:x", true),
+        ("https://www.figma.com/design/KEY/;Name", true),
+        ("https://www.figma.com/design/KEY/N%2Fme", true),
+        ("https://www.figma.com/design/KEY/%2F", true),
+        ("https://www.figma.com/design/KEY/%20", true),
+        ("https://www.figma.com?x/design/KEY/Name", false),
+        ("https://www.figma.com#/design/KEY/Name", false),
+        ("https://www.figma.com:443:443/design/KEY/Name", false),
+        ("https://u:p:q@www.figma.com/design/KEY/Name", false),
+        ("https://a@b@www.figma.com/design/KEY/Name", false),
+        ("https://www.figma.com/design/KEY/Name\u{0}", true),
+        ("https://www.figma.com/design/KEY/Name\r\nx", true),
+        ("https://xn--figma.com/design/KEY/Name", false),
+        ("https://WWW.FIGMA.COM:443/FILE/KEY/Name", false),
+        ("https://figma.com/file/KEY/x?y#z", true),
+        ("https://www.figma.com/design/KEY/Name?q=%E2%9C%93", true),
+        ("https://www.figma.com:70000/design/KEY/Name", false),
+        ("https://www.figma.com:65535/design/KEY/Name", false),
+        ("https://www.figma.com:9223372036854775807/design/KEY/Name", false),
+        ("https://www.figma.com:9223372036854775808/design/KEY/Name", true),
+        ("https://www.figma.com:+443/design/KEY/Name", false),
+        ("https://www.figma.com:443 /design/KEY/Name", false),
+        ("https://www.figma.com:-443/design/KEY/Name", false),
+        ("Figma.Com/design/KEY/x", true),
+        ("https://www.figma.com\t/design/KEY/Name", false),
+        ("https://www.%46igma.com/design/KEY/Name", true),
+        ("https://www.figma.com%3A443/design/KEY/Name", false),
+        ("https://www.figma.com/design/KEY/x\u{85}", true),
+        ("https://figma.com/file/KEY/x/", true),
+    ];
+
     #[test]
-    fn strict_components_follow_rfc_3986() {
-        let url = Components::parse("https://figma.com:443/design/A1/x?node-id=1-2#frag").unwrap();
-        assert_eq!((url.scheme, url.host.as_str(), url.port), ("https", "figma.com", Some(443)));
-        assert_eq!(url.path, "/design/A1/x");
-        assert!(!url.user_info);
-        assert!(Components::parse("https://figma.com/design/A1/My File").is_none());
-        assert!(Components::parse("https://figma.com/design/A1/%zz").is_none());
-        assert!(Components::parse("https://figma.com/design/A1/x#a#b").is_none());
-        assert!(Components::parse("https://figma.com:/design/A1/x").unwrap().port.is_none());
-        assert!(Components::parse("https://figma.com:44a/design/A1/x").is_none());
-        assert!(Components::parse("https://[::1]/design/A1/x").is_none());
-        assert_eq!(Components::parse("https://figma%2Ecom/x").unwrap().host, "figma.com");
+    fn address_acceptance_matches_swift_figma_document_parse() {
+        let mismatches: Vec<String> = SWIFT_PARSE
+            .iter()
+            .filter(|(address, expected)| FigmaDocument::parse(address, "").is_some() != *expected)
+            .map(|(address, expected)| format!("{address:?} (Swift accepted: {expected})"))
+            .collect();
+        assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
     }
 }
