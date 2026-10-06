@@ -340,6 +340,7 @@ fn convert_event(event: &EKEvent) -> Option<CalendarEvent> {
         notes: string(unsafe { event.notes() }),
         url,
         calendar_color: calendar.as_deref().and_then(calendar_color),
+        calendar_title: calendar.as_deref().map(calendar_title),
     })
 }
 
@@ -847,6 +848,7 @@ mod tests {
                     notes: Some("Agenda".into()),
                     url: Some("https://dev.azure.com/org/project/_workitems/edit/123".into()),
                     calendar_color: Some("#ff8000".into()),
+                    calendar_title: Some("Work".into()),
                 }
             );
 
@@ -875,8 +877,14 @@ mod tests {
             assert!(converted.all_day && !converted.declined && !converted.free);
             assert_eq!(converted.status, EventStatus::Canceled);
             assert_eq!(
-                (converted.location, converted.notes, converted.url, converted.calendar_color),
-                (None, None, None, None)
+                (
+                    converted.location,
+                    converted.notes,
+                    converted.url,
+                    converted.calendar_color,
+                    converted.calendar_title
+                ),
+                (None, None, None, None, None)
             );
 
             let undated = event(EventIvars {

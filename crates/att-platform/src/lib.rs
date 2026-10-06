@@ -102,6 +102,7 @@ pub struct CalendarEvent {
     /// Unique per occurrence: the event identifier plus the occurrence start.
     pub occurrence_id: String,
     pub calendar_id: String,
+    /// Empty when the event has no title; the UI shows "Untitled event".
     pub title: String,
     pub start: Timestamp,
     pub end: Timestamp,
@@ -115,6 +116,8 @@ pub struct CalendarEvent {
     pub notes: Option<String>,
     pub url: Option<String>,
     pub calendar_color: Option<String>,
+    /// The calendar's display name, for the agenda.
+    pub calendar_title: Option<String>,
 }
 
 #[async_trait]
@@ -175,7 +178,8 @@ pub struct AppIdentity {
 pub struct PresenceSample {
     /// Seconds since the last keyboard, pointer or touch input in this session.
     pub idle_seconds: f64,
-    /// `None` when the lock state cannot be read.
+    /// `None` when the lock state cannot be read or is not reported (macOS only includes the
+    /// lock key while the screen is locked).
     pub locked: Option<bool>,
     pub foreground: Option<AppIdentity>,
 }
@@ -197,8 +201,10 @@ pub type SystemEventSink = Arc<dyn Fn(SystemEvent) + Send + Sync>;
 
 pub trait PresenceProbe: Send + Sync {
     fn sample(&self) -> PresenceSample;
-    /// Starts delivering OS notifications to `sink`. Must be called on the main thread on macOS.
-    /// Implementations may deliver nothing; the engine also infers sleep from sample gaps.
+    /// Starts delivering OS notifications to `sink`. Callable from any thread; on macOS delivery
+    /// needs the main run loop, which the Tauri app runs. Each call subscribes for the rest of
+    /// the process. Implementations may deliver nothing; the engine also infers sleep from
+    /// sample gaps.
     fn subscribe(&self, sink: SystemEventSink) -> Result<()>;
     /// Reads the identity of an application chosen in a file dialog (`.app` bundle or `.exe`).
     fn app_identity(&self, path: &Path) -> Result<AppIdentity>;
