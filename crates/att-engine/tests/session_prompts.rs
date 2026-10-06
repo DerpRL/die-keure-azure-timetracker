@@ -72,7 +72,8 @@ async fn continuing_after_a_server_stop_needs_a_confirmed_new_session() {
 async fn an_activity_check_is_answered_with_a_confirmation() {
     let h = Harness::new(configuration(vec![]));
     let mut state: TrackingState = running(Some(4821), Some("dev"), None);
-    state.track.as_mut().unwrap().activity_check = Some(ActivityCheck { is_running: Some(true), seconds_left: Some(60) });
+    state.track.as_mut().unwrap().activity_check =
+        Some(ActivityCheck { is_running: Some(true), seconds_left: Some(60) });
     h.seven_pace.set_current(state);
     h.start().await;
     assert_eq!(h.slice("tracking")["attention"]["reason"], "activityCheck");
@@ -97,7 +98,10 @@ async fn a_completed_ticket_prompts_once_and_stop_rechecks_azure() {
     let prompt = h.slice("prompts")["ticketCompletion"].clone();
     assert_eq!(prompt["ticketId"], 33984);
     assert_eq!(prompt["workflowState"], "Done");
-    assert_eq!(h.shell(), vec!["show_panel(focus=false)".to_string(), "notify(ticket-completion)".to_string()]);
+    assert_eq!(
+        h.shell(),
+        vec!["show_panel(focus=false)".to_string(), "notify(ticket-completion)".to_string()]
+    );
     h.tick().await;
     assert!(h.shell().is_empty(), "announced once");
     // Checks run at most once a minute.
@@ -123,7 +127,10 @@ async fn a_reopened_ticket_is_never_stopped_and_keep_tracking_lasts_the_session(
     h.azure.complete(33984, "Improve loading", "Active", "InProgress");
     h.ok(json!({"type": "completion.stop"})).await;
     assert!(h.seven_pace.writes().is_empty());
-    assert_eq!(h.slice("app")["error"], "This ticket is no longer completed. Your timer is unchanged.");
+    assert_eq!(
+        h.slice("app")["error"],
+        "This ticket is no longer completed. Your timer is unchanged."
+    );
     assert_eq!(h.slice("prompts")["ticketCompletion"], Value::Null);
 
     // Completed again, and "Keep tracking" for this session.
@@ -166,8 +173,12 @@ async fn a_meeting_is_suggested_once_and_offers_a_return_when_it_ends() {
     let mut config = configuration(vec![]);
     config.calendar_enabled = true;
     let h = Harness::new(config);
-    *h.t.calendar.events.lock().unwrap() =
-        vec![meeting("occ-1", "Sprint review #4790", "2026-10-06T07:58:00Z", "2026-10-06T08:30:00Z")];
+    *h.t.calendar.events.lock().unwrap() = vec![meeting(
+        "occ-1",
+        "Sprint review #4790",
+        "2026-10-06T07:58:00Z",
+        "2026-10-06T08:30:00Z",
+    )];
     h.seven_pace.set_current(running(Some(4821), Some("dev"), None));
     h.start().await;
     h.shell();
@@ -175,7 +186,10 @@ async fn a_meeting_is_suggested_once_and_offers_a_return_when_it_ends() {
     let prompt = h.slice("prompts")["meetings"][0].clone();
     assert_eq!(prompt["event"]["title"], "Sprint review #4790");
     assert_eq!(prompt["ticketId"], 4790);
-    assert_eq!(h.shell(), vec!["show_panel(focus=false)".to_string(), "notify(meeting:occ-1)".to_string()]);
+    assert_eq!(
+        h.shell(),
+        vec!["show_panel(focus=false)".to_string(), "notify(meeting:occ-1)".to_string()]
+    );
     let agenda = h.slice("agenda");
     assert_eq!(agenda["events"][0]["isNow"], true);
     assert_eq!(agenda["events"][0]["calendarTitle"], "Work");
@@ -191,7 +205,10 @@ async fn a_meeting_is_suggested_once_and_offers_a_return_when_it_ends() {
     h.ok(start_intent(&h, "meeting")).await;
     assert_eq!(
         h.seven_pace.writes(),
-        vec!["stop".to_string(), r#"start(Some(4790),Some("meeting"),Some("Sprint review #4790"))"#.to_string()]
+        vec![
+            "stop".to_string(),
+            r#"start(Some(4790),Some("meeting"),Some("Sprint review #4790"))"#.to_string()
+        ]
     );
     assert_eq!(h.slice("prompts")["meetings"], json!([]));
     let plan = h.slice("prompts")["meetingReturn"].clone();
@@ -214,7 +231,10 @@ async fn a_meeting_is_suggested_once_and_offers_a_return_when_it_ends() {
     assert_eq!(draft["preferredActivityId"], "dev");
     assert_eq!(draft["resume"], true);
     h.ok(start_intent(&h, "dev")).await;
-    assert_eq!(h.seven_pace.writes(), vec!["stop".to_string(), r#"start(Some(4821),Some("dev"),None)"#.to_string()]);
+    assert_eq!(
+        h.seven_pace.writes(),
+        vec!["stop".to_string(), r#"start(Some(4821),Some("dev"),None)"#.to_string()]
+    );
     assert_eq!(h.slice("prompts")["meetingReturn"], Value::Null);
 }
 
@@ -241,7 +261,12 @@ async fn declined_free_all_day_and_old_meetings_are_not_suggested() {
 // -- microphone meetings ------------------------------------------------------------------------
 
 fn slack() -> InputOwner {
-    InputOwner { id: "com.tinyspeck.slackmacgap".into(), name: "Slack".into(), pid: Some(42), path: None }
+    InputOwner {
+        id: "com.tinyspeck.slackmacgap".into(),
+        name: "Slack".into(),
+        pid: Some(42),
+        path: None,
+    }
 }
 
 async fn sample(h: &Harness, owners: Vec<InputOwner>, after: f64) {
@@ -278,7 +303,10 @@ async fn microphone_use_suggests_a_meeting_and_its_end_offers_pause_or_stop() {
     h.ok(start_intent(&h, "meeting")).await;
     assert_eq!(
         h.seven_pace.writes(),
-        vec!["stop".to_string(), r#"start(None,Some("meeting"),Some("Meeting · Slack"))"#.to_string()]
+        vec![
+            "stop".to_string(),
+            r#"start(None,Some("meeting"),Some("Meeting · Slack"))"#.to_string()
+        ]
     );
     assert_eq!(h.slice("prompts")["microphone"], json!([]));
     assert_eq!(h.slice("prompts")["meetingReturn"]["microphone"], true);

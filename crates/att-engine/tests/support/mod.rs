@@ -17,7 +17,9 @@ use tokio::sync::Semaphore;
 
 use att_core::attention::TrackingAttention;
 use att_core::config::SevenPaceAuthMode;
-use att_core::model::{ActivityType, Repository, Track, TrackingState, WireValue, WorkItem, WorkLog};
+use att_core::model::{
+    ActivityType, Repository, Track, TrackingState, WireValue, WorkItem, WorkLog,
+};
 use att_core::service::{
     OfflineDraftService, TrackingService, WorkLogEditingService, WorkLogMutationService,
 };
@@ -34,7 +36,13 @@ pub const WORKSPACE: &str = "https://contoso.timehub.7pace.com";
 pub const HOST: &str = "contoso.timehub.7pace.com";
 
 /// A track as 7pace reports it.
-pub fn track(ticket: Option<i64>, activity: Option<&str>, remark: Option<&str>, log: &str, started: &str) -> Track {
+pub fn track(
+    ticket: Option<i64>,
+    activity: Option<&str>,
+    remark: Option<&str>,
+    log: &str,
+    started: &str,
+) -> Track {
     let mut track = Track::with_state(WireValue::text("Tracking"));
     track.tfs_id = ticket;
     track.activity_type_id = activity.map(str::to_string);
@@ -139,7 +147,9 @@ impl FakeSevenPace {
             .unwrap()
             .calls
             .iter()
-            .filter(|call| call.starts_with("start") || call.starts_with("stop") || call.starts_with("confirm"))
+            .filter(|call| {
+                call.starts_with("start") || call.starts_with("stop") || call.starts_with("confirm")
+            })
             .cloned()
             .collect()
     }
@@ -240,7 +250,10 @@ impl OfflineDraftService for FakeSevenPace {
 
 #[async_trait]
 impl SevenPaceClient for FakeSevenPace {
-    async fn confirm_activity(&self, expected: Option<&TrackingAttention>) -> Result<TrackingState> {
+    async fn confirm_activity(
+        &self,
+        expected: Option<&TrackingAttention>,
+    ) -> Result<TrackingState> {
         let mut server = self.server.lock().unwrap();
         server.calls.push(format!("confirm({:?})", expected.map(|prompt| prompt.id.clone())));
         if let Some(track) = server.current.track.as_mut() {
@@ -477,7 +490,10 @@ impl Harness {
         settle().await;
     }
 
-    pub async fn dispatch(&self, intent: Value) -> std::result::Result<Value, att_engine::IpcError> {
+    pub async fn dispatch(
+        &self,
+        intent: Value,
+    ) -> std::result::Result<Value, att_engine::IpcError> {
         let result = self.engine().dispatch(intent).await;
         settle().await;
         result

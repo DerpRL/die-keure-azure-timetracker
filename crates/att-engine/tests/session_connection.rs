@@ -42,7 +42,10 @@ async fn connect_reads_the_timer_then_activities_history_and_progress() {
     let calls = h.seven_pace.take_calls();
     assert_eq!(calls[0], "current");
     assert!(calls.contains(&"activityTypes".to_string()), "{calls:?}");
-    assert!(calls.iter().filter(|call| *call == "workLogs").count() >= 2, "history + progress: {calls:?}");
+    assert!(
+        calls.iter().filter(|call| *call == "workLogs").count() >= 2,
+        "history + progress: {calls:?}"
+    );
 }
 
 #[tokio::test]
@@ -70,9 +73,12 @@ async fn connection_failures_show_why() {
 
     // The timer read fails: offline, with the last known state kept.
     *h.t.clients.error.lock().unwrap() = None;
-    h.seven_pace.server.lock().unwrap().fail_current.push_back(AppError::Network(
-        "Could not connect to contoso.timehub.7pace.com.".into(),
-    ));
+    h.seven_pace
+        .server
+        .lock()
+        .unwrap()
+        .fail_current
+        .push_back(AppError::Network("Could not connect to contoso.timehub.7pace.com.".into()));
     h.ok(json!({"type": "connection.retry"})).await;
     let connection = h.slice("connection");
     assert_eq!(connection["health"], "disconnected");
@@ -98,7 +104,10 @@ async fn health_turns_stale_without_confirmation() {
     assert_eq!(h.slice("connection")["health"], "stale");
     let tracking = h.slice("tracking");
     assert_eq!(tracking["extrapolate"], false, "a stale clock stands still");
-    assert_eq!(h.slice("connection")["detail"], "Showing the last known timer. Check 7pace before changing it.");
+    assert_eq!(
+        h.slice("connection")["detail"],
+        "Showing the last known timer. Check 7pace before changing it."
+    );
 }
 
 #[tokio::test]
@@ -139,12 +148,16 @@ async fn a_newer_search_drops_older_results() {
     }
     let first = {
         let h = h.clone();
-        tokio::spawn(async move { h.engine().dispatch(json!({"type": "tracking.search", "query": "login"})).await })
+        tokio::spawn(async move {
+            h.engine().dispatch(json!({"type": "tracking.search", "query": "login"})).await
+        })
     };
     settle().await;
     let second = {
         let h = h.clone();
-        tokio::spawn(async move { h.engine().dispatch(json!({"type": "tracking.search", "query": "invoice"})).await })
+        tokio::spawn(async move {
+            h.engine().dispatch(json!({"type": "tracking.search", "query": "invoice"})).await
+        })
     };
     settle().await;
     fast.add_permits(1);

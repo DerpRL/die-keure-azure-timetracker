@@ -70,7 +70,10 @@ async fn an_active_figma_file_suggests_design_with_the_file_name_as_comment() {
     h.ok(json!({"type": "figma.track", "suggestionId": id, "useLinkedTicket": true})).await;
     let draft_id = h.slice("flow")["draft"]["id"].as_str().unwrap().to_string();
     h.ok(json!({"type": "tracking.start", "draftId": draft_id, "activityId": "design", "comment": "", "includeTicket": true})).await;
-    assert_eq!(h.seven_pace.writes(), vec![r#"start(None,Some("design"),Some("Checkout flow"))"#.to_string()]);
+    assert_eq!(
+        h.seven_pace.writes(),
+        vec![r#"start(None,Some("design"),Some("Checkout flow"))"#.to_string()]
+    );
     assert_eq!(h.slice("prompts")["figma"], json!([]), "the suggestion is resolved");
     let audit = h.slice("history")["audit"].clone();
     assert_eq!(audit[0]["detail"], "Checkout flow · Design");
@@ -103,7 +106,10 @@ async fn linked_files_suggest_their_ticket_and_links_are_verified() {
     let draft = h.slice("flow")["draft"].clone();
     assert_eq!(draft["item"]["id"], 4790);
     h.ok(json!({"type": "tracking.start", "draftId": draft["id"], "activityId": "design", "comment": "", "includeTicket": true})).await;
-    assert_eq!(h.seven_pace.writes(), vec![r#"start(Some(4790),Some("design"),Some("Checkout flow"))"#.to_string()]);
+    assert_eq!(
+        h.seven_pace.writes(),
+        vec![r#"start(Some(4790),Some("design"),Some("Checkout flow"))"#.to_string()]
+    );
 
     h.ok(json!({"type": "figma.unlink", "fileKey": "AbC123"})).await;
     assert_eq!(h.slice("figma")["files"][0]["ticketId"], Value::Null);
@@ -124,7 +130,10 @@ async fn keep_tracking_hides_a_suggestion_and_files_open_by_address() {
     h.ok(json!({"type": "figma.open", "fileKey": "AbC123", "desktop": false})).await;
     assert_eq!(
         h.shell(),
-        vec!["open_url(figma://file/AbC123)".to_string(), "open_url(https://www.figma.com/file/AbC123)".to_string()]
+        vec![
+            "open_url(figma://file/AbC123)".to_string(),
+            "open_url(https://www.figma.com/file/AbC123)".to_string()
+        ]
     );
     h.ok(json!({"type": "figma.open", "fileKey": "title:Checkout", "desktop": false})).await;
     assert_eq!(h.slice("app")["error"], "This Figma file key is invalid.");
@@ -153,7 +162,10 @@ async fn pausing_watching_pauses_figma_and_disabling_clears_suggestions() {
     let preferences = json!({"enabled": false, "dismissalMinutes": 500, "historyDays": 0});
     h.ok(json!({"type": "figma.setPreferences", "preferences": preferences})).await;
     let figma = h.slice("figma");
-    assert_eq!(figma["preferences"], json!({"enabled": false, "dismissalMinutes": 120, "historyDays": 1}));
+    assert_eq!(
+        figma["preferences"],
+        json!({"enabled": false, "dismissalMinutes": 120, "historyDays": 1})
+    );
     assert_eq!(figma["label"], "Disabled");
 }
 
@@ -162,7 +174,8 @@ async fn windows_identifies_files_by_window_title() {
     // A title-only observation on macOS is "no address", as in 1.14.2.
     let h = Harness::new(figma_configuration());
     h.start().await;
-    let title_only = WindowObservation::Window { title: Some("Checkout flow – Figma".into()), url: None };
+    let title_only =
+        WindowObservation::Window { title: Some("Checkout flow – Figma".into()), url: None };
     observe(&h, title_only.clone(), 0.0).await;
     observe(&h, title_only, 2.0).await;
     assert_eq!(h.slice("figma")["status"], "noAddress");

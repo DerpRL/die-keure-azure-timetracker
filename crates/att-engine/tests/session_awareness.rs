@@ -14,7 +14,11 @@ async fn presence(h: &Harness, idle_seconds: f64, foreground: Option<&str>) {
     *h.t.presence.0.lock().unwrap() = PresenceSample {
         idle_seconds,
         locked: Some(false),
-        foreground: foreground.map(|id| AppIdentity { id: id.into(), name: "Code".into(), path: None }),
+        foreground: foreground.map(|id| AppIdentity {
+            id: id.into(),
+            name: "Code".into(),
+            path: None,
+        }),
     };
     att_engine::session::sample_presence(h.engine()).await;
     settle().await;
@@ -38,13 +42,20 @@ async fn idle_time_is_reviewed_after_the_review_is_saved() {
     let prompt = idle_then_back(&h, 400.0).await;
     assert_eq!(prompt["reason"], "No keyboard or mouse activity");
     assert_eq!(prompt["session"]["workLogId"], "wl-0");
-    assert_eq!(h.shell(), vec!["show_panel(focus=false)".to_string(), "notify(work-awareness)".to_string()]);
+    assert_eq!(
+        h.shell(),
+        vec!["show_panel(focus=false)".to_string(), "notify(work-awareness)".to_string()]
+    );
 
     h.seven_pace.take_calls();
     h.ok(json!({"type": "awareness.reviewIdle", "promptId": prompt["id"]})).await;
     assert_eq!(h.seven_pace.writes(), vec!["stop".to_string()]);
-    let saved: WorkAwarenessLedger = h.t.store.get(att_store::keys::WORK_AWARENESS).unwrap().unwrap();
-    assert_eq!(saved.correction.as_ref().map(|c| c.id.to_string()).as_deref(), prompt["id"].as_str());
+    let saved: WorkAwarenessLedger =
+        h.t.store.get(att_store::keys::WORK_AWARENESS).unwrap().unwrap();
+    assert_eq!(
+        saved.correction.as_ref().map(|c| c.id.to_string()).as_deref(),
+        prompt["id"].as_str()
+    );
     assert_eq!(h.slice("tracking")["paused"]["ticketId"], 33984);
     let calls = h.shell();
     assert!(calls.contains(&"hide_panel".to_string()), "{calls:?}");
@@ -58,10 +69,12 @@ async fn the_review_is_saved_even_when_the_stop_fails() {
     h.seven_pace.set_current(running(Some(33984), Some("dev"), None));
     h.start().await;
     let prompt = idle_then_back(&h, 400.0).await;
-    h.seven_pace.server.lock().unwrap().fail_stop =
-        Some(AppError::Network("The connection to contoso.timehub.7pace.com was interrupted.".into()));
+    h.seven_pace.server.lock().unwrap().fail_stop = Some(AppError::Network(
+        "The connection to contoso.timehub.7pace.com was interrupted.".into(),
+    ));
     h.ok(json!({"type": "awareness.reviewIdle", "promptId": prompt["id"]})).await;
-    let saved: WorkAwarenessLedger = h.t.store.get(att_store::keys::WORK_AWARENESS).unwrap().unwrap();
+    let saved: WorkAwarenessLedger =
+        h.t.store.get(att_store::keys::WORK_AWARENESS).unwrap().unwrap();
     assert!(saved.correction.is_some(), "saved before the stop was attempted");
     assert_eq!(
         h.slice("app")["error"],
