@@ -10,7 +10,9 @@ use att_store::{Store, legacy};
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let source = std::env::args().nth(1).ok_or("pass the legacy data folder")?;
     let copy = tempfile::tempdir()?;
-    for name in [legacy::STATE_FILE, legacy::OFFLINE_FILE, legacy::JOURNAL_FILE, legacy::WEEKLY_FILE] {
+    for name in
+        [legacy::STATE_FILE, legacy::OFFLINE_FILE, legacy::JOURNAL_FILE, legacy::WEEKLY_FILE]
+    {
         let from = std::path::Path::new(&source).join(name);
         if from.exists() {
             std::fs::copy(&from, copy.path().join(name))?;
