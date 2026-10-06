@@ -1,0 +1,41 @@
+[package]
+name = "att-release"
+description = "Release tool for Azure timetracker 2.x: build, sign, package, bridge, feed, stage and verify."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+default-run = "att-release"
+
+[[bin]]
+name = "att-release"
+path = "src/main.rs"
+
+# Placeholder copied to `Contents/Helpers/AzureTimetrackerUpdater`. 1.13–1.14.x clients refuse an
+# update without that file; 2.x never runs it. `sign-macos` compiles it with `rustc` per
+# architecture (no dependencies) and joins the slices with `lipo`.
+[[bin]]
+name = "legacy-helper-stub"
+path = "src/bin/legacy-helper-stub.rs"
+test = false
+
+[dependencies]
+anyhow = "1"
+base64.workspace = true
+clap = { version = "4.6", features = ["derive"] }
+crc32fast = "1.5"
+dirs.workspace = true
+ed25519-dalek = "3"
+flate2 = "1.1"
+jiff.workspace = true
+# Same major versions as the Tauri CLI 2.12 signer (minisign 0.9) and the updater plugin 2.13
+# verifier (minisign-verify 0.2), so keys and signatures are byte-compatible with Tauri's.
+minisign = "0.9"
+minisign-verify = "0.2"
+plist = "1.10"
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tar = "0.4"
+tempfile.workspace = true

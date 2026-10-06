@@ -1,0 +1,15 @@
+{
+  "release" : {
+    "build" : 21,
+    "bundleID" : "be.yarne.azure-timetracker",
+    "minimumMacOS" : "14.0.0",
+    "notes" : "More frequent update checks\n\nAutomatic update checks now run at startup and every 60 seconds. The automatic-check throttle uses the same one-minute interval.\n\nDownloading and installing remain your choice. Existing app styling is unchanged.\n",
+    "publishedAt" : "2026-10-05T11:27:46Z",
+    "sha256" : "b8ccca25e9aabc80eac82a125946080757a9de02700f295f31ad3f288ead2603",
+    "size" : 7540297,
+    "url" : "https://raw.githubusercontent.com/DerpRL/die-keure-azure-timetracker/main/releases/updates/1.13.1/Azure-timetracker-1.13.1-universal-update.zip",
+    "version" : "1.13.1"
+  },
+  "schemaVersion" : 1,
+  "signature" : "jFbiJUsW+kwpkjvS/uKtbSZ8OQpV1+dX0XeIAM2rwMeamqkRvc0aL+PwZ3tWrPUijh2c8XBKOZn7SjSssxn9Bg=="
+}

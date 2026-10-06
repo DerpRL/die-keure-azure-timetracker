@@ -1,0 +1,15 @@
+{
+  "release" : {
+    "build" : 23,
+    "bundleID" : "be.yarne.azure-timetracker",
+    "minimumMacOS" : "14.0.0",
+    "notes" : "# Azure timetracker 1.14.1\n\n- Track Figma designs, calendar meetings and branch suggestions without an Azure ticket. Unlinked suggestions open the activity chooser directly; suggested tickets can be switched off before Start.\n- Figma uses the design file name as the 7pace comment, whether or not a ticket is selected. Ticket-free tracking preserves any saved file-to-ticket link.\n- Suggestion ticket searches include Continue without a ticket. Meeting titles and branch names supply the comment for these suggestions. Activity selection and Start confirmation remain required.\n- Removed Compare periods from Statistics. Time explorer, Tasks, Work patterns, heatmaps, timelines and the other charts remain available.\n\nUpdate checks remain every minute. No tracking changes occur until you confirm them.\n",
+    "publishedAt" : "2026-10-05T13:06:24Z",
+    "sha256" : "9600bf16f883d9987c6b60b583fe5058f42e1b8c77c5c8a56c1e5b55f0dbb891",
+    "size" : 8242917,
+    "url" : "https://raw.githubusercontent.com/DerpRL/die-keure-azure-timetracker/main/releases/updates/1.14.1/Azure-timetracker-1.14.1-universal-update.zip",
+    "version" : "1.14.1"
+  },
+  "schemaVersion" : 1,
+  "signature" : "u+gVJOit8++ZZOOpXJOQHsDs+ttvMktXQ2QT/VCEbB5AhlQ8uzjTtPbKzHotiJW2BL3c/rmB+qtITyZSMt74Cw=="
+}

@@ -1,0 +1,15 @@
+{
+  "release" : {
+    "build" : 22,
+    "bundleID" : "be.yarne.azure-timetracker",
+    "minimumMacOS" : "14.0.0",
+    "notes" : "# Azure timetracker 1.14.0\n\n- Choose Light, Dark or System appearance, UI scale and contrast in Settings. New users see these choices in onboarding.\n- Switch ticket now includes Meeting, Stand-up and Other activity. No ticket ID or title is required; choose an activity, optionally add a comment and confirm Start. Stand-up defaults to daily standup.\n- Fixed missing local/offline timers: the overview and menu panel now show their live clock and Stop local timer action. The menu-bar clock shows local elapsed time when no confirmed remote timer is running. Local drafts remain separate from confirmed 7pace totals.\n- Added optional Figma Desktop detection with file-to-ticket links, Design suggestions, last-worked context and a local history. Enable it on the Figma page and grant Accessibility. No Figma token, plugin, browser tracking or design-content access. Every timer change requires confirmation.\n- App builds now use a persistent local signing certificate. This is not Apple Developer ID or notarization. The first migration from an older build may require approving Keychain, Calendar or Accessibility again; later builds reuse the same certificate.\n\nUpdate checks remain every minute. This update does not automatically start or stop timers or upload local drafts.\n",
+    "publishedAt" : "2026-10-05T12:42:26Z",
+    "sha256" : "954053d2125bd1813f4774873da62e13d62169ee4b331793bc62ab472ac079a1",
+    "size" : 8400928,
+    "url" : "https://raw.githubusercontent.com/DerpRL/die-keure-azure-timetracker/main/releases/updates/1.14.0/Azure-timetracker-1.14.0-universal-update.zip",
+    "version" : "1.14.0"
+  },
+  "schemaVersion" : 1,
+  "signature" : "2vwB6bL3qFsWRN71PLhg6uDvgrCvfJjgFxXH6Ejbe/4DPWbbjuCoWVsM6upxYIO3Vf82JdeUiXjd0VPDWfhfDQ=="
+}

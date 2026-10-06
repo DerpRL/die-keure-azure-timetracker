@@ -1,0 +1,15 @@
+{
+  "release" : {
+    "build" : 24,
+    "bundleID" : "be.yarne.azure-timetracker",
+    "minimumMacOS" : "14.0.0",
+    "notes" : "# Azure timetracker 1.14.2\n\n- Fixed paused Azure/7pace tracking disappearing when a local timer is still running. The paused ticket, elapsed time and Resume action stay visible in both Overview and the menu panel.\n- Local tracking continues independently. You can resume Azure tracking without stopping the local timer.\n\nUpdate checks remain every minute. This update does not change tracked time or automatically start, pause or stop timers.\n",
+    "publishedAt" : "2026-10-05T14:48:05Z",
+    "sha256" : "ed276cc266bf176a94ddc3e0f786f3338ed8622c434137c29a5779e1958a94dd",
+    "size" : 8244002,
+    "url" : "https://raw.githubusercontent.com/DerpRL/die-keure-azure-timetracker/main/releases/updates/1.14.2/Azure-timetracker-1.14.2-universal-update.zip",
+    "version" : "1.14.2"
+  },
+  "schemaVersion" : 1,
+  "signature" : "ub9zdHY1D/B/lIuk4g3Zxik3tGSMgDpFt8uoFbiCI30TcLn44ffxCHXBt+++wRlZh+bqXRkq1pzJVSezC86ZDA=="
+}
