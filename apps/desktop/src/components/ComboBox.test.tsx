@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../test/axe';
 import { renderWithProviders } from '../test/render';
@@ -45,27 +45,35 @@ describe('AsyncComboBox (ticket search)', () => {
   });
 
   it('aborts superseded searches and shows the empty message', async () => {
+    const queries: string[] = [];
     const signals: AbortSignal[] = [];
+    const release: Array<() => void> = [];
     const { user } = renderWithProviders(
       <AsyncComboBox<Ticket>
         label="Ticket"
         debounceMs={0}
         load={async (query, signal) => {
+          queries.push(query);
           signals.push(signal);
-          // A slow server: later keystrokes arrive while earlier searches are still running.
-          await new Promise((resolve) => setTimeout(resolve, 30));
+          // A slow server: every search stays open until the test releases it, so later
+          // keystrokes always arrive while earlier searches are still running.
+          await new Promise<void>((resolve) => release.push(resolve));
           return search(query);
         }}
         getLabel={(ticket) => ticket.title}
         emptyMessage="No matching tickets"
       />,
     );
-    await user.type(screen.getByRole('combobox', { name: 'Ticket' }), 'zzz');
-    expect(await screen.findByText('No matching tickets')).toBeInTheDocument();
+    await user.click(screen.getByRole('combobox', { name: 'Ticket' }));
+    for (const typed of ['z', 'zz', 'zzz']) {
+      await user.keyboard('z');
+      await waitFor(() => expect(queries.at(-1)).toBe(typed));
+    }
     // Every keystroke started a new search; all but the latest were aborted.
-    expect(signals.length).toBeGreaterThan(1);
     expect(signals.slice(0, -1).every((signal) => signal.aborted)).toBe(true);
     expect(signals.at(-1)?.aborted).toBe(false);
+    act(() => release.forEach((resolve) => resolve()));
+    expect(await screen.findByText('No matching tickets')).toBeInTheDocument();
   });
 
   it('reports a failed search without throwing', async () => {
