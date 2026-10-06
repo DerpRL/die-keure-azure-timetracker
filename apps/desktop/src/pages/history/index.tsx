@@ -82,8 +82,9 @@ function LogRow({ log, items, trackDisabled }: { log: WorkLog; items: WorkItemsS
 
 function DayGroup({ day, logs, items, trackDisabled }: { day: string; logs: WorkLog[]; items: WorkItemsSlice | undefined; trackDisabled: boolean }) {
   const headingId = useId();
+  // A plain section (no landmark per day): long ranges would otherwise list dozens of regions.
   return (
-    <section aria-labelledby={headingId} className={styles.day}>
+    <section className={styles.day}>
       <div className={styles.dayHeader}>
         <Heading level={2} id={headingId} className={styles.dayTitle}>
           {formatDayLong(day)}
@@ -91,7 +92,7 @@ function DayGroup({ day, logs, items, trackDisabled }: { day: string; logs: Work
         <span className={styles.caption}>{formatShortDuration(totalLength(logs))}</span>
       </div>
       <Card padding="small">
-        <ul role="list" className={styles.rows}>
+        <ul role="list" aria-labelledby={headingId} className={styles.rows}>
           {logs.map((log) => (
             <LogRow key={log.id} log={log} items={items} trackDisabled={trackDisabled} />
           ))}

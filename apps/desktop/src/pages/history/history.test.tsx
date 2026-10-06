@@ -45,7 +45,7 @@ describe('History page', () => {
     renderHistory(sampleSlices().history);
     const days = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
     expect(days).toEqual(['Tuesday 6 October', 'Monday 5 October', 'Friday 2 October', 'Thursday 1 October', 'Wednesday 30 September']);
-    const monday = screen.getByRole('region', { name: 'Monday 5 October' });
+    const monday = screen.getByRole('heading', { name: 'Monday 5 October' }).closest('section')!;
     expect(within(monday).getByText('7h 15m')).toBeInTheDocument();
     expect(within(monday).getAllByRole('listitem')).toHaveLength(6);
     expect(within(monday).getByText('Reviewing pull requests')).toBeInTheDocument();
