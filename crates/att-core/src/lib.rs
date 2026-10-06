@@ -6,6 +6,7 @@
 
 // Shared foundation.
 pub mod attention;
+pub mod config;
 pub mod error;
 pub mod model;
 pub mod service;
@@ -46,5 +47,6 @@ pub mod microphone_end;
 // Azure ticket details.
 pub mod ticket_context;
 
+pub use config::Configuration;
 pub use error::{AppError, Result};
 pub use time::{Cal, Interval};
