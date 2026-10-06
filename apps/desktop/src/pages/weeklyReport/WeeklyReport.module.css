@@ -1,0 +1,66 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.intro,
+.caption,
+.status {
+  color: var(--color-text-secondary);
+}
+
+.caption {
+  font-size: var(--font-size-footnote);
+}
+
+.weekBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.range {
+  align-self: center;
+  margin-left: auto;
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-footnote);
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.editor textarea {
+  min-height: 22rem;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-body);
+  line-height: 1.5;
+  resize: vertical;
+}
