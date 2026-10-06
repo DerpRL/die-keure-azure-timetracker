@@ -211,6 +211,14 @@ describe('PanelView tracking flow', () => {
     expect(shellCalls(engine, 'shell_hide_panel')).toHaveLength(0);
   });
 
+  it('does not cancel a start in flight with Escape', async () => {
+    const { engine, user } = renderWithEngine(<PanelView />, { with: { flow: ticketDraftFlow, app: busyApp } });
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+    await user.keyboard('{Escape}');
+    expect(engine.dispatched('tracking.cancelPanel')).toHaveLength(0);
+    expect(shellCalls(engine, 'shell_hide_panel')).toHaveLength(0);
+  });
+
   it('cancels with the Cancel button', async () => {
     const { engine, user } = renderWithEngine(<PanelView />, { with: { flow: panelSearchFlow } });
     await user.click(screen.getByRole('button', { name: 'Cancel' }));

@@ -78,6 +78,8 @@ export function PanelView() {
 
   const flowActive = flow?.surface === 'panel';
   const { run: runCancel } = cancel;
+  // As 1.14's Cancel: a start in flight cannot be cancelled from the chooser.
+  const starting = flowActive && !!flow.draft && (app?.busy ?? false);
 
   useCommand({
     id: 'panel.escape',
@@ -86,6 +88,7 @@ export function PanelView() {
     shortcut: { key: 'Escape' },
     allowInInputs: true,
     showInPalette: false,
+    isDisabled: starting,
     onAction: () => {
       if (flowActive) void runCancel({ type: 'tracking.cancelPanel' });
       else closePanel();
