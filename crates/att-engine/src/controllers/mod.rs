@@ -9,12 +9,16 @@ use serde::Deserialize;
 use serde_json::Value;
 use uuid::Uuid;
 
+use att_core::explorer::ExplorerFilter;
 use att_core::offline::OfflineDraft;
+use att_core::statistics::StatisticsPeriod;
 
 use crate::engine::Engine;
 use crate::intent::not_implemented;
 use crate::ipc::IpcError;
+use view::{StatisticsSection, TimeEditMode};
 
+pub mod hooks;
 pub mod persist;
 pub mod view;
 
@@ -26,9 +30,8 @@ pub struct ControllerState {}
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(tag = "type", rename_all_fields = "camelCase")]
 pub enum ControllerIntent {
-    // TODO(statistics merge): `period` becomes `StatisticsPeriod`, `filter` an `ExplorerFilter`.
     #[serde(rename = "statistics.setPeriod")]
-    SetStatisticsPeriod { period: String },
+    SetStatisticsPeriod { period: StatisticsPeriod },
     #[serde(rename = "statistics.move")]
     MoveStatistics { amount: i64 },
     #[serde(rename = "statistics.current")]
@@ -36,7 +39,7 @@ pub enum ControllerIntent {
     #[serde(rename = "statistics.jumpTo")]
     JumpStatistics { date: Date },
     #[serde(rename = "statistics.setFilter")]
-    SetStatisticsFilter { filter: Value },
+    SetStatisticsFilter { filter: ExplorerFilter },
     #[serde(rename = "statistics.clearFilters")]
     ClearStatisticsFilters,
     #[serde(rename = "statistics.zoomTo")]
@@ -50,7 +53,7 @@ pub enum ControllerIntent {
     #[serde(rename = "statistics.resetZoom")]
     ResetStatisticsZoom,
     #[serde(rename = "statistics.setSection")]
-    SetStatisticsSection { section: String },
+    SetStatisticsSection { section: StatisticsSection },
     #[serde(rename = "statistics.refresh")]
     RefreshStatistics,
     /// A page of the explorer's entry list (returned, not published).
@@ -68,7 +71,7 @@ pub enum ControllerIntent {
     #[serde(rename = "timeEditor.cancel")]
     CancelTimeEdit,
     #[serde(rename = "timeEditor.setMode")]
-    SetTimeEditMode { mode: String },
+    SetTimeEditMode { mode: TimeEditMode },
     #[serde(rename = "timeEditor.setTimes")]
     SetTimeEditTimes { start: Timestamp, end: Timestamp },
     #[serde(rename = "timeEditor.setSplit")]

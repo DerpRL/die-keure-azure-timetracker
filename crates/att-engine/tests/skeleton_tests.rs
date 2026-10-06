@@ -43,6 +43,12 @@ async fn every_documented_intent_shape_parses() {
         json!({"type": "weekly.generate", "replace": false}),
         json!({"type": "offline.startLocal", "ticketId": null, "comment": "Notes", "activityId": null}),
         json!({"type": "ticket.showContext", "ticketId": 33984}),
+        json!({"type": "statistics.setPeriod", "period": "week"}),
+        json!({"type": "statistics.setFilter", "filter": {"query": "login", "weekday": 2}}),
+        json!({"type": "statistics.setSection", "section": "tasks"}),
+        json!({"type": "timeEditor.setMode", "mode": "split"}),
+        json!({"type": "settings.testBranchPattern", "branch": "feature/1-x", "pattern": "([0-9]+)"}),
+        json!({"type": "app.dismissError"}),
     ];
     for example in examples {
         assert!(att_engine::intent::parse(example.clone()).is_ok(), "{example}");

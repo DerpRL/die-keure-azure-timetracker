@@ -22,6 +22,7 @@ use crate::ipc::IpcError;
 use crate::shell::{TrayState, TrayStatus};
 use crate::state::AppState;
 
+pub mod hooks;
 pub mod persist;
 pub mod view;
 

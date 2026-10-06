@@ -1,6 +1,6 @@
 //! Session slices: `app`, `interface`, `connection`, `tracking`, `flow`, `prompts`,
-//! `history`, `workItems`, `repositories`, `agenda`, `settings`, `figma`
-//! (see `docs/engine.md` §6). `progress` joins when the targets port lands.
+//! `progress`, `history`, `workItems`, `repositories`, `agenda`, `settings`, `figma`
+//! (see `docs/engine.md` §6).
 //!
 //! These structs are the UI contract. Their JSON mirrors `apps/desktop/src/ipc/contract.ts`;
 //! change both together. Instants are RFC 3339 strings, calendar days `YYYY-MM-DD`.
@@ -352,6 +352,27 @@ pub struct PromptsSlice {
     pub forgotten_tickets: Vec<ForgottenTicketView>,
     pub ticket_completion: Option<TicketCompletionPrompt>,
     pub day_review: Option<DayReviewPromptView>,
+}
+
+// -- progress ---------------------------------------------------------------------------------
+
+/// Today and this-week progress toward the targets, computed at `computed_at`. While
+/// `extrapolate` is true and a timer runs, the UI adds `now - computed_at` to both totals.
+#[derive(Clone, Debug, Default, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProgressSlice {
+    /// False until the week's worklogs loaded (UI shows "unavailable", never a misleading 0).
+    pub available: bool,
+    pub today_seconds: f64,
+    pub week_seconds: f64,
+    pub today_target: f64,
+    pub week_target: f64,
+    pub computed_at: Option<Timestamp>,
+    pub extrapolate: bool,
+    /// Totals are older than the last tracking change (shown as "last known").
+    pub stale: bool,
+    pub loading: bool,
+    pub issue: Option<String>,
 }
 
 // -- history and titles -----------------------------------------------------------------------
