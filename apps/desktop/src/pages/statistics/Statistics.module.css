@@ -1,0 +1,552 @@
+/* Statistics page. Spacing in rem tokens so the page reflows with the UI scale. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.intro,
+.secondary {
+  color: var(--color-text-secondary);
+}
+
+.intro {
+  max-width: 48rem;
+}
+
+.secondary {
+  font-size: var(--font-size-footnote);
+}
+
+.strong {
+  font-weight: var(--font-weight-semibold);
+}
+
+.number {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.note {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  white-space: nowrap;
+}
+
+.inlineIcon {
+  flex: none;
+  width: var(--size-icon-sm);
+  height: var(--size-icon-sm);
+}
+
+.inlineError {
+  color: var(--color-danger-text);
+  font-size: var(--font-size-footnote);
+}
+
+.warningNote {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  color: var(--color-warning-text);
+  font-size: var(--font-size-footnote);
+}
+
+.buttonRow,
+.formActions,
+.inlineForm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+}
+
+.inlineForm {
+  align-items: flex-end;
+}
+
+.formActions {
+  justify-content: flex-end;
+}
+
+/* -- period controls ------------------------------------------------------------------------- */
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.controlRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-4);
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.rangeNavigator {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  min-width: 0;
+}
+
+.rangeTitle {
+  font-family: var(--font-family-rounded);
+  font-size: var(--font-size-title-2);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  overflow-wrap: anywhere;
+}
+
+.jumpTo {
+  flex: none;
+}
+
+.syncStatus {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  min-height: 1.25rem;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+}
+
+.busy,
+.synced {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.spinner {
+  width: var(--size-icon-sm);
+  height: var(--size-icon-sm);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
+
+:global(:root[data-reduced-motion='true']) .spinner {
+  animation: none;
+}
+
+/* -- filters --------------------------------------------------------------------------------- */
+
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: flex-end;
+}
+
+.searchField {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+.activityField {
+  flex: 0 1 16rem;
+  min-width: 12rem;
+}
+
+.clearFilters {
+  flex: none;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chip {
+  max-width: 28rem;
+  border-radius: var(--radius-full);
+}
+
+/* -- summary --------------------------------------------------------------------------------- */
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.scope {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.scopeText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.scopeTitle {
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-3);
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-4);
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--elevation-1);
+}
+
+.metricTitle {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+}
+
+.metricValue {
+  font-family: var(--font-family-rounded);
+  font-size: var(--font-size-title-1);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--line-height-tight);
+  overflow-wrap: anywhere;
+}
+
+.metricNote {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+}
+
+.skeletonMetrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-3);
+}
+
+/* -- sections -------------------------------------------------------------------------------- */
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.analyzing {
+  opacity: 0.6;
+  transition: opacity var(--motion-duration-base) var(--motion-ease-standard);
+}
+
+.chartCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.chartToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.zoomBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.zoomButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.rangeForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.coverage {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.coverage > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.coverage dt {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+}
+
+.coverage dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: var(--space-5);
+  align-items: start;
+}
+
+/* -- tables ---------------------------------------------------------------------------------- */
+
+.activityCell {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  white-space: nowrap;
+}
+
+.comment {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.durationCell {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.taskCell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.shareRow {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  width: 100%;
+  min-width: 8rem;
+}
+
+.shareTrack {
+  position: relative;
+  flex: 1 1 auto;
+  height: 0.4375rem;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--color-ring-track);
+}
+
+.shareFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+}
+
+@media (forced-colors: active) {
+  .shareTrack {
+    border: 1px solid CanvasText;
+  }
+  .shareFill {
+    background: Highlight;
+  }
+}
+
+.tableSkeleton {
+  padding: var(--space-3) 0;
+}
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+}
+
+.pagerStatus {
+  margin-right: auto;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+}
+
+/* -- patterns -------------------------------------------------------------------------------- */
+
+.patternList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.patternRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: var(--size-border) solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--font-size-footnote);
+  text-align: start;
+  cursor: pointer;
+  transition: background-color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.patternRow[data-hovered] {
+  background: var(--color-hover);
+}
+
+.patternRow[data-pressed] {
+  background: var(--color-pressed);
+}
+
+.patternRow[data-selected] {
+  border-color: var(--color-selected-indicator);
+  background: var(--color-selected-bg);
+}
+
+.patternRow[data-focus-visible] {
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.patternText {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.patternLabel {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: var(--font-weight-medium);
+}
+
+.patternIcon {
+  flex: none;
+  width: var(--size-icon-sm);
+  height: var(--size-icon-sm);
+  color: var(--color-accent);
+}
+
+.countBars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 24rem;
+  overflow-y: auto;
+}
+
+.countRow {
+  display: grid;
+  grid-template-columns: minmax(6rem, 9rem) 1fr minmax(6rem, auto);
+  gap: var(--space-3);
+  align-items: center;
+  font-size: var(--font-size-footnote);
+}
+
+.countLabel {
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.footnoteStrong {
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-medium);
+}
+
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* -- source notes ---------------------------------------------------------------------------- */
+
+.sourceNotes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-width: 56rem;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+}
+
+.strongNote {
+  font-weight: var(--font-weight-medium);
+}
+
+@media (max-width: 40rem) {
+  .rangeTitle {
+    font-size: var(--font-size-title-3);
+  }
+  .countRow {
+    grid-template-columns: 1fr auto;
+  }
+  .countRow > .shareTrack {
+    grid-column: 1 / -1;
+  }
+}
