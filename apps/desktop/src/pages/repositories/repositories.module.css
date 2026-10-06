@@ -1,0 +1,242 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.intro {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.watching {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-6);
+}
+
+.text {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+  overflow-wrap: anywhere;
+}
+
+.pattern {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.code {
+  padding: 0.0625rem var(--space-1);
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-footnote);
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.listHeading {
+  margin: 0;
+  font-size: var(--font-size-title-3);
+  font-weight: var(--font-weight-semibold);
+  outline: none;
+}
+
+.listHeading:focus-visible {
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: 0.125rem;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--elevation-1);
+}
+
+.rowIcon {
+  margin-top: 0.15rem;
+  color: var(--color-accent);
+  font-size: var(--size-icon-lg);
+}
+
+.rowMain {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.rowName {
+  margin: 0;
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.path {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.status {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  margin: 0;
+  font-size: var(--font-size-footnote);
+  overflow-wrap: anywhere;
+}
+
+.status svg {
+  flex: none;
+  margin-top: 0.15em;
+}
+
+.branch {
+  color: var(--color-accent);
+  font-family: var(--font-family-mono);
+}
+
+.muted {
+  color: var(--color-text-secondary);
+}
+
+.issue {
+  color: var(--color-warning-text);
+}
+
+.error {
+  margin: 0;
+  color: var(--color-danger-text);
+  font-size: var(--font-size-footnote);
+  overflow-wrap: anywhere;
+}
+
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+/* Narrow windows: the actions move under the text. */
+@media (max-width: 40rem) {
+  .row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .rowActions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+}
+
+/* Scan sheet */
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.toolbar > :first-child {
+  flex: 1 1 16rem;
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  max-height: 22rem;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  list-style: none;
+}
+
+.result {
+  padding: var(--space-3);
+  border-bottom: var(--size-border) solid var(--color-separator);
+}
+
+.result:last-child {
+  border-bottom: 0;
+}
+
+.resultName {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--font-weight-semibold);
+}
+
+.more {
+  align-self: flex-start;
+}
+
+.unreadable {
+  color: var(--color-warning-text);
+  font-size: var(--font-size-footnote);
+}
+
+.unreadable summary {
+  cursor: default;
+  font-weight: var(--font-weight-medium);
+}
+
+.unreadable ul {
+  max-height: 6rem;
+  margin: var(--space-2) 0 0;
+  padding-inline-start: var(--space-5);
+  overflow-y: auto;
+  user-select: text;
+}
+
+.summary {
+  margin: 0;
+  font-weight: var(--font-weight-medium);
+}
+
+@media (forced-colors: active) {
+  .row,
+  .results {
+    border-color: CanvasText;
+  }
+}
