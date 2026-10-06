@@ -92,8 +92,8 @@ function RangeForm({ slice, onDone }: { slice: StatisticsSlice; onDone: () => vo
         onDone();
       }}
     >
-      <DatePicker<ZonedDateTime> label="From" granularity="minute" hideTimeZone value={from} onChange={setFrom} minValue={min} maxValue={max} />
-      <DatePicker<ZonedDateTime> label="To" granularity="minute" hideTimeZone value={to} onChange={setTo} minValue={min} maxValue={max} />
+      <DatePicker<ZonedDateTime> label="From" granularity="minute" hideTimeZone shouldForceLeadingZeros value={from} onChange={setFrom} minValue={min} maxValue={max} />
+      <DatePicker<ZonedDateTime> label="To" granularity="minute" hideTimeZone shouldForceLeadingZeros value={to} onChange={setTo} minValue={min} maxValue={max} />
       <p className={styles.secondary}>Minimum window: 15 minutes. Ranges stay inside the selected period.</p>
       <div className={styles.formActions}>
         <Button onPress={onDone}>Cancel</Button>

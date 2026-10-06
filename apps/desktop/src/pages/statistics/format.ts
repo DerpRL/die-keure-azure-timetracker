@@ -80,20 +80,6 @@ export function windowTitle(window: Interval): string {
   return `${dayMonthTime.format(date(window.start))} – ${dayMonthTime.format(date(window.end))}`;
 }
 
-/** 1.14 `dateRange`: a day, a span of days, or a year. */
-export function intervalTitle(range: Interval, includeTime = false): string {
-  if (includeTime) return windowTitle(range);
-  const start = date(range.start);
-  const last = new Date(ms(range.end) - 1000);
-  if (seconds(range) > 300 * 86_400) return yearOnly.format(start);
-  if (localDay(start) === localDay(last)) return fullDate.format(start);
-  return `${dayMonth.format(start)} – ${dayMonthYear.format(last)}`;
-}
-
-export function periodNoun(period: StatisticsPeriod): string {
-  return period;
-}
-
 /** Short axis label of a time-chart bucket. */
 export function bucketLabel(start: Date, resolution: ExplorerResolution): string {
   switch (resolution) {

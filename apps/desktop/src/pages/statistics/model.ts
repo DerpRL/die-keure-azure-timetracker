@@ -9,8 +9,6 @@ import { lengthBandName, weekdayName } from './format';
 /** `StatisticsZoom::MINIMUM`: the engine never zooms below 15 minutes. */
 export const MIN_WINDOW_SECONDS = 15 * 60;
 
-export const EMPTY_FILTER: ExplorerFilter = { query: '', activityId: null, taskId: null, weekday: null, lengthBand: null };
-
 /** `ExplorerFilter::is_active`. */
 export function isFilterActive(filter: ExplorerFilter): boolean {
   return (
