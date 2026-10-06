@@ -1,0 +1,247 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.intro,
+.caption {
+  color: var(--color-text-secondary);
+}
+
+.caption {
+  font-size: var(--font-size-footnote);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3) var(--space-4);
+}
+
+.filter {
+  flex: 1 1 16rem;
+  max-width: 28rem;
+}
+
+.entries {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.sectionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.sectionTitle {
+  font-size: var(--font-size-title-3);
+  font-weight: var(--font-weight-semibold);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.mono {
+  font-variant-numeric: tabular-nums;
+}
+
+.warningIcon {
+  flex: none;
+  color: var(--color-warning);
+}
+
+.successIcon {
+  flex: none;
+  color: var(--color-success);
+}
+
+.success,
+.noticeTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--font-weight-medium);
+}
+
+.savedNotice {
+  padding: var(--space-3) var(--space-4);
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-bg);
+}
+
+.savedNotice summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  font-weight: var(--font-weight-medium);
+}
+
+.savedNotice[open] summary {
+  margin-bottom: var(--space-3);
+}
+
+/* Sheets */
+
+.sheetBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.groupTitle {
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-semibold);
+}
+
+.subTitle {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+}
+
+.fieldRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-6);
+}
+
+.reviewArea:empty {
+  display: none;
+}
+
+.notice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.previewList,
+.resultList,
+.disclosureList,
+.changeList,
+.issueList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.previewRow,
+.resultRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.previewLabel,
+.resultTitle {
+  font-weight: var(--font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.barTrack {
+  position: relative;
+  height: 0.625rem;
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-sunken);
+}
+
+.bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 3px;
+  border-radius: var(--radius-xs);
+}
+
+.barBefore {
+  background: var(--color-warning);
+}
+
+/* After bars are striped, so before and after differ by more than colour. */
+.barAfter {
+  background: repeating-linear-gradient(135deg, var(--color-accent) 0 6px, var(--color-primary-hover) 6px 9px);
+}
+
+@media (forced-colors: active) {
+  .barBefore {
+    background: CanvasText;
+  }
+  .barAfter {
+    background: Highlight;
+  }
+}
+
+.changeCard,
+.issueCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.changeNeedsReview {
+  border-color: var(--color-warning);
+  border-width: 2px;
+}
+
+.changeHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.issueTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-semibold);
+}
+
+.selectable {
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.disclosure summary {
+  cursor: pointer;
+  font-weight: var(--font-weight-medium);
+}
+
+.disclosure[open] summary {
+  margin-bottom: var(--space-2);
+}
+
+.boundaryRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
