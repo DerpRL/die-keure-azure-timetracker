@@ -10,6 +10,7 @@ the engine and UI page work.
 Tauri app (apps/desktop/src-tauri)
  ├─ implements att_engine::shell::Shell  (tray, panel, windows, notifications, open URL)
  ├─ #[tauri::command] engine_dispatch(intent: Intent) -> Result<Value, IpcError>
+ ├─ #[tauri::command] engine_resync() (re-sends every slice through the event)
  ├─ forwards Publisher batches as the Tauri event "engine://slices"
  └─ owns the Tauri updater and file dialogs
 
@@ -116,8 +117,12 @@ Clipboard copies (weekly report) stay in the UI.
 ## 6. View slices (engine → UI)
 
 The Tauri event `engine://slices` carries `[{ name, value }]` with only the slices whose JSON
-changed. On load the UI calls `app.snapshot` for every slice. The UI keeps one store keyed by
-slice name and subscribes components per slice.
+changed. A window that loads subscribes to the event first and then calls `engine_resync`, which
+resets the publisher and sends every slice through the same event. Every value therefore arrives
+in order with the regular updates: nothing is missed between subscribing and the first batch,
+and an older snapshot can never overwrite a newer update. (`app.snapshot` and `engine_snapshot`
+still return every slice, for diagnostics and tests.) The UI keeps one store keyed by slice name
+(`apps/desktop/src/state/store.ts`) and subscribes components per slice (`useSlice`).
 
 | Slice | Contents (camelCase JSON) | Swift source |
 |---|---|---|
@@ -147,8 +152,23 @@ Live values: the engine does not publish every second. The UI computes running c
 
 ## 7. Contract verification
 
-- Rust DTOs live in `att-engine` (`view` module) and derive `Serialize`. A test serializes a
-  representative snapshot into `apps/desktop/src/ipc/fixtures/*.json`.
-- The TypeScript contract lives in `apps/desktop/src/ipc/contract.ts`. A TS test type-checks the
-  fixtures against it, so a Rust field change fails the UI build.
-- The mock IPC used by the browser preview and UI tests replays the same fixtures.
+- Every Rust type the UI receives or sends (slices, intents, intent results, `IpcError`, and the
+  att-core / att-platform types inside them) derives `ts_rs::TS` behind the `ts` feature of
+  att-core, att-platform and att-engine:
+  `#[cfg_attr(feature = "ts", derive(ts_rs::TS))]` above the serde derive. A field with a serde
+  adapter (`with`, `serialize_with`) also gets `ts(as = "<wire type>")`, and a field that serde
+  skips when empty without a field-level `default` gets `ts(optional = nullable)`.
+- `crates/att-engine/tests/contract_ts.rs` collects the root types and their dependencies and
+  writes `apps/desktop/src/ipc/generated.ts` (one pretty-printed file) and
+  `apps/desktop/src/ipc/fixtures/defaults.json` (`Configuration::default()`). CI runs
+  `cargo test -p att-engine --features ts --test contract_ts`, which fails when either file is out
+  of date. Regenerate with `npm run contract` in `apps/desktop`
+  (`UPDATE_CONTRACT=1 cargo test -p att-engine --features ts --test contract_ts`).
+- `apps/desktop/src/ipc/contract.ts` is the only hand-written part: the slice name → type map
+  (`SliceMap`), the intent union and the intents that return a value (`IntentResults`). Add a
+  slice or an intent result there together with the Rust change.
+- Large integers (`i64`) are `number` in TypeScript (work item ids and seconds stay far below
+  2^53).
+- The mock engine (`apps/desktop/src/ipc/mockEngine.ts`) and the sample slices
+  (`apps/desktop/src/ipc/fixtures/slices/*.ts`, type-checked against the generated types) serve the
+  browser preview, the gallery and the UI tests.
