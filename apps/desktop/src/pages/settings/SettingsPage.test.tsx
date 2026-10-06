@@ -431,7 +431,7 @@ describe('sections', () => {
     await user.click(work);
     await user.click(screen.getByRole('checkbox', { name: 'Home · iCloud' }));
     await user.click(saveButton());
-    expect(engine.dispatched('settings.save')[0]?.configuration.selectedCalendarIds).toEqual(['cal-home']);
+    expect(engine.dispatched('settings.save')[0]?.configuration.selectedCalendarIds).toEqual(['cal-team', 'cal-home']);
 
     act(() => engine.setSlice('agenda', agendaNotDetermined));
     await user.click(screen.getByRole('button', { name: 'Allow calendar access…' }));

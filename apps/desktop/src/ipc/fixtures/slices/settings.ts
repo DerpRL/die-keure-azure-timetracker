@@ -45,7 +45,8 @@ const configuration: Configuration = {
   activityTypeId: 'dev',
   interfaceSetupCompleted: true,
   interruptions: { trackingAttention: 'openAndFocus' },
-  selectedCalendarIds: ['cal-work'],
+  // Matches the selected calendars of the agenda sample (fixtures/slices/agenda.ts).
+  selectedCalendarIds: ['cal-work', 'cal-team'],
   calendarEnabled: true,
   targets: {
     weeklyHours: 38,
@@ -169,7 +170,7 @@ export const sampleAgenda: AgendaSlice = {
   enabled: true,
   calendars: [
     { id: 'cal-work', title: 'Work', color: '#2f6bd8', source: 'Exchange', selected: true },
-    { id: 'cal-team', title: 'Team rituals', color: '#0e7c73', source: 'Exchange', selected: false },
+    { id: 'cal-team', title: 'Team events', color: '#0e7c73', source: 'Exchange', selected: true },
     { id: 'cal-home', title: 'Home', color: '#c2357c', source: 'iCloud', selected: false },
   ],
   day: '2026-10-06',
