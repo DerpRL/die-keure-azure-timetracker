@@ -1,0 +1,160 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+  max-width: 72rem;
+}
+
+.today {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-body);
+}
+
+.todayLabel {
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.caption {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+  overflow-wrap: anywhere;
+}
+
+/* The local timer inside "Current tracking" */
+
+.local {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: var(--size-border) solid var(--color-separator);
+}
+
+.local:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.localTitle {
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Setup */
+
+.setup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.setupIcon {
+  flex: none;
+  color: var(--color-accent);
+  font-size: var(--size-icon-lg);
+}
+
+.setupText {
+  display: flex;
+  flex: 1 1 18rem;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.setupTitle {
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Today's worklogs */
+
+.logList {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.logRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding-block: var(--space-3);
+  border-bottom: var(--size-border) solid var(--color-separator);
+}
+
+.logRow:first-child {
+  padding-top: 0;
+}
+
+.logRow:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.logStripe {
+  flex: none;
+  align-self: stretch;
+  width: 4px;
+  min-height: 2rem;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  opacity: 0.5;
+}
+
+.logText {
+  display: flex;
+  flex: 1 1 14rem;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.logTitle {
+  font-weight: var(--font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.logMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+}
+
+.time {
+  font-variant-numeric: tabular-nums;
+}
+
+.duration {
+  flex: none;
+  font-family: var(--font-family-rounded);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.privacy {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+}
+
+.privacyIcon {
+  flex: none;
+  color: var(--color-accent);
+}

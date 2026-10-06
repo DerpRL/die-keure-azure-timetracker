@@ -1,0 +1,35 @@
+/* 260 × 72 at 100 %: one clock line and one caption line, never a scroll bar. */
+.readout {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.idle {
+  /* Long text must not widen the body and push the button onto a second line. */
+  contain: inline-size;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.caption {
+  contain: inline-size;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.captionIcon {
+  flex: none;
+}
+
+.captionText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

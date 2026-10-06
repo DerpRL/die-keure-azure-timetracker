@@ -1,0 +1,44 @@
+.health,
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.healthLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.status {
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-medium);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.heading {
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-semibold);
+}
+
+.caption {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+  overflow-wrap: anywhere;
+}
+
+.warning {
+  color: var(--color-warning-text);
+  font-size: var(--font-size-footnote);
+  overflow-wrap: anywhere;
+}
