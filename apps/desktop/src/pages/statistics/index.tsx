@@ -32,9 +32,8 @@ export const SECTIONS: ReadonlyArray<{ id: StatisticsSection; title: string }> =
 /** Statistics page (main window), the 1.14 `StatisticsView` on the engine's `statistics` slice. */
 export default function StatisticsPage() {
   const slice = useSlice('statistics');
-  const connection = useSlice('connection');
   const refresh = useAction();
-  const configured = !!connection && connection.health !== 'unconfigured';
+  const configured = slice?.configured ?? false;
   return (
     <div className={styles.page}>
       <PageRefresh
@@ -49,7 +48,7 @@ export default function StatisticsPage() {
           {refresh.error.message}
         </Banner>
       ) : null}
-      {slice ? <StatisticsContent slice={slice} configured={configured} /> : <PageSkeleton />}
+      {!slice ? <PageSkeleton /> : configured ? <StatisticsContent slice={slice} /> : <NotConfigured />}
     </div>
   );
 }
@@ -77,12 +76,7 @@ function StatisticsSkeleton() {
   );
 }
 
-interface ContentProps {
-  slice: StatisticsSlice;
-  configured: boolean;
-}
-
-function StatisticsContent({ slice, configured }: ContentProps) {
+function StatisticsContent({ slice }: { slice: StatisticsSlice }) {
   const refresh = useAction();
   const retry = () => void refresh.run({ type: 'statistics.refresh' });
   const { analysis } = slice;
@@ -114,14 +108,26 @@ function StatisticsContent({ slice, configured }: ContentProps) {
           </LoadingRegion>
         </Card>
       ) : slice.issue ? null : (
-        <Waiting configured={configured} onRefresh={retry} />
+        <Card padding="large">
+          <EmptyState
+            icon={StatisticsIcon}
+            headingLevel={2}
+            title="Your statistics are waiting"
+            description="Refresh to download the recorded time of this period."
+            action={
+              <Button variant="primary" onPress={retry}>
+                Refresh
+              </Button>
+            }
+          />
+        </Card>
       )}
     </>
   );
 }
 
-/** 1.14 "Your statistics are waiting": nothing downloaded and nothing loading. */
-function Waiting({ configured, onRefresh }: { configured: boolean; onRefresh: () => void }) {
+/** 1.14 "Your statistics are waiting" without a 7pace connection (slice `configured` false). */
+function NotConfigured() {
   const openPage = useOpenPage();
   return (
     <Card padding="large">
@@ -129,19 +135,11 @@ function Waiting({ configured, onRefresh }: { configured: boolean; onRefresh: ()
         icon={StatisticsIcon}
         headingLevel={2}
         title="Your statistics are waiting"
-        description={
-          configured ? 'Refresh to download the recorded time of this period.' : 'Connect to 7pace in Settings to explore your recorded time.'
-        }
+        description="Connect to 7pace in Settings to explore your recorded time."
         action={
-          configured ? (
-            <Button variant="primary" onPress={onRefresh}>
-              Refresh
-            </Button>
-          ) : (
-            <Button variant="primary" onPress={() => openPage('settings')}>
-              Open Settings
-            </Button>
-          )
+          <Button variant="primary" onPress={() => openPage('settings')}>
+            Open Settings
+          </Button>
         }
       />
     </Card>

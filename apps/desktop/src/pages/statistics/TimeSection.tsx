@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
-import { Card, Section } from '../../components/Card';
+import { Card } from '../../components/Card';
 import { ZoomInIcon } from '../../components/icons';
 import { SegmentedControl } from '../../components/Segmented';
 import { ActivityBars, type ActivityBucket, type TimeRange } from '../../charts/ActivityBars';
@@ -35,53 +35,20 @@ function bucketSeconds(bucket: ExplorerBucket): number {
   return bucket.segments[bucket.segments.length - 1]?.top ?? 0;
 }
 
-/** Time explorer (1.14 `timeExplorer`): the zoomable time chart or the day timeline, then entries. */
+/**
+ * Time explorer (1.14 `timeExplorer`): the zoomable time chart or the day timeline, then the
+ * entries of the window, or of the selected bar (`statistics.entries {start, end}`).
+ */
 export function TimeSection({ slice, analysis, analysisKey, colors, chart, onChartChange }: TimeSectionProps) {
   const zoom = useAction();
+  const scale = useAction();
+  const chartRef = useRef<HTMLDivElement>(null);
   const zoomTo = (range: TimeRange) => void zoom.run({ type: 'statistics.zoomTo', start: instant(range.start), end: instant(range.end) });
   const series = useMemo(() => activitySeries(analysis, colors), [analysis, colors]);
-
-  return (
-    <div className={styles.stack}>
-      <Card padding="large" className={styles.chartCard}>
-        <div className={styles.chartToolbar}>
-          <SegmentedControl label="Chart type" hideLabel options={CHARTS} selectedKey={chart} onSelectionChange={onChartChange} />
-          <Badge tone="neutral" accessibleLabel={`Resolution: ${analysis.resolution}`}>
-            {analysis.resolution}
-          </Badge>
-        </div>
-        <ZoomControls slice={slice} />
-        {chart === 'activity' ? (
-          <ActivityChart slice={slice} analysis={analysis} analysisKey={analysisKey} series={series} onZoom={zoomTo} />
-        ) : (
-          <TimelineView slice={slice} analysis={analysis} analysisKey={analysisKey} series={series} colors={colors} onZoom={zoomTo} />
-        )}
-      </Card>
-      <Coverage analysis={analysis} />
-      <EntriesList
-        title="Entries in this window"
-        detail="Select a chart bar or timeline entry to inspect its recorded time."
-        analysis={analysis}
-        analysisKey={analysisKey}
-        colors={colors}
-      />
-    </div>
-  );
-}
-
-interface ActivityChartProps {
-  slice: StatisticsSlice;
-  analysis: AnalysisView;
-  analysisKey: string;
-  series: ReturnType<typeof activitySeries>;
-  onZoom: (range: TimeRange) => void;
-}
-
-function ActivityChart({ slice, analysis, analysisKey, series, onZoom }: ActivityChartProps) {
-  const scale = useAction();
   // The inspected bar is a view choice; a new analysis clears it (1.14 resets it on every change).
   const [selection, setSelection] = useState<{ key: string; id: string | null }>({ key: analysisKey, id: null });
   const selectedId = selection.key === analysisKey ? selection.id : null;
+  const selected = chart === 'activity' ? (analysis.buckets.find((bucket) => bucket.start === selectedId) ?? null) : null;
   const minutes = analysis.resolution === '15 minutes' || analysis.resolution === '5 minutes';
 
   const buckets = useMemo<ActivityBucket[]>(
@@ -100,59 +67,100 @@ function ActivityChart({ slice, analysis, analysisKey, series, onZoom }: Activit
       }),
     [analysis],
   );
-  const selected = analysis.buckets.find((bucket) => bucket.start === selectedId) ?? null;
+
+  /** Back to the chart's focusable bar when the selection's controls go away. */
+  const returnFocus = () => requestAnimationFrame(() => chartRef.current?.querySelector<SVGElement>('[data-mark-index][tabindex="0"]')?.focus());
 
   return (
-    <>
-      <ActivityBars
-        title="Where your time went"
-        headingLevel={2}
-        description="Click a bar to inspect it. Drag across the chart to zoom into a range."
-        series={series}
-        buckets={buckets}
-        selectedId={selectedId}
-        onSelect={(id) => setSelection({ key: analysisKey, id })}
-        onZoom={onZoom}
-        onZoomOut={slice.isZoomed ? () => void scale.run({ type: 'statistics.scale', factor: 2 }) : undefined}
-        valueUnit={minutes ? 'minutes' : 'hours'}
-        emptyMessage="No recorded time in this window."
-      />
+    <div className={styles.stack}>
+      <Card padding="large">
+        <div ref={chartRef} className={styles.chartCard}>
+          <div className={styles.chartToolbar}>
+            <SegmentedControl label="Chart type" hideLabel options={CHARTS} selectedKey={chart} onSelectionChange={onChartChange} />
+            <Badge tone="neutral" accessibleLabel={`Resolution: ${analysis.resolution}`}>
+              {analysis.resolution}
+            </Badge>
+          </div>
+          <ZoomControls slice={slice} />
+          {chart === 'activity' ? (
+            <ActivityBars
+              title="Where your time went"
+              headingLevel={2}
+              description="Click a bar to inspect it. Drag across the chart to zoom into a range."
+              series={series}
+              buckets={buckets}
+              selectedId={selectedId}
+              onSelect={(id) => setSelection({ key: analysisKey, id })}
+              onZoom={zoomTo}
+              onZoomOut={slice.isZoomed ? () => void scale.run({ type: 'statistics.scale', factor: 2 }) : undefined}
+              valueUnit={minutes ? 'minutes' : 'hours'}
+              emptyMessage="No recorded time in this window."
+            />
+          ) : (
+            <TimelineView slice={slice} analysis={analysis} analysisKey={analysisKey} series={series} colors={colors} onZoom={zoomTo} />
+          )}
+        </div>
+      </Card>
+      <Coverage analysis={analysis} />
       {selected ? (
-        <BucketInspector
+        <BucketEntries
           bucket={selected}
-          analysis={analysis}
           slice={slice}
+          analysis={analysis}
+          analysisKey={analysisKey}
+          colors={colors}
           series={series}
-          onZoom={onZoom}
-          onClear={() => setSelection({ key: analysisKey, id: null })}
+          onZoom={(range) => {
+            zoomTo(range);
+            returnFocus();
+          }}
+          onClear={() => {
+            setSelection({ key: analysisKey, id: null });
+            returnFocus();
+          }}
         />
-      ) : null}
-    </>
+      ) : (
+        <EntriesList
+          title="Entries in this window"
+          detail="Select a chart bar or timeline entry to inspect its recorded time."
+          analysis={analysis}
+          analysisKey={analysisKey}
+          colors={colors}
+        />
+      )}
+    </div>
   );
 }
 
-interface BucketInspectorProps {
+interface BucketEntriesProps {
   bucket: ExplorerBucket;
-  analysis: AnalysisView;
   slice: StatisticsSlice;
+  analysis: AnalysisView;
+  analysisKey: string;
+  colors: ReadonlyMap<string, number>;
   series: ReturnType<typeof activitySeries>;
   onZoom: (range: TimeRange) => void;
   onClear: () => void;
 }
 
-/** 1.14 `selectionInspector`: the chosen interval's total by activity, and zoom into it. */
-function BucketInspector({ bucket, analysis, slice, series, onZoom, onClear }: BucketInspectorProps) {
+/**
+ * 1.14 `selectionInspector`: the chosen bar's total by activity and the entries overlapping it,
+ * each with only its time inside the bar.
+ */
+function BucketEntries({ bucket, slice, analysis, analysisKey, colors, series, onZoom, onClear }: BucketEntriesProps) {
   const start = date(bucket.start);
   const end = date(bucket.end);
   const total = bucketSeconds(bucket);
   const label = bucketLongLabel(start, end, analysis.resolution);
   const tooSmall = seconds(bucket) <= MIN_WINDOW_SECONDS && seconds(slice.window) <= MIN_WINDOW_SECONDS;
   return (
-    <Section
+    <EntriesList
       title={`${label} · ${duration(total)}`}
-      subtitle="Recorded time by activity inside this interval. Zoom in to list its entries."
-      variant="plain"
-      headingLevel={3}
+      detail="Matching entries below show only their time inside this interval."
+      analysis={analysis}
+      analysisKey={analysisKey}
+      colors={colors}
+      within={{ start: bucket.start, end: bucket.end }}
       actions={
         <div className={styles.buttonRow}>
           <Button size="small" icon={ZoomInIcon} isDisabled={tooSmall} onPress={() => onZoom({ start, end })}>
@@ -181,7 +189,7 @@ function BucketInspector({ bucket, analysis, slice, series, onZoom, onClear }: B
         }))}
         emptyMessage="No recorded time in this interval."
       />
-    </Section>
+    </EntriesList>
   );
 }
 

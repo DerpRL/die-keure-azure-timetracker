@@ -590,6 +590,7 @@ function sample({ period, from, to, zoom, filter = NO_FILTER, section = 'time', 
       analysis: explored.analysis,
       visuals: explored.visuals,
       targetComparable: !zoom && !filterActive(filter),
+      configured: true,
     },
   };
 }
@@ -651,9 +652,24 @@ export const failedStatistics: StatisticsSlice = {
 /** Not connected: nothing was downloaded and nothing is loading. */
 export const idleStatistics: StatisticsSlice = { ...loadingStatistics, loading: false };
 
-/** A page of `entries`, as `statistics.entries {offset, limit}` returns it. */
-export function entriesPage(entries: readonly ExplorerEntry[], offset: number, limit: number): EntriesPage {
-  return { offset, total: entries.length, entries: entries.slice(offset, offset + limit) };
+/** No 7pace connection: nothing to download and Refresh is unavailable. */
+export const unconfiguredStatistics: StatisticsSlice = { ...idleStatistics, configured: false };
+
+/**
+ * A page of `entries`, as `statistics.entries {offset, limit, start?, end?}` returns it: with an
+ * interval, only the entries overlapping `[start, end)`, unclipped (as the engine does).
+ */
+export function entriesPage(
+  entries: readonly ExplorerEntry[],
+  offset: number,
+  limit: number,
+  start?: string | null,
+  end?: string | null,
+): EntriesPage {
+  const matching = entries.filter(
+    (entry) => (!end || Date.parse(entry.start) < Date.parse(end)) && (!start || Date.parse(entry.end) > Date.parse(start)),
+  );
+  return { offset, total: matching.length, entries: matching.slice(offset, offset + Math.min(limit, 500)) };
 }
 
 export default {

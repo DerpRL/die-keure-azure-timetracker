@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { Banner } from '../../components/Banner';
 import { Button, IconButton } from '../../components/Button';
 import { Section } from '../../components/Card';
@@ -6,10 +6,10 @@ import { Skeleton } from '../../components/EmptyState';
 import { TimeEditorIcon } from '../../components/icons';
 import { Table, type TableColumn } from '../../components/Table';
 import { SeriesSwatch } from '../../charts/palette';
-import type { AnalysisView, ExplorerEntry } from '../../ipc/contract';
+import type { AnalysisView, ExplorerEntry, Interval } from '../../ipc/contract';
 import { TicketLink } from '../../features/ticketContext/TicketLink';
 import { useAction } from '../../state/hooks';
-import { duration, entryTimes, localDay, plural, seconds } from './format';
+import { duration, entryTimes, instant, localDay, plural } from './format';
 import { recordTitle, taskTitles } from './model';
 import { useEntriesPage } from './useEntriesPage';
 import { useOpenPage, useStableHandler } from './useOpenPage';
@@ -33,9 +33,27 @@ export function entryId(entry: ExplorerEntry): string {
   return `${entry.record.log.id}:${entry.start}`;
 }
 
-/** Part of the original worklog only: clipped to the window or split at midnight. */
-function isClipped(entry: ExplorerEntry): boolean {
-  return entry.start !== entry.record.start || entry.end !== entry.record.end;
+interface ShownPart {
+  start: string;
+  end: string;
+  seconds: number;
+  /** Only part of the original worklog: clipped, split at midnight or cut to `clip`. */
+  partial: boolean;
+}
+
+/**
+ * The part of an entry shown: inside `clip` when set (1.14 `entryRow(clip:)`, a chart bar), else
+ * the entry as the engine clipped it to the window and split it at midnight.
+ */
+function shownPart(entry: ExplorerEntry, clip: Interval | null): ShownPart {
+  let start = Date.parse(entry.start);
+  let end = Date.parse(entry.end);
+  if (clip) {
+    start = Math.max(start, Date.parse(clip.start));
+    end = Math.min(end, Date.parse(clip.end));
+  }
+  const partial = start !== Date.parse(entry.record.start) || end !== Date.parse(entry.record.end);
+  return { start: instant(new Date(start)), end: instant(new Date(end)), seconds: Math.max(0, (end - start) / 1000), partial };
 }
 
 export interface EntryTableProps {
@@ -43,10 +61,12 @@ export interface EntryTableProps {
   entries: readonly ExplorerEntry[];
   analysis: AnalysisView;
   colors: ReadonlyMap<string, number>;
+  /** Show only the time inside this interval. */
+  clip?: Interval | null;
 }
 
 /** Entry rows (1.14 `entryRow`): task, times, activity, comment, duration, Time editor. */
-export function EntryTable({ label, entries, analysis, colors }: EntryTableProps) {
+export function EntryTable({ label, entries, analysis, colors, clip = null }: EntryTableProps) {
   const titles = taskTitles(analysis);
   const editor = useAction();
   const openPage = useOpenPage();
@@ -69,6 +89,7 @@ export function EntryTable({ label, entries, analysis, colors }: EntryTableProps
       renderCell={(entry, column) => {
         const { record } = entry;
         const title = recordTitle(record, titles);
+        const part = shownPart(entry, clip);
         switch (column) {
           case 'task':
             return record.ticketId ? (
@@ -79,7 +100,7 @@ export function EntryTable({ label, entries, analysis, colors }: EntryTableProps
               <span className={styles.strong}>{title}</span>
             );
           case 'when':
-            return <span className={styles.number}>{entryTimes(entry.start, entry.end)}</span>;
+            return <span className={styles.number}>{entryTimes(part.start, part.end)}</span>;
           case 'activity':
             return (
               <span className={styles.activityCell}>
@@ -92,8 +113,8 @@ export function EntryTable({ label, entries, analysis, colors }: EntryTableProps
           case 'duration':
             return (
               <span className={styles.durationCell}>
-                <span className={styles.number}>{duration(seconds(entry))}</span>
-                {isClipped(entry) ? <span className={styles.note}>in selection</span> : null}
+                <span className={styles.number}>{duration(part.seconds)}</span>
+                {part.partial ? <span className={styles.note}>in selection</span> : null}
               </span>
             );
           case 'actions':
@@ -118,23 +139,35 @@ export interface EntriesListProps {
   /** `analysisKey` of the slice: a new analysis starts again from the preview. */
   analysisKey: string;
   colors: ReadonlyMap<string, number>;
+  /**
+   * Only the entries overlapping this interval (a chart bar), from `statistics.entries {start,
+   * end}`, each shown with its time inside it. Without it: the whole window, from the preview on.
+   */
+  within?: Interval | null;
+  /** Controls next to the heading. */
+  actions?: ReactNode;
+  /** Content above the entries, e.g. the interval's activity breakdown. */
+  children?: ReactNode;
 }
 
 /**
  * The entries behind the totals. The first entries (`entriesPreview`) show at once; "Show all"
- * pages through `statistics.entries`, one page of 100 at a time.
+ * pages through `statistics.entries`, one page of 100 at a time. A drill-down (`within`) starts
+ * on its first page.
  */
-export function EntriesList({ title, detail, analysis, analysisKey, colors }: EntriesListProps) {
+export function EntriesList({ title, detail, analysis, analysisKey, colors, within = null, actions, children }: EntriesListProps) {
   const statusRef = useRef<HTMLParagraphElement>(null);
-  const [view, setView] = useState<{ key: string; page: number | null }>({ key: analysisKey, page: null });
-  const page = view.key === analysisKey ? view.page : null;
+  const listKey = within ? `${analysisKey}|${within.start}|${within.end}` : analysisKey;
+  const firstPage = within ? 0 : null;
+  const [view, setView] = useState<{ key: string; page: number | null }>({ key: listKey, page: firstPage });
+  const page = view.key === listKey ? view.page : firstPage;
   const offset = page === null ? null : page * ENTRIES_PAGE_SIZE;
-  const loaded = useEntriesPage(analysisKey, offset, ENTRIES_PAGE_SIZE);
-  const total = loaded.page?.total ?? analysis.entryCount;
+  const loaded = useEntriesPage(analysisKey, offset, ENTRIES_PAGE_SIZE, within);
+  const total = loaded.page?.total ?? (within ? 0 : analysis.entryCount);
   const pageCount = Math.max(1, Math.ceil(total / ENTRIES_PAGE_SIZE));
 
   const goTo = (next: number | null) => {
-    setView({ key: analysisKey, page: next });
+    setView({ key: listKey, page: next });
     // Keep keyboard focus in the list when the pressed button disappears or becomes disabled.
     requestAnimationFrame(() => statusRef.current?.focus());
   };
@@ -147,11 +180,14 @@ export function EntriesList({ title, detail, analysis, analysisKey, colors }: En
         ? `Showing the first ${rows.length} of ${plural(analysis.entryCount, 'entry', 'entries')}`
         : plural(analysis.entryCount, 'entry', 'entries')
       : loaded.loading
-        ? `Loading entries ${first + 1}–${Math.min(total, first + ENTRIES_PAGE_SIZE)}…`
-        : `Entries ${total === 0 ? 0 : first + 1}–${Math.min(total, first + rows.length)} of ${total}`;
+        ? 'Loading entries…'
+        : loaded.error
+          ? 'Entries unavailable'
+          : `Entries ${total === 0 ? 0 : first + 1}–${Math.min(total, first + rows.length)} of ${total}`;
 
   return (
-    <Section title={title} subtitle={detail}>
+    <Section title={title} subtitle={detail} actions={actions}>
+      {children}
       {page !== null && loaded.error ? (
         <Banner
           tone="error"
@@ -170,7 +206,7 @@ export function EntriesList({ title, detail, analysis, analysisKey, colors }: En
           <Skeleton lines={6} />
         </div>
       ) : (
-        <EntryTable label={title} entries={rows} analysis={analysis} colors={colors} />
+        <EntryTable label={title} entries={rows} analysis={analysis} colors={colors} clip={within} />
       )}
       <div className={styles.pager}>
         <p ref={statusRef} tabIndex={-1} className={styles.pagerStatus} aria-live="polite">
@@ -182,15 +218,21 @@ export function EntriesList({ title, detail, analysis, analysisKey, colors }: En
           ) : null
         ) : (
           <>
-            <Button size="small" isDisabled={page === 0 || loaded.loading} onPress={() => goTo(page - 1)}>
-              Previous entries
-            </Button>
-            <Button size="small" isDisabled={page >= pageCount - 1 || loaded.loading} onPress={() => goTo(page + 1)}>
-              Next entries
-            </Button>
-            <Button size="small" variant="plain" onPress={() => goTo(null)}>
-              Show fewer
-            </Button>
+            {pageCount > 1 ? (
+              <>
+                <Button size="small" isDisabled={page === 0 || loaded.loading} onPress={() => goTo(page - 1)}>
+                  Previous entries
+                </Button>
+                <Button size="small" isDisabled={page >= pageCount - 1 || loaded.loading} onPress={() => goTo(page + 1)}>
+                  Next entries
+                </Button>
+              </>
+            ) : null}
+            {within ? null : (
+              <Button size="small" variant="plain" onPress={() => goTo(null)}>
+                Show fewer
+              </Button>
+            )}
           </>
         )}
       </div>

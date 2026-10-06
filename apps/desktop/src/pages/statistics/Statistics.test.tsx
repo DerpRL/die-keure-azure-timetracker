@@ -12,10 +12,14 @@ import {
   loadingStatistics,
   monthEntries,
   monthStatistics,
+  unconfiguredStatistics,
+  weekEntries,
   weekStatistics,
+  zoomedWeekEntries,
   zoomedWeekStatistics,
 } from '../../ipc/fixtures/slices/statistics';
-import type { MockEngine } from '../../ipc/mockEngine';
+import { MockEngineError, type MockEngine } from '../../ipc/mockEngine';
+import { PageHeaderSlotContext } from '../../features/app/PageHeaderActions';
 import { useCommand } from '../../shortcuts/hooks';
 import { expectNoA11yViolations } from '../../test/axe';
 import { renderWithEngine } from '../../test/engine';
@@ -35,6 +39,11 @@ function renderPage(statistics: StatisticsSlice | null = weekStatistics, extra: 
   if (statistics) slices.statistics = statistics;
   else delete slices.statistics;
   return renderWithEngine(<StatisticsPage />, { slices: { ...slices, ...extra } });
+}
+
+/** The engine side of `statistics.entries`, with or without an interval. */
+function serveEntries(engine: MockEngine, entries = weekEntries) {
+  engine.handle('statistics.entries', (intent) => entriesPage(entries, intent.offset, intent.limit, intent.start, intent.end));
 }
 
 /** The engine side of the section tabs: publish the chosen section. */
@@ -62,14 +71,27 @@ describe('Statistics page states', () => {
     await expectNoA11yViolations();
   });
 
-  it('asks to connect when nothing was downloaded and 7pace is not set up', async () => {
-    renderPage(idleStatistics, {
-      connection: { ...sampleSlices().connection!, health: 'unconfigured', connected: false, workspace: '' },
-    });
+  it('asks to connect in Settings when the engine has no 7pace connection', async () => {
+    const header = document.body.appendChild(document.createElement('div'));
+    renderWithEngine(
+      <PageHeaderSlotContext.Provider value={header}>
+        <StatisticsPage />
+      </PageHeaderSlotContext.Provider>,
+      { with: { statistics: unconfiguredStatistics } },
+    );
     expect(screen.getByRole('heading', { level: 2, name: 'Your statistics are waiting' })).toBeInTheDocument();
     expect(screen.getByText('Connect to 7pace in Settings to explore your recorded time.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Open Settings' })).toBeInTheDocument();
+    expect(within(header).getByRole('button', { name: 'Refresh' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Previous period' })).not.toBeInTheDocument();
     await expectNoA11yViolations();
+    header.remove();
+  });
+
+  it('offers a refresh when connected but nothing was downloaded yet', () => {
+    renderPage(idleStatistics);
+    expect(screen.getByText('Refresh to download the recorded time of this period.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open Settings' })).not.toBeInTheDocument();
   });
 
   it('shows a failed first download verbatim and retries', async () => {
@@ -295,27 +317,84 @@ describe('zoom', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
-  it('inspects a bar and zooms into it', async () => {
+  it('drills into a bar with statistics.entries for its interval, then zooms into it', async () => {
     const { engine, user } = renderPage();
+    serveEntries(engine);
     const bucket = weekStatistics.analysis!.buckets[1]!;
+    const expected = entriesPage(weekEntries, 0, 100, bucket.start, bucket.end);
     await user.click(screen.getAllByRole('option')[1]!);
+    expect(engine.dispatched('statistics.entries')).toEqual([
+      { type: 'statistics.entries', offset: 0, limit: 100, start: bucket.start, end: bucket.end },
+    ]);
     expect(screen.getByRole('table', { name: /^Recorded time by activity, / })).toBeInTheDocument();
+    expect(await screen.findByText(`Entries 1–${expected.total} of ${expected.total}`)).toBeInTheDocument();
+    const drill = screen.getByRole('grid', { name: /^Tue 29 Sept · / });
+    expect(within(drill).getAllByRole('row')).toHaveLength(1 + expected.total);
+    expect(screen.queryByRole('grid', { name: 'Entries in this window' })).not.toBeInTheDocument();
+
     await user.click(screen.getByRole('button', { name: 'Zoom into selection' }));
     expect(engine.dispatched('statistics.zoomTo')).toEqual([{ type: 'statistics.zoomTo', start: bucket.start, end: bucket.end }]);
+  });
+
+  it('shows only the time inside the selected bar and clears the selection', async () => {
+    const { engine, user } = renderPage(zoomedWeekStatistics);
+    serveEntries(engine, zoomedWeekEntries);
+    // 09:00–10:00 on Wednesday: the 08:45–11:00 entry counts one hour.
+    const bucket = zoomedWeekStatistics.analysis!.buckets[9]!;
+    await user.click(screen.getAllByRole('option')[9]!);
+    expect(engine.dispatched('statistics.entries').at(-1)).toEqual({
+      type: 'statistics.entries',
+      offset: 0,
+      limit: 100,
+      start: bucket.start,
+      end: bucket.end,
+    });
+    const row = await screen.findByRole('row', { name: /#4821 Checkout/ });
+    expect(row).toHaveTextContent(/09:00 – 10:00/);
+    expect(row).toHaveTextContent('1h 0min selection');
+    await user.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(screen.getByRole('grid', { name: 'Entries in this window' })).toBeInTheDocument();
   });
 });
 
 describe('timeline', () => {
-  it('asks to zoom to a day for longer windows', async () => {
+  it('loads the chosen day with statistics.entries for that day', async () => {
     const { engine, user } = renderPage();
+    serveEntries(engine);
     await user.click(screen.getByRole('radio', { name: 'Timeline' }));
-    expect(screen.getByRole('heading', { level: 2, name: 'Your day’s task timeline' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Zoom to this day' }));
-    // The last day with recorded time: Friday 2 October.
-    const friday = weekStatistics.visuals!.days[4]!;
-    expect(engine.dispatched('statistics.zoomTo')).toEqual([
-      { type: 'statistics.zoomTo', start: friday.interval.start, end: friday.interval.end },
+    // The last day with recorded time first: Friday 2 October.
+    const [monday, , , , friday] = weekStatistics.visuals!.days;
+    expect(engine.dispatched('statistics.entries')).toEqual([
+      { type: 'statistics.entries', offset: 0, limit: 500, start: friday!.interval.start, end: friday!.interval.end },
     ]);
+    const listbox = await screen.findByRole('listbox', { name: 'Your day’s task timeline: entries' });
+    const fridayEntries = entriesPage(weekEntries, 0, 500, friday!.interval.start, friday!.interval.end);
+    expect(within(listbox).getAllByRole('option')).toHaveLength(Math.min(12, fridayEntries.total));
+
+    await user.click(screen.getByRole('button', { name: 'Zoom to this day' }));
+    expect(engine.dispatched('statistics.zoomTo')).toEqual([
+      { type: 'statistics.zoomTo', start: friday!.interval.start, end: friday!.interval.end },
+    ]);
+
+    await user.click(screen.getByRole('button', { name: /Timeline day/ }));
+    await user.click(screen.getByRole('option', { name: /^Mon 28 Sept/ }));
+    expect(engine.dispatched('statistics.entries').at(-1)).toEqual({
+      type: 'statistics.entries',
+      offset: 0,
+      limit: 500,
+      start: monday!.interval.start,
+      end: monday!.interval.end,
+    });
+  });
+
+  it('shows the engine message when a day cannot be loaded', async () => {
+    const { engine, user } = renderPage();
+    engine.handle('statistics.entries', () => {
+      throw new MockEngineError('notFound', 'The selected period is no longer loaded.');
+    });
+    await user.click(screen.getByRole('radio', { name: 'Timeline' }));
+    expect(await screen.findByText('The selected period is no longer loaded.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
 
   it('shows the entries of a zoomed day', async () => {
@@ -361,7 +440,7 @@ describe('entries', () => {
     let calls = 0;
     engine.handle('statistics.entries', (intent) => {
       calls += 1;
-      if (calls === 1) throw new Error('The worklog cache is locked.');
+      if (calls === 1) throw new MockEngineError('storage', 'The worklog cache is locked.');
       return entriesPage(monthEntries, intent.offset, intent.limit);
     });
     await user.click(screen.getByRole('button', { name: `Show all ${monthEntries.length} entries` }));
