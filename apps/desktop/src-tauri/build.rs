@@ -14,6 +14,8 @@ const COMMANDS: &[&str] = &[
     "shell_set_shortcut",
     "shell_get_shortcut",
     "shell_quit",
+    "engine_dispatch",
+    "engine_snapshot",
 ];
 
 fn main() {

@@ -1,15 +1,11 @@
 [package]
 name = "att-desktop"
 description = "Azure timetracker desktop shell: tray icon, windows, quick-switch shortcut and Tauri plugin wiring."
-version = "2.0.0"
-edition = "2024"
-rust-version = "1.90"
-license = "Apache-2.0"
-publish = false
-
-# Standalone until the shell and the engine join the root workspace (which excludes this
-# directory). Without this table Cargo keeps searching parent directories for a workspace root.
-[workspace]
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
 
 [lib]
 name = "att_desktop_lib"
@@ -24,6 +20,10 @@ custom-protocol = ["tauri/custom-protocol"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+att-core.workspace = true
+att-engine.workspace = true
+att-platform.workspace = true
+att-store.workspace = true
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-notification = "2"
 tauri-plugin-dialog = "2"
@@ -81,8 +81,3 @@ objc2-web-kit = { version = "0.3", default-features = false, features = [
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.62", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
-
-[profile.release]
-lto = "thin"
-codegen-units = 1
-strip = "symbols"

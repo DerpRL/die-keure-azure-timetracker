@@ -3,11 +3,12 @@
 //! The shell owns what the operating system sees of the app: the tray icon (the menu-bar clock on
 //! macOS), the three windows (`main`, `panel`, `mini`), the quick-switch shortcut, the macOS
 //! activation policy and the plugin wiring. It holds no tracking state. The engine decides what
-//! the tray shows and when the panel opens, through the commands in [`shell`]; engine commands
-//! are registered next to them.
+//! the tray shows and when the panel opens through [`engine_bridge`], which also registers the
+//! engine commands next to the shell commands.
 
 #[cfg(debug_assertions)]
 mod debug;
+mod engine_bridge;
 mod native;
 pub mod shell;
 mod shortcut;
@@ -63,6 +64,8 @@ pub fn run() {
             shell::shell_set_shortcut,
             shell::shell_get_shortcut,
             shell::shell_quit,
+            engine_bridge::engine_dispatch,
+            engine_bridge::engine_snapshot,
         ])
         .setup(|app| {
             setup(app.handle())?;
@@ -93,6 +96,8 @@ fn setup(app: &AppHandle) -> Result<(), shell::ShellError> {
     tray::create(app)?;
     surfaces::prepare(app)?;
     shortcut::register_default(app);
+    // The engine decides what the tray shows and when the panel opens from here on.
+    engine_bridge::start(app).map_err(shell::ShellError::Invalid)?;
     #[cfg(debug_assertions)]
     debug::apply(app);
     Ok(())

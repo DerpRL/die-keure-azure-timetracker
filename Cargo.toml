@@ -1,8 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/*"]
-# The Tauri app joins the workspace once the shell and engine are merged.
-exclude = ["apps/desktop/src-tauri"]
+members = ["crates/*", "apps/desktop/src-tauri"]
 
 [workspace.package]
 version = "2.0.0"

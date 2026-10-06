@@ -94,6 +94,11 @@ impl Engine {
             .collect()
     }
 
+    /// The current settings, for the desktop shell (mini timer, shortcut).
+    pub fn configuration(&self) -> att_core::Configuration {
+        self.read(|state| state.config.clone())
+    }
+
     /// Where changed slices go (the Tauri app forwards them as `engine://slices`).
     pub fn set_sink(&self, sink: SliceSink) {
         self.inner.publisher.set_sink(sink);

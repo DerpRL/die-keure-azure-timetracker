@@ -18,6 +18,8 @@
     "allow-shell-set-shortcut",
     "allow-shell-get-shortcut",
     "allow-shell-quit",
+    "allow-engine-dispatch",
+    "allow-engine-snapshot",
     "dialog:allow-open",
     "dialog:allow-save",
     {

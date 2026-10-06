@@ -148,6 +148,7 @@ fn quick_switch(app: &AppHandle) {
     if let Err(error) = surfaces::show_panel(app, true) {
         tracing::warn!(%error, "quick switch could not show the panel");
     }
+    crate::engine_bridge::quick_switch(app);
     if let Err(error) = app.emit(QUICK_SWITCH_EVENT, ()) {
         tracing::warn!(%error, "could not emit the quick-switch event");
     }
