@@ -17,6 +17,9 @@ const COMMANDS: &[&str] = &[
     "engine_dispatch",
     "engine_snapshot",
     "engine_resync",
+    "shell_update_status",
+    "shell_update_check",
+    "shell_update_install",
 ];
 
 fn main() {
