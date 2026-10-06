@@ -168,8 +168,14 @@ fn launch_options() -> (Option<PathBuf>, bool) {
 
 /// Builds the engine, registers it as managed state and starts it.
 pub fn start(app: &AppHandle) -> Result<(), String> {
-    let (data_dir, preview) = launch_options();
-    let data_dir = data_dir.unwrap_or_else(att_platform::data_dir);
+    let (custom_dir, preview) = launch_options();
+    // 1.14.x data is imported only into the default data folder (not with `--data-dir`,
+    // `AZURE_TIME_DATA_DIR` or `--preview`).
+    let legacy_dir =
+        (custom_dir.is_none() && std::env::var_os("AZURE_TIME_DATA_DIR").is_none() && !preview)
+            .then(att_platform::paths::legacy_data_dir)
+            .flatten();
+    let data_dir = custom_dir.unwrap_or_else(att_platform::data_dir);
     let store = Store::open(&data_dir).map_err(|error| error.to_string())?;
     let clients = NetClientFactory::new().map_err(|error| error.to_string())?;
     let services = Services {
@@ -180,6 +186,7 @@ pub fn start(app: &AppHandle) -> Result<(), String> {
         clients: Arc::new(clients),
         preview,
         os: HostOs::current(),
+        legacy_dir,
     };
     let engine = Engine::new(services).map_err(|error| error.message)?;
     app.manage(AppliedShellSettings::default());

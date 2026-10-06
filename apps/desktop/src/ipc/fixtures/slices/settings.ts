@@ -1,19 +1,20 @@
 import type { InterruptionChoice, PromptKind, SliceMap } from '../../contract';
 import { defaultConfiguration } from '../defaults';
 
+/** `PromptKind::label()` in crates/att-core/src/config.rs. */
 const LABELS: Record<PromptKind, string> = {
   branch: 'Branch changes',
   meeting: 'Calendar meetings',
   microphone: 'Microphone meetings',
-  microphoneEnd: 'Microphone meeting ended',
-  meetingReturn: 'Back from a meeting',
+  microphoneEnd: 'Meeting ended',
+  meetingReturn: 'Return after meetings',
   figma: 'Figma files',
-  idle: 'Idle time',
-  forgottenTimer: 'Forgotten timer',
+  idle: 'Time away',
+  forgottenTimer: 'Working without a timer',
   ticketCompletion: 'Completed tickets',
-  trackingAttention: 'Timer needs attention',
+  trackingAttention: '7pace timer checks',
   dayReview: 'Day review',
-  update: 'Updates',
+  update: 'App updates',
 };
 
 const configuration = {

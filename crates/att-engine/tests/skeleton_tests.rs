@@ -49,6 +49,11 @@ async fn every_documented_intent_shape_parses() {
         json!({"type": "timeEditor.setMode", "mode": "split"}),
         json!({"type": "settings.testBranchPattern", "branch": "feature/1-x", "pattern": "([0-9]+)"}),
         json!({"type": "app.dismissError"}),
+        json!({"type": "statistics.entries", "offset": 0, "limit": 20}),
+        json!({"type": "statistics.entries", "offset": 8, "limit": 20, "start": "2026-10-05T22:00:00Z", "end": "2026-10-06T22:00:00Z"}),
+        json!({"type": "timeEditor.setSecondEntry", "ticket": "", "comment": "Idle time", "activityId": ""}),
+        json!({"type": "timeEditor.prepareCorrection", "issueId": "gap|1.0||a", "option": "extendEarlier"}),
+        json!({"type": "timeEditor.prepareCorrection", "issueId": "overlap|1.0|a|b", "option": "boundary", "boundary": "2026-10-06T09:30:00Z"}),
     ];
     for example in examples {
         assert!(att_engine::intent::parse(example.clone()).is_ok(), "{example}");

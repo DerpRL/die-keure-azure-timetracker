@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import './theme/tokens.css';
 import './theme/global.css';
 import { AppProviders } from './app/AppProviders';
+import { InterfaceSync } from './features/app/InterfaceSync';
 import { isTauri } from './ipc';
 import { EngineProvider } from './state/EngineProvider';
 import { currentSurface } from './surface';
@@ -67,6 +68,7 @@ if (container) {
           builtInShortcuts={surface !== 'mini'}
         >
           <EngineProvider connect={surface !== 'gallery'}>
+            <InterfaceSync />
             <SurfaceRoot surface={surface} />
           </EngineProvider>
         </AppProviders>
