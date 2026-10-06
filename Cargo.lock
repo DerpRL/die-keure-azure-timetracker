@@ -42,7 +42,17 @@ dependencies = [
 name = "att-engine"
 version = "2.0.0"
 dependencies = [
+ "async-trait",
  "att-core",
+ "att-store",
+ "jiff",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]
