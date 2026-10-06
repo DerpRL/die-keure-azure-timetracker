@@ -35,7 +35,7 @@ async fn a_draft_is_generated_and_replacing_it_needs_confirmation() {
     let weekly = h.slice("weekly");
     let text = weekly["text"].as_str().unwrap();
     assert!(text.starts_with("# Weekly status · Oct 5, 2026 – Oct 11, 2026"), "{text}");
-    assert!(text.contains("- #1 · Azure ticket — 1h 0m\n  - Built the editor"), "{text}");
+    assert!(text.contains("- #1 · Ticket 1 — 1h 0m\n  - Built the editor"), "{text}");
     assert_eq!(weekly["message"], "Draft generated. Review outcomes and blockers before sharing.");
     assert_eq!(weekly["hasDraft"], true);
     assert_eq!(h.t.store.weekly_draft(KEY).unwrap().as_deref(), Some(text), "saved at once");
