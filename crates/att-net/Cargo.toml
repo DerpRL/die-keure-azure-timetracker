@@ -12,9 +12,12 @@ att-core.workspace = true
 async-trait.workspace = true
 base64.workspace = true
 jiff.workspace = true
-# The workspace enables rustls (aws-lc-rs + the OS certificate verifier), json and form. URLSession
-# also honoured the OS proxy settings, negotiated HTTP/2 and accepted gzip, so those are enabled too.
+# The workspace enables rustls (the OS certificate verifier, no built-in provider), json and form.
+# URLSession also honoured the OS proxy settings, negotiated HTTP/2 and accepted gzip, so those are
+# enabled too.
 reqwest = { workspace = true, features = ["system-proxy", "http2", "gzip"] }
+# The crypto provider for reqwest's rustls: ring, installed as the process default.
+rustls.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true

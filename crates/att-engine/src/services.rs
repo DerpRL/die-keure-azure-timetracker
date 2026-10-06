@@ -1,5 +1,6 @@
 //! Everything the engine needs from the outside world.
 
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use att_core::model::HostOs;
@@ -21,4 +22,8 @@ pub struct Services {
     /// `--preview`).
     pub preview: bool,
     pub os: HostOs,
+    /// The 1.14.x data folder to import once, or `None` to never import (previews, a custom data
+    /// folder, tests). Only the app's default data folder imports, so nothing but the real app
+    /// ever reads `~/Library/Application Support/Azure timetracker` or writes its marker file.
+    pub legacy_dir: Option<PathBuf>,
 }

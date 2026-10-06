@@ -74,10 +74,13 @@ New tests (no Swift counterpart):
 
 ## Decisions
 
-1. **reqwest 0.13 features.** The workspace names (`rustls`, `json`, `form`) are correct for
-   0.13. att-net adds `system-proxy` (URLSession honoured OS proxy settings), `http2` and `gzip`
-   (URLSession negotiated both). `rustls` = aws-lc-rs + `rustls-platform-verifier`, so certificates
-   are checked against the OS trust store, as before.
+1. **reqwest 0.13 features.** The workspace enables `rustls-no-provider`, `json` and `form`.
+   att-net adds `system-proxy` (URLSession honoured OS proxy settings), `http2` and `gzip`
+   (URLSession negotiated both). TLS is rustls with `rustls-platform-verifier`, so certificates
+   are checked against the OS trust store, as before. The crypto provider is ring, installed as
+   the process default when the transport is built (`install_crypto_provider`), the same provider
+   `tauri-plugin-updater` installs. The app therefore has one provider, and no aws-lc C build,
+   which would need NASM on Windows.
 2. **No replays.** No request is retried by att-net. reqwest's default retry policy is kept: it
    re-sends only HTTP/2 requests the server refused unprocessed (`REFUSED_STREAM`, graceful
    `GOAWAY`; RFC 9113 §8.7), which cannot replay a write.

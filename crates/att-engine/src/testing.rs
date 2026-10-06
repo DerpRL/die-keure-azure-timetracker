@@ -219,6 +219,12 @@ impl TestEngine {
     }
 
     pub fn with_store(store: Arc<Store>) -> Self {
+        Self::with_legacy(store, None)
+    }
+
+    /// Like [`with_store`](Self::with_store), importing 1.14.x data from `legacy_dir` (a
+    /// temporary folder in tests; never the real one).
+    pub fn with_legacy(store: Arc<Store>, legacy_dir: Option<std::path::PathBuf>) -> Self {
         let now: Timestamp = "2026-10-06T08:00:00Z".parse().expect("timestamp");
         let tz = TimeZone::get("Europe/Brussels").expect("tzdb");
         let clock = Arc::new(ManualClock::new(now, tz));
@@ -243,6 +249,8 @@ impl TestEngine {
             clients: clients.clone(),
             preview: false,
             os: HostOs::Macos,
+            // Never the developer's real 1.14.x folder.
+            legacy_dir,
         };
         let engine = Engine::new(services).expect("engine");
         Self {
