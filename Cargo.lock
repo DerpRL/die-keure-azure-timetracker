@@ -78,6 +78,8 @@ version = "2.0.0"
 dependencies = [
  "async-trait",
  "att-core",
+ "att-net",
+ "att-platform",
  "att-store",
  "jiff",
  "serde",

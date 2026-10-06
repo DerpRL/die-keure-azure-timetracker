@@ -15,9 +15,27 @@
 //! The Tauri app implements [`shell::Shell`] (tray, panel, windows, notifications) and forwards
 //! UI intents to the engine.
 
+// TODO(engine port): remove once the session and controllers use every skeleton item.
+#![allow(dead_code)]
+
 pub mod cadence;
+pub mod clients;
 pub mod clock;
+pub mod controllers;
+pub mod engine;
 pub mod guard;
+pub mod intent;
 pub mod ipc;
+mod persist;
+pub mod probes;
 pub mod publish;
+pub mod services;
+pub mod session;
 pub mod shell;
+pub mod state;
+pub mod testing;
+mod view;
+
+pub use engine::Engine;
+pub use ipc::IpcError;
+pub use services::Services;

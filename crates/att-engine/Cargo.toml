@@ -10,6 +10,8 @@ publish.workspace = true
 [dependencies]
 att-core.workspace = true
 att-store.workspace = true
+att-net.workspace = true
+att-platform.workspace = true
 jiff.workspace = true
 serde.workspace = true
 serde_json.workspace = true
