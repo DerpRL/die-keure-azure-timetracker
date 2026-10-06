@@ -50,6 +50,9 @@ pub type Result<T, E = PlatformError> = std::result::Result<T, E>;
 /// Service name is [`CREDENTIAL_SERVICE`]. Account names are kept from 1.14.x so existing Keychain
 /// items are read without migration: `7pace:<host>`, `azure:<org lowercased>`,
 /// `7pace-oauth:<host>` (OAuth token JSON).
+///
+/// Secrets may be up to 20 KiB. Windows Credential Manager limits one entry to 2,560 bytes, so
+/// longer secrets continue in `<target>#part2`, `#part3`, … transparently.
 pub trait Credentials: Send + Sync {
     fn get(&self, account: &str) -> Result<Option<String>>;
     fn set(&self, account: &str, secret: &str) -> Result<()>;
@@ -139,7 +142,8 @@ pub trait CalendarSource: Send + Sync {
 #[serde(rename_all = "camelCase")]
 pub struct InputOwner {
     /// macOS: the owning app's bundle ID (WebKit helpers keep `com.apple.WebKit…`).
-    /// Windows: the executable file name in lower case, e.g. `ms-teams.exe`.
+    /// Windows: the executable file name in lower case, e.g. `ms-teams.exe`. Packaged (Store)
+    /// apps without a known mapping arrive as their package family name, `Name_PublisherId`.
     pub id: String,
     /// Display name, e.g. "Microsoft Teams".
     pub name: String,
@@ -220,6 +224,7 @@ pub enum WindowObservation {
 }
 
 pub trait FigmaObserver: Send + Sync {
+    /// macOS: Accessibility permission. Windows needs no permission and always returns true.
     fn has_access(&self) -> bool;
     /// Shows the OS permission prompt where one exists. Returns the access state afterwards.
     fn request_access(&self) -> bool;
