@@ -5,7 +5,7 @@
 //! - [`start`] opens the store, builds the engine on the native platform and production
 //!   clients, forwards changed slices to every window as `engine://slices`, applies the
 //!   settings the shell owns (mini timer, quick-switch shortcut) and starts the engine loops.
-//! - [`engine_dispatch`] and [`engine_snapshot`] are the two commands the UI calls.
+//! - [`engine_dispatch`], [`engine_resync`] and [`engine_snapshot`] are the commands the UI calls.
 
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -216,8 +216,14 @@ pub async fn engine_dispatch(engine: State<'_, Engine>, intent: Value) -> Result
     engine.dispatch(intent).await
 }
 
-/// Every slice, for a window that just loaded.
+/// Every slice as a return value (diagnostics and tests; windows use [`engine_resync`]).
 #[tauri::command]
 pub fn engine_snapshot(engine: State<'_, Engine>) -> Vec<SliceUpdate> {
     engine.snapshot()
+}
+
+/// Re-sends every slice as `engine://slices`, for a window that just subscribed.
+#[tauri::command]
+pub fn engine_resync(engine: State<'_, Engine>) {
+    engine.resync();
 }

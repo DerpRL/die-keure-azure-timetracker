@@ -1,15 +1,11 @@
-import { MiniTimerShell } from '../layout/MiniTimerShell';
-import { TrackingStatusLabel } from '../timer/status';
-import { TimerDisplay } from '../timer/TimerDisplay';
+import { MiniTimerView } from '../features/mini/MiniTimerView';
 import styles from './surfaces.module.css';
 
-/** Floating mini timer placeholder (Windows replaces the menu-bar text with this window). */
+/** The floating mini timer window (Windows replaces the menu-bar text with it; optional on macOS). */
 export function MiniSurface() {
   return (
     <div className={styles.fill}>
-      <MiniTimerShell caption={<TrackingStatusLabel status="stopped" label="No timer running" />}>
-        <TimerDisplay seconds={0} status="stopped" sessionId="idle" size="small" showRing={false} />
-      </MiniTimerShell>
+      <MiniTimerView />
     </div>
   );
 }

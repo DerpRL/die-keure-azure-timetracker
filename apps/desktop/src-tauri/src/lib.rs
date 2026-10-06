@@ -66,6 +66,7 @@ pub fn run() {
             shell::shell_quit,
             engine_bridge::engine_dispatch,
             engine_bridge::engine_snapshot,
+            engine_bridge::engine_resync,
         ])
         .setup(|app| {
             setup(app.handle())?;

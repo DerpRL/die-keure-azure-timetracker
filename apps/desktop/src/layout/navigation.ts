@@ -83,11 +83,18 @@ export const NAV_GROUPS: readonly NavGroup[] = [
 export interface VisibilityOptions {
   platform: Platform;
   features?: FeatureFlags;
+  /** Pages the user hid (Settings → Features) or the engine reports as unavailable. */
+  hiddenPages?: readonly string[];
 }
 
-export function isPageVisible(page: PageDefinition, { platform, features = {} }: VisibilityOptions): boolean {
+export function isPageVisible(
+  page: PageDefinition,
+  { platform, features = {}, hiddenPages = [] }: VisibilityOptions,
+): boolean {
   if (page.platforms && !page.platforms.includes(platform)) return false;
   if (page.feature && features[page.feature] === false) return false;
+  // Overview and Settings can never be hidden: they are how the user gets back.
+  if (page.id !== 'overview' && page.id !== 'settings' && hiddenPages.includes(page.id)) return false;
   return true;
 }
 

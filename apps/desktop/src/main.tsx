@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client';
 import './theme/tokens.css';
 import './theme/global.css';
 import { AppProviders } from './app/AppProviders';
+import { isTauri } from './ipc';
+import { EngineProvider } from './state/EngineProvider';
 import { currentSurface } from './surface';
 import { SurfaceRoot } from './surfaces/SurfaceRoot';
 import { setPlatformOverride } from './shortcuts/platform';
@@ -37,20 +39,38 @@ const preferences = overrides.preferences ?? loadCachedPreferences();
 applyAppearance(resolveAppearance(preferences, readSystemAppearance(), overrides.reducedMotion));
 document.documentElement.dataset.surface = surface;
 
+/**
+ * Outside Tauri (browser preview, gallery) a mock engine serves the sample slices, loaded as a
+ * separate chunk that the desktop app never requests.
+ */
+async function installPreviewEngine(): Promise<void> {
+  if (isTauri()) return;
+  const [{ installMockEngine }, { sampleSlices }] = await Promise.all([
+    import('./ipc/mockEngine'),
+    import('./ipc/fixtures'),
+  ]);
+  installMockEngine({ slices: sampleSlices(), latencyMs: 120 });
+}
+
 const container = document.getElementById('root');
 if (container) {
-  createRoot(container).render(
-    <StrictMode>
-      <AppProviders
-        theme={{
-          defaultPreferences: preferences,
-          onPreferencesChange: overrides.preferences ? undefined : saveCachedPreferences,
-          reducedMotion: overrides.reducedMotion,
-        }}
-        builtInShortcuts={surface !== 'mini'}
-      >
-        <SurfaceRoot surface={surface} />
-      </AppProviders>
-    </StrictMode>,
-  );
+  const root = createRoot(container);
+  void installPreviewEngine().then(() => {
+    root.render(
+      <StrictMode>
+        <AppProviders
+          theme={{
+            defaultPreferences: preferences,
+            onPreferencesChange: overrides.preferences ? undefined : saveCachedPreferences,
+            reducedMotion: overrides.reducedMotion,
+          }}
+          builtInShortcuts={surface !== 'mini'}
+        >
+          <EngineProvider connect={surface !== 'gallery'}>
+            <SurfaceRoot surface={surface} />
+          </EngineProvider>
+        </AppProviders>
+      </StrictMode>,
+    );
+  });
 }

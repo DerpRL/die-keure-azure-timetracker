@@ -1,0 +1,40 @@
+import type { SliceMap } from '../../contract';
+
+export default {
+  tracking: {
+    running: true,
+    ticketId: 4821,
+    title: 'Checkout: retry failed card payments',
+    activityId: 'dev',
+    activityName: 'Development',
+    remark: null,
+    elapsedBase: 4_980,
+    confirmedAt: '2026-10-06T07:59:40Z',
+    extrapolate: true,
+    paused: null,
+    local: null,
+    showsLocalTimer: false,
+    showsRemoteTimer: true,
+    attention: null,
+    todaySeconds: 3_600,
+    ticketUrl: 'https://dev.azure.com/contoso/_workitems/edit/4821',
+  },
+  progress: {
+    available: true,
+    todaySeconds: 8_580,
+    weekSeconds: 36_900,
+    todayTarget: 27_360,
+    weekTarget: 136_800,
+    computedAt: '2026-10-06T07:59:40Z',
+    extrapolate: true,
+    stale: false,
+    loading: false,
+    issue: null,
+  },
+  workItems: {
+    '4821': { id: 4821, title: 'Checkout: retry failed card payments', teamProject: 'Webshop', type: 'User Story' },
+    '4790': { id: 4790, title: 'Invoice PDF shows the wrong VAT number', teamProject: 'Webshop', type: 'Bug' },
+    '4777': { id: 4777, title: 'Sprint ceremonies', teamProject: 'Webshop', type: 'Task' },
+    '4655': { id: 4655, title: 'Design system: date picker tokens', teamProject: 'Design', type: 'Task' },
+  },
+} satisfies Partial<SliceMap>;

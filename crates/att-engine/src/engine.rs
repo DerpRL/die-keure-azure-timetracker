@@ -94,6 +94,14 @@ impl Engine {
             .collect()
     }
 
+    /// Sends every slice again through the sink, in order with the regular updates. A window
+    /// that just loaded subscribes to the slice event, then calls this, so it can neither miss
+    /// an update nor apply an older snapshot over a newer update.
+    pub fn resync(&self) {
+        self.inner.publisher.reset();
+        self.publish_now();
+    }
+
     /// The current settings, for the desktop shell (mini timer, shortcut).
     pub fn configuration(&self) -> att_core::Configuration {
         self.read(|state| state.config.clone())

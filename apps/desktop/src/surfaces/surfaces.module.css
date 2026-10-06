@@ -24,3 +24,14 @@
   padding: var(--space-6);
   color: var(--color-text-secondary);
 }
+
+/* The page's own header actions (PageHeaderActions portals into it). */
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.headerActions:empty {
+  display: none;
+}

@@ -25,6 +25,8 @@ export interface AppShellProps {
   /** Defaults to the detected platform. */
   platform?: Platform;
   features?: FeatureFlags;
+  /** Pages hidden by the user or unavailable on this OS (engine `app.pages`). */
+  hiddenPages?: readonly string[];
   indicators?: Partial<Record<PageId, NavIndicator>>;
   /** Bottom of the sidebar: watching status and the pause button in 1.14. */
   sidebarFooter?: ReactNode;
@@ -44,6 +46,7 @@ export function AppShell({
   onNavigate,
   platform: platformOverride,
   features,
+  hiddenPages,
   indicators = {},
   sidebarFooter,
   header,
@@ -52,7 +55,10 @@ export function AppShell({
 }: AppShellProps) {
   const detected = usePlatform();
   const platform = platformOverride ?? detected;
-  const groups = useMemo(() => visibleNavGroups({ platform, features }), [platform, features]);
+  const groups = useMemo(
+    () => visibleNavGroups({ platform, features, hiddenPages }),
+    [platform, features, hiddenPages],
+  );
   const pages = useMemo(() => groups.flatMap((entry) => entry.pages), [groups]);
   usePageCommands(pages, onNavigate);
   const idPrefix = useId();

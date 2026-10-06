@@ -16,6 +16,7 @@ const COMMANDS: &[&str] = &[
     "shell_quit",
     "engine_dispatch",
     "engine_snapshot",
+    "engine_resync",
 ];
 
 fn main() {
