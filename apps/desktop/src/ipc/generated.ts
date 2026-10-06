@@ -197,6 +197,11 @@ export type ConnectionSlice = {
   connecting: boolean;
   /** Why the last ticket completion check failed ("Ticket completion check: …"). */
   completionIssue?: string | null;
+  /**
+   * The quick-switch shortcut could not be registered (reported by the shell through
+   * `app.reportShortcutIssue`).
+   */
+  shortcutIssue?: string | null;
 };
 
 export type ContextDay = {
@@ -645,6 +650,8 @@ export type HistorySlice = {
   totalSeconds: number;
   /** App activity, newest first (at most 2,000). */
   audit: Array<AuditEntry>;
+  /** Why the last load or CSV export failed (1.14.x showed it in the error banner). */
+  issue?: string | null;
 };
 
 /** The operating system, for per-OS defaults such as work apps and microphone apps. */
@@ -665,20 +672,6 @@ export type IdleTrackingSession = {
   workLogId: string;
   title: string;
   start: string;
-};
-
-/** A process that currently has an active microphone input stream. */
-export type InputOwner = {
-  /**
-   * macOS: the owning app's bundle ID (WebKit helpers keep `com.apple.WebKit…`).
-   * Windows: the executable file name in lower case, e.g. `ms-teams.exe`. Packaged (Store)
-   * apps without a known mapping arrive as their package family name, `Name_PublisherId`.
-   */
-  id: string;
-  /** Display name, e.g. "Microsoft Teams". */
-  name: string;
-  pid: number | null;
-  path: string | null;
 };
 
 export type InterfaceContrast = "system" | "standard" | "increased";
@@ -719,6 +712,8 @@ export type LocalTimerView = {
   comment: string | null;
   activityName: string | null;
   start: string;
+  /** The timer belongs to another 7pace workspace ("Workspace: …"). */
+  otherWorkspace?: string | null;
 };
 
 /** What the user tracks without an Azure ticket (Swift `ManualTrackingKind`). */
@@ -761,7 +756,7 @@ export type MeetingReturnView = {
   /** Due now: offer "Resume previous…". */
   ready: boolean;
   /** The meeting was a microphone session ("Microphone use stopped"). */
-  microphone: boolean;
+  fromMicrophone: boolean;
 };
 
 /** App categories the user can watch. Persisted by display name (`"Microsoft Teams"`). */
@@ -778,7 +773,7 @@ export type MicrophoneApp =
 export type MicrophoneDiagnostics = {
   supported: boolean;
   /** Every process with input running at the last sample. */
-  owners: Array<InputOwner>;
+  owners: Array<MicrophoneOwnerView>;
   /** The last sample succeeded recently. */
   fresh: boolean;
   issue: string | null;
@@ -806,6 +801,24 @@ export type MicrophoneOwner = {
   /** Bundle ID (macOS) or executable file name (Windows). */
   id: string;
   name: string;
+};
+
+/**
+ * A process using microphone input and its app category (Settings shows "Selected" when the
+ * category is watched, else "Ignored").
+ */
+export type MicrophoneOwnerView = {
+  category: MicrophoneApp | null;
+  /**
+   * macOS: the owning app's bundle ID (WebKit helpers keep `com.apple.WebKit…`).
+   * Windows: the executable file name in lower case, e.g. `ms-teams.exe`. Packaged (Store)
+   * apps without a known mapping arrive as their package family name, `Name_PublisherId`.
+   */
+  id: string;
+  /** Display name, e.g. "Microsoft Teams". */
+  name: string;
+  pid: number | null;
+  path: string | null;
 };
 
 /** Microphone suggestion settings. Persisted as `Configuration.microphoneMeetings`. */
@@ -1039,6 +1052,7 @@ export type SessionIntent =
   | { type: "app.prepareForRestart" }
   | { type: "app.dismissError" }
   | { type: "app.dismissNotice" }
+  | { type: "app.reportShortcutIssue"; issue?: string | null }
   | { type: "connection.retry" }
   | { type: "connection.refresh" }
   | { type: "connection.recheck" }
@@ -1052,9 +1066,9 @@ export type SessionIntent =
   | { type: "settings.setPromptInterruption"; kind: PromptKind; level: Interruption }
   | { type: "settings.setQuietHours"; quietHours: QuietHours }
   | { type: "settings.testBranchPattern"; branch: string; pattern: string }
-  | { type: "settings.appIdentity"; path: string }
-  | { type: "pairing.generatePin" }
-  | { type: "pairing.begin"; workspace: string }
+  | { type: "settings.resolveWorkApp"; path: string }
+  | { type: "app.reportNotificationPermission"; authorized: boolean }
+  | { type: "pairing.generatePin"; workspace?: string | null }
   | { type: "pairing.cancel" }
   | { type: "repositories.scan"; path: string }
   | { type: "repositories.cancelScan" }
@@ -1063,8 +1077,13 @@ export type SessionIntent =
   | { type: "repositories.remove"; id: string }
   | { type: "repositories.toggleWatching" }
   | { type: "branch.keep"; id: string }
-  | { type: "branch.track"; id: string }
-  | { type: "branch.chooseAnother"; id: string }
+  | {
+      type: "branch.track";
+      id: string;
+      /** Where the user clicked; absent: the open surface (see the enum docs). */
+      surface?: FlowSurface | null;
+    }
+  | { type: "branch.chooseAnother"; id: string; surface?: FlowSurface | null }
   | { type: "branch.pause"; id: string }
   | { type: "branch.stop"; id: string }
   | { type: "tracking.beginPanel"; branchId: string | null }
@@ -1072,7 +1091,7 @@ export type SessionIntent =
   | { type: "tracking.openPicker" }
   | { type: "tracking.closePicker" }
   | { type: "tracking.search"; query: string }
-  | { type: "tracking.chooseTicket"; ticketId: number }
+  | { type: "tracking.chooseTicket"; ticketId: number; surface?: FlowSurface | null }
   | { type: "tracking.chooseManual"; kind: ManualTrackingKind }
   | { type: "tracking.chooseDifferentWork" }
   | { type: "tracking.chooseSuggestionTicket"; draftId: string }
@@ -1086,7 +1105,7 @@ export type SessionIntent =
     }
   | { type: "tracking.stop" }
   | { type: "tracking.pause" }
-  | { type: "tracking.resume" }
+  | { type: "tracking.resume"; surface?: FlowSurface | null }
   | { type: "tracking.discardPause" }
   | { type: "tracking.confirmActivity" }
   | { type: "tracking.reloadActivities" }
@@ -1096,7 +1115,7 @@ export type SessionIntent =
   | { type: "quick.toggleFavorite"; ticketId: number }
   | { type: "completion.keep" }
   | { type: "completion.stop" }
-  | { type: "completion.switch" }
+  | { type: "completion.switch"; surface?: FlowSurface | null }
   | { type: "meeting.begin"; id: string; useSuggestedTicket: boolean }
   | { type: "meeting.dismiss"; id: string }
   | { type: "meeting.returnResume" }
@@ -1141,6 +1160,11 @@ export type SettingsSlice = {
   interruptions: Array<InterruptionChoice>;
   /** The last successful `settings.save` (a failure leaves it and shows `app.error`). */
   savedAt?: string | null;
+  /**
+   * Whether the OS allows notifications (reported by the shell through
+   * `app.reportNotificationPermission`); `null` until known.
+   */
+  notificationsAuthorized?: boolean | null;
 };
 
 /**

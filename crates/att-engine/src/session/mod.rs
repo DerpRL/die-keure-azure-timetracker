@@ -57,6 +57,7 @@ mod tracking;
 mod tray;
 
 pub use tray::tray_status;
+use view::{BranchPatternTest, FlowSurface};
 
 /// Session state (Swift `AppModel` properties). Persisted parts are saved by [`persist`].
 #[derive(Default)]
@@ -101,6 +102,10 @@ pub struct SessionState {
     pub(crate) loading_titles: BTreeSet<i64>,
     /// The last successful `settings.save`.
     pub(crate) settings_saved_at: Option<Timestamp>,
+    /// Swift `shortcutIssue`, reported by the shell.
+    pub(crate) shortcut_issue: Option<String>,
+    /// Swift `notificationAuthorized`, reported by the shell; `None` until it does.
+    pub(crate) notifications_authorized: Option<bool>,
 }
 
 /// Intents owned by the session. Field names are camelCase on the wire.
@@ -127,6 +132,14 @@ pub enum SessionIntent {
     DismissError,
     #[serde(rename = "app.dismissNotice")]
     DismissNotice,
+    /// The shell reports why the quick-switch shortcut could not be registered (`null` clears
+    /// it); shown as `connection.shortcutIssue`.
+    #[serde(rename = "app.reportShortcutIssue")]
+    ReportShortcutIssue {
+        #[serde(default)]
+        #[cfg_attr(feature = "ts", ts(optional = nullable))]
+        issue: Option<String>,
+    },
 
     #[serde(rename = "connection.retry")]
     RetryConnection,
@@ -147,21 +160,28 @@ pub enum SessionIntent {
     SetPromptInterruption { kind: PromptKind, level: Interruption },
     #[serde(rename = "settings.setQuietHours")]
     SetQuietHours { quiet_hours: QuietHours },
-    /// Returns the Settings tester line for `branch` under `pattern` (no state change).
+    /// Returns the Settings tester line for `branch` under `pattern` (`BranchPatternTest`, no
+    /// state change).
     #[serde(rename = "settings.testBranchPattern")]
     TestBranchPattern { branch: String, pattern: String },
-    /// Returns the identity (`AppIdentity`) of an application chosen in a file dialog, for the
-    /// work-app list (Settings → Tracking → Add work application…).
-    #[serde(rename = "settings.appIdentity")]
-    AppIdentity { path: String },
+    /// Returns the identity (`AppIdentity`: `id`, `name`, `path`) of an application chosen in a
+    /// file dialog (`.app` bundle or `.exe`), for the work-app list (Settings → Tracking → Add
+    /// work application…).
+    #[serde(rename = "settings.resolveWorkApp")]
+    ResolveWorkApp { path: String },
+    /// The shell reports whether the OS allows this app's notifications
+    /// (`settings.notificationsAuthorized`).
+    #[serde(rename = "app.reportNotificationPermission")]
+    ReportNotificationPermission { authorized: bool },
 
-    /// Pairs with the saved 7pace URL.
+    /// Pairs with `workspace`, the 7pace URL typed in Settings (1.14.x paired with the unsaved
+    /// form), or with the saved URL when absent.
     #[serde(rename = "pairing.generatePin")]
-    GeneratePin,
-    /// Pairs with the 7pace URL typed in Settings, which need not be saved yet (1.14.x paired
-    /// with the Settings draft).
-    #[serde(rename = "pairing.begin")]
-    BeginPairing { workspace: String },
+    GeneratePin {
+        #[serde(default)]
+        #[cfg_attr(feature = "ts", ts(optional = nullable))]
+        workspace: Option<String>,
+    },
     #[serde(rename = "pairing.cancel")]
     CancelPairing,
 
@@ -183,9 +203,20 @@ pub enum SessionIntent {
     KeepBranch { id: Uuid },
     /// Choose an activity for the suggested ticket (or the ticket-free branch remark).
     #[serde(rename = "branch.track")]
-    TrackBranch { id: Uuid },
+    TrackBranch {
+        id: Uuid,
+        /// Where the user clicked; absent: the open surface (see the enum docs).
+        #[serde(default)]
+        #[cfg_attr(feature = "ts", ts(optional = nullable))]
+        surface: Option<FlowSurface>,
+    },
     #[serde(rename = "branch.chooseAnother")]
-    ChooseAnotherForBranch { id: Uuid },
+    ChooseAnotherForBranch {
+        id: Uuid,
+        #[serde(default)]
+        #[cfg_attr(feature = "ts", ts(optional = nullable))]
+        surface: Option<FlowSurface>,
+    },
     #[serde(rename = "branch.pause")]
     PauseForBranch { id: Uuid },
     #[serde(rename = "branch.stop")]
@@ -203,7 +234,12 @@ pub enum SessionIntent {
     #[serde(rename = "tracking.search")]
     Search { query: String },
     #[serde(rename = "tracking.chooseTicket")]
-    ChooseTicket { ticket_id: i64 },
+    ChooseTicket {
+        ticket_id: i64,
+        #[serde(default)]
+        #[cfg_attr(feature = "ts", ts(optional = nullable))]
+        surface: Option<FlowSurface>,
+    },
     #[serde(rename = "tracking.chooseManual")]
     ChooseManual { kind: ManualTrackingKind },
     #[serde(rename = "tracking.chooseDifferentWork")]
@@ -220,7 +256,11 @@ pub enum SessionIntent {
     #[serde(rename = "tracking.pause")]
     PauseTracking,
     #[serde(rename = "tracking.resume")]
-    ResumeTracking,
+    ResumeTracking {
+        #[serde(default)]
+        #[cfg_attr(feature = "ts", ts(optional = nullable))]
+        surface: Option<FlowSurface>,
+    },
     #[serde(rename = "tracking.discardPause")]
     DiscardPause,
     #[serde(rename = "tracking.confirmActivity")]
@@ -244,7 +284,11 @@ pub enum SessionIntent {
     #[serde(rename = "completion.stop")]
     StopCompletedTicket,
     #[serde(rename = "completion.switch")]
-    SwitchFromCompletedTicket,
+    SwitchFromCompletedTicket {
+        #[serde(default)]
+        #[cfg_attr(feature = "ts", ts(optional = nullable))]
+        surface: Option<FlowSurface>,
+    },
 
     #[serde(rename = "meeting.begin")]
     BeginMeeting { id: String, use_suggested_ticket: bool },
@@ -340,6 +384,9 @@ async fn route(engine: &Engine, intent: SessionIntent) -> Result<Value, IpcError
         I::PrepareForRestart => return settings::prepare_for_restart(engine),
         I::DismissError => engine.update(|state| state.session.error = None),
         I::DismissNotice => engine.update(|state| state.session.notice = None),
+        I::ReportShortcutIssue { issue } => {
+            engine.update(|state| state.session.shortcut_issue = issue);
+        }
 
         I::RetryConnection => connection::retry(engine).await,
         I::Refresh => connection::refresh(engine).await,
@@ -355,17 +402,25 @@ async fn route(engine: &Engine, intent: SessionIntent) -> Result<Value, IpcError
         I::SetPromptInterruption { kind, level } => settings::set_interruption(engine, kind, level),
         I::SetQuietHours { quiet_hours } => settings::set_quiet_hours(engine, quiet_hours),
         I::TestBranchPattern { branch, pattern } => {
-            return Ok(Value::String(att_core::git::BranchTicket::tester_result(
-                &branch, &pattern,
-            )));
+            let test = BranchPatternTest {
+                text: att_core::git::BranchTicket::tester_result(&branch, &pattern),
+                valid: att_core::git::BranchTicket::extract(&branch, &pattern).is_ok(),
+            };
+            return serde_json::to_value(test)
+                .map_err(|e| IpcError::new("internal", e.to_string()));
         }
-        I::AppIdentity { path } => return settings::app_identity(engine, path).await,
+        I::ResolveWorkApp { path } => return settings::app_identity(engine, path).await,
+        I::ReportNotificationPermission { authorized } => {
+            engine.update(|state| state.session.notifications_authorized = Some(authorized));
+        }
 
-        I::GeneratePin => {
-            let workspace = engine.read(|state| state.config.seven_pace_url.clone());
+        I::GeneratePin { workspace } => {
+            let workspace = match workspace {
+                Some(workspace) => workspace,
+                None => engine.read(|state| state.config.seven_pace_url.clone()),
+            };
             pairing::begin(engine, workspace);
         }
-        I::BeginPairing { workspace } => pairing::begin(engine, workspace),
         I::CancelPairing => pairing::cancel(engine),
 
         I::ScanRepositories { path } => repositories::scan(engine, path).await,
@@ -376,8 +431,10 @@ async fn route(engine: &Engine, intent: SessionIntent) -> Result<Value, IpcError
         I::ToggleWatching => repositories::toggle_watching(engine),
 
         I::KeepBranch { id } => branches::keep(engine, id),
-        I::TrackBranch { id } => tracking::track_branch(engine, id).await,
-        I::ChooseAnotherForBranch { id } => tracking::choose_another_for_branch(engine, id).await,
+        I::TrackBranch { id, surface } => tracking::track_branch(engine, id, surface).await,
+        I::ChooseAnotherForBranch { id, surface } => {
+            tracking::choose_another_for_branch(engine, id, surface).await;
+        }
         I::PauseForBranch { id } => return tracking::pause_for_branch(engine, id).await,
         I::StopForBranch { id } => return tracking::stop_for_branch(engine, id).await,
 
@@ -386,7 +443,9 @@ async fn route(engine: &Engine, intent: SessionIntent) -> Result<Value, IpcError
         I::OpenTicketPicker => tracking::open_picker(engine).await,
         I::CloseTicketPicker => return tracking::close_picker(engine),
         I::Search { query } => tracking::search(engine, query).await,
-        I::ChooseTicket { ticket_id } => tracking::choose_ticket(engine, ticket_id).await,
+        I::ChooseTicket { ticket_id, surface } => {
+            tracking::choose_ticket(engine, ticket_id, surface).await;
+        }
         I::ChooseManual { kind } => tracking::choose_manual(engine, kind).await,
         I::ChooseDifferentWork => tracking::choose_different_work(engine),
         I::ChooseSuggestionTicket { draft_id } => {
@@ -398,7 +457,7 @@ async fn route(engine: &Engine, intent: SessionIntent) -> Result<Value, IpcError
         }
         I::StopTracking => return tracking::stop(engine, tracking::StopReason::User).await,
         I::PauseTracking => return tracking::pause(engine, tracking::StopReason::User).await,
-        I::ResumeTracking => tracking::resume(engine).await,
+        I::ResumeTracking { surface } => tracking::resume(engine, surface).await,
         I::DiscardPause => tracking::discard_pause(engine),
         I::ConfirmActivity => return tracking::confirm_activity(engine).await,
         I::ReloadActivities => connection::refresh_activities(engine).await,
@@ -413,7 +472,9 @@ async fn route(engine: &Engine, intent: SessionIntent) -> Result<Value, IpcError
 
         I::KeepCompletedTicket => completion::keep(engine),
         I::StopCompletedTicket => return completion::stop(engine).await,
-        I::SwitchFromCompletedTicket => tracking::switch_from_completed(engine),
+        I::SwitchFromCompletedTicket { surface } => {
+            tracking::switch_from_completed(engine, surface);
+        }
 
         I::BeginMeeting { id, use_suggested_ticket } => {
             meetings::begin(engine, &id, use_suggested_ticket).await;

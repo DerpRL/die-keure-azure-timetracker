@@ -12,7 +12,7 @@ use std::collections::BTreeMap;
 
 use jiff::Timestamp;
 use jiff::civil::Date;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
@@ -24,7 +24,7 @@ use att_core::git::{AuditEntry, BranchChange};
 use att_core::interface_prefs::InterfacePreferences;
 use att_core::manual::ManualTrackingKind;
 use att_core::meetings::MeetingEvent;
-use att_core::microphone::MicrophoneSession;
+use att_core::microphone::{MicrophoneApp, MicrophoneSession};
 use att_core::microphone_end::MicrophoneEndPrompt;
 use att_core::model::{ActivityType, HostOs, TrackingState, WorkItem, WorkLog};
 use att_core::offline::LocalTimerDisplay;
@@ -157,6 +157,11 @@ pub struct ConnectionSlice {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional = nullable))]
     pub completion_issue: Option<String>,
+    /// The quick-switch shortcut could not be registered (reported by the shell through
+    /// `app.reportShortcutIssue`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional = nullable))]
+    pub shortcut_issue: Option<String>,
 }
 
 // -- tracking ---------------------------------------------------------------------------------
@@ -214,6 +219,10 @@ pub struct LocalTimerView {
     pub comment: Option<String>,
     pub activity_name: Option<String>,
     pub start: Timestamp,
+    /// The timer belongs to another 7pace workspace ("Workspace: …").
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional = nullable))]
+    pub other_workspace: Option<String>,
 }
 
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
@@ -233,7 +242,7 @@ pub struct AttentionView {
 // -- flow (ticket search and activity chooser) -----------------------------------------------
 
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum FlowSurface {
     /// No tracking choice in progress.
@@ -382,7 +391,7 @@ pub struct MeetingReturnView {
     /// Due now: offer "Resume previous…".
     pub ready: bool,
     /// The meeting was a microphone session ("Microphone use stopped").
-    pub microphone: bool,
+    pub from_microphone: bool,
 }
 
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
@@ -482,6 +491,10 @@ pub struct HistorySlice {
     pub total_seconds: f64,
     /// App activity, newest first (at most 2,000).
     pub audit: Vec<AuditEntry>,
+    /// Why the last load or CSV export failed (1.14.x showed it in the error banner).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional = nullable))]
+    pub issue: Option<String>,
 }
 
 /// Ticket titles known to the engine, keyed by id (shared by every page).
@@ -584,13 +597,34 @@ pub struct PairingView {
     pub busy: bool,
 }
 
+/// A process using microphone input and its app category (Settings shows "Selected" when the
+/// category is watched, else "Ignored").
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MicrophoneOwnerView {
+    #[serde(flatten)]
+    pub owner: InputOwner,
+    pub category: Option<MicrophoneApp>,
+}
+
+/// The result of `settings.testBranchPattern`: the tester line and whether the pattern is
+/// valid (`false` with "Invalid pattern: …").
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BranchPatternTest {
+    pub text: String,
+    pub valid: bool,
+}
+
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MicrophoneDiagnostics {
     pub supported: bool,
     /// Every process with input running at the last sample.
-    pub owners: Vec<InputOwner>,
+    pub owners: Vec<MicrophoneOwnerView>,
     /// The last sample succeeded recently.
     pub fresh: bool,
     pub issue: Option<String>,
@@ -628,6 +662,11 @@ pub struct SettingsSlice {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional = nullable))]
     pub saved_at: Option<Timestamp>,
+    /// Whether the OS allows notifications (reported by the shell through
+    /// `app.reportNotificationPermission`); `null` until known.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional = nullable))]
+    pub notifications_authorized: Option<bool>,
 }
 
 // -- figma ------------------------------------------------------------------------------------
@@ -818,6 +857,7 @@ fn connection_slice(state: &AppState, context: &Context) -> ConnectionSlice {
         connected: connection.connected,
         connecting: connection.connecting,
         completion_issue: state.session.completion.issue.clone(),
+        shortcut_issue: state.session.shortcut_issue.clone(),
     }
 }
 
@@ -885,6 +925,8 @@ fn tracking_slice(state: &AppState, context: &Context) -> TrackingSlice {
                 .map(str::to_string),
             activity_name: cached,
             start: draft.start,
+            other_workspace: (!connection::same_workspace(&draft.workspace, &workspace))
+                .then(|| draft.workspace.clone()),
         }
     });
     let shows_local_timer =
@@ -1121,7 +1163,7 @@ fn prompts_slice(state: &AppState, context: &Context) -> PromptsSlice {
         activity_name: activity_name(state, plan.activity_id.as_deref()),
         end: plan.end,
         ready: meeting_return::ready(state, now, context.preview),
-        microphone: plan.microphone_session_id.is_some(),
+        from_microphone: plan.microphone_session_id.is_some(),
     });
     let figma = figma::suggestions(state, now)
         .into_iter()
@@ -1215,6 +1257,7 @@ fn history_slice(state: &AppState, context: &Context) -> HistorySlice {
         loading: history.loading,
         loaded: history.loaded,
         audit: state.audit.clone(),
+        issue: history.issue.clone(),
     }
 }
 
@@ -1319,7 +1362,14 @@ fn settings_slice(state: &AppState, context: &Context) -> SettingsSlice {
         },
         microphone: MicrophoneDiagnostics {
             supported: context.microphone_supported,
-            owners: microphone.inputs.clone(),
+            owners: microphone
+                .inputs
+                .iter()
+                .map(|owner| MicrophoneOwnerView {
+                    category: Some(MicrophoneApp::classify(&owner.id)),
+                    owner: owner.clone(),
+                })
+                .collect(),
             fresh,
             issue: (!microphone.connected && microphone.configured.is_some())
                 .then(|| microphone.status.clone()),
@@ -1335,6 +1385,7 @@ fn settings_slice(state: &AppState, context: &Context) -> SettingsSlice {
             })
             .collect(),
         saved_at: session.settings_saved_at,
+        notifications_authorized: session.notifications_authorized,
     }
 }
 

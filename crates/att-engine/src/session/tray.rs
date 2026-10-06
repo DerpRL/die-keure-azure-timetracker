@@ -103,3 +103,90 @@ pub fn tray_status(state: &AppState, now: Timestamp) -> TrayStatus {
         state: tray_state(indicator(state, now)),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use att_core::indicator::PausedSession;
+    use att_core::model::{Track, TrackingState, WireValue, WorkItem};
+    use att_core::offline::OfflineDraft;
+
+    fn now() -> Timestamp {
+        "2026-10-06T08:00:00Z".parse().unwrap()
+    }
+
+    fn connected(state: &mut AppState, tracking: TrackingState) {
+        let connection = &mut state.session.connection;
+        connection.tracking = Some(tracking);
+        connection.connected = true;
+        connection.has_seven_pace_token = true;
+        connection.last_sync = Some(now());
+    }
+
+    fn running(length: f64) -> TrackingState {
+        let mut track = Track::with_state(WireValue::text("Tracking"));
+        track.tfs_id = Some(33984);
+        track.work_log_id = Some("wl".into());
+        track.current_track_length = Some(length);
+        TrackingState::with_track(track)
+    }
+
+    #[test]
+    fn the_title_is_the_running_clock_and_the_tooltip_names_the_ticket() {
+        let mut state = AppState::default();
+        connected(&mut state, running(3_725.0));
+        state.session.work_items.insert(33984, WorkItem::new(33984, "Improve loading"));
+        let status = tray_status(&state, att_core::time::add_secs(now(), 10.0));
+        assert_eq!(status.title.as_deref(), Some(" 01:02:15"), "extrapolated while confirmed");
+        assert_eq!(status.state, TrayState::Running);
+        assert_eq!(
+            status.tooltip,
+            "Azure timetracker — Tracking · 7pace connected\n#33984 · Improve loading"
+        );
+        // Stale: the clock stands still and the tooltip says so.
+        let status = tray_status(&state, att_core::time::add_secs(now(), 600.0));
+        assert_eq!(status.title.as_deref(), Some(" 01:02:05"));
+        assert!(status.tooltip.contains("7pace status is out of date"), "{}", status.tooltip);
+        // Disconnected: the last known ticket.
+        state.session.connection.connected = false;
+        let status = tray_status(&state, now());
+        assert_eq!(status.state, TrayState::Disconnected);
+        assert_eq!(
+            status.tooltip,
+            "Azure timetracker — Disconnected · 7pace offline\nLast known: #33984 · Improve loading"
+        );
+    }
+
+    #[test]
+    fn paused_and_stopped_timers_and_the_windows_tooltip() {
+        let mut state = AppState::default();
+        let idle = TrackingState::with_track(Track::with_state(WireValue::text("Idle")));
+        connected(&mut state, idle);
+        let status = tray_status(&state, now());
+        assert_eq!(status.title.as_deref(), Some(" 00:00:00"));
+        assert_eq!(status.state, TrayState::Stopped);
+        let paused = PausedSession::new(None, None, "", now(), 1_800.0, Some("Planning"));
+        state.session.paused = Some(paused);
+        let status = tray_status(&state, now());
+        assert_eq!(status.title.as_deref(), Some(" 00:30:00"));
+        assert_eq!(status.state, TrayState::Paused);
+        assert_eq!(status.tooltip, "Azure timetracker — Paused · 7pace connected\nPlanning");
+        state.session.host_os = Some(HostOs::Windows);
+        let status = tray_status(&state, now());
+        assert!(status.tooltip.starts_with("00:30:00 · Azure timetracker — Paused"));
+    }
+
+    #[test]
+    fn a_leading_local_timer_drives_the_title() {
+        let mut state = AppState::default();
+        let start = att_core::time::add_secs(now(), -90.0);
+        let draft = OfflineDraft::new("ws", start, None, None, "Offline notes", None);
+        state.controllers.offline.ledger.drafts.push(draft);
+        let status = tray_status(&state, now());
+        assert_eq!(status.title.as_deref(), Some(" 00:01:30"));
+        assert_eq!(
+            status.tooltip,
+            "Azure timetracker — Local tracking · Offline notes · Not uploaded to 7pace"
+        );
+    }
+}

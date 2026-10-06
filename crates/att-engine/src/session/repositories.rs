@@ -194,3 +194,26 @@ pub(crate) fn toggle_watching(engine: &Engine) {
     });
     figma::configure(engine);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn first_run_discovery_finds_direct_children_with_git() {
+        let root = std::env::temp_dir().join(format!("att-discover-{}", Uuid::new_v4()));
+        for name in ["zeta", "alpha", ".hidden", "plain"] {
+            std::fs::create_dir_all(root.join(name)).unwrap();
+        }
+        for name in ["zeta", "alpha", ".hidden"] {
+            std::fs::create_dir_all(root.join(name).join(".git")).unwrap();
+        }
+        std::fs::create_dir_all(root.join("plain/nested/.git")).unwrap();
+        let found = discover(&root);
+        let names: Vec<&str> = found.iter().map(Repository::name).collect();
+        assert_eq!(names, ["alpha", "zeta"], "hidden and nested folders are skipped");
+        assert!(found.iter().all(|repo| repo.enabled));
+        assert!(discover(&root.join("missing")).is_empty());
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+}

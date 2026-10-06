@@ -117,12 +117,53 @@ async fn the_branch_pattern_tester_returns_the_settings_line() {
     let h = Harness::new(configuration(vec![]));
     let test = |branch: &str, pattern: &str| json!({"type": "settings.testBranchPattern", "branch": branch, "pattern": pattern});
     let default = att_core::git::DEFAULT_BRANCH_PATTERN;
-    assert_eq!(h.ok(test("feature/33624-improve-loading", default)).await, "Ticket #33624");
-    assert_eq!(h.ok(test("develop", default)).await, "No unique ticket found");
+    assert_eq!(
+        h.ok(test("feature/33624-improve-loading", default)).await,
+        json!({"text": "Ticket #33624", "valid": true})
+    );
+    assert_eq!(
+        h.ok(test("develop", default)).await,
+        json!({"text": "No unique ticket found", "valid": true})
+    );
     assert_eq!(
         h.ok(test("feature/1", "([0-9]+")).await,
-        "Invalid pattern: The value “([0-9]+” is invalid."
+        json!({"text": "Invalid pattern: The value “([0-9]+” is invalid.", "valid": false})
     );
+}
+
+#[tokio::test]
+async fn the_shell_reports_shortcut_and_notification_state() {
+    let h = Harness::new(configuration(vec![]));
+    assert!(h.slice("connection").get("shortcutIssue").is_none());
+    assert!(h.slice("settings").get("notificationsAuthorized").is_none(), "unknown at first");
+    let issue =
+        "⌃⌥T is unavailable or already used by another app. Use Switch ticket in the menu bar.";
+    h.ok(json!({"type": "app.reportShortcutIssue", "issue": issue})).await;
+    h.ok(json!({"type": "app.reportNotificationPermission", "authorized": false})).await;
+    assert_eq!(h.slice("connection")["shortcutIssue"], issue);
+    assert_eq!(h.slice("settings")["notificationsAuthorized"], false);
+    h.ok(json!({"type": "app.reportShortcutIssue", "issue": null})).await;
+    assert!(h.slice("connection").get("shortcutIssue").is_none());
+}
+
+#[tokio::test]
+async fn microphone_owners_carry_their_category() {
+    let h = Harness::new(configuration(vec![]));
+    h.start().await;
+    *h.t.microphone.0.lock().unwrap() = Some(vec![att_platform::InputOwner {
+        id: "us.zoom.xos".into(),
+        name: "Zoom".into(),
+        pid: Some(7),
+        path: None,
+    }]);
+    h.ok(json!({"type": "microphone.checkNow"})).await;
+    let diagnostics = h.slice("settings")["microphone"].clone();
+    assert_eq!(
+        diagnostics["owners"],
+        json!([{"id": "us.zoom.xos", "name": "Zoom", "pid": 7, "path": null, "category": "Zoom"}])
+    );
+    assert_eq!(diagnostics["status"], "Microphone in use: Zoom");
+    assert_eq!(diagnostics["checkedAt"], "2026-10-06T08:00:00Z");
 }
 
 #[tokio::test]
@@ -244,7 +285,8 @@ async fn pin_pairing_polls_until_approved_and_saves_the_tokens() {
     let pairing =
         Arc::new(FakePairing::new(&[SevenPacePinStatus::Waiting, SevenPacePinStatus::Validated]));
     *h.t.clients.pairing.lock().unwrap() = Some(pairing.clone());
-    h.ok(json!({"type": "pairing.begin", "workspace": "https://Contoso.timehub.7pace.com"})).await;
+    h.ok(json!({"type": "pairing.generatePin", "workspace": "https://Contoso.timehub.7pace.com"}))
+        .await;
     let view = h.slice("settings")["pairing"].clone();
     assert_eq!(view["pin"], "482913");
     assert_eq!(view["busy"], true);
@@ -287,7 +329,7 @@ async fn an_unapproved_pin_expires_after_a_minute_and_pairing_can_be_cancelled()
         pairing.calls.lock().unwrap().iter().filter(|call| call.starts_with("status")).count();
     assert_eq!(polls, 29, "every 2 s within the minute");
 
-    h.ok(json!({"type": "pairing.begin", "workspace": WORKSPACE})).await;
+    h.ok(json!({"type": "pairing.generatePin", "workspace": WORKSPACE})).await;
     h.ok(json!({"type": "pairing.cancel"})).await;
     tokio::time::sleep(Duration::from_secs(5)).await;
     settle().await;
@@ -296,7 +338,7 @@ async fn an_unapproved_pin_expires_after_a_minute_and_pairing_can_be_cancelled()
         json!({"pin": null, "expiresAt": null, "status": null, "pairedHost": null, "busy": false})
     );
 
-    h.ok(json!({"type": "pairing.begin", "workspace": "https://example.com"})).await;
+    h.ok(json!({"type": "pairing.generatePin", "workspace": "https://example.com"})).await;
     settle().await;
     assert_eq!(
         h.slice("settings")["pairing"]["status"],

@@ -227,7 +227,7 @@ async fn history_export_writes_formula_safe_csv() {
     // A missing folder is reported, not ignored.
     let missing = dir.0.join("missing/history.csv");
     h.ok(json!({"type": "history.exportCsv", "path": missing.to_string_lossy()})).await;
-    assert!(h.slice("app")["error"].as_str().unwrap().contains("could not be saved"));
+    assert!(h.slice("history")["issue"].as_str().unwrap().contains("could not be saved"));
 }
 
 #[tokio::test]
@@ -239,7 +239,10 @@ async fn the_history_range_is_validated_and_today_comes_from_the_week() {
     h.start().await;
     h.ok(json!({"type": "history.setRange", "from": "2026-10-02", "to": "2026-10-01"})).await;
     h.ok(json!({"type": "history.load"})).await;
-    assert_eq!(h.slice("app")["error"], "Choose a history end date on or after the start date.");
+    assert_eq!(
+        h.slice("history")["issue"],
+        "Choose a history end date on or after the start date."
+    );
     h.ok(json!({"type": "history.setRange", "from": "2026-09-01", "to": "2026-09-02"})).await;
     h.ok(json!({"type": "history.load"})).await;
     let history = h.slice("history");

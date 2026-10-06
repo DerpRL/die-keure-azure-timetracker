@@ -56,8 +56,8 @@ async fn every_documented_intent_shape_parses() {
         json!({"type": "timeEditor.prepareCorrection", "issueId": "overlap|1.0|a|b", "option": "boundary", "boundary": "2026-10-06T09:30:00Z"}),
         // Session intents added during the session port.
         json!({"type": "connection.recheck"}),
-        json!({"type": "settings.appIdentity", "path": "/Applications/Visual Studio Code.app"}),
-        json!({"type": "pairing.begin", "workspace": "https://contoso.timehub.7pace.com"}),
+        json!({"type": "settings.resolveWorkApp", "path": "/Applications/Visual Studio Code.app"}),
+        json!({"type": "pairing.generatePin", "workspace": "https://contoso.timehub.7pace.com"}),
         json!({"type": "tracking.reloadActivities"}),
         json!({"type": "microphone.checkNow"}),
         json!({"type": "agenda.openCalendar"}),

@@ -29,6 +29,8 @@ use crate::intent::done;
 use crate::ipc::IpcError;
 use crate::state::AppState;
 
+use super::view::FlowSurface;
+
 use super::connection::{self, lookup, reconcile_after_error, refresh_activities, tracking};
 use super::{
     branches, busy, completion, figma, history, meetings, microphone, progress, update_with,
@@ -318,7 +320,11 @@ pub(crate) async fn search(engine: &Engine, query: String) {
 
 /// `tracking.chooseTicket`: a search result or quick ticket in the open flow; with no flow
 /// open (History → Track again) the picker shows the activity chooser.
-pub(crate) async fn choose_ticket(engine: &Engine, ticket: i64) {
+pub(crate) async fn choose_ticket(engine: &Engine, ticket: i64, surface: Option<FlowSurface>) {
+    let open = engine.read(|state| state.session.flow.menu_tracking);
+    if surface == Some(FlowSurface::Panel) && !open {
+        begin_menu_tracking(engine, None);
+    }
     let (menu, picker, change, meeting, figma) = engine.read(|state| {
         let flow = &state.session.flow;
         (
@@ -329,6 +335,11 @@ pub(crate) async fn choose_ticket(engine: &Engine, ticket: i64) {
             flow.selected_figma.clone(),
         )
     });
+    let (menu, picker) = match surface {
+        Some(FlowSurface::Panel) => (true, false),
+        Some(FlowSurface::Picker) => (false, picker),
+        _ => (menu, picker),
+    };
     let choice = if menu {
         Choice { ticket: Some(ticket), change, meeting, in_menu_bar: true, ..Choice::default() }
     } else if picker {
@@ -1073,8 +1084,8 @@ pub(crate) async fn stop_for_branch(
 
 /// Swift `resumeTracking(inMenuBar:)`: a new session after confirmation; paused time is never
 /// logged. Acts in the picker while it is open, else in the panel.
-pub(crate) async fn resume(engine: &Engine) {
-    let in_menu_bar = !engine.read(|state| state.session.flow.show_picker);
+pub(crate) async fn resume(engine: &Engine, surface: Option<FlowSurface>) {
+    let in_menu_bar = in_panel(engine, surface);
     let ready = engine.read(|state| {
         let session = &state.session;
         let running = tracking(state).map(TrackingState::running);
@@ -1148,9 +1159,9 @@ pub(crate) async fn confirm_activity(engine: &Engine) -> std::result::Result<Val
 }
 
 /// `branch.track`: the activity chooser for the suggested ticket (or the branch remark).
-pub(crate) async fn track_branch(engine: &Engine, id: Uuid) {
+pub(crate) async fn track_branch(engine: &Engine, id: Uuid, surface: Option<FlowSurface>) {
     let Some(change) = branches::pending(engine, id) else { return };
-    let in_menu_bar = !engine.read(|state| state.session.flow.show_picker);
+    let in_menu_bar = in_panel(engine, surface);
     if in_menu_bar {
         begin_menu_tracking(engine, Some(change.clone()));
         engine.services().shell.show_panel(true);
@@ -1160,25 +1171,51 @@ pub(crate) async fn track_branch(engine: &Engine, id: Uuid) {
     choose_activity(engine, choice).await;
 }
 
+/// The surface an action that 1.14.x ran in the panel or the window uses: the one the user
+/// clicked in, else the picker while it is open, else the panel.
+fn in_panel(engine: &Engine, surface: Option<FlowSurface>) -> bool {
+    match surface {
+        Some(FlowSurface::Panel) => true,
+        Some(FlowSurface::Picker) => false,
+        _ => !engine.read(|state| state.session.flow.show_picker),
+    }
+}
+
+/// Swift's window version: the picker sheet for a selected suggestion.
+async fn open_picker_for(engine: &Engine, change: Option<BranchChange>) {
+    let ticket = change.as_ref().and_then(|change| change.ticket_id);
+    engine.update(|state| {
+        let flow = &mut state.session.flow;
+        flow.selected_change = change;
+        flow.show_picker = true;
+    });
+    // The sheet searched the suggested ticket when it appeared.
+    if let Some(ticket) = ticket {
+        search(engine, ticket.to_string()).await;
+    }
+}
+
 /// `branch.chooseAnother`: the ticket search for a branch change.
-pub(crate) async fn choose_another_for_branch(engine: &Engine, id: Uuid) {
+pub(crate) async fn choose_another_for_branch(
+    engine: &Engine,
+    id: Uuid,
+    surface: Option<FlowSurface>,
+) {
     let Some(change) = branches::pending(engine, id) else { return };
-    if engine.read(|state| state.session.flow.show_picker) {
-        let ticket = change.ticket_id;
-        engine.update(|state| state.session.flow.selected_change = Some(change));
-        // The sheet searched the suggested ticket when it appeared.
-        if let Some(ticket) = ticket {
-            search(engine, ticket.to_string()).await;
-        }
+    if !in_panel(engine, surface) {
+        open_picker_for(engine, Some(change)).await;
     } else if begin_menu_tracking(engine, Some(change)) {
         engine.services().shell.show_panel(true);
     }
 }
 
 /// `completion.switch`: the ticket search after a completed ticket.
-pub(crate) fn switch_from_completed(engine: &Engine) {
-    if engine.read(|state| state.session.flow.show_picker) {
-        engine.update(|state| state.session.flow.selected_change = None);
+pub(crate) fn switch_from_completed(engine: &Engine, surface: Option<FlowSurface>) {
+    if !in_panel(engine, surface) {
+        engine.update(|state| {
+            state.session.flow.selected_change = None;
+            state.session.flow.show_picker = true;
+        });
     } else if begin_menu_tracking(engine, None) {
         engine.services().shell.show_panel(true);
     }

@@ -399,3 +399,54 @@ async fn writes_are_refused_while_another_is_in_flight() {
     assert_eq!(h.slice("app")["busy"], false);
     assert!(h.seven_pace.writes().is_empty());
 }
+
+#[tokio::test]
+async fn the_surface_the_user_clicked_in_receives_the_draft() {
+    let (h, _dir, root) =
+        watching("feature/4821-card-retry", running(Some(4821), Some("dev"), None)).await;
+    let prompt = switch_branch(&h, &root, "feature/33984-improve-loading").await;
+    let id = prompt["change"]["id"].clone();
+    // Overview: the picker sheet.
+    h.ok(json!({"type": "branch.track", "id": id, "surface": "picker"})).await;
+    assert_eq!(h.slice("flow")["surface"], "picker");
+    assert_eq!(h.slice("flow")["draft"]["item"]["id"], 33984);
+    h.ok(json!({"type": "tracking.closePicker"})).await;
+    // The tray panel.
+    h.ok(json!({"type": "branch.track", "id": id, "surface": "panel"})).await;
+    assert_eq!(h.slice("flow")["surface"], "panel");
+    h.ok(json!({"type": "tracking.cancelPanel"})).await;
+    // The 1.14.x sequences without `surface` still work.
+    h.ok(json!({"type": "tracking.openPicker"})).await;
+    h.ok(json!({"type": "branch.chooseAnother", "id": id})).await;
+    let flow = h.slice("flow");
+    assert_eq!(flow["surface"], "picker");
+    assert_eq!(flow["selectedSuggestion"]["kind"], "branch");
+    assert_eq!(flow["search"]["results"][0]["id"], 33984, "the suggested ticket is searched");
+    h.ok(json!({"type": "tracking.closePicker"})).await;
+    h.ok(json!({"type": "tracking.beginPanel", "branchId": id})).await;
+    h.ok(json!({"type": "tracking.chooseTicket", "ticketId": 4790})).await;
+    let flow = h.slice("flow");
+    assert_eq!(flow["surface"], "panel");
+    assert_eq!(flow["draft"]["source"], "branch", "the panel keeps the selected change");
+    h.ok(json!({"type": "tracking.cancelPanel"})).await;
+    // A quick ticket clicked in the panel without an open flow.
+    h.ok(json!({"type": "tracking.chooseTicket", "ticketId": 4790, "surface": "panel"})).await;
+    assert_eq!(h.slice("flow")["surface"], "panel");
+    assert_eq!(h.slice("flow")["draft"]["source"], "ticket");
+    h.ok(json!({"type": "tracking.cancelPanel"})).await;
+    h.ok(json!({"type": "completion.switch", "surface": "picker"})).await;
+    assert_eq!(h.slice("flow")["surface"], "picker");
+}
+
+#[tokio::test]
+async fn resume_opens_in_the_main_window_when_asked() {
+    let h = Harness::new(configuration(vec![]));
+    h.seven_pace.set_current(running(Some(4821), Some("dev"), None));
+    h.start().await;
+    h.ok(json!({"type": "tracking.pause"})).await;
+    h.shell();
+    h.ok(json!({"type": "tracking.resume", "surface": "picker"})).await;
+    assert_eq!(h.slice("flow")["surface"], "picker");
+    assert_eq!(h.slice("flow")["draft"]["source"], "resume");
+    assert!(h.shell().is_empty(), "the panel stays closed");
+}

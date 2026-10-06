@@ -31,6 +31,8 @@ pub(crate) struct HistoryState {
     pub generation: u64,
     /// Swift `lastHistoryCheck`.
     pub last_check: Option<Timestamp>,
+    /// The last load or export failure, shown on the History page.
+    pub issue: Option<String>,
 }
 
 /// The default range: the last seven days including today.
@@ -63,7 +65,7 @@ pub(crate) async fn load(engine: &Engine) {
         let from = history.from.unwrap_or(default_from);
         let to = history.to.unwrap_or(default_to);
         if from > to {
-            state.session.error =
+            history.issue =
                 Some("Choose a history end date on or after the start date.".to_string());
             return None;
         }
@@ -90,11 +92,12 @@ pub(crate) async fn load(engine: &Engine) {
                 session.history.fetched = Some((from, to));
                 session.history.loaded = true;
                 session.history.last_check = Some(now);
+                session.history.issue = None;
                 true
             }
             Ok(_) => false,
             Err(error) => {
-                session.error = Some(format!("History: {error}"));
+                session.history.issue = Some(format!("History: {error}"));
                 false
             }
         }
@@ -189,10 +192,8 @@ pub(crate) async fn export_csv(engine: &Engine, path: String) {
     let result = tokio::task::spawn_blocking(move || write_atomically(&target, &text))
         .await
         .unwrap_or_else(|error| Err(AppError::Message(error.to_string())));
-    if let Err(error) = result {
-        let message = error.to_string();
-        engine.update(|state| state.session.error = Some(message));
-    }
+    let issue = result.err().map(|error| error.to_string());
+    engine.update(|state| state.session.history.issue = issue);
 }
 
 fn write_atomically(path: &std::path::Path, text: &str) -> att_core::Result<()> {

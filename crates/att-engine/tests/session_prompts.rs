@@ -214,7 +214,7 @@ async fn a_meeting_is_suggested_once_and_offers_a_return_when_it_ends() {
     let plan = h.slice("prompts")["meetingReturn"].clone();
     assert_eq!(plan["ticketId"], 4821);
     assert_eq!(plan["ready"], false);
-    assert_eq!(plan["microphone"], false);
+    assert_eq!(plan["fromMicrophone"], false);
 
     // The meeting ends: "Return to #4821?" once.
     h.advance(31.0 * 60.0);
@@ -309,7 +309,7 @@ async fn microphone_use_suggests_a_meeting_and_its_end_offers_pause_or_stop() {
         ]
     );
     assert_eq!(h.slice("prompts")["microphone"], json!([]));
-    assert_eq!(h.slice("prompts")["meetingReturn"]["microphone"], true);
+    assert_eq!(h.slice("prompts")["meetingReturn"]["fromMicrophone"], true);
 
     // Input still in use binds the meeting timer; then a minute without input ends the call.
     sample(&h, vec![slack()], 2.0).await;
