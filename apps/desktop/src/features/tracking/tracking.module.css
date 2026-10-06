@@ -1,0 +1,219 @@
+/* Tracking flow, current tracking and local timer. Layouts wrap instead of widening, so every
+   control stays reachable in the 420 px panel at 150 % scale. */
+
+.flow,
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.stack {
+  gap: var(--space-2);
+}
+
+.row,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.actions {
+  gap: var(--space-2) var(--space-3);
+}
+
+.trailing {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-inline-start: auto;
+}
+
+.flowHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.flowHeading {
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-semibold);
+}
+
+.subheading {
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.caption {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+  overflow-wrap: anywhere;
+}
+
+.warning,
+.actionError,
+.rowError {
+  color: var(--color-warning-text);
+  font-size: var(--font-size-footnote);
+  overflow-wrap: anywhere;
+}
+
+.actionError {
+  color: var(--color-danger-text);
+}
+
+.rowError {
+  flex-basis: 100%;
+  color: var(--color-danger-text);
+}
+
+.inlineIcon {
+  display: inline-block;
+  vertical-align: -0.125em;
+}
+
+/* Quick tickets */
+
+.quickList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.quickItem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.quickButton {
+  flex: 1 1 12rem;
+  justify-content: flex-start;
+  min-width: 0;
+  padding-block: var(--space-2);
+  border-color: var(--color-separator);
+  background: var(--color-accent-bg);
+  text-align: start;
+}
+
+.quickText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.ticketNumber {
+  color: var(--color-accent);
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-semibold);
+}
+
+.quickTitle {
+  color: var(--color-text);
+  font-weight: var(--font-weight-regular);
+}
+
+.favorite {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+/* A filled star: the shape changes, not only the colour. */
+.favoriteOn {
+  color: var(--color-accent);
+}
+
+.favoriteOn svg {
+  fill: currentColor;
+}
+
+/* Activity chooser */
+
+.draftSummary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border: var(--size-border) solid var(--color-separator);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.draftTitle {
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+/* Current tracking */
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.ticketLink {
+  padding-inline: 0;
+  color: var(--color-accent);
+}
+
+.trackingTitle {
+  font-weight: var(--font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.timerCard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5) var(--space-6);
+  min-width: 0;
+}
+
+.timerText {
+  display: flex;
+  flex: 1 1 18rem;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.timerSide {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.eyebrow {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.timerTitle {
+  font-size: var(--font-size-title-3);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  overflow-wrap: anywhere;
+}
