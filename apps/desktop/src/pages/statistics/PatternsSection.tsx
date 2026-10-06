@@ -147,12 +147,15 @@ function PatternBars({ title, description, nameHeader, items, selectedId, onTogg
           const selected = item.id === selectedId;
           return (
             <li key={item.id}>
-              <ToggleButton isSelected={selected} onChange={() => onToggle(selected ? null : item.id)} className={styles.patternRow}>
+              <ToggleButton
+                isSelected={selected}
+                onChange={() => onToggle(selected ? null : item.id)}
+                // 1.14's name: "Filter by Mon, 7h 25m"; the pressed state says whether it applies.
+                aria-label={`Filter by ${item.label}, ${duration(item.seconds)}${showCount ? `, ${plural(item.count, 'entry', 'entries')}` : ''}`}
+                className={styles.patternRow}
+              >
                 <span className={styles.patternText}>
-                  <span className={styles.patternLabel}>
-                    <span className="visually-hidden">Filter by </span>
-                    {item.label}
-                  </span>
+                  <span className={styles.patternLabel}>{item.label}</span>
                   {showCount ? <span className={styles.note}>{`${plural(item.count, 'entry', 'entries')} ·`}</span> : null}
                   <span className={styles.number}>{duration(item.seconds)}</span>
                   {selected ? <CheckIcon className={styles.patternIcon} /> : <FilterIcon className={styles.patternIcon} />}

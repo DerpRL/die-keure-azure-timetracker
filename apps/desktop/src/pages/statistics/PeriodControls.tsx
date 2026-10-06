@@ -1,5 +1,5 @@
 import { getLocalTimeZone, today, type CalendarDate } from '@internationalized/date';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { IconButton, Button } from '../../components/Button';
 import { DatePicker } from '../../components/DateFields';
 import { ChevronLeftIcon, ChevronRightIcon, RefreshIcon, SpinnerIcon } from '../../components/icons';
@@ -8,6 +8,9 @@ import type { StatisticsPeriod, StatisticsSlice } from '../../ipc/contract';
 import { useAction } from '../../state/hooks';
 import { calendarDate, rangeTitle, syncedLabel } from './format';
 import styles from './Statistics.module.css';
+
+/** Typing a date waits this long before the engine loads its period. */
+export const JUMP_DEBOUNCE_MS = 400;
 
 export const PERIODS: ReadonlyArray<{ id: StatisticsPeriod; label: string }> = [
   { id: 'day', label: 'Day' },
@@ -30,13 +33,24 @@ export function PeriodControls({ slice }: { slice: StatisticsSlice }) {
   const navigate = useAction();
   const { run } = navigate;
   const now = today(getLocalTimeZone());
-  // The picker shows the day the user jumped to while it lies in the shown range, else the
-  // range's first day. Only a draft: the range itself comes from the engine.
-  const [jumped, setJumped] = useState<CalendarDate | null>(null);
+  // The picker is a draft: it shows the typed day until the range moves elsewhere (Previous,
+  // Next, Current), then the first day of the engine's range.
+  const [jumped, setJumped] = useState<{ date: CalendarDate; range: string } | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(timer.current), []);
   const start = calendarDate(slice.range.start);
   const last = calendarDate(new Date(Date.parse(slice.range.end) - 1000));
-  const shown = jumped && jumped.compare(start) >= 0 && jumped.compare(last) <= 0 ? jumped : start;
+  const keepsDraft =
+    !!jumped && (jumped.range === slice.range.start || (jumped.date.compare(start) >= 0 && jumped.date.compare(last) <= 0));
+  const shown = keepsDraft && jumped ? jumped.date : start;
   const atLatest = isCurrentOrFuture(slice, now);
+  const jumpTo = (value: CalendarDate | null) => {
+    if (!value || value.compare(now) > 0) return;
+    setJumped({ date: value, range: slice.range.start });
+    // Each typed digit makes a complete date; ask for the period once typing pauses.
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => void run({ type: 'statistics.jumpTo', date: value.toString() }), JUMP_DEBOUNCE_MS);
+  };
 
   return (
     <div className={styles.controls}>
@@ -74,11 +88,7 @@ export function PeriodControls({ slice }: { slice: StatisticsSlice }) {
           className={styles.jumpTo}
           value={shown}
           maxValue={now}
-          onChange={(value) => {
-            if (!value || value.compare(now) > 0) return;
-            setJumped(value);
-            void run({ type: 'statistics.jumpTo', date: value.toString() });
-          }}
+          onChange={jumpTo}
         />
       </div>
       {navigate.error ? (
