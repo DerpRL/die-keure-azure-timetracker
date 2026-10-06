@@ -71,9 +71,9 @@ and `localDate` helpers) are in `tests/support/context.rs`.
 | FigmaContextTests › linksInvalidateOldChoicesAndCurrentTicketSuppresses | figma_context_tests::links_invalidate_old_choices_and_current_ticket_suppresses | ported |
 | FigmaContextTests › lastWorkedUsesActivationsAndMigratesMappingOnlyStorage | figma_context_tests::last_worked_uses_activations_and_migrates_mapping_only_storage | ported |
 | FigmaContextTests › historyRetentionAndWorkspaceIsolation | figma_context_tests::history_retention_and_workspace_isolation | ported |
-| FigmaContextTests › outdatedContextNeverMutatesTracking | — | not ported: tests `TrackingTransaction.switchTo` with `validateContext`; moves to the tracking port |
+| FigmaContextTests › outdatedContextNeverMutatesTracking | `figma_tracking_tests::outdated_context_never_mutates_tracking` | ported after the tracking merge |
 | FigmaContextTests › ticketFreeCompletionClearsSuggestionAndPreservesSavedLinks | figma_context_tests::ticket_free_completion_clears_suggestion_and_preserves_saved_links | ported |
-| FigmaContextTests › ticketFreeDesignStartsWithFileComment (2 cases) | — | not ported: tests `TrackingTransaction.switchTo`; moves to the tracking port |
+| FigmaContextTests › ticketFreeDesignStartsWithFileComment (2 cases) | `figma_tracking_tests::ticket_free_design_starts_with_file_comment` | ported after the tracking merge |
 | WorkAwarenessTests › inactivityUsesLastInputAndPromptsOnlyOnReturn | work_awareness_tests::inactivity_uses_last_input_and_prompts_only_on_return | ported |
 | WorkAwarenessTests › lockPromptsEvenBelowIdleThresholdAndDoesNotEndUntilUnlocked | work_awareness_tests::lock_prompts_even_below_idle_threshold_and_does_not_end_until_unlocked | ported |
 | WorkAwarenessTests › meetingSuppressesPassiveIdleAndDisabledFeaturesClearEvidence | work_awareness_tests::meeting_suppresses_passive_idle_and_disabled_features_clear_evidence | ported |
@@ -197,7 +197,7 @@ is missing; the Rust `Configuration` should do the same.
 ## For other scopes
 
 - **Configuration / importer:** the keys in the persistence table; port the five deferred tests.
-- **Tracking:** port `outdatedContextNeverMutatesTracking` and `ticketFreeDesignStartsWithFileComment`.
+- **Tracking:** done — both tests are in `figma_tracking_tests.rs`.
 - **Engine:** map `att_platform::WindowObservation` with `FigmaObservation::from_window(…,
   HostOs::current())` (`MissingAccess` → `MissingAccess`, `NotForeground`/`Waiting` → `Waiting`).
   Calendar occurrence ids must stay `sha256("<calendarId>|<calendarItemId>|<start seconds>")` in
