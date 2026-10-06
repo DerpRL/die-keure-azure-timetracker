@@ -1,0 +1,46 @@
+/* The panel fills its 420 × 640 window; PanelShell owns the only scroll area. */
+.root {
+  height: 100%;
+  min-height: 0;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.setup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-4);
+  border: var(--size-border) solid var(--color-primary-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-accent-bg);
+}
+
+.setupIcon {
+  flex: none;
+  color: var(--color-accent);
+  font-size: var(--size-icon-lg);
+}
+
+.setupText {
+  display: flex;
+  flex: 1 1 14rem;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.setupTitle {
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-semibold);
+}
+
+.caption {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+}
