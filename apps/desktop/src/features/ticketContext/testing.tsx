@@ -3,6 +3,8 @@
  */
 import type { ReactNode } from 'react';
 import { destroyAnnouncer } from 'react-aria/private/live-announcer/LiveAnnouncer';
+import type { PageId } from '../../layout/navigation';
+import { useCommands } from '../../shortcuts/hooks';
 
 /**
  * React Aria announces pending buttons through `aria-labelledby` messages in its own live region,
@@ -21,4 +23,12 @@ export function PageFrame({ title, children }: { title: string; children: ReactN
       {children}
     </main>
   );
+}
+
+const PAGE_IDS: readonly PageId[] = ['overview', 'dayReview', 'offlineDrafts', 'statistics', 'weeklyReport', 'history', 'timeEditor', 'settings'];
+
+/** Registers the main window's `page.<id>` commands (normally done by `AppShell`), reporting each open. */
+export function FakePageCommands({ onOpen }: { onOpen: (page: PageId) => void }) {
+  useCommands(PAGE_IDS.map((id) => ({ id: `page.${id}`, label: id, group: 'Pages' as const, onAction: () => onOpen(id) })));
+  return null;
 }
