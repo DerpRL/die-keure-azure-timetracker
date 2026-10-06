@@ -47,9 +47,19 @@ impl Repository {
 
     /// The last path component, on both `/` and `\` separators.
     pub fn name(&self) -> &str {
-        let trimmed = self.path.trim_end_matches(['/', '\\']);
-        trimmed.rsplit(['/', '\\']).next().unwrap_or(trimmed)
+        last_path_component(&self.path)
     }
+}
+
+/// Foundation's `URL(fileURLWithPath:).lastPathComponent` on both `/` and `\` separators:
+/// trailing separators are ignored, and a path made only of separators names the root (`"/"`).
+pub(crate) fn last_path_component(path: &str) -> &str {
+    let trimmed = path.trim_end_matches(['/', '\\']);
+    if trimmed.is_empty() {
+        // Swift returns "/" for the root rather than an empty name.
+        return &path[..path.len().min(1)];
+    }
+    trimmed.rsplit(['/', '\\']).next().unwrap_or(trimmed)
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -368,5 +378,7 @@ mod tests {
     fn repository_names_on_both_separators() {
         assert_eq!(Repository::new("/Users/me/repo/").name(), "repo");
         assert_eq!(Repository::new(r"C:\code\other").name(), "other");
+        assert_eq!(Repository::new("/").name(), "/");
+        assert_eq!(Repository::new("").name(), "");
     }
 }
