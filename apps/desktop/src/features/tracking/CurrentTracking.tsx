@@ -109,6 +109,7 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
       <Button
         variant="primary"
         icon={PlayIcon}
+        data-current-primary=""
         isDisabled={writeDisabled}
         isPending={actions.isPending('resume')}
         onPress={() =>
@@ -130,6 +131,7 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
   const switchTicket = !paused ? (
     <Button
       variant="primary"
+      data-current-primary=""
       isDisabled={writeDisabled}
       isPending={actions.isPending('switch')}
       onPress={() => void actions.run('switch', ...flowIntents(surface))}

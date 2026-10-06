@@ -270,6 +270,20 @@ describe('PanelView tracking flow', () => {
     await waitFor(() => expect(engine.dispatched('tracking.cancelPanel')).toHaveLength(1));
   });
 
+  it('keeps focus in the panel when a resolved prompt disappears', async () => {
+    const { engine, user } = renderWithEngine(<PanelView />);
+    engine.handle('branch.keep', (_intent, mock) => mock.setSlice('prompts', noPrompts));
+    await user.click(screen.getByRole('button', { name: 'Keep tracking' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Switch ticket…' })).toHaveFocus());
+  });
+
+  it('moves focus into the chooser when the search step ends', async () => {
+    const { engine, user } = renderWithEngine(<PanelView />, { with: { flow: panelSearchFlow } });
+    engine.handle('tracking.chooseTicket', (_intent, mock) => mock.setSlice('flow', ticketDraftFlow));
+    await user.click(screen.getByRole('button', { name: '#4790 Invoice PDF shows the wrong VAT number' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Start' })).toHaveFocus());
+  });
+
   it('announces a tracking change politely, not on load', async () => {
     const { engine } = renderWithEngine(<PanelView />, { with: { prompts: noPrompts } });
     const polite = () => document.querySelector('[data-announcer="polite"]')?.textContent ?? '';

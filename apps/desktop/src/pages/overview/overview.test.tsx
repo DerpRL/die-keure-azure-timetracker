@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { resetMockIpc } from '../../ipc';
 import { busyApp, windowsApp } from '../../ipc/fixtures/slices/app';
 import { degradedConnection, unconfiguredConnection } from '../../ipc/fixtures/slices/connection';
-import { noPrompts, pickerDraftFlow, ticketDraft } from '../../ipc/fixtures/slices/flow';
+import { noPrompts, pickerDraftFlow, sampleBranch, ticketDraft } from '../../ipc/fixtures/slices/flow';
 import {
   emptyHistory,
   localTracking,
@@ -143,6 +143,15 @@ describe('Overview page', () => {
     expect(within(local).getByText('Not uploaded to 7pace', { exact: false })).toBeInTheDocument();
     await user.click(within(local).getByRole('button', { name: 'Stop local timer' }));
     expect(engine.dispatched('offline.stopLocal')).toHaveLength(1);
+  });
+
+  it('moves focus to the next suggestion when one is resolved', async () => {
+    const { engine, user } = renderWithEngine(<OverviewPage />, {
+      with: { prompts: { ...noPrompts, branches: [sampleBranch], dayReview: { day: '2026-10-06', canSnooze: true } } },
+    });
+    engine.handle('branch.keep', (_intent, mock) => mock.patchSlice('prompts', { branches: [] }));
+    await user.click(screen.getByRole('button', { name: 'Keep tracking' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Open review' })).toHaveFocus());
   });
 
   it('names the Windows credential store on Windows', () => {

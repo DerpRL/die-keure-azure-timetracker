@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useDateFormatter } from 'react-aria';
 import { Button } from '../../components/Button';
 import { Card, Section } from '../../components/Card';
@@ -9,6 +9,7 @@ import { TargetProgress } from '../../features/progress/TargetProgress';
 import { PromptList, usePromptAnnouncements, usePromptItems } from '../../features/prompts/PromptList';
 import { useIntents, useWriteGuards } from '../../features/tracking/actions';
 import { CurrentTracking, LocalTimer, useLocalTimerTitle } from '../../features/tracking/CurrentTracking';
+import { useFocusRecovery } from '../../features/tracking/focus';
 import { PrivacyIcon, SetupIcon } from '../../features/tracking/icons';
 import { openMainPage } from '../../features/tracking/platform';
 import { useTrackingAnnouncements } from '../../features/tracking/status';
@@ -33,6 +34,9 @@ function SetupCard() {
     </Card>
   );
 }
+
+/** Where focus goes when a resolved prompt takes the focused button with it. */
+const FOCUS_FALLBACKS = ['[data-prompt-primary]:not([disabled])', '[data-current-primary]:not([disabled])'] as const;
 
 /** "Today Tuesday 6 October", updated once a minute so it turns over at midnight. */
 function TodayLine() {
@@ -87,11 +91,13 @@ export default function OverviewPage() {
   const app = useSlice('app');
   const items = usePromptItems('main');
   const localTitle = useLocalTimerTitle();
+  const rootRef = useRef<HTMLDivElement>(null);
   usePromptAnnouncements(items);
   useTrackingAnnouncements();
+  useFocusRecovery(rootRef, FOCUS_FALLBACKS);
 
   return (
-    <div className={styles.page}>
+    <div ref={rootRef} className={styles.page}>
       <OverviewHeader />
       <TodayLine />
 

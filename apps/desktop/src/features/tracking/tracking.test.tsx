@@ -101,6 +101,8 @@ describe('TicketPickerSheet', () => {
     engine.handle('tracking.chooseTicket', (_intent, mock) => mock.setSlice('flow', pickerDraftFlow));
     await user.click(await screen.findByRole('button', { name: '#4790 Invoice PDF shows the wrong VAT number' }));
     const dialog = await screen.findByRole('dialog', { name: 'Choose an activity' });
+    // Focus stays in the sheet when the ticket step makes way for the chooser.
+    await waitFor(() => expect(dialog).toContainElement(document.activeElement as HTMLElement));
     // Preselected from the draft; nothing has started yet.
     expect(within(dialog).getByRole('button', { name: /Development/ })).toBeInTheDocument();
     expect(within(dialog).getByText('#4790 · Bug')).toBeInTheDocument();

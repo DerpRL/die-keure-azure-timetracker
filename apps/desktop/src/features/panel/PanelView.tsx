@@ -14,6 +14,7 @@ import { TargetProgress, useProgressSummary } from '../progress/TargetProgress';
 import { PromptList, usePromptAnnouncements, usePromptItems } from '../prompts/PromptList';
 import { CurrentTracking, LocalTimer, useLocalTimerTitle } from '../tracking/CurrentTracking';
 import { SetupIcon } from '../tracking/icons';
+import { focusFirst, useFocusRecovery } from '../tracking/focus';
 import { closePanel, openMainPage, quitApp } from '../tracking/platform';
 import { trackingStatus, useTrackingAnnouncements } from '../tracking/status';
 import { TICKET_SEARCH_SELECTOR } from '../tracking/TicketSearch';
@@ -23,18 +24,16 @@ import { UpdateNotice } from '../updates/UpdateNotice';
 import styles from './panel.module.css';
 
 const NEXT_ACTION_PRIMARY = '[data-next-action] [data-prompt-primary]:not([disabled])';
+const FLOW_PRIMARY = '[data-tracking-flow] [data-prompt-primary]:not([disabled])';
 
-function focusFirst(root: HTMLElement | null, selectors: readonly string[]): boolean {
-  if (!root) return false;
-  for (const selector of selectors) {
-    const element = root.querySelector<HTMLElement>(selector);
-    if (element) {
-      element.focus();
-      return true;
-    }
-  }
-  return false;
-}
+/** Where focus goes when the focused control disappears (a prompt resolved, the choice ended). */
+const FOCUS_FALLBACKS = [
+  NEXT_ACTION_PRIMARY,
+  TICKET_SEARCH_SELECTOR,
+  FLOW_PRIMARY,
+  '[data-tracking-flow] button:not([disabled])',
+  '[data-current-primary]:not([disabled])',
+] as const;
 
 /** "A little setup. A lot less forgotten time." while no 7pace account is configured. */
 function SetupCallToAction() {
@@ -75,6 +74,7 @@ export function PanelView() {
   const rootRef = useRef<HTMLDivElement>(null);
   usePromptAnnouncements(items);
   useTrackingAnnouncements();
+  useFocusRecovery(rootRef, FOCUS_FALLBACKS);
 
   const flowActive = flow?.surface === 'panel';
   const { run: runCancel } = cancel;
@@ -122,7 +122,7 @@ export function PanelView() {
         requestAnimationFrame(() => {
           const root = rootRef.current;
           if (flowActiveRef.current) {
-            focusFirst(root, [TICKET_SEARCH_SELECTOR, '[data-tracking-flow] [data-prompt-primary]:not([disabled])']);
+            focusFirst(root, [TICKET_SEARCH_SELECTOR, FLOW_PRIMARY]);
           } else {
             focusFirst(root, [NEXT_ACTION_PRIMARY]);
           }
