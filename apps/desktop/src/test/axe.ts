@@ -7,7 +7,10 @@ import { expect } from 'vitest';
  * `region` rule is off because components are rendered outside page landmarks in tests.
  */
 export async function expectNoA11yViolations(context: Element | Document = document.body, options: RunOptions = {}) {
-  const results = await axe.run(context, {
+  // React Aria's live announcer is shared across tests and can briefly hold a message that points
+  // at an element that already unmounted (a pressed button); it is not part of the tree under test.
+  const target = { include: [context], exclude: [['[data-live-announcer]:not([data-announcer])']] };
+  const results = await axe.run(target as axe.ElementContext, {
     ...options,
     rules: {
       'color-contrast': { enabled: false },

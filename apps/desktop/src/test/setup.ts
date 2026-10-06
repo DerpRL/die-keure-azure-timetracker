@@ -42,9 +42,21 @@ beforeEach(() => {
   setPlatformOverride('macos');
 });
 
+/**
+ * React Aria's own live announcer (not ours, which has `data-announcer`) outlives each test. Its
+ * messages can point at elements that are gone, which axe reports, and they would leak into the
+ * next test's announcement assertions.
+ */
+function clearReactAriaAnnouncer(): void {
+  for (const log of document.querySelectorAll('[data-live-announcer]:not([data-announcer]) [role="log"]')) {
+    log.replaceChildren();
+  }
+}
+
 afterEach(() => {
   cleanup();
   clearAnnouncements();
+  clearReactAriaAnnouncer();
   resetMatchMedia();
   setPlatformOverride(null);
   document.documentElement.removeAttribute('data-theme');
