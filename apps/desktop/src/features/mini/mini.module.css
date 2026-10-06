@@ -1,0 +1,32 @@
+/* 260 × 72 at 100 %: one clock line and one caption line, never a scroll bar. */
+.readout {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.idle {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.caption {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.captionIcon {
+  flex: none;
+}
+
+.captionText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
