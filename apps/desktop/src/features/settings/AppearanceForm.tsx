@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { Button } from '../../components/Button';
 import { StatusDot } from '../../components/Badge';
 import { InfoIcon } from '../../components/icons';
@@ -44,9 +45,12 @@ export function useInterfacePreferences() {
 export function AppearancePreview({ preferences }: { preferences: InterfacePreferences }) {
   const system = useSystemAppearance();
   const resolved = resolveAppearance(preferences, system);
+  const captionId = useId();
   return (
-    <figure className={styles.preview} data-theme={resolved.theme} data-contrast={resolved.contrast}>
-      <figcaption className={styles.previewCaption}>Appearance preview</figcaption>
+    <figure className={styles.preview} data-theme={resolved.theme} data-contrast={resolved.contrast} aria-labelledby={captionId}>
+      <figcaption id={captionId} className={styles.previewCaption}>
+        Appearance preview
+      </figcaption>
       <div className={styles.previewCard}>
         <span className={styles.previewPrimary}>
           <StatusDot tone="running" label="Running" />

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import type { Key } from 'react-aria-components';
 import { Badge } from '../../components/Badge';
+import { ErrorIcon } from '../../components/icons';
 import { Tab, TabList, TabPanel, TabsRoot } from '../../components/Segmented';
 import type { SettingsSlice } from '../../ipc/contract';
 import { useCommand, useCommands, useSaveShortcut } from '../../shortcuts/hooks';
@@ -153,10 +154,16 @@ export function SettingsEditor({ settings }: { settings: SettingsSlice }) {
           {categories.map((entry) => {
             const count = issueCount(entry.id);
             return (
-              <Tab key={entry.id} id={entry.id} className={styles.category}>
+              <Tab
+                key={entry.id}
+                id={entry.id}
+                className={styles.category}
+                // "Tracking, 1 problem": the visible label stays first (WCAG 2.5.3).
+                aria-label={count > 0 ? `${entry.title}, ${count} ${count === 1 ? 'problem' : 'problems'}` : undefined}
+              >
                 <span>{entry.title}</span>
                 {count > 0 ? (
-                  <Badge tone="danger" accessibleLabel={`${count} ${count === 1 ? 'problem' : 'problems'}`} className={styles.categoryBadge}>
+                  <Badge tone="danger" icon={ErrorIcon} className={styles.categoryBadge}>
                     {count}
                   </Badge>
                 ) : null}

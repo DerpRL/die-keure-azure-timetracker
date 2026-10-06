@@ -1,6 +1,10 @@
-import type { ReactNode } from 'react';
+import { lazy, Suspense, type ReactNode } from 'react';
 import { useSlice } from '../../state/hooks';
-import { AppearanceOnboarding } from './AppearanceOnboarding';
+
+// Only the first run needs it, so it stays out of the main window's initial bundle.
+const AppearanceOnboarding = lazy(() =>
+  import('./AppearanceOnboarding').then((module) => ({ default: module.AppearanceOnboarding })),
+);
 
 /**
  * Shows the first-run appearance onboarding instead of `children` while `app.onboarding` is
@@ -9,6 +13,10 @@ import { AppearanceOnboarding } from './AppearanceOnboarding';
  */
 export function OnboardingGate({ children }: { children: ReactNode }) {
   const app = useSlice('app');
-  if (app?.onboarding) return <AppearanceOnboarding />;
-  return <>{children}</>;
+  if (!app?.onboarding) return <>{children}</>;
+  return (
+    <Suspense fallback={<main aria-busy="true" aria-label="Loading setup" />}>
+      <AppearanceOnboarding />
+    </Suspense>
+  );
 }

@@ -35,14 +35,14 @@ export const TEST_BRANCH = 'feature/33624-improve-loading';
 /** The 1.14 live tester: runs `settings.testBranchPattern` shortly after the user stops typing. */
 function useBranchPatternTest(branch: string, pattern: string) {
   const { run } = useAction();
-  const [result, setResult] = useState<{ key: string; text: string; failed: boolean } | null>(null);
+  const [result, setResult] = useState<{ key: string; text: string | null; failed: boolean } | null>(null);
   const key = `${branch}\u0000${pattern}`;
   useEffect(() => {
     let active = true;
     const timer = setTimeout(() => {
       void run({ type: 'settings.testBranchPattern', branch, pattern }).then((outcome) => {
         if (!active) return;
-        if (outcome.ok) setResult(typeof outcome.value === 'string' ? { key, text: outcome.value, failed: false } : null);
+        if (outcome.ok) setResult({ key, text: typeof outcome.value === 'string' ? outcome.value : null, failed: false });
         else setResult({ key, text: outcome.error.message, failed: true });
       });
     }, 200);
@@ -54,7 +54,7 @@ function useBranchPatternTest(branch: string, pattern: string) {
   // A result for older input is not shown as current.
   const current = result?.key === key ? result : null;
   // `BranchTicket::tester_result` prefixes compile errors with "Invalid pattern:".
-  const invalid = current ? current.failed || current.text.startsWith('Invalid pattern') : false;
+  const invalid = current ? current.failed || (current.text ?? '').startsWith('Invalid pattern') : false;
   return { text: current?.text ?? null, invalid, testing: current === null };
 }
 
