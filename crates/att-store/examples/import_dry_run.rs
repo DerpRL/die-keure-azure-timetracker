@@ -10,12 +10,14 @@ use std::collections::BTreeMap;
 use att_core::Configuration;
 use att_core::awareness::WorkAwarenessLedger;
 use att_core::completion::TicketCompletionMonitor;
+use att_core::day_review::DayReviewRecord;
 use att_core::figma::FigmaStore;
 use att_core::git::{AuditEntry, BranchChange};
 use att_core::indicator::PausedSession;
 use att_core::meetings::MeetingSuggestionEngine;
 use att_core::microphone_end::MicrophoneTrackingMonitor;
 use att_core::offline::OfflineLedger;
+use att_core::productivity::{MeetingReturn, QuickTickets};
 use att_core::worklog::ops::WorkLogChange;
 use att_store::{Store, keys, legacy};
 use jiff::Timestamp;
@@ -62,9 +64,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("skipped: {skipped}");
     }
     check::<Configuration>(&store, keys::CONFIGURATION);
+    if let Some(text) = store.get_raw(keys::CONFIGURATION)? {
+        let raw: serde_json::Value = serde_json::from_str(&text)?;
+        let config: Configuration = serde_json::from_str(&text)?;
+        let has = |key: &str| raw.get(key).is_some();
+        println!(
+            "configuration: workTargets stored={} differs-from-default={}, endOfDayReview stored={} differs-from-default={}, repositories={}",
+            has("workTargets"),
+            config.targets != att_core::targets::WorkTargets::default(),
+            has("endOfDayReview"),
+            config.day_review != att_core::day_review::DayReviewPreferences::default(),
+            config.repositories.len()
+        );
+    }
     check::<Vec<BranchChange>>(&store, keys::PENDING_BRANCHES);
     check::<MeetingSuggestionEngine>(&store, keys::MEETING_REMINDERS);
     check::<PausedSession>(&store, keys::PAUSED_SESSION);
+    check::<MeetingReturn>(&store, keys::MEETING_RETURN);
+    check::<QuickTickets>(&store, keys::QUICK_TICKETS);
+    check::<BTreeMap<String, DayReviewRecord>>(&store, keys::DAY_REVIEWS);
     check::<WorkAwarenessLedger>(&store, keys::WORK_AWARENESS);
     check::<TicketCompletionMonitor>(&store, keys::TICKET_COMPLETION);
     check::<MicrophoneTrackingMonitor>(&store, keys::MICROPHONE_TRACKING);
