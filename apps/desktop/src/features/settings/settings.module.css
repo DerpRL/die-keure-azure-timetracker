@@ -1,0 +1,508 @@
+/* Settings page: category list, sections and the save bar. */
+
+/* `[data-orientation]` (set by React Aria) outranks the foundation tab styles. */
+.layout[data-orientation] {
+  display: grid;
+  grid-template-columns: minmax(10rem, 13rem) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.categoryList[data-orientation] {
+  position: sticky;
+  top: calc(3.5rem + var(--space-4));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: 0;
+  border: 0;
+}
+
+/* Overrides the horizontal tab look of the foundation tabs. */
+.categoryList .category {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: var(--size-control-md);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-weight: var(--font-weight-regular);
+}
+
+.categoryList .category[data-selected] {
+  background: var(--color-selected-bg);
+  color: var(--color-selected-text);
+  font-weight: var(--font-weight-semibold);
+  /* A leading bar marks the selection, not colour alone. */
+  box-shadow: inset 0.1875rem 0 0 var(--color-selected-indicator);
+}
+
+.categoryList .category[data-selected]::after {
+  content: none;
+}
+
+.categoryBadge {
+  flex: none;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  max-width: 56rem;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.sectionAnchor {
+  scroll-margin-top: calc(3.5rem + var(--space-4));
+  outline: none;
+}
+
+.sectionAnchor:focus-visible {
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: var(--space-1);
+  border-radius: var(--radius-lg);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.groupTitle {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.subTitle {
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-semibold);
+}
+
+.hint {
+  max-width: 44rem;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+  overflow-wrap: anywhere;
+}
+
+.issue {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--color-danger-text);
+  font-size: var(--font-size-footnote);
+  overflow-wrap: anywhere;
+}
+
+.warning {
+  color: var(--color-warning-text);
+}
+
+.issueIcon,
+.statusIcon {
+  flex: none;
+  margin-top: 0.15em;
+}
+
+.divider {
+  width: 100%;
+  margin: var(--space-1) 0;
+  border: 0;
+  border-top: var(--size-border) solid var(--color-separator);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  min-width: 0;
+}
+
+.fieldRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3) var(--space-4);
+  min-width: 0;
+}
+
+.fieldRow > * {
+  flex: 1 1 14rem;
+}
+
+.fieldRow > .narrow {
+  flex: 0 1 10rem;
+}
+
+.mono input {
+  font-family: var(--font-family-mono);
+}
+
+.status {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  overflow-wrap: anywhere;
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+}
+
+.secretDescription {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* PIN pairing */
+.pairing {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.pinDetails {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-4);
+}
+
+.pinDetails dt {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+}
+
+.pin {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-title-1);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.08em;
+  user-select: all;
+}
+
+.countdown {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Fieldsets for checkbox groups */
+.fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  margin-bottom: var(--space-1);
+  padding: 0;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+}
+
+.checkGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: var(--space-2) var(--space-4);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.listItem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+}
+
+.listItem + .listItem {
+  border-top: var(--size-border) solid var(--color-separator);
+}
+
+.listText {
+  display: flex;
+  flex: 1 1 12rem;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.listMeta {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+}
+
+.swatch {
+  flex: none;
+  width: 0.75rem;
+  height: 0.75rem;
+  border: var(--size-border) solid var(--color-control-border);
+  border-radius: 50%;
+}
+
+.calendarLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Weekly schedule */
+.weekGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: var(--space-3);
+}
+
+.total {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  font-weight: var(--font-weight-semibold);
+}
+
+.total output {
+  font-variant-numeric: tabular-nums;
+}
+
+.holidayList {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) auto;
+  gap: var(--space-1) var(--space-4);
+  font-size: var(--font-size-footnote);
+}
+
+.holidayList dt {
+  font-variant-numeric: tabular-nums;
+}
+
+.holidayList dd {
+  margin: 0;
+}
+
+/* Interruptions */
+.levels {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-1) var(--space-4);
+  font-size: var(--font-size-footnote);
+}
+
+.levels dt {
+  font-weight: var(--font-weight-semibold);
+}
+
+.levels dd {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.interruptions {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--space-3) var(--space-4);
+}
+
+/* Features */
+.featureList {
+  display: flex;
+  flex-direction: column;
+}
+
+.feature {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) 0;
+}
+
+.feature + .feature {
+  border-top: var(--size-border) solid var(--color-separator);
+}
+
+.featureFacts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0 var(--space-3);
+  margin-top: var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+  overflow-wrap: anywhere;
+}
+
+.featureNote {
+  grid-column: 1 / -1;
+}
+
+.factLabel {
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Appearance preview */
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-4);
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.previewCaption {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.previewCard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.previewPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--font-weight-medium);
+}
+
+.previewSecondary {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+}
+
+.previewButton {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--size-control-sm);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-semibold);
+}
+
+.appearanceGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Save bar */
+.saveBar {
+  position: sticky;
+  bottom: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-inline: calc(-1 * var(--space-2));
+  padding: var(--space-3) var(--space-4);
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-raised);
+  box-shadow: var(--elevation-2);
+}
+
+.saveRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.saveState {
+  display: inline-flex;
+  flex: 1 1 12rem;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  font-weight: var(--font-weight-medium);
+}
+
+.issueList {
+  margin: var(--space-1) 0 0;
+  padding-inline-start: var(--space-5);
+}
+
+.issueList li + li {
+  margin-top: var(--space-1);
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+@media (max-width: 52rem) {
+  .layout[data-orientation] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .categoryList[data-orientation] {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
+
+@media (forced-colors: active) {
+  .categoryList .category[data-selected] {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+}
