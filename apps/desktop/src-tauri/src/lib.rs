@@ -14,6 +14,7 @@ pub mod shell;
 mod shortcut;
 mod surfaces;
 mod tray;
+mod updates;
 
 use tauri::{AppHandle, RunEvent};
 use tauri_plugin_window_state::StateFlags;
@@ -67,6 +68,9 @@ pub fn run() {
             engine_bridge::engine_dispatch,
             engine_bridge::engine_snapshot,
             engine_bridge::engine_resync,
+            updates::shell_update_status,
+            updates::shell_update_check,
+            updates::shell_update_install,
         ])
         .setup(|app| {
             setup(app.handle())?;
@@ -99,6 +103,8 @@ fn setup(app: &AppHandle) -> Result<(), shell::ShellError> {
     shortcut::register_default(app);
     // The engine decides what the tray shows and when the panel opens from here on.
     engine_bridge::start(app).map_err(shell::ShellError::Invalid)?;
+    // Update checks read the engine's settings, so they start after it.
+    updates::start(app);
     #[cfg(debug_assertions)]
     debug::apply(app);
     Ok(())

@@ -21,6 +21,9 @@
     "allow-engine-dispatch",
     "allow-engine-snapshot",
     "allow-engine-resync",
+    "allow-shell-update-status",
+    "allow-shell-update-check",
+    "allow-shell-update-install",
     "dialog:allow-open",
     "dialog:allow-save",
     {

@@ -226,7 +226,13 @@ export type ControllerIntent =
   | { type: "statistics.resetZoom" }
   | { type: "statistics.setSection"; section: StatisticsSection }
   | { type: "statistics.refresh" }
-  | { type: "statistics.entries"; offset: number; limit: number }
+  | {
+      type: "statistics.entries";
+      offset: number;
+      limit: number;
+      start?: string | null;
+      end?: string | null;
+    }
   | { type: "timeEditor.setDay"; day: string }
   | { type: "timeEditor.setFilter"; text: string }
   | { type: "timeEditor.load" }
@@ -235,6 +241,7 @@ export type ControllerIntent =
   | { type: "timeEditor.setMode"; mode: TimeEditMode }
   | { type: "timeEditor.setTimes"; start: string; end: string }
   | { type: "timeEditor.setSplit"; at: string; ticket: string; comment: string; activityId: string }
+  | { type: "timeEditor.setSecondEntry"; ticket: string; comment: string; activityId: string }
   | { type: "timeEditor.setSelection"; ids: Array<string> }
   | { type: "timeEditor.beginMerge" }
   | { type: "timeEditor.beginUndo"; changeId: string }
@@ -243,7 +250,12 @@ export type ControllerIntent =
   | { type: "timeEditor.acknowledge"; changeId: string }
   | { type: "timeEditor.showCorrections"; show: boolean }
   | { type: "timeEditor.loadCorrections" }
-  | { type: "timeEditor.prepareCorrection"; issueId: string; option: string }
+  | {
+      type: "timeEditor.prepareCorrection";
+      issueId: string;
+      option: string;
+      boundary?: string | null;
+    }
   | { type: "timeEditor.setSeparateIdle"; separate: boolean }
   | { type: "dayReview.setDay"; day: string }
   | { type: "dayReview.refresh" }
@@ -271,11 +283,22 @@ export type ControllerIntent =
   | { type: "ticket.closeContext" }
   | { type: "ticket.openInAzure"; ticketId: number };
 
+/**
+ * The corrections offered for one gap or overlap: `extendEarlier`, `startLaterEarlier` (gaps),
+ * `removeFromEarlier`, `removeFromLater`, `boundary` (overlaps).
+ */
+export type CorrectionChoices = { issueId: string; options: Array<string> };
+
 export type CorrectionsView = {
   show: boolean;
   issues: Array<TimeCorrectionIssue>;
   loading: boolean;
   issue: string | null;
+  /**
+   * For each of `issues`, in the same order: its id and the correction options with a valid
+   * plan, for `timeEditor.prepareCorrection`.
+   */
+  choices: Array<CorrectionChoices>;
 };
 
 /** Persisted in the configuration as `endOfDayReview`. */
@@ -309,6 +332,10 @@ export type DayReviewSlice = {
   loading: boolean;
   issue: string | null;
   syncedAt: string | null;
+  /** The shortest gap the review reports, in minutes (Day review preferences). */
+  gapMinutes: number;
+  /** A 7pace connection exists ("Refresh review" is available). */
+  configured: boolean;
 };
 
 export type DayReviewSummary = {
@@ -787,6 +814,8 @@ export type OfflineSlice = {
   issue: string | null;
   message: string | null;
   canCreate: boolean;
+  /** A 7pace connection exists (reviews and uploads are available). */
+  configured: boolean;
 };
 
 export type PageInfo = {
@@ -1074,6 +1103,8 @@ export type StatisticsSlice = {
   visuals: ExplorerVisuals | null;
   /** Targets are compared only for the complete, unfiltered period. */
   targetComparable: boolean;
+  /** A 7pace connection exists ("Refresh" is available). */
+  configured: boolean;
 };
 
 export type SuggestionView = {
@@ -1194,6 +1225,13 @@ export type TimeEditorSlice = {
   guidedPlan: WorkLogPlan | null;
   idleInterval: Interval | null;
   separateIdle: boolean;
+  /** A 7pace connection exists. */
+  configured: boolean;
+  /**
+   * Overlaps of the pending change with the loaded day's entries and the running timer,
+   * shown before the optional full check (Swift `loadedConflicts`).
+   */
+  loadedConflicts: Array<WorkLogConflict>;
 };
 
 export type TrackingSlice = {
@@ -1246,6 +1284,10 @@ export type WeeklySlice = {
   storageIssue: string | null;
   message: string | null;
   syncedAt: string | null;
+  /** A 7pace connection exists (drafts are saved per workspace). */
+  configured: boolean;
+  /** The file name the export dialog suggests: `weekly-status-<yyyy-MM-dd>.md`. */
+  exportFileName: string;
 };
 
 /**

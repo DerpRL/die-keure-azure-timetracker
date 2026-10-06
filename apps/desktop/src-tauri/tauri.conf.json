@@ -92,7 +92,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "PLACEHOLDER-NOT-A-KEY: the release engineer replaces this with the base64 minisign public key from `tauri signer generate` before the first 2.x release",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDdEQUMyNzUwQkFCM0ZBMjEKUldRaCtyTzZVQ2VzZldBYzFLdXhFSVFiUUxzNHBUSWxsSXh3a29CblIraWVzKytUbEFzR09Ja1AK",
       "endpoints": [
         "https://raw.githubusercontent.com/DerpRL/die-keure-azure-timetracker/main/updates/v2/latest.json"
       ],
