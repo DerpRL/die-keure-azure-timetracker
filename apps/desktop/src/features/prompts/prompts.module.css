@@ -1,0 +1,188 @@
+/* Prompt cards. The tone sets the border and the icon tile; the icon, heading and badge text
+   carry the meaning, so colour is never the only signal. */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.warning {
+  border-color: var(--color-warning);
+  background: var(--color-warning-bg);
+}
+
+.accent {
+  border-color: var(--color-primary-border);
+  background: var(--color-accent-bg);
+}
+
+.neutral {
+  border-color: var(--color-border);
+}
+
+/* The 1.14 accent stripe on the leading edge. */
+.warning::before,
+.accent::before {
+  position: absolute;
+  inset-block: var(--space-4);
+  inset-inline-start: -1px;
+  width: 4px;
+  border-radius: var(--radius-full);
+  background: currentColor;
+  content: '';
+}
+
+.warning::before {
+  color: var(--color-warning);
+}
+
+.accent::before {
+  color: var(--color-accent);
+}
+
+@media (forced-colors: active) {
+  .card {
+    border: 2px solid CanvasText;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.iconTile {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-accent);
+  font-size: var(--size-icon-md);
+}
+
+.warning .iconTile {
+  color: var(--color-warning-text);
+}
+
+.headerText {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.title {
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  overflow-wrap: anywhere;
+}
+
+.subtitle {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.badge {
+  flex: none;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.strong {
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.text {
+  overflow-wrap: anywhere;
+}
+
+.caption {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+  overflow-wrap: anywhere;
+}
+
+.time {
+  font-variant-numeric: tabular-nums;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.spacer {
+  flex: 1 1 0;
+}
+
+.branchLines {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.branchLabel {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+}
+
+.branchName {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-footnote);
+  overflow-wrap: anywhere;
+}
+
+.branchCurrent {
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.ticketChoices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.more {
+  align-self: flex-start;
+}
