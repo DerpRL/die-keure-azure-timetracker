@@ -1,0 +1,205 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.width-full {
+  width: 100%;
+}
+.width-narrow {
+  width: min(100%, 14rem);
+}
+.width-auto {
+  width: auto;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--size-control-md);
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-3);
+  border: var(--size-border) solid var(--color-control-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-secondary-bg);
+  color: var(--color-text);
+  font-size: var(--font-size-body);
+  text-align: start;
+}
+
+.trigger[data-hovered] {
+  background: var(--color-secondary-hover);
+}
+
+.trigger[data-pressed] {
+  background: var(--color-secondary-pressed);
+}
+
+.trigger[data-disabled] {
+  border-color: var(--color-separator);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-disabled);
+}
+
+.value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.value[data-placeholder] {
+  color: var(--color-text-secondary);
+}
+
+.chevron {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.listBox {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 20rem;
+  overflow: auto;
+  outline: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--size-control-md);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  cursor: default;
+  outline: none;
+}
+
+.item[data-focused],
+.item[data-hovered] {
+  background: var(--color-hover);
+}
+
+.item[data-focus-visible] {
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+.item[data-selected] {
+  background: var(--color-selected-bg);
+  color: var(--color-selected-text);
+}
+
+.item[data-disabled] {
+  color: var(--color-text-disabled);
+}
+
+.itemText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.itemLabel {
+  overflow-wrap: anywhere;
+}
+
+.itemDescription {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+}
+
+.item[data-selected] .itemDescription {
+  color: var(--color-selected-text);
+}
+
+.check {
+  flex: none;
+}
+
+.empty {
+  padding: var(--space-3);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+}
+
+.comboGroup {
+  display: flex;
+  align-items: center;
+  border: var(--size-border) solid var(--color-control-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-field-bg);
+}
+
+.comboGroup[data-focus-within] {
+  border-color: var(--color-focus-ring);
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+}
+
+.comboGroup[data-invalid] {
+  border-color: var(--color-danger);
+}
+
+.comboInput {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--size-control-md);
+  padding: var(--space-1) var(--space-3);
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--font-size-body);
+}
+
+.comboInput::placeholder {
+  color: var(--color-text-secondary);
+  opacity: 1;
+}
+
+.comboInput:focus {
+  outline: none;
+}
+
+.spinner {
+  flex: none;
+  color: var(--color-text-secondary);
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.comboButton {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  min-height: calc(var(--size-control-md) - 2px);
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.comboButton[data-hovered] {
+  color: var(--color-text);
+}
+
+@media (forced-colors: active) {
+  .item[data-selected] {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+}

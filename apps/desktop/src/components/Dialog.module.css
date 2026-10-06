@@ -1,0 +1,141 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  justify-content: center;
+  padding: var(--space-4);
+  overflow-y: auto;
+  background: var(--color-backdrop);
+  transition: opacity var(--motion-duration-base) var(--motion-ease-standard);
+}
+
+.overlay-dialog {
+  align-items: center;
+}
+
+.overlay-sheet {
+  align-items: flex-start;
+  padding-top: 0;
+}
+
+.overlay[data-entering],
+.overlay[data-exiting] {
+  opacity: 0;
+}
+
+.modal {
+  width: 100%;
+  max-height: calc(100vh - 2 * var(--space-4));
+  display: flex;
+  border: var(--size-border) solid var(--color-border);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  box-shadow: var(--elevation-3);
+  outline: none;
+  transition: transform var(--motion-duration-base) var(--motion-ease-standard);
+}
+
+.present-dialog {
+  border-radius: var(--radius-lg);
+}
+
+.present-sheet {
+  max-height: calc(100vh - var(--space-4));
+  border-top: 0;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+.present-dialog[data-entering] {
+  transform: scale(0.97);
+}
+
+.present-sheet[data-entering] {
+  transform: translateY(-1.5rem);
+}
+
+.small {
+  max-width: 24rem;
+}
+.medium {
+  max-width: 34rem;
+}
+.large {
+  max-width: 48rem;
+}
+
+.dialog {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  border-radius: inherit;
+  outline: none;
+}
+
+.content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-5) var(--space-6) var(--space-3);
+}
+
+.title {
+  font-size: var(--font-size-title-3);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  overflow-wrap: anywhere;
+}
+
+.description {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-body);
+}
+
+.body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-height: 0;
+  padding: var(--space-2) var(--space-6) var(--space-4);
+  overflow-y: auto;
+}
+
+/* Action buttons stay visible; the body scrolls instead (1.14 behaviour for edit sheets). */
+.footer {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6) var(--space-5);
+  border-top: var(--size-border) solid var(--color-separator);
+}
+
+.secondary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.primaryGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-inline-start: auto;
+}
+
+@media (forced-colors: active) {
+  .modal {
+    border: 2px solid CanvasText;
+  }
+}

@@ -1,0 +1,814 @@
+/* ------------------------------------------------------------------ frame */
+.frame {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.frameHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+.frameTitles {
+  display: flex;
+  flex: 1 1 16rem;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.frameTitle {
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-semibold);
+}
+
+.frameDescription {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+}
+
+.frameActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.frameStatus {
+  min-height: 1.25rem;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+}
+
+.tableToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--size-control-sm);
+  padding: 0 var(--space-3);
+  border: var(--size-border) solid var(--color-control-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-secondary-bg);
+  color: var(--color-secondary-text);
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-medium);
+}
+
+.tableToggle[data-hovered] {
+  background: var(--color-secondary-hover);
+}
+
+.tableToggle[data-selected] {
+  border-color: var(--color-selected-indicator);
+  background: var(--color-selected-bg);
+  color: var(--color-selected-text);
+}
+
+.tableWrap {
+  max-height: 24rem;
+  overflow: auto;
+}
+
+/* ------------------------------------------------------------------ data table */
+.dataTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-footnote);
+  font-variant-numeric: tabular-nums;
+}
+
+.dataCaption {
+  padding-bottom: var(--space-2);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-semibold);
+  text-align: start;
+}
+
+.dataTable th,
+.dataTable td {
+  padding: var(--space-1) var(--space-2);
+  border-bottom: var(--size-border) solid var(--color-separator);
+  text-align: start;
+  vertical-align: top;
+}
+
+.dataTable thead th {
+  position: sticky;
+  top: 0;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.dataTable tbody th {
+  font-weight: var(--font-weight-medium);
+}
+
+.dataTable .alignEnd {
+  text-align: end;
+}
+
+.dataEmpty {
+  color: var(--color-text-secondary);
+  text-align: center !important;
+}
+
+/* ------------------------------------------------------------------ tooltip */
+.tooltip {
+  position: absolute;
+  z-index: var(--z-tooltip);
+  max-width: 16rem;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-tooltip-bg);
+  color: var(--color-tooltip-text);
+  font-size: var(--font-size-caption);
+  line-height: 1.35;
+  box-shadow: var(--elevation-2);
+  pointer-events: none;
+  white-space: normal;
+}
+
+.tooltipTitle {
+  font-weight: var(--font-weight-semibold);
+}
+
+.tooltipLine {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ legend */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-size-caption);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.legendValue {
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.swatch {
+  flex: none;
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.swatchShape {
+  stroke: var(--color-surface);
+  stroke-width: 0.5;
+}
+
+/* ------------------------------------------------------------------ svg plots */
+.plot {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.svg {
+  display: block;
+  overflow: visible;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.zoomable {
+  cursor: crosshair;
+}
+
+.gridLine {
+  stroke: var(--chart-grid);
+  stroke-width: 1;
+}
+
+.axisLine {
+  stroke: var(--chart-axis);
+  stroke-width: 1;
+}
+
+.axisLabel {
+  fill: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  font-variant-numeric: tabular-nums;
+}
+
+.axisLabelSelected {
+  fill: var(--color-text);
+  font-weight: var(--font-weight-bold);
+}
+
+.selectionBand {
+  fill: var(--chart-selection);
+}
+
+.selectionMarker {
+  fill: var(--color-selected-indicator);
+}
+
+.mark {
+  outline: none;
+}
+
+.hit {
+  fill: transparent;
+}
+
+.segment {
+  stroke: var(--color-surface);
+  stroke-width: 1;
+}
+
+.rule {
+  stroke: var(--chart-rule);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  pointer-events: none;
+}
+
+.dragBand {
+  fill: var(--chart-selection);
+  stroke: var(--color-accent);
+  stroke-dasharray: 4 3;
+  pointer-events: none;
+}
+
+.focusRing {
+  fill: none;
+  stroke: var(--color-focus-ring);
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.emptyOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+  pointer-events: none;
+}
+
+.emptyText {
+  padding: var(--space-6) var(--space-3);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+  text-align: center;
+}
+
+/* Cumulative progress */
+.recordedArea {
+  fill: var(--chart-selection);
+}
+
+.recordedLine {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 2.5;
+}
+
+.targetLine {
+  fill: none;
+  stroke: var(--chart-target);
+  stroke-width: 1.75;
+  stroke-dasharray: 5 4;
+}
+
+.point {
+  fill: var(--color-surface);
+  stroke: var(--color-accent);
+  stroke-width: 1.5;
+  outline: none;
+}
+
+.pointActive {
+  fill: var(--color-accent);
+  stroke: var(--color-surface);
+  stroke-width: 1.5;
+  outline: none;
+}
+
+/* ------------------------------------------------------------------ donut */
+.donutLayout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-5) var(--space-7);
+}
+
+.donutChart {
+  position: relative;
+  flex: none;
+  width: min(100%, 11.875rem);
+  aspect-ratio: 1;
+}
+
+.donutCenter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.donutTotal {
+  font-size: var(--font-size-title-3);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.donutTotalLabel {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+}
+
+.slice {
+  stroke: var(--color-surface);
+  stroke-width: 1;
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.sliceSelected {
+  stroke: var(--color-text);
+  stroke-width: 2.5;
+}
+
+.filters {
+  display: flex;
+  flex: 1 1 16rem;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.filterButton {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--size-control-md);
+  padding: var(--space-1) var(--space-3);
+  border: var(--size-border) solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--font-size-footnote);
+  text-align: start;
+}
+
+.filterButton[data-hovered] {
+  background: var(--color-hover);
+}
+
+.filterButton[data-selected] {
+  border-color: var(--color-selected-indicator);
+  background: var(--color-selected-bg);
+  color: var(--color-selected-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.filterButton[data-disabled] {
+  color: var(--color-text);
+}
+
+.filterName {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.filterValue {
+  font-variant-numeric: tabular-nums;
+}
+
+.filterShare {
+  min-width: 2.5rem;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+.filterButton[data-selected] .filterShare {
+  color: var(--color-selected-text);
+}
+
+.filterIcon {
+  color: var(--color-accent);
+}
+
+.filterButton[data-selected] .filterIcon {
+  color: var(--color-selected-text);
+}
+
+/* ------------------------------------------------------------------ timeline */
+.timeline {
+  --timeline-label: minmax(6rem, 14rem);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.timelineAxis,
+.timelineRow {
+  display: grid;
+  grid-template-columns: var(--timeline-label) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.timelineTicks {
+  position: relative;
+  height: 1.25rem;
+}
+
+.timelineTick {
+  position: absolute;
+  top: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  font-variant-numeric: tabular-nums;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.timelineTick:first-child {
+  transform: none;
+}
+
+.timelineBody {
+  position: relative;
+}
+
+.timelineRows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  outline: none;
+}
+
+.timelineRow {
+  min-height: 2rem;
+  padding: 0.125rem var(--space-1);
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+
+.timelineRow:hover {
+  background: var(--color-hover);
+}
+
+.timelineRow:focus-visible {
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: 0;
+}
+
+.timelineRowSelected,
+.timelineRowSelected:hover {
+  background: var(--color-selected-bg);
+  color: var(--color-selected-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.timelineLabel {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--font-size-footnote);
+  text-align: end;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timelineTrack {
+  position: relative;
+  height: 1.25rem;
+}
+
+.timelineGrid {
+  position: absolute;
+  top: -0.25rem;
+  bottom: -0.25rem;
+  width: 1px;
+  background: var(--chart-grid);
+}
+
+.timelineBar {
+  position: absolute;
+  top: 0.125rem;
+  bottom: 0.125rem;
+  min-width: 0.25rem;
+  border-radius: var(--radius-xs);
+  box-shadow: 0 0 0 1px var(--color-surface);
+}
+
+.timelineRowSelected .timelineBar {
+  box-shadow:
+    0 0 0 1px var(--color-surface),
+    0 0 0 3px var(--color-text);
+}
+
+.patternDiagonal {
+  background-image: repeating-linear-gradient(45deg, var(--chart-pattern-ink) 0 1.25px, transparent 1.25px 6px);
+}
+.patternBackDiagonal {
+  background-image: repeating-linear-gradient(-45deg, var(--chart-pattern-ink) 0 1.25px, transparent 1.25px 6px);
+}
+.patternHorizontal {
+  background-image: repeating-linear-gradient(0deg, var(--chart-pattern-ink) 0 1.25px, transparent 1.25px 4px);
+}
+.patternVertical {
+  background-image: repeating-linear-gradient(90deg, var(--chart-pattern-ink) 0 1.25px, transparent 1.25px 4px);
+}
+.patternCrosshatch {
+  background-image:
+    repeating-linear-gradient(45deg, var(--chart-pattern-ink) 0 1px, transparent 1px 6px),
+    repeating-linear-gradient(-45deg, var(--chart-pattern-ink) 0 1px, transparent 1px 6px);
+}
+.patternGrid {
+  background-image:
+    repeating-linear-gradient(0deg, var(--chart-pattern-ink) 0 1px, transparent 1px 5px),
+    repeating-linear-gradient(90deg, var(--chart-pattern-ink) 0 1px, transparent 1px 5px);
+}
+.patternDots {
+  background-image: radial-gradient(var(--chart-pattern-ink) 1px, transparent 1.4px);
+  background-size: 5px 5px;
+}
+
+.timelineFooter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.pagerStatus {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ heatmaps */
+.heat0 {
+  background: var(--heat-0);
+  box-shadow: inset 0 0 0 1px var(--heat-border);
+}
+.heat1 {
+  background: var(--heat-1);
+}
+.heat2 {
+  background: var(--heat-2);
+}
+.heat3 {
+  background: var(--heat-3);
+}
+.heat4 {
+  background: var(--heat-4);
+}
+.heat5 {
+  background: var(--heat-5);
+}
+
+.onLow {
+  color: var(--heat-on-low);
+}
+.onHigh {
+  color: var(--heat-on-high);
+}
+
+.heatLegend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+}
+
+.heatScale {
+  display: inline-flex;
+  gap: 0.125rem;
+}
+
+.heatSwatch {
+  width: 1.125rem;
+  height: 0.75rem;
+  border-radius: 0.125rem;
+}
+
+.heatFutureNote {
+  margin-inline-start: auto;
+}
+
+.heatContainer {
+  position: relative;
+  min-width: 0;
+}
+
+.heatGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1875rem;
+  min-width: 0;
+  outline: none;
+}
+
+.heatRow {
+  display: grid;
+  align-items: center;
+  gap: 0.1875rem;
+}
+
+.heatYear .heatRow {
+  grid-template-columns: 2rem repeat(var(--heat-columns), minmax(0, 1fr));
+}
+
+.heatMonth .heatRow {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.375rem;
+}
+
+.heatMonth {
+  gap: 0.375rem;
+}
+
+.heatHours .heatRow {
+  grid-template-columns: 5.5rem repeat(var(--heat-columns), minmax(0, 1fr));
+  gap: 0.25rem;
+}
+
+.monthLabel {
+  min-height: 1rem;
+  overflow: visible;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  white-space: nowrap;
+}
+
+.rowHeader,
+.columnHeader {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+}
+
+.columnHeader {
+  text-align: center;
+}
+
+.dayCell {
+  position: relative;
+  min-width: 0;
+  border-radius: 0.125rem;
+  outline: none;
+  cursor: default;
+}
+
+.dayCellCompact {
+  aspect-ratio: 1;
+  max-height: 1rem;
+}
+
+.dayCellLarge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3.125rem;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.dayCellText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  font-size: var(--font-size-caption);
+  line-height: 1.2;
+}
+
+.dayCellDate {
+  font-weight: var(--font-weight-semibold);
+}
+
+.future {
+  outline: 1px dashed var(--heat-future-border);
+  outline-offset: -1px;
+}
+
+.dayCell:focus-visible,
+.hourCell:focus-visible {
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: 1px;
+  z-index: 1;
+}
+
+.cellSelected {
+  box-shadow:
+    0 0 0 2px var(--color-surface),
+    0 0 0 4px var(--color-text) !important;
+  z-index: 1;
+}
+
+.emptyCell {
+  min-height: 3.125rem;
+}
+
+.hourCell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1875rem;
+  min-width: 0;
+  border-radius: var(--radius-xs);
+  outline: none;
+}
+
+.hourLabel {
+  overflow: visible;
+  color: var(--color-text-secondary);
+  font-size: 0.625rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.hourBlock {
+  display: block;
+  height: 1.5rem;
+  border-radius: var(--radius-xs);
+}
+
+@media (forced-colors: active) {
+  .segment,
+  .slice {
+    stroke: Canvas;
+  }
+  .rule,
+  .focusRing {
+    stroke: Highlight;
+  }
+  .timelineBar {
+    forced-color-adjust: none;
+    background-color: CanvasText !important;
+    border: 1px solid CanvasText;
+  }
+  .heat0,
+  .heat1,
+  .heat2,
+  .heat3,
+  .heat4,
+  .heat5 {
+    forced-color-adjust: none;
+    border: 1px solid CanvasText;
+  }
+  .heat0 {
+    background: Canvas;
+  }
+  .heat1 {
+    background: repeating-linear-gradient(45deg, CanvasText 0 1px, Canvas 1px 6px);
+  }
+  .heat2 {
+    background: repeating-linear-gradient(45deg, CanvasText 0 1px, Canvas 1px 4px);
+  }
+  .heat3 {
+    background: repeating-linear-gradient(45deg, CanvasText 0 2px, Canvas 2px 4px);
+  }
+  .heat4,
+  .heat5 {
+    background: CanvasText;
+  }
+  .cellSelected {
+    outline: 3px solid Highlight;
+  }
+}

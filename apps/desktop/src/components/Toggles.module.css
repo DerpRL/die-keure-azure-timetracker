@@ -1,0 +1,158 @@
+.switch,
+.checkbox {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-height: 1.5rem;
+  color: var(--color-text);
+  cursor: default;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.label {
+  min-width: 0;
+  font-size: var(--font-size-body);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.description {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+  overflow-wrap: anywhere;
+}
+
+/* Align descriptions with the label text, past the control. */
+.switchDescription {
+  padding-inline-start: calc(2.25rem + var(--space-3));
+}
+
+.checkboxDescription {
+  padding-inline-start: calc(1.125rem + var(--space-3));
+}
+
+/* Switch */
+.track {
+  position: relative;
+  flex: none;
+  width: 2.25rem;
+  height: 1.375rem;
+  margin-top: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-switch-off);
+  transition: background-color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.thumb {
+  position: absolute;
+  top: 0.1875rem;
+  left: 0.1875rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: var(--color-switch-thumb-off);
+  transition: transform var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.switch[data-selected] .track {
+  background: var(--color-switch-on);
+}
+
+.switch[data-selected] .thumb {
+  background: var(--color-switch-thumb-on);
+  transform: translateX(0.875rem);
+}
+
+.switch[data-focus-visible] {
+  outline: none;
+}
+
+.switch[data-focus-visible] .track,
+.checkbox[data-focus-visible] .box {
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.switch[data-disabled],
+.checkbox[data-disabled] {
+  color: var(--color-text-disabled);
+}
+
+.switch[data-disabled] .track {
+  background: var(--color-surface-sunken);
+  border: var(--size-border) solid var(--color-separator);
+}
+
+/* Checkbox */
+.box {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-top: 0.0625rem;
+  border: 0.09375rem solid var(--color-control-border);
+  border-radius: var(--radius-xs);
+  background: var(--color-field-bg);
+  color: var(--color-check-mark);
+  font-size: 0.75rem;
+  transition:
+    background-color var(--motion-duration-fast) var(--motion-ease-standard),
+    border-color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.checkbox[data-focus-visible] {
+  outline: none;
+}
+
+.checkbox[data-selected] .box,
+.checkbox[data-indeterminate] .box {
+  border-color: var(--color-check-bg);
+  background: var(--color-check-bg);
+}
+
+.checkbox[data-invalid] .box {
+  border-color: var(--color-danger);
+}
+
+.checkbox[data-disabled] .box {
+  border-color: var(--color-separator);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-disabled);
+}
+
+.bare {
+  min-height: 0;
+  align-items: center;
+}
+
+@media (forced-colors: active) {
+  .track {
+    border: 1px solid ButtonBorder;
+    background: Canvas;
+    forced-color-adjust: none;
+  }
+  .thumb {
+    background: ButtonText;
+  }
+  .switch[data-selected] .track {
+    background: Highlight;
+  }
+  .switch[data-selected] .thumb {
+    background: HighlightText;
+  }
+  .checkbox[data-selected] .box,
+  .checkbox[data-indeterminate] .box {
+    forced-color-adjust: none;
+    background: Highlight;
+    border-color: Highlight;
+    color: HighlightText;
+  }
+}

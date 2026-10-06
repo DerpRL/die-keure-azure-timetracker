@@ -1,0 +1,89 @@
+.card {
+  min-width: 0;
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--elevation-1);
+}
+
+.sunken {
+  background: var(--color-surface-sunken);
+  box-shadow: none;
+}
+
+.padding-none {
+  padding: 0;
+}
+.padding-small {
+  padding: var(--space-3);
+}
+.padding-medium {
+  padding: var(--space-5);
+}
+.padding-large {
+  padding: var(--space-6);
+}
+
+.cardSection,
+.plainSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+.headingText {
+  display: flex;
+  flex: 1 1 14rem;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.title {
+  overflow-wrap: anywhere;
+  color: var(--color-text);
+  line-height: var(--line-height-tight);
+}
+
+.title-title {
+  font-family: var(--font-family-rounded);
+  font-size: var(--font-size-title-1);
+  font-weight: var(--font-weight-bold);
+}
+
+.title-section {
+  font-size: var(--font-size-title-3);
+  font-weight: var(--font-weight-semibold);
+}
+
+.title-group {
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-semibold);
+}
+
+.subtitle {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}

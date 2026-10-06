@@ -1,0 +1,240 @@
+.timer {
+  --timer-status: var(--color-neutral);
+  --timer-font-size: 2.125rem;
+  --ring-size: 4rem;
+
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+  max-width: 100%;
+}
+
+.small {
+  --timer-font-size: 1.375rem;
+  --ring-size: 2.75rem;
+  gap: var(--space-2);
+}
+
+.large {
+  --timer-font-size: var(--font-size-display);
+  --ring-size: 4.5rem;
+}
+
+.status-running {
+  --timer-status: var(--color-running);
+}
+.status-paused {
+  --timer-status: var(--color-paused);
+}
+.status-attention,
+.status-disconnected {
+  --timer-status: var(--color-warning);
+}
+.status-stopped,
+.status-connecting {
+  --timer-status: var(--color-neutral);
+}
+
+.readout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+/* Digits */
+.value {
+  position: relative;
+  display: inline-block;
+  align-self: flex-start;
+  font-family: var(--font-family-rounded);
+  font-size: var(--timer-font-size);
+  font-weight: var(--font-weight-light);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.unconfirmed .value {
+  color: var(--color-text-secondary);
+}
+
+.template {
+  visibility: hidden;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.digits {
+  display: inline-flex;
+}
+
+.slot {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+}
+
+.sizer {
+  visibility: hidden;
+}
+
+.digit {
+  position: absolute;
+  inset: 0;
+  text-align: center;
+}
+
+.separator {
+  display: inline-block;
+}
+
+.rollIn {
+  animation: roll-in var(--motion-duration-base) var(--motion-ease-in-out) both;
+}
+
+.rollOut {
+  animation: roll-out var(--motion-duration-base) var(--motion-ease-in-out) both;
+}
+
+@keyframes roll-in {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes roll-out {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+}
+
+.description {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  overflow-wrap: anywhere;
+}
+
+/* Ring */
+.ring {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--ring-size);
+  height: var(--ring-size);
+  color: var(--timer-status);
+}
+
+.ringSvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.ringTrack {
+  fill: none;
+  stroke: var(--color-ring-track);
+  stroke-width: 3;
+}
+
+.ringArc {
+  fill: none;
+  stroke: var(--timer-status);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition:
+    stroke-dasharray var(--motion-duration-slow) var(--motion-ease-in-out),
+    stroke var(--motion-duration-base) var(--motion-ease-in-out);
+}
+
+.ringStale {
+  stroke: var(--color-neutral);
+}
+
+.ringFace {
+  fill: var(--color-surface-sunken);
+}
+
+.clockIcon {
+  position: relative;
+  display: inline-flex;
+  font-size: calc(var(--ring-size) * 0.4);
+  transition: color var(--motion-duration-base) var(--motion-ease-in-out);
+}
+
+.pulse {
+  animation: pulse 360ms var(--motion-ease-in-out) 1;
+}
+
+@keyframes pulse {
+  50% {
+    transform: scale(1.08);
+    opacity: 0.78;
+  }
+}
+
+.badge {
+  position: absolute;
+  right: 4%;
+  bottom: 4%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--ring-size) * 0.3);
+  height: calc(var(--ring-size) * 0.3);
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-ring-track);
+  color: var(--timer-status);
+  font-size: calc(var(--ring-size) * 0.15);
+}
+
+.badgeGlyph {
+  font-family: var(--font-family-sans);
+  font-size: 1.2em;
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+}
+
+/* Reduced motion: no rolling, scaling, fading or ring/colour interpolation. */
+.reduced .rollIn,
+.reduced .rollOut,
+.reduced .pulse {
+  animation: none;
+}
+
+.reduced .ringArc,
+.reduced .clockIcon {
+  transition: none;
+}
+
+@media (forced-colors: active) {
+  .ringArc {
+    stroke: CanvasText;
+  }
+  .ringTrack {
+    stroke: GrayText;
+  }
+  .badge {
+    border: 1px solid CanvasText;
+  }
+}

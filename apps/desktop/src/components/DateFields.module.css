@@ -1,0 +1,220 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  align-self: flex-start;
+  max-width: 100%;
+  min-height: var(--size-control-md);
+  padding: 0 0 0 var(--space-2);
+  border: var(--size-border) solid var(--color-control-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-field-bg);
+}
+
+.timeGroup {
+  padding-inline-end: var(--space-2);
+}
+
+.group[data-focus-within] {
+  border-color: var(--color-focus-ring);
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+}
+
+.group[data-invalid] {
+  border-color: var(--color-danger);
+}
+
+.group[data-disabled] {
+  border-color: var(--color-separator);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-disabled);
+}
+
+.input {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.segment {
+  padding: 0 0.125rem;
+  border-radius: var(--radius-xs);
+  color: var(--color-text);
+  outline: none;
+}
+
+.segment[data-type='literal'] {
+  padding: 0;
+  color: var(--color-text-secondary);
+}
+
+.segment[data-placeholder] {
+  color: var(--color-text-secondary);
+}
+
+.segment[data-focused] {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.segment[data-invalid] {
+  color: var(--color-danger);
+}
+
+.segment[data-invalid][data-focused] {
+  background: var(--color-danger-solid);
+  color: var(--color-on-danger);
+}
+
+.rangeDash {
+  padding: 0 var(--space-1);
+  color: var(--color-text-secondary);
+}
+
+.calendarButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  width: 2rem;
+  margin-inline-start: var(--space-2);
+  border: 0;
+  border-inline-start: var(--size-border) solid var(--color-control-border);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: transparent;
+  color: var(--color-text);
+}
+
+.calendarButton[data-hovered] {
+  background: var(--color-hover);
+}
+
+.calendarButton[data-pressed] {
+  background: var(--color-pressed);
+}
+
+.popover {
+  padding: 0;
+}
+
+.dialog {
+  padding: var(--space-3);
+  outline: none;
+}
+
+.calendar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: max-content;
+}
+
+.calendarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.calendarHeading {
+  margin: 0;
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-semibold);
+}
+
+.navButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-control-sm);
+  height: var(--size-control-sm);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+}
+
+.navButton[data-hovered] {
+  background: var(--color-hover);
+}
+
+.grid {
+  border-collapse: collapse;
+}
+
+.weekday {
+  padding-bottom: var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+}
+
+.day {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  margin: 1px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--font-size-footnote);
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+  outline: none;
+}
+
+.day[data-outside-month] {
+  display: none;
+}
+
+.day[data-hovered] {
+  background: var(--color-hover);
+}
+
+.day[data-focus-visible] {
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.day[data-selected] {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.range .day[data-selected] {
+  border-radius: 0;
+  background: var(--color-selected-bg);
+  color: var(--color-selected-text);
+}
+
+.range .day[data-selection-start],
+.range .day[data-selection-end] {
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.day[data-disabled],
+.day[data-unavailable] {
+  color: var(--color-text-disabled);
+  text-decoration: line-through;
+}
+
+@media (forced-colors: active) {
+  .segment[data-focused],
+  .day[data-selected] {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+}

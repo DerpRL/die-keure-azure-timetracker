@@ -1,0 +1,137 @@
+.badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 1.375rem;
+  padding: 0.0625rem var(--space-2);
+  border: var(--size-border) solid transparent;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.2;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.icon {
+  font-size: 0.875rem;
+}
+
+.neutral {
+  background: var(--color-neutral-bg);
+  color: var(--color-neutral-text);
+}
+.accent {
+  background: var(--color-accent-bg);
+  color: var(--color-selected-text);
+}
+.running {
+  background: var(--color-running-bg);
+  color: var(--color-running-text);
+}
+.paused {
+  background: var(--color-paused-bg);
+  color: var(--color-paused-text);
+}
+.warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+.danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger-text);
+}
+.success {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+.info {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+}
+
+.status {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.statusLabel {
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-medium);
+}
+
+.dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+}
+
+.ring {
+  background: transparent !important;
+  border: 0.125rem solid var(--color-neutral);
+}
+
+.shape {
+  font-size: 0.875rem;
+}
+
+.dot-neutral {
+  background: var(--color-neutral);
+}
+.dot-accent,
+.dot-running {
+  background: var(--color-running);
+}
+.dot-success {
+  background: var(--color-success);
+}
+.dot-info {
+  background: var(--color-info);
+}
+.dot-paused {
+  background: var(--color-paused);
+}
+.dot-warning {
+  background: var(--color-warning);
+}
+.dot-danger {
+  background: var(--color-danger);
+}
+
+.fg-paused {
+  color: var(--color-paused);
+}
+.fg-warning {
+  color: var(--color-warning);
+}
+.fg-danger {
+  color: var(--color-danger);
+}
+
+.pulse {
+  animation: pulse 2.4s var(--motion-ease-in-out) infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.35);
+  }
+}
+
+@media (forced-colors: active) {
+  .badge {
+    border-color: CanvasText;
+  }
+  .dot {
+    background: CanvasText;
+    forced-color-adjust: none;
+  }
+}

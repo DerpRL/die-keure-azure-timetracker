@@ -1,0 +1,75 @@
+.popover {
+  max-width: calc(100vw - 1rem);
+  max-height: var(--visual-viewport-height, 80vh);
+  overflow: auto;
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  box-shadow: var(--elevation-2);
+  z-index: var(--z-popover);
+  transition:
+    opacity var(--motion-duration-fast) var(--motion-ease-standard),
+    transform var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.popover[data-entering],
+.popover[data-exiting] {
+  opacity: 0;
+}
+
+.popover[data-placement='bottom'][data-entering] {
+  transform: translateY(-0.25rem);
+}
+
+.popover[data-placement='top'][data-entering] {
+  transform: translateY(0.25rem);
+}
+
+.width-auto {
+  width: auto;
+}
+.width-small {
+  width: 16rem;
+}
+.width-medium {
+  width: 22rem;
+}
+.width-large {
+  width: 30rem;
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  outline: none;
+}
+
+.title {
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-semibold);
+}
+
+.arrow svg {
+  fill: var(--color-surface-raised);
+  stroke: var(--color-border);
+}
+
+.popover[data-placement='bottom'] .arrow svg {
+  transform: rotate(180deg);
+}
+
+/* List popovers (Select, ComboBox, Menu) size to their trigger. */
+.listPopover {
+  min-width: var(--trigger-width);
+  max-width: min(calc(100vw - 1rem), 32rem);
+  padding: var(--space-1);
+}
+
+@media (forced-colors: active) {
+  .popover {
+    border-color: CanvasText;
+  }
+}

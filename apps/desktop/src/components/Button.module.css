@@ -1,0 +1,163 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--size-control-md);
+  padding: var(--space-1) var(--space-4);
+  border: var(--size-border) solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  text-align: center;
+  cursor: default;
+  user-select: none;
+  -webkit-user-select: none;
+  transition:
+    background-color var(--motion-duration-fast) var(--motion-ease-standard),
+    border-color var(--motion-duration-fast) var(--motion-ease-standard),
+    color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.icon,
+.spinner {
+  flex: none;
+  font-size: var(--size-icon-md);
+}
+
+.spinner {
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.shortcut {
+  margin-inline-start: var(--space-1);
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+/* Variants */
+.primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary-border);
+  color: var(--color-on-primary);
+}
+.primary .shortcut {
+  color: var(--color-on-primary);
+}
+.primary[data-hovered] {
+  background: var(--color-primary-hover);
+}
+.primary[data-pressed] {
+  background: var(--color-primary-pressed);
+}
+
+.secondary {
+  background: var(--color-secondary-bg);
+  border-color: var(--color-control-border);
+  color: var(--color-secondary-text);
+}
+.secondary[data-hovered] {
+  background: var(--color-secondary-hover);
+}
+.secondary[data-pressed] {
+  background: var(--color-secondary-pressed);
+}
+
+.plain {
+  background: transparent;
+  color: var(--color-accent);
+}
+.plain[data-hovered] {
+  background: var(--color-hover);
+}
+.plain[data-pressed] {
+  background: var(--color-pressed);
+}
+
+.destructive {
+  background: var(--color-danger-solid);
+  border-color: var(--color-danger-solid);
+  color: var(--color-on-danger);
+}
+.destructive .shortcut {
+  color: var(--color-on-danger);
+}
+.destructive[data-hovered],
+.destructive[data-pressed] {
+  background: var(--color-danger-solid-hover);
+}
+
+.button[data-disabled] {
+  background: var(--color-surface-sunken);
+  border-color: var(--color-separator);
+  color: var(--color-text-disabled);
+}
+.plain[data-disabled] {
+  background: transparent;
+  border-color: transparent;
+}
+
+.button[data-pending] {
+  cursor: progress;
+}
+
+/* Sizes */
+.small {
+  min-height: var(--size-control-sm);
+  padding: 0.125rem var(--space-3);
+  font-size: var(--font-size-footnote);
+}
+.small .icon,
+.small .spinner {
+  font-size: var(--size-icon-sm);
+}
+
+.large {
+  min-height: var(--size-control-lg);
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--font-size-headline);
+}
+
+/* Icon-only buttons stay square and at least 28 px (WCAG 2.5.8 asks for 24). */
+.iconOnly {
+  min-width: var(--size-control-md);
+  padding: 0;
+}
+.iconOnly.small {
+  min-width: var(--size-control-sm);
+}
+.iconOnly.large {
+  min-width: var(--size-control-lg);
+}
+
+.tooltipShortcut {
+  margin-inline-start: var(--space-2);
+  color: inherit;
+}
+
+@media (forced-colors: active) {
+  .button {
+    border-color: ButtonBorder;
+  }
+  .primary {
+    border-width: 2px;
+  }
+  .button[data-disabled] {
+    border-color: GrayText;
+    color: GrayText;
+  }
+}

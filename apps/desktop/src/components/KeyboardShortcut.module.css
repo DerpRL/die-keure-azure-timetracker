@@ -1,0 +1,38 @@
+.shortcut {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+}
+
+.keys {
+  display: inline-flex;
+  gap: 0.125rem;
+}
+
+.key {
+  font-family: var(--font-family-sans);
+  font-size: inherit;
+  line-height: 1;
+}
+
+.inline {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+}
+
+.inline .key {
+  padding: 0;
+}
+
+.standalone .key {
+  min-width: 1.75em;
+  padding: 0.25em 0.45em;
+  border: var(--size-border) solid var(--color-control-border);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-xs);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-medium);
+  text-align: center;
+}

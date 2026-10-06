@@ -1,0 +1,40 @@
+.status {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.small {
+  font-size: var(--font-size-caption);
+}
+
+.medium {
+  font-size: var(--font-size-footnote);
+}
+
+.icon {
+  flex: none;
+  font-size: 1.15em;
+}
+
+.running {
+  color: var(--color-running);
+}
+.paused {
+  color: var(--color-paused);
+}
+.warning {
+  color: var(--color-warning);
+}
+.danger {
+  color: var(--color-danger);
+}
+.neutral,
+.accent,
+.success,
+.info {
+  color: var(--color-neutral);
+}

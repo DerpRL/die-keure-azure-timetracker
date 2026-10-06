@@ -1,0 +1,642 @@
+/*
+ * Design tokens for Azure timetracker 2.0.
+ *
+ * This file is the single source of truth for colour values. `contrast.test.ts` parses it and
+ * checks every text/background and UI-component pair against WCAG 2.2 AA in all four themes, so
+ * keep colour values as solid 6-digit hex (the backdrop and shadows are the only exceptions).
+ *
+ * Themes are selected with attributes, on <html> or on any subtree (the gallery uses subtrees):
+ *   data-theme="light" | "dark"   data-contrast="standard" | "increased"
+ * Every colour block declares the complete set of colour tokens so a subtree never mixes themes.
+ * Forced colours (Windows High Contrast) map the tokens to system colours at the end of the file.
+ */
+
+/* ------------------------------------------------------------------------------------------ */
+/* Theme-independent tokens                                                                    */
+/* ------------------------------------------------------------------------------------------ */
+:root {
+  /* UI scale (90–150 %) is applied by the theme provider through the root font size. All
+     lengths below are rem-based so pages reflow instead of being transformed. */
+  --ui-scale: 1;
+
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-7: 1.75rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  --radius-xs: 0.1875rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-full: 999rem;
+
+  --font-family-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', system-ui,
+    sans-serif;
+  --font-family-rounded: ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Display',
+    'Segoe UI', system-ui, sans-serif;
+  --font-family-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace;
+
+  --font-size-caption: 0.75rem;
+  --font-size-footnote: 0.8125rem;
+  --font-size-body: 0.875rem;
+  --font-size-headline: 0.9375rem;
+  --font-size-title-3: 1.125rem;
+  --font-size-title-2: 1.375rem;
+  --font-size-title-1: 1.6875rem;
+  --font-size-display: 2.5rem;
+
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.2;
+  --line-height-body: 1.45;
+
+  --size-control-sm: 1.75rem;
+  --size-control-md: 2.125rem;
+  --size-control-lg: 2.625rem;
+  --size-icon-sm: 0.875rem;
+  --size-icon-md: 1.125rem;
+  --size-icon-lg: 1.5rem;
+  --size-sidebar: 15rem;
+  --size-focus-ring: 0.125rem;
+  --size-border: 1px;
+
+  --motion-duration-instant: 80ms;
+  --motion-duration-fast: 140ms;
+  --motion-duration-base: 220ms;
+  --motion-duration-slow: 350ms;
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --motion-ease-in-out: cubic-bezier(0.42, 0, 0.58, 1);
+  --motion-ease-out: cubic-bezier(0, 0, 0.2, 1);
+
+  --z-sticky: 10;
+  --z-popover: 100;
+  --z-modal: 200;
+  --z-toast: 300;
+  --z-tooltip: 400;
+}
+
+/* ------------------------------------------------------------------------------------------ */
+/* Light · standard contrast                                                                   */
+/* ------------------------------------------------------------------------------------------ */
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+
+  --color-bg: #f1f3f4;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-surface-sunken: #e9ecee;
+  --color-sidebar: #f8f9fa;
+  --color-field-bg: #ffffff;
+  --color-hover: #e7ebed;
+  --color-pressed: #dce1e4;
+  --color-selected-bg: #dcefeb;
+  --color-selected-text: #05504b;
+  --color-selected-indicator: #08615c;
+
+  --color-text: #1a1d21;
+  --color-text-secondary: #555c64;
+  --color-text-disabled: #8c949b;
+  --color-accent: #08615c;
+  --color-accent-bg: #dcefeb;
+
+  --color-separator: #dadee1;
+  --color-border: #cdd2d6;
+  --color-control-border: #737b83;
+  --color-focus-ring: #1d5bd8;
+
+  --color-primary: #08615c;
+  --color-primary-hover: #0a6f69;
+  --color-primary-pressed: #064d49;
+  --color-primary-border: #08615c;
+  --color-on-primary: #ffffff;
+  --color-secondary-bg: #ffffff;
+  --color-secondary-hover: #eef1f3;
+  --color-secondary-pressed: #e1e6e9;
+  --color-secondary-text: #1a1d21;
+  --color-danger-solid: #b42318;
+  --color-danger-solid-hover: #9f1f15;
+  --color-on-danger: #ffffff;
+
+  --color-check-bg: #08615c;
+  --color-check-mark: #ffffff;
+  --color-switch-on: #08615c;
+  --color-switch-off: #737b83;
+  --color-switch-thumb-on: #ffffff;
+  --color-switch-thumb-off: #ffffff;
+
+  --color-running: #08615c;
+  --color-paused: #855600;
+  --color-warning: #9a4300;
+  --color-danger: #b42318;
+  --color-success: #1a7134;
+  --color-info: #1d5bd8;
+  --color-neutral: #555c64;
+
+  --color-running-bg: #dff1ee;
+  --color-running-text: #05504b;
+  --color-paused-bg: #fff3d4;
+  --color-paused-text: #6b4500;
+  --color-warning-bg: #ffeddc;
+  --color-warning-text: #813600;
+  --color-danger-bg: #fde7e5;
+  --color-danger-text: #9a1b11;
+  --color-success-bg: #e2f3e6;
+  --color-success-text: #145a29;
+  --color-info-bg: #e4edfb;
+  --color-info-text: #1747a3;
+  --color-neutral-bg: #eceff1;
+  --color-neutral-text: #3d434a;
+
+  --color-brand-tile: #1f2124;
+  --color-on-brand-tile: #ffffff;
+  --color-tooltip-bg: #1f2328;
+  --color-tooltip-text: #ffffff;
+  --color-backdrop: rgb(16 19 22 / 0.42);
+  --color-ring-track: #dce1e4;
+
+  --chart-1: #0e7c73;
+  --chart-2: #2f6bd8;
+  --chart-3: #c05600;
+  --chart-4: #7b4fd0;
+  --chart-5: #c2357c;
+  --chart-6: #4d7d1a;
+  --chart-7: #8b5a2b;
+  --chart-8: #6b6e75;
+  --chart-grid: #e3e6e9;
+  --chart-axis: #737b83;
+  --chart-pattern-ink: #ffffff;
+  --chart-target: #9a4300;
+  --chart-selection: #d6ebe8;
+  --chart-rule: #555c64;
+
+  --heat-0: #ebeef0;
+  --heat-1: #c6e9e3;
+  --heat-2: #8dd0c6;
+  --heat-3: #2a7f75;
+  --heat-4: #137267;
+  --heat-5: #064c45;
+  --heat-on-low: #1a1d21;
+  --heat-on-high: #ffffff;
+  --heat-border: #c4cacf;
+  --heat-future-border: #737b83;
+
+  --elevation-1: 0 1px 2px rgb(16 19 22 / 0.06);
+  --elevation-2: 0 4px 16px rgb(16 19 22 / 0.14), 0 1px 3px rgb(16 19 22 / 0.1);
+  --elevation-3: 0 16px 48px rgb(16 19 22 / 0.24), 0 2px 6px rgb(16 19 22 / 0.12);
+}
+
+/* ------------------------------------------------------------------------------------------ */
+/* Dark · standard contrast                                                                    */
+/* ------------------------------------------------------------------------------------------ */
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-bg: #1a1c1f;
+  --color-surface: #232629;
+  --color-surface-raised: #2b2f33;
+  --color-surface-sunken: #151719;
+  --color-sidebar: #1f2225;
+  --color-field-bg: #1a1c1f;
+  --color-hover: #31363b;
+  --color-pressed: #3a4046;
+  --color-selected-bg: #14403c;
+  --color-selected-text: #b5f2e8;
+  --color-selected-indicator: #59e0cc;
+
+  --color-text: #eceff1;
+  --color-text-secondary: #b9c1c9;
+  --color-text-disabled: #7a828a;
+  --color-accent: #59e0cc;
+  --color-accent-bg: #14403c;
+
+  --color-separator: #363b40;
+  --color-border: #40464c;
+  --color-control-border: #8a939b;
+  --color-focus-ring: #7fb0ff;
+
+  --color-primary: #0b7068;
+  --color-primary-hover: #0d7d74;
+  --color-primary-pressed: #08605a;
+  --color-primary-border: #3db5a6;
+  --color-on-primary: #ffffff;
+  --color-secondary-bg: #2b2f33;
+  --color-secondary-hover: #353a3f;
+  --color-secondary-pressed: #3f454b;
+  --color-secondary-text: #eceff1;
+  --color-danger-solid: #b42318;
+  --color-danger-solid-hover: #c42a1e;
+  --color-on-danger: #ffffff;
+
+  --color-check-bg: #59e0cc;
+  --color-check-mark: #0f1a19;
+  --color-switch-on: #59e0cc;
+  --color-switch-off: #737c84;
+  --color-switch-thumb-on: #0f1a19;
+  --color-switch-thumb-off: #ffffff;
+
+  --color-running: #59e0cc;
+  --color-paused: #f2c14e;
+  --color-warning: #ffa155;
+  --color-danger: #ff8a80;
+  --color-success: #6bd68a;
+  --color-info: #8ab8ff;
+  --color-neutral: #b9c1c9;
+
+  --color-running-bg: #123a37;
+  --color-running-text: #b5f2e8;
+  --color-paused-bg: #3a2f12;
+  --color-paused-text: #ffe08a;
+  --color-warning-bg: #3d2612;
+  --color-warning-text: #ffc797;
+  --color-danger-bg: #3f1a18;
+  --color-danger-text: #ffb4ab;
+  --color-success-bg: #163222;
+  --color-success-text: #a6ebb9;
+  --color-info-bg: #172b47;
+  --color-info-text: #b8d3ff;
+  --color-neutral-bg: #2e3338;
+  --color-neutral-text: #d5dbe0;
+
+  --color-brand-tile: #33373b;
+  --color-on-brand-tile: #ffffff;
+  --color-tooltip-bg: #f1f3f4;
+  --color-tooltip-text: #1a1d21;
+  --color-backdrop: rgb(0 0 0 / 0.6);
+  --color-ring-track: #3a4046;
+
+  --chart-1: #4fd1c1;
+  --chart-2: #74a7ff;
+  --chart-3: #ff9f5a;
+  --chart-4: #b794f6;
+  --chart-5: #f383bc;
+  --chart-6: #9ccf5f;
+  --chart-7: #c9a27c;
+  --chart-8: #a3adb7;
+  --chart-grid: #33383d;
+  --chart-axis: #8a939b;
+  --chart-pattern-ink: #1a1c1f;
+  --chart-target: #ffa155;
+  --chart-selection: #1d4a46;
+  --chart-rule: #b9c1c9;
+
+  --heat-0: #2b2f33;
+  --heat-1: #173f3b;
+  --heat-2: #1c6159;
+  --heat-3: #3aa596;
+  --heat-4: #5fd6c6;
+  --heat-5: #a6efe5;
+  --heat-on-low: #eceff1;
+  --heat-on-high: #0f1a19;
+  --heat-border: #454b51;
+  --heat-future-border: #8a939b;
+
+  --elevation-1: 0 1px 2px rgb(0 0 0 / 0.3);
+  --elevation-2: 0 6px 20px rgb(0 0 0 / 0.45), 0 1px 3px rgb(0 0 0 / 0.35);
+  --elevation-3: 0 18px 56px rgb(0 0 0 / 0.6), 0 2px 8px rgb(0 0 0 / 0.4);
+}
+
+/* ------------------------------------------------------------------------------------------ */
+/* Light · increased contrast                                                                  */
+/* ------------------------------------------------------------------------------------------ */
+[data-theme='light'][data-contrast='increased'] {
+  color-scheme: light;
+
+  --color-bg: #f4f5f6;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-surface-sunken: #eceef0;
+  --color-sidebar: #ffffff;
+  --color-field-bg: #ffffff;
+  --color-hover: #e3e7ea;
+  --color-pressed: #d3d9dd;
+  --color-selected-bg: #d2ece7;
+  --color-selected-text: #023a35;
+  --color-selected-indicator: #03473f;
+
+  --color-text: #000000;
+  --color-text-secondary: #1f2429;
+  --color-text-disabled: #5c636a;
+  --color-accent: #03473f;
+  --color-accent-bg: #d2ece7;
+
+  --color-separator: #6b7178;
+  --color-border: #4a5056;
+  --color-control-border: #3a4046;
+  --color-focus-ring: #0036a8;
+
+  --color-primary: #03473f;
+  --color-primary-hover: #055a52;
+  --color-primary-pressed: #023530;
+  --color-primary-border: #011f1c;
+  --color-on-primary: #ffffff;
+  --color-secondary-bg: #ffffff;
+  --color-secondary-hover: #e8ecee;
+  --color-secondary-pressed: #d8dee2;
+  --color-secondary-text: #000000;
+  --color-danger-solid: #8f150c;
+  --color-danger-solid-hover: #7a1109;
+  --color-on-danger: #ffffff;
+
+  --color-check-bg: #03473f;
+  --color-check-mark: #ffffff;
+  --color-switch-on: #03473f;
+  --color-switch-off: #3a4046;
+  --color-switch-thumb-on: #ffffff;
+  --color-switch-thumb-off: #ffffff;
+
+  --color-running: #03473f;
+  --color-paused: #5f3d00;
+  --color-warning: #6e2e00;
+  --color-danger: #8f150c;
+  --color-success: #0f4a21;
+  --color-info: #0036a8;
+  --color-neutral: #1f2429;
+
+  --color-running-bg: #d9efeb;
+  --color-running-text: #012f2b;
+  --color-paused-bg: #fff0c7;
+  --color-paused-text: #4a2f00;
+  --color-warning-bg: #ffe6cf;
+  --color-warning-text: #5c2600;
+  --color-danger-bg: #fbdcd8;
+  --color-danger-text: #741008;
+  --color-success-bg: #d9efdf;
+  --color-success-text: #0c3f1c;
+  --color-info-bg: #dbe6fa;
+  --color-info-text: #0b2f80;
+  --color-neutral-bg: #e5e9ec;
+  --color-neutral-text: #1f2429;
+
+  --color-brand-tile: #000000;
+  --color-on-brand-tile: #ffffff;
+  --color-tooltip-bg: #000000;
+  --color-tooltip-text: #ffffff;
+  --color-backdrop: rgb(0 0 0 / 0.55);
+  --color-ring-track: #b9c0c6;
+
+  --chart-1: #0e7c73;
+  --chart-2: #2f6bd8;
+  --chart-3: #c05600;
+  --chart-4: #7b4fd0;
+  --chart-5: #c2357c;
+  --chart-6: #4d7d1a;
+  --chart-7: #8b5a2b;
+  --chart-8: #6b6e75;
+  --chart-grid: #b9c0c6;
+  --chart-axis: #3a4046;
+  --chart-pattern-ink: #ffffff;
+  --chart-target: #6e2e00;
+  --chart-selection: #c7e6e0;
+  --chart-rule: #1f2429;
+
+  --heat-0: #e3e7ea;
+  --heat-1: #b7e2da;
+  --heat-2: #74c3b7;
+  --heat-3: #125e56;
+  --heat-4: #0a4a44;
+  --heat-5: #02302b;
+  --heat-on-low: #000000;
+  --heat-on-high: #ffffff;
+  --heat-border: #6b7178;
+  --heat-future-border: #3a4046;
+
+  --elevation-1: 0 1px 2px rgb(0 0 0 / 0.1);
+  --elevation-2: 0 4px 16px rgb(0 0 0 / 0.2), 0 1px 3px rgb(0 0 0 / 0.16);
+  --elevation-3: 0 16px 48px rgb(0 0 0 / 0.32), 0 2px 6px rgb(0 0 0 / 0.18);
+}
+
+/* ------------------------------------------------------------------------------------------ */
+/* Dark · increased contrast                                                                   */
+/* ------------------------------------------------------------------------------------------ */
+[data-theme='dark'][data-contrast='increased'] {
+  color-scheme: dark;
+
+  --color-bg: #0e0f11;
+  --color-surface: #16181b;
+  --color-surface-raised: #1d2024;
+  --color-surface-sunken: #090a0b;
+  --color-sidebar: #121416;
+  --color-field-bg: #0e0f11;
+  --color-hover: #2a2e33;
+  --color-pressed: #353a40;
+  --color-selected-bg: #0d3d38;
+  --color-selected-text: #d4fff7;
+  --color-selected-indicator: #8fffeb;
+
+  --color-text: #ffffff;
+  --color-text-secondary: #f2f7ff;
+  --color-text-disabled: #9aa2aa;
+  --color-accent: #8fffeb;
+  --color-accent-bg: #0d3d38;
+
+  --color-separator: #8a939b;
+  --color-border: #b5bdc5;
+  --color-control-border: #c9d0d6;
+  --color-focus-ring: #a8c8ff;
+
+  --color-primary: #03473f;
+  --color-primary-hover: #055a52;
+  --color-primary-pressed: #023530;
+  --color-primary-border: #8fffeb;
+  --color-on-primary: #ffffff;
+  --color-secondary-bg: #1d2024;
+  --color-secondary-hover: #2a2e33;
+  --color-secondary-pressed: #353a40;
+  --color-secondary-text: #ffffff;
+  --color-danger-solid: #8f150c;
+  --color-danger-solid-hover: #a3190e;
+  --color-on-danger: #ffffff;
+
+  --color-check-bg: #8fffeb;
+  --color-check-mark: #000000;
+  --color-switch-on: #8fffeb;
+  --color-switch-off: #9aa2aa;
+  --color-switch-thumb-on: #000000;
+  --color-switch-thumb-off: #000000;
+
+  --color-running: #8fffeb;
+  --color-paused: #ffe08a;
+  --color-warning: #ffc58a;
+  --color-danger: #ffb4ab;
+  --color-success: #9ff0b5;
+  --color-info: #b8d3ff;
+  --color-neutral: #f2f7ff;
+
+  --color-running-bg: #0b3330;
+  --color-running-text: #d4fff7;
+  --color-paused-bg: #33280a;
+  --color-paused-text: #fff0c2;
+  --color-warning-bg: #36200b;
+  --color-warning-text: #ffe0c2;
+  --color-danger-bg: #3a1311;
+  --color-danger-text: #ffd7d2;
+  --color-success-bg: #0f2a1a;
+  --color-success-text: #d1f7dc;
+  --color-info-bg: #10233f;
+  --color-info-text: #dce9ff;
+  --color-neutral-bg: #23272b;
+  --color-neutral-text: #ffffff;
+
+  --color-brand-tile: #26292d;
+  --color-on-brand-tile: #ffffff;
+  --color-tooltip-bg: #ffffff;
+  --color-tooltip-text: #000000;
+  --color-backdrop: rgb(0 0 0 / 0.72);
+  --color-ring-track: #3a4046;
+
+  --chart-1: #4fd1c1;
+  --chart-2: #74a7ff;
+  --chart-3: #ff9f5a;
+  --chart-4: #b794f6;
+  --chart-5: #f383bc;
+  --chart-6: #9ccf5f;
+  --chart-7: #c9a27c;
+  --chart-8: #a3adb7;
+  --chart-grid: #5c636a;
+  --chart-axis: #c9d0d6;
+  --chart-pattern-ink: #000000;
+  --chart-target: #ffc58a;
+  --chart-selection: #0d3d38;
+  --chart-rule: #f2f7ff;
+
+  --heat-0: #23272b;
+  --heat-1: #0d3d38;
+  --heat-2: #136058;
+  --heat-3: #4cc2b2;
+  --heat-4: #7aeadb;
+  --heat-5: #c7fff6;
+  --heat-on-low: #ffffff;
+  --heat-on-high: #000000;
+  --heat-border: #8a939b;
+  --heat-future-border: #c9d0d6;
+
+  --elevation-1: 0 1px 2px rgb(0 0 0 / 0.5);
+  --elevation-2: 0 6px 20px rgb(0 0 0 / 0.6), 0 1px 3px rgb(0 0 0 / 0.5);
+  --elevation-3: 0 18px 56px rgb(0 0 0 / 0.75), 0 2px 8px rgb(0 0 0 / 0.55);
+}
+
+/* ------------------------------------------------------------------------------------------ */
+/* Forced colours (Windows High Contrast and similar). System colours replace every token so    */
+/* inline SVG fills and component styles follow the user's palette. Charts keep patterns,       */
+/* labels and ordering, so series stay distinguishable without colour.                          */
+/* ------------------------------------------------------------------------------------------ */
+@media (forced-colors: active) {
+  :root,
+  [data-theme] {
+    --color-bg: Canvas;
+    --color-surface: Canvas;
+    --color-surface-raised: Canvas;
+    --color-surface-sunken: Canvas;
+    --color-sidebar: Canvas;
+    --color-field-bg: Field;
+    --color-hover: Canvas;
+    --color-pressed: Canvas;
+    --color-selected-bg: Highlight;
+    --color-selected-text: HighlightText;
+    --color-selected-indicator: HighlightText;
+
+    --color-text: CanvasText;
+    --color-text-secondary: CanvasText;
+    --color-text-disabled: GrayText;
+    --color-accent: LinkText;
+    --color-accent-bg: Canvas;
+
+    --color-separator: CanvasText;
+    --color-border: CanvasText;
+    --color-control-border: ButtonBorder;
+    --color-focus-ring: Highlight;
+
+    --color-primary: ButtonFace;
+    --color-primary-hover: ButtonFace;
+    --color-primary-pressed: ButtonFace;
+    --color-primary-border: ButtonBorder;
+    --color-on-primary: ButtonText;
+    --color-secondary-bg: ButtonFace;
+    --color-secondary-hover: ButtonFace;
+    --color-secondary-pressed: ButtonFace;
+    --color-secondary-text: ButtonText;
+    --color-danger-solid: ButtonFace;
+    --color-danger-solid-hover: ButtonFace;
+    --color-on-danger: ButtonText;
+
+    --color-check-bg: Highlight;
+    --color-check-mark: HighlightText;
+    --color-switch-on: Highlight;
+    --color-switch-off: ButtonBorder;
+    --color-switch-thumb-on: HighlightText;
+    --color-switch-thumb-off: ButtonText;
+
+    --color-running: CanvasText;
+    --color-paused: CanvasText;
+    --color-warning: CanvasText;
+    --color-danger: CanvasText;
+    --color-success: CanvasText;
+    --color-info: CanvasText;
+    --color-neutral: CanvasText;
+
+    --color-running-bg: Canvas;
+    --color-running-text: CanvasText;
+    --color-paused-bg: Canvas;
+    --color-paused-text: CanvasText;
+    --color-warning-bg: Canvas;
+    --color-warning-text: CanvasText;
+    --color-danger-bg: Canvas;
+    --color-danger-text: CanvasText;
+    --color-success-bg: Canvas;
+    --color-success-text: CanvasText;
+    --color-info-bg: Canvas;
+    --color-info-text: CanvasText;
+    --color-neutral-bg: Canvas;
+    --color-neutral-text: CanvasText;
+
+    --color-brand-tile: Canvas;
+    --color-on-brand-tile: CanvasText;
+    --color-tooltip-bg: Canvas;
+    --color-tooltip-text: CanvasText;
+    --color-backdrop: transparent;
+    --color-ring-track: GrayText;
+
+    --chart-1: CanvasText;
+    --chart-2: CanvasText;
+    --chart-3: CanvasText;
+    --chart-4: CanvasText;
+    --chart-5: CanvasText;
+    --chart-6: CanvasText;
+    --chart-7: CanvasText;
+    --chart-8: CanvasText;
+    --chart-grid: GrayText;
+    --chart-axis: CanvasText;
+    --chart-pattern-ink: Canvas;
+    --chart-target: CanvasText;
+    --chart-selection: Highlight;
+    --chart-rule: CanvasText;
+
+    --heat-0: Canvas;
+    --heat-1: Canvas;
+    --heat-2: Canvas;
+    --heat-3: CanvasText;
+    --heat-4: CanvasText;
+    --heat-5: CanvasText;
+    --heat-on-low: CanvasText;
+    --heat-on-high: Canvas;
+    --heat-border: CanvasText;
+    --heat-future-border: GrayText;
+
+    --elevation-1: none;
+    --elevation-2: none;
+    --elevation-3: none;
+  }
+}
