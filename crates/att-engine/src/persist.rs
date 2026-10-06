@@ -14,9 +14,9 @@ use crate::{controllers, session};
 
 pub(crate) fn load(services: &Services, state: &mut AppState) {
     if !services.preview
-        && let Some(dir) = att_platform::paths::legacy_data_dir()
+        && let Some(dir) = &services.legacy_dir
     {
-        match services.store.import_legacy(&dir) {
+        match services.store.import_legacy(dir) {
             Ok(report) if report.imported => {
                 tracing::info!(
                     documents = report.documents.len(),
