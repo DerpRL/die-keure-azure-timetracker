@@ -10,6 +10,7 @@ use crate::microphone::{MicrophoneApp, MicrophoneOwner, MicrophoneSession};
 use crate::model::TrackingState;
 
 /// A microphone session observed while a confirmed timer was running.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MicrophoneTrackingLink {
@@ -18,6 +19,7 @@ pub struct MicrophoneTrackingLink {
     #[serde(alias = "appID")]
     pub app_id: String,
     pub app_name: String,
+    #[cfg_attr(feature = "ts", ts(as = "Timestamp"))]
     #[serde(with = "crate::time::flex_date")]
     pub started: Timestamp,
     pub workspace: String,
@@ -46,6 +48,7 @@ impl MicrophoneTrackingLink {
 }
 
 /// "Has your meeting finished?" for the timer that was running during the call.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MicrophoneEndPrompt {
@@ -54,6 +57,7 @@ pub struct MicrophoneEndPrompt {
     pub workspace: String,
     pub tracking_identity: String,
     pub app_names: Vec<String>,
+    #[cfg_attr(feature = "ts", ts(as = "Timestamp"))]
     #[serde(with = "crate::time::flex_date")]
     pub ended_at: Timestamp,
     #[serde(default)]
@@ -90,11 +94,13 @@ pub struct MicrophoneEndObservation<'a> {
 /// Binds confirmed remote tracking to observed input use, independently of a previous ticket.
 /// Ended sessions must come from the debounced microphone engine, never a missing or failed
 /// sample. Persisted as `microphoneTracking` (`{links, pending}`).
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct MicrophoneTrackingMonitor {
     /// Session id → link.
     links: BTreeMap<String, MicrophoneTrackingLink>,
+    #[cfg_attr(feature = "ts", ts(optional = nullable))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pending: Option<MicrophoneEndPrompt>,
 }

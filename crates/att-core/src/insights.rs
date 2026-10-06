@@ -17,6 +17,7 @@ use crate::time::{Cal, add_secs, diff_secs};
 /// Switches within this gap count; longer breaks start afresh.
 const SWITCH_GAP: f64 = 15.0 * 60.0;
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextDay {
@@ -27,6 +28,7 @@ pub struct ContextDay {
     pub blocks: Vec<f64>,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextInsights {

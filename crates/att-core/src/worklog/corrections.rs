@@ -17,6 +17,7 @@ use crate::model::WorkLog;
 use crate::time::{Cal, Interval, add_secs, diff_secs, secs};
 
 /// Swift `TimeCorrectionIssue.Kind`.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum TimeCorrectionKind {
@@ -34,6 +35,7 @@ impl TimeCorrectionKind {
 }
 
 /// A gap between recorded time, or time recorded twice. Ported from `TimeCorrectionIssue`.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TimeCorrectionIssue {

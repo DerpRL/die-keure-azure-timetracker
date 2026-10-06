@@ -16,16 +16,20 @@ use crate::time::{Cal, Interval, add_secs, diff_secs};
 /// Settings written before per-weekday schedules have only `weeklyHours` and `dailyHours`; they
 /// keep working (`dailyHours` Monday to Friday) and convert to `hoursByWeekday` on the first
 /// [`WorkTargets::set_hours`].
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct WorkTargets {
     pub weekly_hours: f64,
     pub daily_hours: f64,
     /// Sunday first, matching Swift weekday numbers (index 0 = Sunday).
+    #[cfg_attr(feature = "ts", ts(optional = nullable))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hours_by_weekday: Option<Vec<f64>>,
+    #[cfg_attr(feature = "ts", ts(optional = nullable))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub belgian_holidays_enabled: Option<bool>,
+    #[cfg_attr(feature = "ts", ts(optional = nullable))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub date_exceptions: Option<Vec<TargetException>>,
 }
@@ -112,6 +116,7 @@ impl WorkTargets {
 }
 
 /// Recorded seconds today and this ISO week.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub struct TargetProgress {
     pub today: f64,

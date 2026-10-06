@@ -32,6 +32,8 @@ jobs:
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
+      # The TypeScript contract (apps/desktop/src/ipc/generated.ts) matches the Rust types.
+      - run: cargo test -p att-engine --features ts --test contract_ts
 
   ui:
     name: UI

@@ -19,6 +19,7 @@ use crate::text::NonEmpty;
 use crate::time::{add_secs, diff_secs};
 
 /// Figma context settings. Persisted as `Configuration.figmaDetection`.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct FigmaPreferences {
@@ -36,6 +37,7 @@ impl Default for FigmaPreferences {
 }
 
 /// A Figma file seen in the foreground.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct FigmaDocument {
     pub key: String,
@@ -127,6 +129,7 @@ fn window_title_name(title: &str) -> Option<&str> {
 }
 
 /// The result of one read of the Figma window.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "document", rename_all = "camelCase")]
 pub enum FigmaObservation {
@@ -230,11 +233,13 @@ impl FigmaActivation {
 }
 
 /// A file in the register.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FigmaFile {
     pub key: String,
     pub name: String,
+    #[cfg_attr(feature = "ts", ts(as = "Option<Timestamp>"))]
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
@@ -259,6 +264,7 @@ impl FigmaFile {
 }
 
 /// "Start Design for this file?"
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FigmaSuggestion {
@@ -268,6 +274,7 @@ pub struct FigmaSuggestion {
     pub name: String,
     #[serde(alias = "ticketID", default, skip_serializing_if = "Option::is_none")]
     pub ticket_id: Option<i64>,
+    #[cfg_attr(feature = "ts", ts(as = "Timestamp"))]
     #[serde(with = "crate::time::flex_date")]
     pub created: Timestamp,
 }
@@ -297,11 +304,13 @@ impl FigmaSuggestion {
 }
 
 /// One activation in the history.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FigmaContextEvent {
     #[serde(default = "uuid::Uuid::new_v4")]
     pub id: Uuid,
+    #[cfg_attr(feature = "ts", ts(as = "Timestamp"))]
     #[serde(with = "crate::time::flex_date")]
     pub timestamp: Timestamp,
     pub kind: String,
@@ -315,6 +324,7 @@ pub struct FigmaContextEvent {
 ///
 /// Decoding is tolerant like the Swift `init(from:)`: a missing or `null` key becomes empty, so
 /// mapping-only storage (`{"links":{…}}`) from older versions still loads.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct FigmaLedger {
@@ -326,6 +336,7 @@ pub struct FigmaLedger {
     #[serde(deserialize_with = "null_as_default")]
     pub suggestions: Vec<FigmaSuggestion>,
     /// Suggestion signature (`file NUL ticket NUL name`) → hidden until.
+    #[cfg_attr(feature = "ts", ts(as = "BTreeMap<String, Timestamp>"))]
     #[serde(with = "nullable_dates")]
     pub dismissals: BTreeMap<String, Timestamp>,
     #[serde(deserialize_with = "null_as_default")]
@@ -504,6 +515,7 @@ pub mod design_activity {
 }
 
 /// Every workspace's ledger, keyed by `organization|7pace URL`. Persisted as `figmaStore`.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct FigmaStore {

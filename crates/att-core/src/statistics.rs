@@ -18,6 +18,7 @@ use crate::targets::WorkTargets;
 use crate::text::NonEmpty;
 use crate::time::{Cal, Interval};
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum StatisticsPeriod {
@@ -42,6 +43,7 @@ impl StatisticsPeriod {
 }
 
 /// A calendar day, Monday-first ISO week, month or year. Build it with [`StatisticsRange::new`].
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StatisticsRange {
@@ -80,6 +82,7 @@ impl StatisticsRange {
     }
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StatisticsDay {
@@ -92,6 +95,7 @@ pub struct StatisticsDay {
     pub cumulative_target: f64,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StatisticsActivity {
@@ -102,6 +106,7 @@ pub struct StatisticsActivity {
     pub sessions: i64,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StatisticsTicket {
@@ -118,6 +123,7 @@ impl StatisticsTicket {
 }
 
 /// Uses the worklog's reported date, like History. Does not extrapolate a live timer.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ActivityStatistics {

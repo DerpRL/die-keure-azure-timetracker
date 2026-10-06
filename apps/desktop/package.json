@@ -15,7 +15,9 @@
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "contract": "cd ../.. && UPDATE_CONTRACT=1 cargo test -p att-engine --features ts --test contract_ts",
+    "contract:check": "cd ../.. && cargo test -p att-engine --features ts --test contract_ts"
   },
   "dependencies": {
     "@internationalized/date": "^3.12.4",

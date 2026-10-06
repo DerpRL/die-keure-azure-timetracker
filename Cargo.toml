@@ -32,6 +32,8 @@ tracing = "0.1"
 dirs = "7"
 rusqlite = { version = "0.40", features = ["bundled"] }
 keyring = "4"
+# UI contract generation (feature `ts`): TypeScript types derived from the serde types.
+ts-rs = { version = "12", features = ["jiff-impl", "uuid-impl", "serde-json-impl", "no-serde-warnings"] }
 
 # Test-only
 wiremock = "0.6"

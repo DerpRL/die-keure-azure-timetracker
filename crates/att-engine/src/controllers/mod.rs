@@ -27,6 +27,7 @@ pub mod view;
 pub struct ControllerState {}
 
 /// Intents owned by the page controllers. Field names are camelCase on the wire.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(tag = "type", rename_all_fields = "camelCase")]
 pub enum ControllerIntent {

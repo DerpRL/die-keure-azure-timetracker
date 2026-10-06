@@ -13,6 +13,7 @@ use crate::time::{Cal, add_secs, diff_secs, wire_date};
 ///
 /// The default work apps depend on the OS: bundle IDs on macOS (as in 1.14.2), executable file
 /// names on Windows. Decoding keeps whatever list was stored.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct WorkAwarenessPreferences {
@@ -92,6 +93,7 @@ impl WorkAwarenessPreferences {
 }
 
 /// The confirmed running timer that idle evidence belongs to.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IdleTrackingSession {
@@ -99,6 +101,7 @@ pub struct IdleTrackingSession {
     #[serde(alias = "workLogID")]
     pub work_log_id: String,
     pub title: String,
+    #[cfg_attr(feature = "ts", ts(as = "Timestamp"))]
     #[serde(with = "crate::time::flex_date")]
     pub start: Timestamp,
 }
@@ -133,14 +136,17 @@ impl IdleTrackingSession {
 }
 
 /// Detected time away from the running timer.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IdlePeriod {
     #[serde(default = "uuid::Uuid::new_v4")]
     pub id: Uuid,
     pub session: IdleTrackingSession,
+    #[cfg_attr(feature = "ts", ts(as = "Timestamp"))]
     #[serde(with = "crate::time::flex_date")]
     pub start: Timestamp,
+    #[cfg_attr(feature = "ts", ts(as = "Option<Timestamp>"))]
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
@@ -178,11 +184,14 @@ pub struct IdleObservation<'a> {
 }
 
 /// Consumes only elapsed idle time and lock/sleep state. It never changes a remote timer.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct IdleMonitor {
+    #[cfg_attr(feature = "ts", ts(optional = nullable))]
     #[serde(skip_serializing_if = "Option::is_none")]
     away: Option<IdlePeriod>,
+    #[cfg_attr(feature = "ts", ts(optional = nullable))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pending: Option<IdlePeriod>,
 }
@@ -265,21 +274,28 @@ impl IdleMonitor {
 }
 
 /// "Working without a timer?"
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ForgottenReminder {
     pub id: Uuid,
+    #[cfg_attr(feature = "ts", ts(as = "Timestamp"))]
     #[serde(with = "crate::time::flex_date")]
     pub since: Timestamp,
     pub app_name: String,
 }
 
 /// Snooze and "ignore today" for the forgotten-timer reminder.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct ForgottenDeferral {
+    #[cfg_attr(feature = "ts", ts(as = "Option<Timestamp>"))]
+    #[cfg_attr(feature = "ts", ts(optional = nullable))]
     #[serde(skip_serializing_if = "Option::is_none", with = "crate::time::flex_date::option")]
     pub until: Option<Timestamp>,
+    #[cfg_attr(feature = "ts", ts(as = "Option<Timestamp>"))]
+    #[cfg_attr(feature = "ts", ts(optional = nullable))]
     #[serde(skip_serializing_if = "Option::is_none", with = "crate::time::flex_date::option")]
     pub ignored_day: Option<Timestamp>,
 }
@@ -353,12 +369,14 @@ impl ForgottenTimerMonitor {
 }
 
 /// Persisted awareness state of one workspace. Persisted as `workAwareness`.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct WorkAwarenessLedger {
     pub workspace: String,
     pub idle: IdleMonitor,
     /// An idle period being corrected in the time editor.
+    #[cfg_attr(feature = "ts", ts(optional = nullable))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub correction: Option<IdlePeriod>,
     pub deferral: ForgottenDeferral,

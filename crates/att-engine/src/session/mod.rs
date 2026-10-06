@@ -31,6 +31,7 @@ pub mod view;
 pub struct SessionState {}
 
 /// Intents owned by the session. Field names are camelCase on the wire.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(tag = "type", rename_all_fields = "camelCase")]
 pub enum SessionIntent {

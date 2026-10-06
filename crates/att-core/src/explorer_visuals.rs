@@ -17,6 +17,7 @@ use crate::time::{Cal, Interval, diff_secs};
 const HOURLY_GRID_MAX_DAYS: usize = 8;
 
 /// One cell of the Monday-first ISO calendar heatmap.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExplorerCalendarDay {
@@ -36,6 +37,7 @@ pub struct ExplorerCalendarDay {
 }
 
 /// One cell of the hourly grid.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExplorerHeatHour {
@@ -47,6 +49,7 @@ pub struct ExplorerHeatHour {
     pub slot: i64,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExplorerProgressPoint {
@@ -55,6 +58,7 @@ pub struct ExplorerProgressPoint {
     pub target: f64,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExplorerVisuals {

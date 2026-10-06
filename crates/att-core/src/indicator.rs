@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::model::TrackingState;
 
 /// The tracking status shown by the tray, the panel and the timer (Swift `TrackingIndicator`).
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum TrackingIndicator {
@@ -90,6 +91,7 @@ impl TrackingIndicator {
 
 /// Platform-neutral icon state for the tray and the panel. Each OS maps it to its own asset
 /// (an SF Symbol on macOS, an `.ico` on Windows) by [`id`](Self::id).
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum IndicatorIcon {
@@ -125,6 +127,7 @@ impl IndicatorIcon {
     }
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum IndicatorTone {
@@ -175,6 +178,7 @@ pub fn status_description(
 ///
 /// Pausing stops the 7pace timer; resuming starts a new session after confirmation, so the
 /// paused interval is never logged.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PausedSession {
@@ -186,6 +190,7 @@ pub struct PausedSession {
     pub activity_id: Option<String>,
     /// The normalised 7pace workspace URL; a pause is dropped when the workspace changes.
     pub workspace: String,
+    #[cfg_attr(feature = "ts", ts(as = "Timestamp"))]
     #[serde(with = "crate::time::flex_date")]
     pub paused_at: Timestamp,
     pub elapsed_seconds: f64,

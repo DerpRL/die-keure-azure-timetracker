@@ -12,6 +12,7 @@ use crate::model::ActivityType;
 use crate::time::{add_secs, diff_secs};
 
 /// Meeting suggestion settings. Persisted as `Configuration.meetingSuggestions`.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct MeetingPreferences {
@@ -29,14 +30,17 @@ impl Default for MeetingPreferences {
 }
 
 /// One calendar occurrence, as the calendar probe reports it.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MeetingEvent {
     /// Identifies one occurrence, so a recurring meeting can prompt again the next day.
     pub id: String,
     pub title: String,
+    #[cfg_attr(feature = "ts", ts(as = "Timestamp"))]
     #[serde(with = "crate::time::flex_date")]
     pub start: Timestamp,
+    #[cfg_attr(feature = "ts", ts(as = "Timestamp"))]
     #[serde(with = "crate::time::flex_date")]
     pub end: Timestamp,
     #[serde(default)]
@@ -89,9 +93,11 @@ impl MeetingEvent {
 
 /// Decides which meetings to suggest. Persisted as the bare `seen` map (`meetingReminders` in
 /// the 1.14.x `state.json`): occurrence id → occurrence end.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct MeetingSuggestionEngine {
+    #[cfg_attr(feature = "ts", ts(as = "BTreeMap<String, Timestamp>"))]
     #[serde(with = "crate::time::flex_date::map")]
     seen: BTreeMap<String, Timestamp>,
 }

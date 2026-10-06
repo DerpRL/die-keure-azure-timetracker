@@ -12,6 +12,7 @@ use crate::text::NonEmpty;
 use crate::time::wire_date;
 
 /// The operating system, for per-OS defaults such as work apps and microphone apps.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum HostOs {
@@ -33,6 +34,7 @@ impl HostOs {
     }
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Repository {
     pub id: Uuid,
@@ -62,6 +64,7 @@ pub(crate) fn last_path_component(path: &str) -> &str {
     trimmed.rsplit(['/', '\\']).next().unwrap_or(trimmed)
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkItem {
@@ -82,6 +85,7 @@ impl WorkItem {
 }
 
 /// 7pace enums arrive as names or as their numeric representation.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum WireValue {
@@ -108,6 +112,7 @@ impl WireValue {
     }
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ActivityCheck {
@@ -117,6 +122,7 @@ pub struct ActivityCheck {
     pub seconds_left: Option<i64>,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Track {
@@ -209,6 +215,7 @@ impl Track {
     }
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TrackSettings {
@@ -226,6 +233,7 @@ impl TrackSettings {
     }
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TrackingState {
@@ -270,6 +278,7 @@ impl TrackingState {
     }
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ActivityType {
     pub id: String,
@@ -296,12 +305,14 @@ pub fn resolve_activity(selected_id: &str, available: &[ActivityType]) -> Result
     Ok(Some(selected_id.to_string()))
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorkLogUser {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkLog {

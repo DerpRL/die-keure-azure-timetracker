@@ -124,6 +124,7 @@ impl WorkLogDraft {
 
 /// The entries a change starts from and the drafts it should leave behind. Ported from
 /// `WorkLogPlan`.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkLogPlan {
@@ -268,6 +269,7 @@ impl WorkLogPlan {
 }
 
 /// Journal state of a change. Encodes as the Swift case name (`"needsReview"`).
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum WorkLogChangeStatus {
@@ -289,10 +291,12 @@ pub enum WorkLogChangeStatus {
 /// Decodes the Swift journal directly: Swift's `JSONEncoder` dates (seconds since 2001), uppercase
 /// UUIDs, omitted `undoOf`. Missing keys with a Swift default (`status`, `detail`) and missing
 /// lists decode to those defaults instead of failing the whole journal.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkLogChange {
     pub id: Uuid,
+    #[cfg_attr(feature = "ts", ts(as = "Timestamp"))]
     #[serde(with = "crate::time::flex_date")]
     pub date: Timestamp,
     /// The workspace identity (lower-cased 7pace URL) the change was made in.

@@ -57,6 +57,7 @@ pub const MACOS_PACKAGE_EXTENSIONS: &[&str] = &[
 ];
 
 /// A repository found by a scan. `path` is canonical (see [`RepositoryDiscovery::canonical_path`]).
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DiscoveredRepository {
@@ -75,6 +76,7 @@ impl DiscoveredRepository {
     }
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RepositoryScan {

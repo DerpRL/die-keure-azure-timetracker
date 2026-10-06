@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use att_core::AppError;
 
 /// `{ kind, message }`. `kind` is stable for UI logic; `message` is shown to the user verbatim.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, thiserror::Error)]
 #[error("{message}")]
 pub struct IpcError {

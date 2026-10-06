@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum InterfaceTheme {
@@ -35,6 +36,7 @@ impl InterfaceTheme {
     }
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum InterfaceContrast {
@@ -120,9 +122,12 @@ impl<'de> Deserialize<'de> for InterfaceScale {
 ///
 /// Decoding never fails: unsupported future values, wrong types and non-objects fall back to
 /// the defaults field by field, so they cannot prevent loading account and tracking settings.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize)]
 pub struct InterfacePreferences {
     pub theme: InterfaceTheme,
+    /// Percent, serialized as the raw number (`InterfaceScale::ALL`).
+    #[cfg_attr(feature = "ts", ts(type = "90 | 100 | 110 | 125 | 150"))]
     pub scale: InterfaceScale,
     pub contrast: InterfaceContrast,
 }

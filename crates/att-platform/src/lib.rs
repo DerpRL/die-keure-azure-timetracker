@@ -65,6 +65,7 @@ pub const CREDENTIAL_SERVICE: &str = "be.yarne.azure-timetracker";
 // ---------------------------------------------------------------------------------------------
 // Calendar (macOS only at launch; Windows reports `Unsupported`)
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum CalendarAccess {
@@ -76,6 +77,7 @@ pub enum CalendarAccess {
     Unsupported,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CalendarInfo {
@@ -87,6 +89,7 @@ pub struct CalendarInfo {
     pub source: Option<String>,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EventStatus {
@@ -96,6 +99,7 @@ pub enum EventStatus {
     Canceled,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CalendarEvent {
@@ -141,6 +145,7 @@ pub trait CalendarSource: Send + Sync {
 // Microphone in use
 
 /// A process that currently has an active microphone input stream.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InputOwner {
@@ -164,6 +169,7 @@ pub trait MicrophoneProbe: Send + Sync {
 // ---------------------------------------------------------------------------------------------
 // Presence: idle time, screen lock, foreground app, sleep/wake
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppIdentity {
@@ -173,6 +179,7 @@ pub struct AppIdentity {
     pub path: Option<String>,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PresenceSample {
@@ -184,6 +191,7 @@ pub struct PresenceSample {
     pub foreground: Option<AppIdentity>,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SystemEvent {
@@ -213,6 +221,7 @@ pub trait PresenceProbe: Send + Sync {
 // ---------------------------------------------------------------------------------------------
 // Figma Desktop window observer
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "kind")]
 pub enum WindowObservation {

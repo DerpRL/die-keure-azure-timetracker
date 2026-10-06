@@ -13,6 +13,7 @@ use uuid::Uuid;
 use crate::time::diff_secs;
 
 /// App categories the user can watch. Persisted by display name (`"Microsoft Teams"`).
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum MicrophoneApp {
     #[serde(rename = "Slack")]
@@ -139,6 +140,7 @@ pub(crate) fn windows_executable(id: &str) -> Option<String> {
 }
 
 /// Microphone suggestion settings. Persisted as `Configuration.microphoneMeetings`.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct MicrophonePreferences {
@@ -168,6 +170,7 @@ fn known_apps<'de, D: Deserializer<'de>>(d: D) -> Result<BTreeSet<MicrophoneApp>
 }
 
 /// An app using microphone input.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MicrophoneOwner {
@@ -198,11 +201,13 @@ impl MicrophoneOwner {
 }
 
 /// One continuous episode of input use by one app.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MicrophoneSession {
     pub id: String,
     pub owner: MicrophoneOwner,
+    #[cfg_attr(feature = "ts", ts(as = "Timestamp"))]
     #[serde(with = "crate::time::flex_date")]
     pub started: Timestamp,
 }

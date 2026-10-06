@@ -104,6 +104,7 @@ pub fn floor_to_second(ts: Timestamp) -> Timestamp {
 }
 
 /// A half-open interval `[start, end)`.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Interval {
     pub start: Timestamp,
@@ -489,8 +490,10 @@ mod tests {
     fn flex_dates_read_swift_numbers_and_write_rfc3339() {
         #[derive(Serialize, Deserialize, PartialEq, Debug)]
         struct Probe {
+            #[cfg_attr(feature = "ts", ts(as = "Timestamp"))]
             #[serde(with = "flex_date")]
             at: Timestamp,
+            #[cfg_attr(feature = "ts", ts(as = "Option<Timestamp>"))]
             #[serde(default, with = "flex_date::option")]
             maybe: Option<Timestamp>,
         }

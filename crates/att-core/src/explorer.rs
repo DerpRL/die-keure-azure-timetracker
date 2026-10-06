@@ -59,6 +59,7 @@ impl StatisticsZoom {
 }
 
 /// Bucket size of the time chart. Serialized as the Swift raw value, which is also the label.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ExplorerResolution {
     #[serde(rename = "Monthly")]
@@ -130,6 +131,7 @@ pub(crate) fn clock_hour(cal: &Cal, ts: Timestamp) -> (Interval, usize) {
     (Interval::new(start, add_secs(start, 3_600.0)), hour)
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct ExplorerFilter {
@@ -154,6 +156,7 @@ impl ExplorerFilter {
 }
 
 /// A parsed worklog.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExplorerRecord {
@@ -203,9 +206,11 @@ impl ExplorerRecord {
 }
 
 /// The part of a record inside the window and inside one local day.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExplorerEntry {
+    #[cfg_attr(feature = "ts", ts(as = "ExplorerRecord"))]
     #[serde(serialize_with = "serialize_shared")]
     pub record: Arc<ExplorerRecord>,
     pub start: Timestamp,
@@ -234,6 +239,7 @@ fn serialize_shared<S: Serializer, T: Serialize>(
     T::serialize(value, serializer)
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExplorerTask {
@@ -248,6 +254,7 @@ pub struct ExplorerTask {
     pub last_worked: Timestamp,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExplorerActivity {
@@ -257,6 +264,7 @@ pub struct ExplorerActivity {
 }
 
 /// One activity's slice of a stacked bucket.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExplorerSegment {
@@ -266,6 +274,7 @@ pub struct ExplorerSegment {
     pub top: f64,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExplorerBucket {
@@ -285,6 +294,7 @@ impl ExplorerBucket {
     }
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExplorerPattern {
@@ -423,6 +433,7 @@ impl ExplorerDataset {
     }
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExplorerAnalysis {

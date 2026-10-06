@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::targets::WorkTargets;
 use crate::time::{Cal, Interval, diff_secs};
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BelgianHoliday {
@@ -66,6 +67,7 @@ impl BelgianHoliday {
 }
 
 /// Persisted as the exact Swift raw values.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TargetExceptionKind {
     #[serde(rename = "Full-day leave")]
@@ -93,6 +95,7 @@ impl TargetExceptionKind {
 }
 
 /// A date whose target differs from the weekly schedule.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct TargetException {
     /// Gregorian `yyyy-MM-dd` in the user's local time zone.

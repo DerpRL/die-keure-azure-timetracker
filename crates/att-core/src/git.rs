@@ -132,6 +132,7 @@ impl BranchPattern {
 }
 
 /// One HEAD reading. `branch` is `None` for a detached HEAD; `head` is the trimmed HEAD text.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GitSnapshot {
@@ -260,6 +261,7 @@ fn is_object_id(raw: &str) -> bool {
 
 /// A confirmed branch switch waiting for the user's decision. Persisted in `state.json` as
 /// `pending`; reads the Swift keys `repositoryID` and `ticketID`.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BranchChange {
@@ -272,6 +274,7 @@ pub struct BranchChange {
     pub previous_branch: Option<String>,
     #[serde(alias = "ticketID", default, skip_serializing_if = "Option::is_none")]
     pub ticket_id: Option<i64>,
+    #[cfg_attr(feature = "ts", ts(as = "Timestamp"))]
     #[serde(with = "crate::time::flex_date")]
     pub detected_at: Timestamp,
 }
@@ -344,10 +347,12 @@ impl BranchDebouncer {
 }
 
 /// One row of the App activity log. Persisted in `state.json` as `audit`, newest first.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AuditEntry {
     pub id: Uuid,
+    #[cfg_attr(feature = "ts", ts(as = "Timestamp"))]
     #[serde(with = "crate::time::flex_date")]
     pub date: Timestamp,
     pub title: String,

@@ -56,6 +56,7 @@ impl WorkLogTimeEdit {
 }
 
 /// Another entry (or the running timer) that shares time with a proposed edit.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkLogConflict {
@@ -169,6 +170,7 @@ fn active_work_log_id(state: &TrackingState) -> Option<&str> {
 }
 
 /// The fresh entry and overlap advice for a proposed edit.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkLogEditReview {
@@ -181,6 +183,7 @@ pub struct WorkLogEditReview {
 }
 
 /// A confirmed time edit with the overlaps found just before it was saved.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkLogEditResult {

@@ -11,6 +11,7 @@ use crate::model::ActivityType;
 use crate::text::NonEmpty;
 
 /// What the user tracks without an Azure ticket (Swift `ManualTrackingKind`).
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ManualTrackingKind {

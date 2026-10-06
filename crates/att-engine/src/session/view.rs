@@ -33,6 +33,7 @@ use crate::state::{AppState, PAGES};
 
 // -- app -------------------------------------------------------------------------------------
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppSlice {
@@ -53,6 +54,7 @@ pub struct AppSlice {
     pub features: Features,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PageInfo {
@@ -70,6 +72,7 @@ pub struct PageInfo {
     pub dot: bool,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Features {
@@ -83,6 +86,7 @@ pub struct Features {
 
 // -- connection -------------------------------------------------------------------------------
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Health {
@@ -96,6 +100,7 @@ pub enum Health {
     AccessDenied,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConnectionSlice {
@@ -123,6 +128,7 @@ pub struct ConnectionSlice {
 
 // -- tracking ---------------------------------------------------------------------------------
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TrackingSlice {
@@ -152,6 +158,7 @@ pub struct TrackingSlice {
     pub ticket_url: Option<String>,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PausedView {
@@ -164,6 +171,7 @@ pub struct PausedView {
     pub elapsed_seconds: f64,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LocalTimerView {
@@ -175,6 +183,7 @@ pub struct LocalTimerView {
     pub start: Timestamp,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AttentionView {
@@ -190,6 +199,7 @@ pub struct AttentionView {
 
 // -- flow (ticket search and activity chooser) -----------------------------------------------
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum FlowSurface {
@@ -203,6 +213,7 @@ pub enum FlowSurface {
 }
 
 /// Where a draft came from; decides labels and revalidation.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum DraftSource {
@@ -217,6 +228,7 @@ pub enum DraftSource {
     Manual,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DraftView {
@@ -239,6 +251,7 @@ pub struct DraftView {
     pub resume: bool,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SuggestionView {
@@ -248,6 +261,7 @@ pub struct SuggestionView {
     pub ticket_id: Option<i64>,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchView {
@@ -257,6 +271,7 @@ pub struct SearchView {
     pub error: Option<String>,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QuickTicketView {
@@ -265,6 +280,7 @@ pub struct QuickTicketView {
     pub favorite: bool,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FlowSlice {
@@ -284,6 +300,7 @@ pub struct FlowSlice {
 
 // -- prompts ----------------------------------------------------------------------------------
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BranchPromptView {
@@ -293,6 +310,7 @@ pub struct BranchPromptView {
     pub suggests_break: bool,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MeetingPromptView {
@@ -301,6 +319,7 @@ pub struct MeetingPromptView {
     pub ticket_id: Option<i64>,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MeetingReturnView {
@@ -312,6 +331,7 @@ pub struct MeetingReturnView {
     pub ready: bool,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FigmaPromptView {
@@ -319,6 +339,7 @@ pub struct FigmaPromptView {
     pub ticket_title: Option<String>,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ForgottenTicketView {
@@ -327,6 +348,7 @@ pub struct ForgottenTicketView {
     pub title: Option<String>,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DayReviewPromptView {
@@ -334,6 +356,7 @@ pub struct DayReviewPromptView {
     pub can_snooze: bool,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PromptsSlice {
@@ -358,6 +381,7 @@ pub struct PromptsSlice {
 
 /// Today and this-week progress toward the targets, computed at `computed_at`. While
 /// `extrapolate` is true and a timer runs, the UI adds `now - computed_at` to both totals.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProgressSlice {
@@ -377,6 +401,7 @@ pub struct ProgressSlice {
 
 // -- history and titles -----------------------------------------------------------------------
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HistorySlice {
@@ -397,6 +422,7 @@ pub type WorkItemsSlice = BTreeMap<i64, WorkItem>;
 
 // -- repositories -----------------------------------------------------------------------------
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RepositoryView {
@@ -409,6 +435,7 @@ pub struct RepositoryView {
     pub error: Option<String>,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DiscoveredView {
@@ -417,6 +444,7 @@ pub struct DiscoveredView {
     pub already_added: bool,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScanView {
@@ -427,6 +455,7 @@ pub struct ScanView {
     pub error: Option<String>,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RepositoriesSlice {
@@ -437,6 +466,7 @@ pub struct RepositoriesSlice {
 
 // -- agenda -----------------------------------------------------------------------------------
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AgendaEventView {
@@ -451,6 +481,7 @@ pub struct AgendaEventView {
     pub is_now: bool,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CalendarChoice {
@@ -459,6 +490,7 @@ pub struct CalendarChoice {
     pub selected: bool,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AgendaSlice {
@@ -474,6 +506,7 @@ pub struct AgendaSlice {
 
 // -- settings ---------------------------------------------------------------------------------
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PairingView {
@@ -484,6 +517,7 @@ pub struct PairingView {
     pub busy: bool,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MicrophoneDiagnostics {
@@ -495,6 +529,7 @@ pub struct MicrophoneDiagnostics {
     pub issue: Option<String>,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InterruptionChoice {
@@ -503,6 +538,7 @@ pub struct InterruptionChoice {
     pub level: Interruption,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SettingsSlice {
@@ -516,6 +552,7 @@ pub struct SettingsSlice {
 
 // -- figma ------------------------------------------------------------------------------------
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FigmaFileView {
@@ -529,6 +566,7 @@ pub struct FigmaFileView {
     pub last_seen: Option<Timestamp>,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FigmaSlice {

@@ -6,6 +6,7 @@ use std::sync::Mutex;
 use serde::{Deserialize, Serialize};
 
 /// The status icon vocabulary from 1.14.x (`TrackingIndicator`).
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum TrayState {
@@ -17,6 +18,7 @@ pub enum TrayState {
     Attention,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TrayStatus {
@@ -27,6 +29,7 @@ pub struct TrayStatus {
 }
 
 /// How strongly a new prompt may interrupt (user-controlled per prompt kind).
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Interruption {
@@ -41,6 +44,7 @@ pub enum Interruption {
     OpenAndFocus,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Notification {

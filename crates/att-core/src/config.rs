@@ -24,6 +24,7 @@ use crate::targets::WorkTargets;
 
 /// How the app signs in to 7pace. Ported from `SevenPaceAuthMode`; a missing value means
 /// `apiToken`, as in 1.14.x.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SevenPaceAuthMode {
     #[default]
@@ -35,6 +36,7 @@ pub enum SevenPaceAuthMode {
 
 /// How strongly a new prompt may interrupt. 1.14.x always opened the panel and took focus
 /// (`OpenAndFocus`); 2.0 opens the panel without stealing focus by default.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Interruption {
@@ -50,6 +52,7 @@ pub enum Interruption {
 }
 
 /// Every kind of prompt that can interrupt.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum PromptKind {
@@ -104,6 +107,7 @@ impl PromptKind {
 /// While active, prompts do not open the panel or send notifications. They stay listed in the
 /// panel and overview. 7pace activity checks still interrupt, because 7pace stops the timer
 /// when they go unanswered.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct QuietHours {
@@ -139,6 +143,7 @@ impl QuietHours {
 }
 
 /// Polling intervals in seconds. The 7pace interval stays in `poll_seconds` for compatibility.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Cadences {
@@ -177,6 +182,7 @@ impl Cadences {
 /// The 7pace polling choices offered in Settings (seconds).
 pub const POLL_CHOICES: [i64; 4] = [30, 60, 120, 300];
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Configuration {

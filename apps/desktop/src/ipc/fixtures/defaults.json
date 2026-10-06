@@ -1,0 +1,93 @@
+{
+  "configuration": {
+    "activityTypeId": "",
+    "autoStartWhenIdle": false,
+    "automaticUpdateChecks": true,
+    "awareness": {
+      "forgottenEnabled": true,
+      "forgottenMinutes": 10,
+      "idleEnabled": true,
+      "idleMinutes": 5,
+      "lockEnabled": true,
+      "workAppIds": [
+        "com.microsoft.VSCode",
+        "com.apple.Terminal",
+        "com.googlecode.iterm2",
+        "com.todesktop.230313mzl4w4u92",
+        "com.openai.codex",
+        "com.apple.dt.Xcode"
+      ]
+    },
+    "branchPattern": "(?:^|/)(?:AB[−#_-]?)?([1-9][0-9]{0,8})(?=[_-]|$)",
+    "cadences": {
+      "calendarSeconds": 30,
+      "probeSeconds": 2,
+      "progressSeconds": 300,
+      "updateCheckSeconds": 60
+    },
+    "calendarEnabled": false,
+    "completionReminders": true,
+    "dayReview": {
+      "enabled": true,
+      "finishMinute": 1020,
+      "gapMinutes": 20,
+      "longSessionMinutes": 180,
+      "startMinute": 540,
+      "weekdays": [
+        2,
+        3,
+        4,
+        5,
+        6
+      ]
+    },
+    "figma": {
+      "dismissalMinutes": 15,
+      "enabled": false,
+      "historyDays": 30
+    },
+    "hiddenPages": [],
+    "interface": {
+      "contrast": "system",
+      "scale": 100,
+      "theme": "system"
+    },
+    "interfaceSetupCompleted": null,
+    "interruptions": {},
+    "meetings": {
+      "activityTypeId": "",
+      "defaultTicket": "",
+      "enabled": true
+    },
+    "microphone": {
+      "apps": [
+        "Slack",
+        "Microsoft Teams",
+        "Zoom",
+        "Web browsers"
+      ],
+      "enabled": true
+    },
+    "miniTimer": false,
+    "notificationsEnabled": true,
+    "organization": "",
+    "pollSeconds": 60,
+    "project": "",
+    "quickSwitchEnabled": true,
+    "quickSwitchShortcut": null,
+    "quietHours": {
+      "enabled": false,
+      "endMinute": 480,
+      "startMinute": 1080
+    },
+    "repositories": [],
+    "selectedCalendarIds": [],
+    "sevenPaceAuthMode": "apiToken",
+    "sevenPaceUrl": "",
+    "targets": {
+      "dailyHours": 7.6,
+      "weeklyHours": 38.0
+    },
+    "watchEnabled": true
+  }
+}

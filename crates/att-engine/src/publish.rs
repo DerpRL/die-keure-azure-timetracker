@@ -7,6 +7,7 @@ use serde::Serialize;
 use sha2::{Digest, Sha256};
 
 /// One changed slice: `name` and its new JSON value.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SliceUpdate {
     pub name: &'static str,

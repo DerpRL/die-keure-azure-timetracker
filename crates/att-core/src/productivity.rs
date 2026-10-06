@@ -7,6 +7,7 @@ use crate::error::AppError;
 use crate::model::TrackingState;
 use crate::time::{add_secs, diff_secs, swift_date};
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ConnectionHealth {
@@ -75,12 +76,14 @@ impl ConnectionHealth {
 /// Only the occurrence key and tracking identifiers are persisted, never calendar text. The Slack
 /// fields Swift also declared (`slackCallID`, `slackTeamID`, `slackWasJoined`) belonged to the
 /// removed huddle detection; they are ignored when old state is read.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MeetingReturn {
     #[serde(alias = "occurrenceID")]
     pub occurrence_id: String,
     /// Meeting end. [`MeetingReturn::open_end`] marks a microphone session without a known end.
+    #[cfg_attr(feature = "ts", ts(as = "Timestamp"))]
     #[serde(with = "crate::time::flex_date")]
     pub end: Timestamp,
     #[serde(alias = "ticketID")]
@@ -166,6 +169,7 @@ impl MeetingReturn {
 }
 
 /// Recent and favourite tickets for quick switch, per workspace. Stores IDs only, never titles.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QuickTickets {

@@ -31,6 +31,7 @@ use crate::state::AppState;
 // -- statistics -------------------------------------------------------------------------------
 
 /// The three Statistics sections.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum StatisticsSection {
@@ -41,6 +42,7 @@ pub enum StatisticsSection {
 }
 
 /// `ExplorerAnalysis` without its entry list (paged through `statistics.entries`).
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnalysisView {
@@ -66,6 +68,7 @@ pub struct AnalysisView {
     pub entries_preview: Vec<ExplorerEntry>,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StatisticsSlice {
@@ -94,6 +97,7 @@ pub struct StatisticsSlice {
 }
 
 /// One page of explorer entries (result of `statistics.entries`).
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EntriesPage {
@@ -105,6 +109,7 @@ pub struct EntriesPage {
 // -- time editor ------------------------------------------------------------------------------
 
 /// Swift `TimeEditMode`.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum TimeEditMode {
@@ -116,6 +121,7 @@ pub enum TimeEditMode {
     Undo,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CorrectionsView {
@@ -125,6 +131,7 @@ pub struct CorrectionsView {
     pub issue: Option<String>,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TimeEditorSlice {
@@ -168,6 +175,7 @@ pub struct TimeEditorSlice {
 
 // -- day review, weekly report, offline drafts, ticket context --------------------------------
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DayReviewSlice {
@@ -182,6 +190,7 @@ pub struct DayReviewSlice {
     pub synced_at: Option<Timestamp>,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WeeklySlice {
@@ -198,6 +207,7 @@ pub struct WeeklySlice {
     pub synced_at: Option<Timestamp>,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OfflineSlice {
@@ -216,6 +226,7 @@ pub struct OfflineSlice {
     pub can_create: bool,
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TicketContextSlice {

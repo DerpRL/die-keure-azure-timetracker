@@ -13,6 +13,7 @@ use crate::ticket::TicketWorkflowStatus;
 use crate::time::diff_secs;
 
 /// "This ticket is completed in Azure. Stop tracking?"
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TicketCompletionPrompt {
@@ -43,12 +44,15 @@ impl TicketCompletionPrompt {
 
 /// Decisions apply to one running session. A confirmed reopen permits a later completion
 /// reminder. Persisted as `ticketCompletion`, including the private `dismissed` map.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct TicketCompletionMonitor {
+    #[cfg_attr(feature = "ts", ts(optional = nullable))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pending: Option<TicketCompletionPrompt>,
     /// `scope|tracking identity` → when "Keep tracking" was chosen.
+    #[cfg_attr(feature = "ts", ts(as = "BTreeMap<String, Timestamp>"))]
     #[serde(with = "crate::time::flex_date::map")]
     dismissed: BTreeMap<String, Timestamp>,
 }

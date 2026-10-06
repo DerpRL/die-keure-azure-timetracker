@@ -26,6 +26,7 @@ use crate::worklog::edit::{WorkLogConflict, WorkLogOverlap};
 use crate::worklog::ops::is_swift_uuid;
 
 /// Upload state of a draft. Serializes as the Swift raw values.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum OfflineDraftStatus {
     #[default]
@@ -50,15 +51,18 @@ impl OfflineDraftStatus {
 }
 
 /// Locally recorded time, possibly still running. Ported from `OfflineDraft`.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OfflineDraft {
     pub id: Uuid,
     /// The workspace identity (lower-cased 7pace URL) the draft belongs to.
     pub workspace: String,
+    #[cfg_attr(feature = "ts", ts(as = "Timestamp"))]
     #[serde(with = "crate::time::flex_date")]
     pub start: Timestamp,
     /// `None` while the local timer runs.
+    #[cfg_attr(feature = "ts", ts(as = "Option<Timestamp>"))]
     #[serde(
         default,
         with = "crate::time::flex_date::option",
@@ -140,6 +144,7 @@ impl OfflineDraft {
 ///
 /// Decodes the 1.14.x `offline-drafts.json` directly (Swift dates, uppercase UUIDs, raw status
 /// values).
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OfflineLedger {
     #[serde(default)]
@@ -182,6 +187,7 @@ impl OfflineLedger {
 }
 
 /// A stopped draft checked against 7pace before upload. Ported from `OfflineReview`.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OfflineReview {

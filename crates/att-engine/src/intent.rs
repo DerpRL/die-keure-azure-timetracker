@@ -13,6 +13,7 @@ use crate::ipc::IpcError;
 use crate::session::{self, SessionIntent};
 
 /// Intents handled by the engine itself.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(tag = "type")]
 pub enum GenericIntent {

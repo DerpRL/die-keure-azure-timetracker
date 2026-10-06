@@ -15,6 +15,7 @@ use crate::text::NonEmpty;
 use crate::time::{Cal, add_secs, diff_secs};
 
 /// Persisted in the configuration as `endOfDayReview`.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct DayReviewPreferences {
@@ -79,21 +80,25 @@ impl DayReviewPreferences {
 }
 
 /// Persisted per workspace and local day under [`DayReviewSchedule::key`].
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DayReviewRecord {
+    #[cfg_attr(feature = "ts", ts(as = "Option<Timestamp>"))]
     #[serde(
         default,
         with = "crate::time::flex_date::option",
         skip_serializing_if = "Option::is_none"
     )]
     pub prompted_at: Option<Timestamp>,
+    #[cfg_attr(feature = "ts", ts(as = "Option<Timestamp>"))]
     #[serde(
         default,
         with = "crate::time::flex_date::option",
         skip_serializing_if = "Option::is_none"
     )]
     pub snoozed_until: Option<Timestamp>,
+    #[cfg_attr(feature = "ts", ts(as = "Option<Timestamp>"))]
     #[serde(
         default,
         with = "crate::time::flex_date::option",
@@ -144,6 +149,7 @@ impl DayReviewSchedule {
     }
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ReviewSession {
@@ -164,6 +170,7 @@ impl ReviewSession {
     }
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ReviewGap {
@@ -177,6 +184,7 @@ impl ReviewGap {
     }
 }
 
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DayReviewSummary {

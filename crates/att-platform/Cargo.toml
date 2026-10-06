@@ -7,6 +7,10 @@ rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 
+[features]
+# Derive `ts_rs::TS` on the UI contract types (used by the contract export test).
+ts = ["dep:ts-rs", "att-core/ts"]
+
 [dependencies]
 att-core.workspace = true
 jiff.workspace = true
@@ -15,6 +19,7 @@ thiserror.workspace = true
 async-trait.workspace = true
 dirs.workspace = true
 tracing.workspace = true
+ts-rs = { workspace = true, optional = true }
 
 [dev-dependencies]
 tokio = { workspace = true }

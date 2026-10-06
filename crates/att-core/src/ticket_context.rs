@@ -18,6 +18,7 @@ use crate::error::{AppError, Result};
 pub use uri::UriParts;
 
 /// A related link shown in the context panel.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TicketLink {
@@ -33,6 +34,7 @@ impl TicketLink {
 }
 
 /// Ticket details for the context panel. Missing text fields are empty strings, as in Swift.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TicketContext {

@@ -18,6 +18,7 @@ pub mod edit;
 pub mod ops;
 
 /// A start/end pair rounded to whole seconds. Ported from `WorkLogTimeEdit`.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorkLogTimeEdit {
     pub start: Timestamp,
@@ -40,6 +41,7 @@ impl WorkLogTimeEdit {
 ///
 /// Persisted inside the edit journal. Writes use camelCase keys; reads also accept the Swift keys
 /// (`existingID`, `ticketID`, …) and the Swift date format, so 1.14.x journals decode directly.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkLogDraft {
@@ -49,6 +51,7 @@ pub struct WorkLogDraft {
     /// For undo: the deleted ID this draft recreates (checked to be gone first).
     #[serde(alias = "restoredID", default, skip_serializing_if = "Option::is_none")]
     pub restored_id: Option<String>,
+    #[cfg_attr(feature = "ts", ts(as = "Timestamp"))]
     #[serde(with = "crate::time::flex_date")]
     pub start: Timestamp,
     pub seconds: i64,
