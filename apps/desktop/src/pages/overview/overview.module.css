@@ -29,6 +29,26 @@
   overflow-wrap: anywhere;
 }
 
+/* The local timer inside "Current tracking" */
+
+.local {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: var(--size-border) solid var(--color-separator);
+}
+
+.local:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.localTitle {
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-semibold);
+}
+
 /* Setup */
 
 .setup {

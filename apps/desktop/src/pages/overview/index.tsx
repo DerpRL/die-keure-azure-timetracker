@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useDateFormatter } from 'react-aria';
 import { Button } from '../../components/Button';
 import { Card, Section } from '../../components/Card';
@@ -92,6 +92,7 @@ export default function OverviewPage() {
   const items = usePromptItems('main');
   const localTitle = useLocalTimerTitle();
   const rootRef = useRef<HTMLDivElement>(null);
+  const localHeadingId = useId();
   usePromptAnnouncements(items);
   useTrackingAnnouncements();
   useFocusRecovery(rootRef, FOCUS_FALLBACKS);
@@ -111,16 +112,15 @@ export default function OverviewPage() {
 
       <Section title="Current tracking" subtitle="Start, pause or finish your active work.">
         {tracking?.showsRemoteTimer !== false ? <CurrentTracking surface="main" /> : null}
-        {tracking && !tracking.showsRemoteTimer && !tracking.local ? (
-          <p className={styles.caption}>No timer running</p>
+        {tracking?.local ? (
+          <section aria-labelledby={localHeadingId} className={styles.local}>
+            <h3 id={localHeadingId} className={styles.localTitle}>
+              {localTitle}
+            </h3>
+            <LocalTimer surface="main" />
+          </section>
         ) : null}
       </Section>
-
-      {tracking?.local ? (
-        <Section title={localTitle}>
-          <LocalTimer surface="main" />
-        </Section>
-      ) : null}
 
       <div className={styles.grid}>
         <Section
