@@ -92,7 +92,7 @@ export function formatDayLong(day: string | Date): string {
   return dayLongFormat.format(typeof day === 'string' ? dayToDate(day) : day);
 }
 
-/** "Monday 5 October 2026" (Swift `.complete`). */
+/** "Monday, 5 October 2026" (Swift `.complete`). */
 export function formatDayComplete(day: string | Date): string {
   return dayCompleteFormat.format(typeof day === 'string' ? dayToDate(day) : day);
 }
