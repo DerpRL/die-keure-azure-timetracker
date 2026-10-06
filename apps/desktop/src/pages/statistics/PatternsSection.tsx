@@ -50,7 +50,7 @@ export function PatternsSection({ slice, analysis, analysisKey, colors, onOpenTi
       <MetricList label="Work pattern totals">
         <Metric title="Context switches" value={String(switches)} note="Between tasks, with breaks up to 15 min" icon={StatisticsIcon} />
         <Metric title="Longest work block" value={duration(longest)} note="Continuous entries for the same task" icon={HistoryIcon} />
-        <Metric title="Average work block" value={duration(average)} note="Continuous entries for the same task" icon={TimeEditorIcon} />
+        <Metric title="Average work block" value={duration(average)} note="Mean length of continuous work" icon={TimeEditorIcon} />
         <Metric
           title="Overlapping time"
           value={duration(Math.max(0, analysis.total - analysis.covered))}

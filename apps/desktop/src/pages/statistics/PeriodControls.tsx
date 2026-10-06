@@ -54,7 +54,7 @@ export function PeriodControls({ slice }: { slice: StatisticsSlice }) {
 
   return (
     <div className={styles.controls}>
-      <div className={styles.controlRow}>
+      <div className={styles.periodRow}>
         <SegmentedControl
           label="Period"
           hideLabel

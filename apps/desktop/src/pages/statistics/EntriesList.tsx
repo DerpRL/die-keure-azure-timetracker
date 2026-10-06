@@ -12,7 +12,7 @@ import { useAction } from '../../state/hooks';
 import { duration, entryTimes, localDay, plural, seconds } from './format';
 import { recordTitle, taskTitles } from './model';
 import { useEntriesPage } from './useEntriesPage';
-import { useOpenPage } from './useOpenPage';
+import { useOpenPage, useStableHandler } from './useOpenPage';
 import styles from './Statistics.module.css';
 
 /** Entries per `statistics.entries` page. The table never holds more than one page. */
@@ -50,12 +50,12 @@ export function EntryTable({ label, entries, analysis, colors }: EntryTableProps
   const titles = taskTitles(analysis);
   const editor = useAction();
   const openPage = useOpenPage();
-  const openInEditor = (entry: ExplorerEntry) => {
+  const openInEditor = useStableHandler((entry: ExplorerEntry) => {
     const { record } = entry;
     void editor.run({ type: 'timeEditor.setDay', day: localDay(record.start) });
     void editor.run({ type: 'timeEditor.setFilter', text: record.ticketId ? String(record.ticketId) : (record.log.comment ?? '') });
     openPage('timeEditor');
-  };
+  });
 
   return (
     <Table<ExplorerEntry, Column>
@@ -72,12 +72,14 @@ export function EntryTable({ label, entries, analysis, colors }: EntryTableProps
         switch (column) {
           case 'task':
             return record.ticketId ? (
-              <TicketLink ticketId={record.ticketId} title={titles.get(record.taskId) ?? null} />
+              <span className={styles.ticketCell}>
+                <TicketLink ticketId={record.ticketId} title={titles.get(record.taskId) ?? null} />
+              </span>
             ) : (
               <span className={styles.strong}>{title}</span>
             );
           case 'when':
-            return entryTimes(entry.start, entry.end);
+            return <span className={styles.number}>{entryTimes(entry.start, entry.end)}</span>;
           case 'activity':
             return (
               <span className={styles.activityCell}>

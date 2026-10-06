@@ -8,6 +8,7 @@ import type { AnalysisView, ExplorerTask, StatisticsSection, StatisticsSlice } f
 import { TicketLink } from '../../features/ticketContext/TicketLink';
 import { useAction } from '../../state/hooks';
 import { duration, percent } from './format';
+import { useStableHandler } from './useOpenPage';
 import styles from './Statistics.module.css';
 
 type TaskOrder = 'time' | 'entries' | 'recent';
@@ -60,10 +61,10 @@ export function TasksSection({ slice, analysis, analysisKey, colors, onSection }
   const tasks = useMemo(() => ordered(analysis.tasks, order), [analysis.tasks, order]);
   const visible = tasks.slice(0, limit);
 
-  const explore = (task: ExplorerTask) => {
+  const explore = useStableHandler((task: ExplorerTask) => {
     void filter.run({ type: 'statistics.setFilter', filter: { ...slice.filter, taskId: task.id } });
     onSection('time');
-  };
+  });
 
   return (
     <div className={styles.stack}>
@@ -99,7 +100,13 @@ export function TasksSection({ slice, analysis, analysisKey, colors, onSection }
                 const share = task.seconds / Math.max(1, analysis.total);
                 return (
                   <span className={styles.taskCell}>
-                    {task.ticketId ? <TicketLink ticketId={task.ticketId} title={task.title} /> : <span className={styles.strong}>{task.title}</span>}
+                    {task.ticketId ? (
+                      <span className={styles.ticketCell}>
+                        <TicketLink ticketId={task.ticketId} title={task.title} />
+                      </span>
+                    ) : (
+                      <span className={styles.strong}>{task.title}</span>
+                    )}
                     <span className={styles.shareRow}>
                       <span className={styles.shareTrack} aria-hidden="true">
                         <span className={styles.shareFill} style={{ width: `${Math.min(100, share * 100)}%` }} />

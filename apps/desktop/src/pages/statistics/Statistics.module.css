@@ -94,6 +94,13 @@
   justify-content: space-between;
 }
 
+.periodRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
 .rangeNavigator {
   display: flex;
   gap: var(--space-3);
@@ -222,7 +229,7 @@
 
 .metrics {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
   gap: var(--space-3);
 }
 
@@ -371,6 +378,18 @@
   display: inline-flex;
   flex-direction: column;
   align-items: flex-end;
+}
+
+/* Ticket buttons line up with plain titles; long titles wrap from the start. */
+.ticketCell {
+  display: block;
+  min-width: 0;
+}
+
+.ticketCell > button {
+  justify-content: flex-start;
+  margin-inline-start: calc(-1 * var(--space-3));
+  text-align: start;
 }
 
 .taskCell {

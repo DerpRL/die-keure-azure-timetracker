@@ -16,6 +16,7 @@ import {
   zoomedWeekStatistics,
 } from '../../ipc/fixtures/slices/statistics';
 import type { MockEngine } from '../../ipc/mockEngine';
+import { useCommand } from '../../shortcuts/hooks';
 import { expectNoA11yViolations } from '../../test/axe';
 import { renderWithEngine } from '../../test/engine';
 import StatisticsPage from './index';
@@ -122,6 +123,19 @@ describe('Statistics page from the week sample', () => {
   it('has no axe violations in the time section', async () => {
     renderPage();
     await expectNoA11yViolations();
+  });
+});
+
+describe('analysis updates', () => {
+  it('marks the sections busy while analysing and announces the result', async () => {
+    const { engine } = renderPage();
+    act(() => engine.patchSlice('statistics', { analyzing: true }));
+    expect(screen.getAllByText('Updating…').length).toBeGreaterThan(0);
+    expect(screen.getByRole('tabpanel').parentElement).toHaveAttribute('aria-busy', 'true');
+    act(() => engine.patchSlice('statistics', { analyzing: false }));
+    await waitFor(() =>
+      expect(document.querySelector('[data-announcer="polite"]')).toHaveTextContent('Statistics updated: 39h 30m recorded.'),
+    );
   });
 });
 
@@ -362,6 +376,24 @@ describe('entries', () => {
     await user.click(screen.getAllByRole('button', { name: /^Edit entries for .* in Time editor$/ })[0]!);
     expect(engine.dispatched('timeEditor.setDay')).toEqual([{ type: 'timeEditor.setDay', day: '2026-09-28' }]);
     expect(engine.dispatched('timeEditor.setFilter')).toEqual([{ type: 'timeEditor.setFilter', text: String(first.record.ticketId) }]);
+  });
+
+  it('opens the Time editor page through the sidebar command', async () => {
+    const open = vi.fn();
+    function TimeEditorCommand() {
+      useCommand({ id: 'page.timeEditor', label: 'Time editor', group: 'Pages', onAction: open });
+      return null;
+    }
+    const slices = sampleSlices();
+    const { user } = renderWithEngine(
+      <>
+        <TimeEditorCommand />
+        <StatisticsPage />
+      </>,
+      { slices: { ...slices, statistics: weekStatistics } },
+    );
+    await user.click(screen.getAllByRole('button', { name: /^Edit entries for .* in Time editor$/ })[0]!);
+    expect(open).toHaveBeenCalledTimes(1);
   });
 
   it('opens ticket details from an entry', async () => {

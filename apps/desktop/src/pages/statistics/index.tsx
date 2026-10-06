@@ -1,5 +1,6 @@
 import { getLocalTimeZone, today } from '@internationalized/date';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useAnnounce } from '../../components/Announcer';
 import { Banner } from '../../components/Banner';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -11,7 +12,7 @@ import type { AnalysisView, Interval, StatisticsSection, StatisticsSlice } from 
 import { useCommands } from '../../shortcuts/hooks';
 import { useAction, useSlice } from '../../state/hooks';
 import { Filters } from './Filters';
-import { plural, syncedLabel } from './format';
+import { duration, plural, syncedLabel } from './format';
 import { activityColors, analysisKey, isFilterActive } from './model';
 import { PatternsSection } from './PatternsSection';
 import { isCurrentOrFuture, PeriodControls } from './PeriodControls';
@@ -156,6 +157,14 @@ function Explorer({ slice, analysis }: { slice: StatisticsSlice; analysis: Analy
   // The tab follows the engine; a choice shows at once and gives way to the next slice.
   const [pending, setPending] = useState<{ from: StatisticsSection; to: StatisticsSection } | null>(null);
   const shown = pending && pending.from === slice.section ? pending.to : slice.section;
+
+  // A filter or zoom re-analyses in the background; say when the numbers are ready.
+  const announce = useAnnounce();
+  const wasAnalyzing = useRef(slice.analyzing);
+  useEffect(() => {
+    if (wasAnalyzing.current && !slice.analyzing) announce(`Statistics updated: ${duration(analysis.total)} recorded.`);
+    wasAnalyzing.current = slice.analyzing;
+  }, [slice.analyzing, analysis.total, announce]);
 
   const key = analysisKey(slice);
   const colors = activityColors(slice.availableActivities, analysis);
