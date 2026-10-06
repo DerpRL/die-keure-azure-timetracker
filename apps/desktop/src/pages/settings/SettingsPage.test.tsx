@@ -480,6 +480,34 @@ describe('sections', () => {
     expect(engine.dispatched('settings.save')[0]?.configuration.awareness.workAppIds.at(-1)).toBe('rider64.exe');
   });
 
+  it('pages long exception lists', async () => {
+    const dateExceptions = Array.from({ length: 45 }, (_, index) => ({
+      id: `2027-01-${String((index % 28) + 1).padStart(2, '0')}`.replace('2027', String(2027 + Math.floor(index / 28))),
+      kind: 'Full-day leave' as const,
+      hours: 0,
+      note: '',
+    }));
+    const { user } = renderWithEngine(<SettingsPage />, {
+      with: { settings: settingsWith({ targets: { ...stored.targets, dateExceptions } }) },
+    });
+    await user.click(tab('Tracking'));
+    expect(screen.getByRole('heading', { name: 'Date exceptions (45)' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^Remove exception on/ })).toHaveLength(20);
+    await user.click(screen.getByRole('button', { name: 'Show 20 more' }));
+    expect(screen.getAllByRole('button', { name: /^Remove exception on/ })).toHaveLength(40);
+    await user.click(screen.getByRole('button', { name: 'Show 5 more' }));
+    expect(screen.getAllByRole('button', { name: /^Remove exception on/ })).toHaveLength(45);
+  });
+
+  it('registers every section in the command palette', async () => {
+    const { user } = renderWithEngine(<SettingsPage />);
+    await user.keyboard('{Meta>}k{/Meta}');
+    const palette = await screen.findByRole('dialog', { name: 'Command palette' });
+    await user.keyboard('Microphone');
+    await user.click(within(palette).getByRole('menuitem', { name: 'Go to Settings: Microphone meetings' }));
+    await waitFor(() => expect(tab('Meetings')).toHaveAttribute('aria-selected', 'true'));
+  });
+
   it('opens the section a deep link names', () => {
     window.location.hash = '#settings/microphone';
     renderWithEngine(<SettingsPage />);

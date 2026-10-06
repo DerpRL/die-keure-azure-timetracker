@@ -130,6 +130,11 @@ function PinPairing() {
           <dd className={styles.pin}>{pairing.pin}</dd>
           {pairing.expiresAt ? <PairingCountdown expiresAt={pairing.expiresAt} /> : null}
         </dl>
+      ) : pairing.pairedHost ? (
+        <dl className={styles.pinDetails}>
+          <dt>Paired with</dt>
+          <dd>{pairing.pairedHost}</dd>
+        </dl>
       ) : null}
       <div className={styles.row}>
         <Button

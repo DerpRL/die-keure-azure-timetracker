@@ -174,7 +174,9 @@ export function AboutSection() {
         ) : null}
       </SettingsGroup>
       <Divider />
-      <Hint>{`Credentials are kept in ${words.credentials}. Day review status is stored only on this ${words.device}.`}</Hint>
+      <Hint>
+        {`Credentials are kept in ${os === 'windows' ? words.credentials : 'macOS Keychain'}. Day review status is stored only on this ${words.device}.`}
+      </Hint>
     </SettingsSection>
   );
 }
