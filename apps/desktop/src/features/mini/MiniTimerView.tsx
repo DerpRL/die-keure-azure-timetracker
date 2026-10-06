@@ -54,8 +54,11 @@ export function MiniTimerView() {
   if (!tracking || !connection) {
     return (
       <MiniTimerShell actions={openPanel} caption={<span className={styles.caption}>Connecting…</span>}>
-        <div data-tauri-drag-region="deep" aria-busy="true" className={styles.readout}>
-          <Skeleton width="6rem" />
+        <div data-tauri-drag-region="deep" className={styles.readout}>
+          {/* The clock's place, busy until the engine reports the timer (never a made-up 0). */}
+          <div role="timer" aria-label="Elapsed time" aria-busy="true">
+            <Skeleton width="6rem" />
+          </div>
         </div>
       </MiniTimerShell>
     );
