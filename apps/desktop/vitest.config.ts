@@ -1,6 +1,10 @@
 import { defineConfig, mergeConfig } from 'vitest/config';
 import viteConfig from './vite.config.ts';
 
+// Tests format and group by local day like the users in Belgium do; pin the zone so results do
+// not depend on the machine (CI runners use UTC). Workers inherit it.
+process.env.TZ = 'Europe/Brussels';
+
 export default defineConfig((env) =>
   mergeConfig(viteConfig(env), {
     test: {
