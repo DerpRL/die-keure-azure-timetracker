@@ -1,7 +1,9 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { useState, type ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PageHeaderSlotContext } from '../../features/app/PageHeaderActions';
+import type * as ipc from '../../ipc';
+import { isTauri } from '../../ipc';
 import { sampleSlices } from '../../ipc/fixtures';
 import {
   emptyRepositories,
@@ -19,10 +21,20 @@ import RepositoriesPage from './index';
 const open = vi.hoisted(() => vi.fn<(options?: unknown) => Promise<string | string[] | null>>());
 vi.mock('@tauri-apps/plugin-dialog', () => ({ open }));
 
+// The folder chooser exists inside the app only; these tests run as if they were inside it.
+vi.mock('../../ipc', async (importOriginal) => {
+  const actual = await importOriginal<typeof ipc>();
+  return { ...actual, isTauri: vi.fn(() => true) };
+});
+
 const showMain = vi.hoisted(() => vi.fn((_page?: string) => Promise.resolve()));
 vi.mock('../../ipc/shell', () => ({ showMain }));
 
 const ROOT = '/Users/sam/Documents/repositories';
+
+beforeEach(() => {
+  vi.mocked(isTauri).mockReturnValue(true);
+});
 
 /** The page with a header slot, as the main window renders it. */
 function WithHeader({ children }: { children: ReactNode }) {
@@ -123,6 +135,15 @@ describe('RepositoriesPage', () => {
     await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
     expect(screen.queryByRole('heading', { name: 'webshop' })).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('heading', { level: 2, name: /Watched repositories/ })).toHaveFocus());
+  });
+
+  it('explains that the folder chooser needs the desktop app', async () => {
+    vi.mocked(isTauri).mockReturnValue(false);
+    const { user, engine } = renderPage();
+    await user.click(screen.getByRole('button', { name: 'Add repositories…' }));
+    expect(await screen.findByText('The folder chooser is only available in the desktop app.')).toBeInTheDocument();
+    expect(open).not.toHaveBeenCalled();
+    expect(engine.dispatched('repositories.scan')).toHaveLength(0);
   });
 
   it('does nothing when the folder chooser is cancelled', async () => {

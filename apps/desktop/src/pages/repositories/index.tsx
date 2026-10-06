@@ -62,8 +62,9 @@ function WatchingSection({ watching }: { watching: boolean }) {
         </p>
       ) : null}
       <p className={styles.text}>
-        A branch such as feature/33624-improve-loading suggests ticket 33624. develop and long-feature/* branches suggest
-        Pause, Stop or Keep current instead, and a detached HEAD does not change tracking.
+        A branch such as <code className={styles.code}>feature/33624-improve-loading</code> suggests ticket 33624.{' '}
+        <code className={styles.code}>develop</code> and <code className={styles.code}>long-feature/*</code> branches
+        suggest Pause, Stop or Keep current instead, and a detached HEAD does not change tracking.
       </p>
       <div className={styles.pattern}>
         <span className={styles.text}>Ticket pattern:</span>

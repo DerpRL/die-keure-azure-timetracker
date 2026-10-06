@@ -1,6 +1,6 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import type { ReactElement } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type * as ipc from '../../ipc';
 import { isTauri } from '../../ipc';
 import { sampleSlices } from '../../ipc/fixtures';
@@ -15,6 +15,11 @@ import { UpdateSettings } from './UpdateSettings';
 vi.mock('../../ipc', async (importOriginal) => {
   const actual = await importOriginal<typeof ipc>();
   return { ...actual, isTauri: vi.fn(actual.isTauri) };
+});
+
+beforeEach(() => {
+  // Outside the app unless a test says otherwise.
+  vi.mocked(isTauri).mockReturnValue(false);
 });
 
 const openUrl = vi.hoisted(() => vi.fn((_url: string) => Promise.resolve()));
