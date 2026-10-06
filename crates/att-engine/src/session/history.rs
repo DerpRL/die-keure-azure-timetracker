@@ -101,10 +101,6 @@ pub(crate) async fn load(engine: &Engine) {
     });
     if loaded {
         crate::controllers::hooks::invalidate_worklogs(engine);
-        let ids: Vec<i64> = engine.read(|state| {
-            state.session.history.logs.iter().filter_map(WorkLog::ticket_id).collect()
-        });
-        super::connection::request_titles(engine, ids);
     }
 }
 

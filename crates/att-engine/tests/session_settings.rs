@@ -26,7 +26,8 @@ async fn save(h: &Harness, config: &Configuration, pat: &str, token: &str) {
 async fn settings_are_validated_before_anything_is_stored() {
     let h = Harness::new(configuration(vec![]));
     h.start().await;
-    let cases: Vec<(Box<dyn Fn(&mut Configuration)>, &str)> = vec![
+    type Change = Box<dyn Fn(&mut Configuration)>;
+    let cases: Vec<(Change, &str)> = vec![
         (
             Box::new(|c| c.awareness.idle_minutes = 0),
             "Choose idle and forgotten-timer thresholds between 1 and 120 minutes.",

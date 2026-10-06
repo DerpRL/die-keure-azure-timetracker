@@ -11,6 +11,7 @@ use std::collections::BTreeMap;
 use jiff::Timestamp;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use att_core::awareness::WorkAwarenessLedger;
 use att_core::completion::TicketCompletionMonitor;
@@ -28,7 +29,7 @@ use crate::ipc::IpcError;
 use crate::services::Services;
 use crate::state::AppState;
 
-use super::connection::workspace;
+use super::connection::{same_workspace, workspace};
 use super::history;
 
 /// Swift `[String: Date]` (`attentionNotified`, `attentionDismissed`).
@@ -87,10 +88,27 @@ pub(crate) fn load(services: &Services, state: &mut AppState) {
     let meeting_return: Option<Option<MeetingReturn>> = read(services, state, keys::MEETING_RETURN);
     let meeting_return = meeting_return.flatten();
     let awareness: Option<WorkAwarenessLedger> = read(services, state, keys::WORK_AWARENESS);
-    state.session.awareness.ledger = awareness.unwrap_or_default();
+    let mut ledger = awareness.unwrap_or_default();
+    if same_workspace(&ledger.workspace, &workspace) {
+        ledger.workspace = workspace.clone();
+    }
+    state.session.awareness.ledger = ledger;
     let completion: Option<TicketCompletionMonitor> =
         read(services, state, keys::TICKET_COMPLETION);
-    state.session.completion.monitor = completion.unwrap_or_default();
+    state.session.completion.monitor =
+        respell(completion.unwrap_or_default(), &workspace, |value, workspace| {
+            if let Some(scope) = value.pointer_mut("/pending/scope")
+                && let Some(text) = scope.as_str()
+            {
+                *scope = Value::String(rekey(text, workspace));
+            }
+            if let Some(Value::Object(dismissed)) = value.get_mut("dismissed") {
+                let entries = std::mem::take(dismissed);
+                for (key, date) in entries {
+                    dismissed.entry(rekey(&key, workspace)).or_insert(date);
+                }
+            }
+        });
     let microphone: Option<MicrophoneTrackingMonitor> =
         read(services, state, keys::MICROPHONE_TRACKING);
     let restore_link =
@@ -111,23 +129,91 @@ pub(crate) fn load(services: &Services, state: &mut AppState) {
             &plan.meeting_identity,
         ));
     }
+    let mut monitor = respell(monitor, &workspace, |value, workspace| {
+        let respell = |field: &mut Value| {
+            if field.as_str().is_some_and(|text| same_workspace(text, workspace)) {
+                *field = Value::String(workspace.to_string());
+            }
+        };
+        if let Some(Value::Object(links)) = value.get_mut("links") {
+            links.values_mut().filter_map(|link| link.get_mut("workspace")).for_each(respell);
+        }
+        if let Some(pending) = value.pointer_mut("/pending/workspace") {
+            respell(pending);
+        }
+    });
     monitor.restrict(&state.config.microphone.apps, &workspace);
     state.session.microphone.monitor = monitor;
+    // 1.14.x stored the URL as typed: the same workspace may be spelled with a trailing slash.
     let quick: Option<QuickTickets> = read(services, state, keys::QUICK_TICKETS);
     state.session.quick_tickets = quick
-        .filter(|quick| quick.workspace == workspace)
+        .filter(|quick| same_workspace(&quick.workspace, &workspace))
+        .map(|quick| QuickTickets { workspace: workspace.clone(), ..quick })
         .unwrap_or_else(|| QuickTickets::new(workspace.clone()));
-    state.session.meeting_return = meeting_return.filter(|plan| plan.workspace == workspace);
-    state.session.paused = paused.flatten().filter(|paused| paused.workspace == workspace);
+    state.session.meeting_return = meeting_return
+        .filter(|plan| same_workspace(&plan.workspace, &workspace))
+        .map(|plan| MeetingReturn { workspace: workspace.clone(), ..plan });
+    state.session.paused = paused
+        .flatten()
+        .filter(|paused| same_workspace(&paused.workspace, &workspace))
+        .map(|paused| PausedSession { workspace: workspace.clone(), ..paused });
     let reviews: Option<BTreeMap<String, DayReviewRecord>> =
         read(services, state, keys::DAY_REVIEWS);
-    state.session.day_review.records = reviews.unwrap_or_default();
+    state.session.day_review.records = rekey_map(reviews.unwrap_or_default(), &workspace);
     let notified: Option<DateMap> = read(services, state, keys::ATTENTION_NOTIFIED);
-    state.session.attention.notified = notified.unwrap_or_default().0;
+    state.session.attention.notified = rekey_map(notified.unwrap_or_default().0, &workspace);
     let dismissed: Option<DateMap> = read(services, state, keys::ATTENTION_DISMISSED);
-    state.session.attention.dismissed = dismissed.unwrap_or_default().0;
+    state.session.attention.dismissed = rekey_map(dismissed.unwrap_or_default().0, &workspace);
     let figma: Option<FigmaStore> = read(services, state, keys::FIGMA_STORE);
-    state.session.figma.store = figma.unwrap_or_default();
+    let mut figma = figma.unwrap_or_default();
+    let ledgers = std::mem::take(&mut figma.workspaces);
+    for (key, ledger) in ledgers {
+        // Figma scopes are `organization|workspace`.
+        let key = match key.split_once('|') {
+            Some((organization, spelled))
+                if !workspace.is_empty() && same_workspace(spelled, &workspace) =>
+            {
+                format!("{organization}|{workspace}")
+            }
+            _ => key,
+        };
+        figma.workspaces.entry(key).or_insert(ledger);
+    }
+    state.session.figma.store = figma;
+}
+
+/// `workspace|rest` keys written with another spelling of this workspace, respelled.
+fn rekey(key: &str, workspace: &str) -> String {
+    match key.split_once('|') {
+        Some((head, rest))
+            if !workspace.is_empty() && head != workspace && same_workspace(head, workspace) =>
+        {
+            format!("{workspace}|{rest}")
+        }
+        _ => key.to_string(),
+    }
+}
+
+fn rekey_map<V>(map: BTreeMap<String, V>, workspace: &str) -> BTreeMap<String, V> {
+    let mut result = BTreeMap::new();
+    for (key, value) in map {
+        result.entry(rekey(&key, workspace)).or_insert(value);
+    }
+    result
+}
+
+/// Rewrites workspace spellings inside a core type whose fields are private, through its JSON.
+fn respell<T: Serialize + DeserializeOwned>(
+    value: T,
+    workspace: &str,
+    rewrite: impl Fn(&mut Value, &str),
+) -> T {
+    if workspace.is_empty() {
+        return value;
+    }
+    let Ok(mut json) = serde_json::to_value(&value) else { return value };
+    rewrite(&mut json, workspace);
+    serde_json::from_value(json).unwrap_or(value)
 }
 
 /// Writes every session document (the store skips unchanged JSON).

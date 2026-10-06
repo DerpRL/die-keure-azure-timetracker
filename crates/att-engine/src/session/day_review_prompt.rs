@@ -86,11 +86,10 @@ pub(crate) fn mark_reviewed(engine: &Engine, day: Date) {
     if engine.preview() {
         return;
     }
-    let cal = engine.cal();
     let now = engine.now();
     let today = today(engine);
     update_with(engine, |state, effects| {
-        let key = DayReviewSchedule::key(&workspace(state), cal.start_of_date(day), &cal);
+        let key = key(&workspace(state), day);
         let review = &mut state.session.day_review;
         let record = review.records.entry(key).or_default();
         record.reviewed_at = Some(now);
@@ -137,7 +136,11 @@ pub(crate) async fn open(engine: &Engine) {
 }
 
 /// The record of the local day `day`, for the controllers (Swift `dayReviewRecord(for:)`).
-pub(crate) fn record(state: &AppState, day: Date, cal: &att_core::Cal) -> Option<DayReviewRecord> {
-    let key = DayReviewSchedule::key(&workspace(state), cal.start_of_date(day), cal);
-    state.session.day_review.records.get(&key).cloned()
+pub(crate) fn record(state: &AppState, day: Date) -> Option<DayReviewRecord> {
+    state.session.day_review.records.get(&key(&workspace(state), day)).cloned()
+}
+
+/// `DayReviewSchedule::key` for a civil day: `workspace|y-m-d` without zero padding.
+pub(crate) fn key(workspace: &str, day: Date) -> String {
+    format!("{workspace}|{}-{}-{}", day.year(), day.month(), day.day())
 }

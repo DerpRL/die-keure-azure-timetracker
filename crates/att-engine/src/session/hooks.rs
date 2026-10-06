@@ -6,15 +6,14 @@ use std::collections::BTreeMap;
 use jiff::Timestamp;
 use jiff::civil::Date;
 
-use att_core::Cal;
 use att_core::day_review::DayReviewRecord;
 use att_core::model::{ActivityType, TrackingState, WorkItem};
 
 use crate::engine::Engine;
 use crate::state::AppState;
 
-/// The lower-cased 7pace workspace URL (Swift `workspaceIdentity`): the URL as typed, so
-/// 1.14.x offline drafts and edit journals keyed by it keep matching (see
+/// The lower-cased 7pace workspace URL (Swift `workspaceIdentity`, 2.0 spelling with a trailing
+/// `/`; 1.14.x data without it is respelled on load, compare with a slash-insensitive check, see
 /// `session::connection::workspace_identity`).
 pub fn workspace(state: &AppState) -> String {
     super::connection::workspace(state)
@@ -55,20 +54,19 @@ pub fn idle_correction_applied(engine: &Engine, correction_id: uuid::Uuid) {
     let _ = engine.persist();
 }
 
-/// When the tracking state was last confirmed by 7pace (Swift `lastSync`), for the day review
-/// summary's `confirmed_at`. Added for the controllers.
-pub fn last_sync(state: &AppState) -> Option<Timestamp> {
-    state.session.connection.last_sync
+/// The confirmed timer for reviews at `now`: the tracking state (while connected), when 7pace
+/// last confirmed it (Swift `lastSync`) and whether the connection health is confirmed (Swift
+/// `connectionHealth == .confirmed`). Requested by the controllers for the day review.
+pub fn tracking_confirmation(
+    state: &AppState,
+    now: Timestamp,
+) -> (Option<TrackingState>, Option<Timestamp>, bool) {
+    let confirmed = super::connection::health(state, now)
+        == att_core::productivity::ConnectionHealth::Confirmed;
+    (tracking_state(state), state.session.connection.last_sync, confirmed)
 }
 
-/// Swift `connectionHealth == .confirmed` at `now` (the day review's `timer_confirmed`, the
-/// offline drafts' upload gate). Added for the controllers.
-pub fn timer_confirmed(state: &AppState, now: Timestamp) -> bool {
-    super::connection::health(state, now) == att_core::productivity::ConnectionHealth::Confirmed
-}
-
-/// The day review record of a local day (Swift `dayReviewRecord(for:)`). Added for the
-/// controllers.
-pub fn day_review_record(state: &AppState, day: Date, cal: &Cal) -> Option<DayReviewRecord> {
-    super::day_review_prompt::record(state, day, cal)
+/// The day review record of a local day in this workspace (Swift `dayReviewRecord(for:)`).
+pub fn day_review_record(state: &AppState, day: Date) -> Option<DayReviewRecord> {
+    super::day_review_prompt::record(state, day)
 }

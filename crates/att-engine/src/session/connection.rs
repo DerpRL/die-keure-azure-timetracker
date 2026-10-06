@@ -12,7 +12,6 @@ use att_core::productivity::{ConnectionHealth, QuickTickets};
 use att_core::text::NonEmpty;
 use att_core::time::diff_secs;
 use att_core::{AppError, Cal, Result};
-use att_net::Endpoint;
 
 use crate::clients::Clients;
 use crate::controllers::hooks as controllers;
@@ -46,17 +45,25 @@ pub(crate) struct ConnectionState {
     pub activity_error: Option<String>,
 }
 
-/// Swift `workspaceIdentity`: the trimmed 7pace URL as typed, lower-cased, when it is valid.
+/// Swift `workspaceIdentity`, the 2.0 spelling shared with the controllers
+/// (`clients::workspace_identity`: the parsed URL, lower-cased, with a trailing `/`).
 ///
-/// Swift built it from `URLComponents(string:).url`, which keeps the text as typed (a trailing
-/// `/` only when the user typed one). Paused sessions, quick tickets, meeting returns, day
-/// reviews, awareness, Figma links and offline drafts from 1.14.x are keyed by this exact
-/// string, so it must not be normalised (`Url::as_str` would always add the `/`).
+/// Swift kept the URL as typed (usually without the `/`), so data restored from 1.14.x is
+/// compared with [`same_workspace`] and respelled on load (`session::persist`).
 pub(crate) fn workspace_identity(seven_pace_url: &str) -> String {
-    match Endpoint::seven_pace(seven_pace_url) {
-        Ok(_) => seven_pace_url.trim().to_lowercase(),
-        Err(_) => String::new(),
-    }
+    crate::clients::workspace_identity(seven_pace_url)
+}
+
+/// Workspace identities compare without a trailing slash or the default port, so data written
+/// with either spelling (1.14.x stored the URL as typed) still belongs to the workspace.
+pub(crate) fn same_workspace(a: &str, b: &str) -> bool {
+    normalized_workspace(a) == normalized_workspace(b)
+}
+
+fn normalized_workspace(workspace: &str) -> String {
+    let lower = workspace.trim().to_lowercase();
+    let trimmed = lower.trim_end_matches('/');
+    trimmed.strip_suffix(":443").unwrap_or(trimmed).to_string()
 }
 
 pub(crate) fn workspace(state: &AppState) -> String {
@@ -224,13 +231,18 @@ fn reset_for_connect(state: &mut AppState, effects: &mut Effects) {
     flow.skip_figma_prefill = false;
     session.loading_titles.clear();
     session.microphone.monitor.restrict(&state.config.microphone.apps, &workspace);
-    if session.paused.as_ref().is_some_and(|paused| paused.workspace != workspace) {
+    if session.paused.as_ref().is_some_and(|paused| !same_workspace(&paused.workspace, &workspace))
+    {
         session.paused = None;
     }
-    if session.meeting_return.as_ref().is_some_and(|plan| plan.workspace != workspace) {
+    if session
+        .meeting_return
+        .as_ref()
+        .is_some_and(|plan| !same_workspace(&plan.workspace, &workspace))
+    {
         session.meeting_return = None;
     }
-    if session.quick_tickets.workspace != workspace {
+    if !same_workspace(&session.quick_tickets.workspace, &workspace) {
         session.quick_tickets = QuickTickets::new(workspace);
     }
     let connection = &mut session.connection;

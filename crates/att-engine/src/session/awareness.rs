@@ -365,8 +365,9 @@ async fn open_correction(engine: &Engine, prompt: &att_core::awareness::IdlePeri
     shell.hide_panel();
     shell.show_main(Some("timeEditor"));
     engine.update(|state| state.visible_page = Some("timeEditor".to_string()));
-    controllers::prepare_idle_correction(
+    controllers::prepare_idle_correction_for(
         engine,
+        prompt.id,
         Some(prompt.session.work_log_id.clone()),
         prompt.start,
         end,

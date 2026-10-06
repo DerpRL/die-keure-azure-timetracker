@@ -195,6 +195,8 @@ export type ConnectionSlice = {
   hasSevenPaceToken: boolean;
   connected: boolean;
   connecting: boolean;
+  /** Why the last ticket completion check failed ("Ticket completion check: …"). */
+  completionIssue?: string | null;
 };
 
 export type ContextDay = {
@@ -372,7 +374,10 @@ export type DraftView = {
   /** "Use Azure ticket" can be switched off. */
   allowsNoTicket: boolean;
   manual: ManualTrackingKind | null;
-  /** The activity the chooser preselects (Swift `preferredActivityID`). */
+  /**
+   * The activity the chooser preselects (Swift `preferredActivityID`), or `""` when that
+   * activity is not loaded.
+   */
   preferredActivityId: string;
   /** Activities the user may start with; empty means any loaded activity. */
   allowedActivityIds: Array<string>;
@@ -382,6 +387,28 @@ export type DraftView = {
   defaultComment: string;
   /** The primary button says "Resume" instead of "Start". */
   resume: boolean;
+  /** A daily stand-up: only the Standup activity can start it. */
+  standup: boolean;
+  /** Started from Figma: only the Design activity can start it. */
+  isFigma: boolean;
+  /** The 7pace comment the draft carries (Swift `remark`), shown with the ticket switched off. */
+  remark: string | null;
+  /** "Comment: …" with the ticket included (Swift `trackingComment(includeTicket: true)`). */
+  commentWithTicket: string | null;
+  /** "Comment: …" with the ticket switched off. */
+  commentWithoutTicket: string | null;
+  /** The calendar meeting the draft is for. */
+  meetingTitle: string | null;
+  /**
+   * "Choose a ticket instead…" / "Choose another ticket…" is offered
+   * (`tracking.chooseSuggestionTicket`).
+   */
+  canChooseTicket: boolean;
+  /**
+   * The activity ids `tracking.start` accepts right now (Swift `canStart`), `""` included
+   * when the workspace has no activity types; empty while busy or disconnected.
+   */
+  startableActivityIds: Array<string>;
 };
 
 /** One page of explorer entries (result of `statistics.entries`). */
@@ -547,6 +574,19 @@ export type FigmaSlice = {
   /** Newest first, at most 200. */
   history: Array<FigmaContextEvent>;
   storageIssue: string | null;
+  /** Observation is on (`preferences.enabled`) and not paused by "Pause watching". */
+  observing: boolean;
+  /** The status line (Swift `FigmaService.status`, without the time). */
+  label: string;
+  /**
+   * When Figma was last in front, and the file seen then ("Waiting for Figma · 10:02 ·
+   * Seen: …").
+   */
+  lastForegroundAt: string | null;
+  /** The files linked to `lastWorkedTicket`, most recently seen first. */
+  lastWorked: Array<FigmaFileView>;
+  /** History events in total (the list shows the latest 200). */
+  historyCount: number;
 };
 
 /** "Start Design for this file?" */
@@ -720,6 +760,8 @@ export type MeetingReturnView = {
   end: string;
   /** Due now: offer "Resume previous…". */
   ready: boolean;
+  /** The meeting was a microphone session ("Microphone use stopped"). */
+  microphone: boolean;
 };
 
 /** App categories the user can watch. Persisted by display name (`"Microsoft Teams"`). */
@@ -740,6 +782,13 @@ export type MicrophoneDiagnostics = {
   /** The last sample succeeded recently. */
   fresh: boolean;
   issue: string | null;
+  /**
+   * The status line ("Watching microphone status · checked every 2 seconds", "Microphone in
+   * use: Slack", the last error, …).
+   */
+  status?: string | null;
+  /** The last successful sample ("Checked 10:02:14"). */
+  checkedAt?: string | null;
 };
 
 /** "Has your meeting finished?" for the timer that was running during the call. */
@@ -868,6 +917,15 @@ export type ProgressSlice = {
   stale: boolean;
   loading: boolean;
   issue: string | null;
+  /**
+   * Start of today: the UI extrapolates today's total from `max(computedAt, todayStart)`,
+   * so a timer running across midnight counts only today's part.
+   */
+  todayStart?: string | null;
+  /** Start of the ISO week (Monday), likewise for the week's total. */
+  weekStart?: string | null;
+  /** Why today's target differs (a holiday or a date exception). */
+  todayReason?: string | null;
 };
 
 /** Every kind of prompt that can interrupt. */
@@ -964,7 +1022,17 @@ export type SearchView = {
   error: string | null;
 };
 
-/** Intents owned by the session. Field names are camelCase on the wire. */
+/**
+ * Intents owned by the session. Field names are camelCase on the wire.
+ *
+ * Where an action can happen in the tray panel or in the main window's ticket picker, it acts
+ * in the surface that is open (see [`view::FlowSurface`]): the prompt actions `branch.track`,
+ * `branch.chooseAnother`, `completion.switch` and `tracking.resume` use the picker while it is
+ * open (`tracking.openPicker`) and otherwise open the panel flow; `tracking.chooseTicket`,
+ * `tracking.chooseManual` and `tracking.continueWithoutTicket` use the panel while its flow is
+ * open (`tracking.beginPanel`) and otherwise the picker. Meeting, microphone, Figma, meeting
+ * return, forgotten-timer and attention actions always use the panel, as in 1.14.x.
+ */
 export type SessionIntent =
   | { type: "app.finishOnboarding" }
   | { type: "app.setInterface"; preferences: InterfacePreferences }
@@ -973,6 +1041,7 @@ export type SessionIntent =
   | { type: "app.dismissNotice" }
   | { type: "connection.retry" }
   | { type: "connection.refresh" }
+  | { type: "connection.recheck" }
   | {
       type: "settings.save";
       configuration: Configuration;
@@ -983,7 +1052,9 @@ export type SessionIntent =
   | { type: "settings.setPromptInterruption"; kind: PromptKind; level: Interruption }
   | { type: "settings.setQuietHours"; quietHours: QuietHours }
   | { type: "settings.testBranchPattern"; branch: string; pattern: string }
+  | { type: "settings.appIdentity"; path: string }
   | { type: "pairing.generatePin" }
+  | { type: "pairing.begin"; workspace: string }
   | { type: "pairing.cancel" }
   | { type: "repositories.scan"; path: string }
   | { type: "repositories.cancelScan" }
@@ -1018,6 +1089,7 @@ export type SessionIntent =
   | { type: "tracking.resume" }
   | { type: "tracking.discardPause" }
   | { type: "tracking.confirmActivity" }
+  | { type: "tracking.reloadActivities" }
   | { type: "attention.keepStopped" }
   | { type: "attention.continue" }
   | { type: "quick.switch" }
@@ -1034,6 +1106,7 @@ export type SessionIntent =
   | { type: "microphone.endKeep" }
   | { type: "microphone.endPause" }
   | { type: "microphone.endStop" }
+  | { type: "microphone.checkNow" }
   | { type: "awareness.keepIdle" }
   | { type: "awareness.reviewIdle"; promptId: string }
   | { type: "awareness.openCorrection" }
@@ -1047,8 +1120,10 @@ export type SessionIntent =
   | { type: "history.load" }
   | { type: "history.exportCsv"; path: string }
   | { type: "agenda.setDay"; day: string }
+  | { type: "agenda.openCalendar" }
   | { type: "figma.setPreferences"; preferences: FigmaPreferences }
   | { type: "figma.requestAccess" }
+  | { type: "figma.refreshAccess" }
   | { type: "figma.keep"; suggestionId: string }
   | { type: "figma.track"; suggestionId: string; useLinkedTicket: boolean }
   | { type: "figma.link"; fileKey: string; ticketId: number | null }
@@ -1064,6 +1139,8 @@ export type SettingsSlice = {
   pairing: PairingView;
   microphone: MicrophoneDiagnostics;
   interruptions: Array<InterruptionChoice>;
+  /** The last successful `settings.save` (a failure leaves it and shows `app.error`). */
+  savedAt?: string | null;
 };
 
 /**

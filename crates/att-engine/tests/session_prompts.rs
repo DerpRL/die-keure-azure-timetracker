@@ -377,6 +377,6 @@ async fn the_day_review_prompts_at_the_finish_time_and_can_be_snoozed_or_marked(
     assert_eq!(h.slice("prompts")["dayReview"], Value::Null, "never after the day was reviewed");
     let saved: std::collections::BTreeMap<String, Value> =
         h.t.store.get(att_store::keys::DAY_REVIEWS).unwrap().unwrap();
-    let record = &saved[&format!("{WORKSPACE}|2026-10-6")];
+    let record = &saved[&format!("{WORKSPACE}/|2026-10-6")];
     assert!(record.get("reviewedAt").is_some(), "{record}");
 }

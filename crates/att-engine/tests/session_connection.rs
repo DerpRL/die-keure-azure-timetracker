@@ -25,7 +25,7 @@ async fn connect_reads_the_timer_then_activities_history_and_progress() {
     assert_eq!(connection["hasSevenPaceToken"], true);
     assert_eq!(connection["hasAzurePat"], true);
     assert_eq!(connection["host"], HOST);
-    assert_eq!(connection["workspace"], WORKSPACE, "the URL as typed, like 1.14.x");
+    assert_eq!(connection["workspace"], format!("{WORKSPACE}/"), "the 2.0 spelling");
     assert_eq!(connection["indicator"], "running");
     assert_eq!(h.slice("app")["notice"], format!("Connected to {HOST}"));
     let flow = h.slice("flow");

@@ -103,7 +103,7 @@ async fn documents_written_by_1_14_load_and_another_workspace_drops_them() {
     // Saving writes the 2.0 encoding.
     h.ok(json!({"type": "app.dismissError"})).await;
     let raw = store.get_raw(keys::ATTENTION_DISMISSED).unwrap().unwrap();
-    assert_eq!(raw, format!(r#"{{"{WORKSPACE}|x":"2025-10-06T08:00:00Z"}}"#));
+    assert_eq!(raw, format!(r#"{{"{WORKSPACE}/|x":"2025-10-06T08:00:00Z"}}"#), "respelled");
 
     // Another 7pace workspace: the pause, the meeting return and quick tickets are dropped.
     let mut other = configuration(vec![]);
@@ -111,6 +111,49 @@ async fn documents_written_by_1_14_load_and_another_workspace_drops_them() {
     let h = Harness::with_store(store.clone(), other);
     assert_eq!(h.slice("tracking")["paused"], Value::Null);
     assert_eq!(h.slice("flow")["quickTickets"], json!([]));
+}
+
+#[tokio::test]
+async fn data_keyed_by_another_spelling_of_the_workspace_still_belongs_to_it() {
+    let store = store();
+    // 1.14.x stored the URL as typed, without the trailing slash of the 2.0 identity.
+    let typed = WORKSPACE.to_string();
+    store
+        .put_raw(
+            keys::PAUSED_SESSION,
+            &json!({"ticketID": 4821, "workspace": typed, "pausedAt": 781_430_400.0, "elapsedSeconds": 60.0}).to_string(),
+        )
+        .unwrap();
+    store
+        .put_raw(
+            keys::QUICK_TICKETS,
+            &json!({"workspace": typed, "recent": [4821], "favorites": []}).to_string(),
+        )
+        .unwrap();
+    store
+        .put_raw(
+            keys::DAY_REVIEWS,
+            &json!({format!("{typed}|2026-10-6"): {"reviewedAt": 781_430_400.0}}).to_string(),
+        )
+        .unwrap();
+    store
+        .put_raw(
+            keys::FIGMA_STORE,
+            &json!({"workspaces": {format!("contoso|{typed}"): {"links": {"AbC123": 4790}}}})
+                .to_string(),
+        )
+        .unwrap();
+    let h = Harness::with_store(store.clone(), configuration(vec![]));
+    assert_eq!(h.slice("tracking")["paused"]["ticketId"], 4821);
+    assert_eq!(h.slice("flow")["quickTickets"][0]["ticketId"], 4821);
+    assert_eq!(h.slice("figma")["files"][0]["ticketId"], 4790);
+    h.start().await;
+    // Reviewed today already: no prompt at the finish time.
+    h.t.clock.set(ts("2026-10-06T15:01:00Z"));
+    h.tick().await;
+    assert_eq!(h.slice("prompts")["dayReview"], Value::Null);
+    let raw = store.get_raw(keys::DAY_REVIEWS).unwrap().unwrap();
+    assert!(raw.contains(&format!("\"{WORKSPACE}/|2026-10-6\"")), "respelled: {raw}");
 }
 
 #[tokio::test]
@@ -155,6 +198,8 @@ async fn a_microphone_meeting_from_1_14_keeps_its_end_prompt() {
 #[tokio::test]
 async fn history_export_writes_formula_safe_csv() {
     let h = Harness::new(configuration(vec![]));
+    // The running ticket's title is loaded, so the export can name it.
+    h.seven_pace.set_current(running(Some(33984), Some("dev"), None));
     let mut first = WorkLog::new("a", "2026-10-06T09:00:00", 1800.9);
     first.work_item_id = Some(33984);
     first.comment = Some("=SUM(A1) \"quoted\"".into());
