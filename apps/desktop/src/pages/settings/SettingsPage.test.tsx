@@ -480,6 +480,18 @@ describe('sections', () => {
     expect(engine.dispatched('settings.save')[0]?.configuration.awareness.workAppIds.at(-1)).toBe('rider64.exe');
   });
 
+  it('saves automatic update checks from the switch the updater section names', async () => {
+    const { engine, user } = renderWithEngine(<SettingsPage />);
+    await user.click(tab('App'));
+    expect(screen.getByRole('heading', { level: 2, name: 'App updates' })).toBeInTheDocument();
+    expect(screen.getByText(/“Check for updates automatically” in these settings/)).toBeInTheDocument();
+    await user.click(screen.getByRole('switch', { name: 'Check for updates automatically' }));
+    await user.click(tab('Features'));
+    expect(screen.getByRole('switch', { name: 'Check for updates automatically' })).not.toBeChecked();
+    await user.click(saveButton());
+    expect(engine.dispatched('settings.save')[0]?.configuration.automaticUpdateChecks).toBe(false);
+  });
+
   it('pages long exception lists', async () => {
     const dateExceptions = Array.from({ length: 45 }, (_, index) => ({
       id: `2027-01-${String((index % 28) + 1).padStart(2, '0')}`.replace('2027', String(2027 + Math.floor(index / 28))),

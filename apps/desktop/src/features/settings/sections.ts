@@ -81,7 +81,7 @@ export const SETTINGS_CATEGORIES: readonly SettingsCategoryDefinition[] = [
     title: 'App',
     sections: [
       { id: 'window', title: 'Window and startup' },
-      { id: 'updates', title: 'Updates' },
+      { id: 'updates', title: 'App updates' },
       { id: 'about', title: 'About' },
     ],
   },

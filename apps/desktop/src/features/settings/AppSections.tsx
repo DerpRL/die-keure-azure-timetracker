@@ -9,7 +9,7 @@ import { UpdateSettings } from '../updates/UpdateSettings';
 import { AppearanceSettings } from './AppearanceForm';
 import { FigmaSettings } from './FigmaSettings';
 import { osWords } from './labels';
-import { Divider, Hint, InlineIssue, SettingsGroup, SettingsSection } from './SettingsSection';
+import { Divider, Hint, InlineIssue, SettingsCard, SettingsGroup, SettingsSection } from './SettingsSection';
 import { useSettingsForm } from './SettingsForm';
 import { useLaunchAtLogin } from './useLaunchAtLogin';
 import { CADENCE_BOUNDS, issueFor } from './validation';
@@ -66,21 +66,25 @@ export function WindowSection() {
   );
 }
 
-/** Settings → App → Updates: automatic checks (draft) plus the update controls. */
+/**
+ * Settings → App → App updates: the updater's own section (`UpdateSettings`, with its h2 and
+ * the saved state of automatic checks) plus the draft switch it points to.
+ */
 export function UpdatesSection() {
   const { draft, update } = useSettingsForm();
   const seconds = draft.cadences.updateCheckSeconds;
   return (
-    <SettingsSection id="updates">
+    <SettingsCard id="updates">
+      <UpdateSettings />
+      <Divider />
       <Switch
         isSelected={draft.automaticUpdateChecks}
         onChange={(automaticUpdateChecks) => update((current) => ({ ...current, automaticUpdateChecks }))}
-        description={`Checks the update feed every ${seconds} seconds. Change the interval in Advanced.`}
+        description={`Checks the update feed every ${seconds} seconds once saved. Change the interval in Advanced.`}
       >
         Check for updates automatically
       </Switch>
-      <UpdateSettings />
-    </SettingsSection>
+    </SettingsCard>
   );
 }
 

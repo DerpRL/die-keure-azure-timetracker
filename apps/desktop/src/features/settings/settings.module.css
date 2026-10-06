@@ -74,6 +74,12 @@
   border-radius: var(--radius-lg);
 }
 
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
 .group {
   display: flex;
   flex-direction: column;

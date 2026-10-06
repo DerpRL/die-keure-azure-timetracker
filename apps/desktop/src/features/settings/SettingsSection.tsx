@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Section } from '../../components/Card';
+import { Card, Section } from '../../components/Card';
 import { ErrorIcon, WarningIcon } from '../../components/icons';
 import { cx } from '../../utils/cx';
 import { sectionAnchorId, sectionTitle, type SettingsSectionId } from './sections';
@@ -22,6 +22,20 @@ export function SettingsSection({ id, subtitle, actions, children }: SettingsSec
       <Section title={sectionTitle(id)} subtitle={subtitle} actions={actions} headingLevel={2}>
         {children}
       </Section>
+    </div>
+  );
+}
+
+/**
+ * A deep-linkable card for content that brings its own h2 (the updater's `UpdateSettings`), so
+ * the page outline has no empty or duplicated heading.
+ */
+export function SettingsCard({ id, children }: { id: SettingsSectionId; children: ReactNode }) {
+  return (
+    <div id={sectionAnchorId(id)} className={styles.sectionAnchor} tabIndex={-1}>
+      <Card padding="medium" className={styles.card}>
+        {children}
+      </Card>
     </div>
   );
 }

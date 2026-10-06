@@ -212,7 +212,7 @@ export const FEATURES: readonly FeatureDefinition[] = [
   },
   {
     id: 'updates',
-    title: 'Updates',
+    title: 'Check for updates automatically',
     group: 'App',
     privacy: () => 'Checks the public update feed. No personal data is sent.',
     permission: none,
