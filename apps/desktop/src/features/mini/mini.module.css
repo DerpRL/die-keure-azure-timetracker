@@ -5,6 +5,8 @@
 }
 
 .idle {
+  /* Long text must not widen the body and push the button onto a second line. */
+  contain: inline-size;
   overflow: hidden;
   color: var(--color-text-secondary);
   font-size: var(--font-size-body);
@@ -14,6 +16,7 @@
 }
 
 .caption {
+  contain: inline-size;
   display: flex;
   align-items: center;
   gap: var(--space-1);
