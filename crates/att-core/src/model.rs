@@ -11,6 +11,28 @@ use crate::error::{AppError, Result};
 use crate::text::NonEmpty;
 use crate::time::wire_date;
 
+/// The operating system, for per-OS defaults such as work apps and microphone apps.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum HostOs {
+    Macos,
+    Windows,
+    Other,
+}
+
+impl HostOs {
+    /// The OS this binary was built for.
+    pub const fn current() -> Self {
+        if cfg!(target_os = "macos") {
+            Self::Macos
+        } else if cfg!(target_os = "windows") {
+            Self::Windows
+        } else {
+            Self::Other
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Repository {
     pub id: Uuid,

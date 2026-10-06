@@ -24,6 +24,10 @@ pub mod windows;
 /// Shown when a capability is not available on this OS.
 pub mod unsupported;
 
+/// Pure parsing helpers for the Windows implementation. Compiled on every OS so their unit tests
+/// run on macOS CI too (registry key names, FILETIME values, executable names).
+pub mod windows_parse;
+
 pub mod paths;
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -257,22 +261,10 @@ impl Platform {
 }
 
 /// Which OS the app runs on, for per-OS defaults (work apps, microphone apps, shortcuts).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum Os {
-    Macos,
-    Windows,
-    Other,
-}
+pub use att_core::model::HostOs as Os;
 
 pub const fn current_os() -> Os {
-    if cfg!(target_os = "macos") {
-        Os::Macos
-    } else if cfg!(target_os = "windows") {
-        Os::Windows
-    } else {
-        Os::Other
-    }
+    Os::current()
 }
 
 /// Re-exported so implementors do not need their own path helpers.
