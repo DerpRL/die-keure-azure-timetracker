@@ -82,6 +82,7 @@ impl HttpTransport {
     }
 
     pub fn with_options(options: TransportOptions) -> Result<Self> {
+        install_crypto_provider();
         let mut builder = Client::builder()
             .user_agent(USER_AGENT)
             .redirect(reqwest::redirect::Policy::none())
@@ -202,9 +203,29 @@ fn transport_error(error: &reqwest::Error, host: &str) -> AppError {
     }
 }
 
+/// Makes ring the process-wide rustls provider unless one is installed already (the updater
+/// plugin installs the same one). reqwest is built without a provider of its own.
+fn install_crypto_provider() {
+    if rustls::crypto::CryptoProvider::get_default().is_none() {
+        // Losing the race to another thread that installed one is fine.
+        let _ = rustls::crypto::ring::default_provider().install_default();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_transport_uses_the_ring_provider() {
+        HttpTransport::new().expect("a client builds without a built-in reqwest provider");
+        let provider = rustls::crypto::CryptoProvider::get_default().expect("installed");
+        let ring = rustls::crypto::ring::default_provider();
+        assert_eq!(
+            provider.cipher_suites.iter().map(|suite| suite.suite()).collect::<Vec<_>>(),
+            ring.cipher_suites.iter().map(|suite| suite.suite()).collect::<Vec<_>>()
+        );
+    }
 
     #[test]
     fn retry_after_reads_seconds_dates_and_defaults() {
