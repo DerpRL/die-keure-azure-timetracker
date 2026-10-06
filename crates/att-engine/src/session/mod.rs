@@ -40,6 +40,10 @@ pub enum SessionIntent {
     /// Refuses while a write is in flight; persists before an update restarts the app.
     #[serde(rename = "app.prepareForRestart")]
     PrepareForRestart,
+    #[serde(rename = "app.dismissError")]
+    DismissError,
+    #[serde(rename = "app.dismissNotice")]
+    DismissNotice,
 
     #[serde(rename = "connection.retry")]
     RetryConnection,
@@ -55,6 +59,9 @@ pub enum SessionIntent {
     SetPromptInterruption { kind: PromptKind, level: Interruption },
     #[serde(rename = "settings.setQuietHours")]
     SetQuietHours { quiet_hours: QuietHours },
+    /// Returns the Settings tester line for `branch` under `pattern` (no state change).
+    #[serde(rename = "settings.testBranchPattern")]
+    TestBranchPattern { branch: String, pattern: String },
 
     #[serde(rename = "pairing.generatePin")]
     GeneratePin,
