@@ -221,15 +221,13 @@ impl TrackingState {
 
     /// Rejects HTTP 200 responses that carry an error state, and unknown tracking states.
     pub fn checked(self) -> Result<Self> {
-        if let Some(settings) = &self.track_settings {
-            if settings.has_error() {
-                let message = settings
-                    .response_message
-                    .non_empty()
-                    .unwrap_or("7pace rejected this request.")
-                    .to_string();
-                return Err(AppError::Message(message));
-            }
+        if let Some(settings) = self.track_settings.as_ref().filter(|s| s.has_error()) {
+            let message = settings
+                .response_message
+                .non_empty()
+                .unwrap_or("7pace rejected this request.")
+                .to_string();
+            return Err(AppError::Message(message));
         }
         match &self.track {
             Some(track) if track.is_running() || track.is_idle() => Ok(self),

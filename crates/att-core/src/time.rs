@@ -45,10 +45,11 @@ pub fn from_secs(seconds: f64) -> Timestamp {
     if !seconds.is_finite() {
         return if seconds > 0.0 { Timestamp::MAX } else { Timestamp::MIN };
     }
-    if seconds.fract() == 0.0 && seconds.abs() < i64::MAX as f64 {
-        if let Ok(ts) = Timestamp::from_second(seconds as i64) {
-            return ts;
-        }
+    if seconds.fract() == 0.0
+        && seconds.abs() < i64::MAX as f64
+        && let Ok(ts) = Timestamp::from_second(seconds as i64)
+    {
+        return ts;
     }
     let nanos = (seconds * 1e9).round();
     Timestamp::from_nanosecond(nanos as i128).unwrap_or(if seconds > 0.0 {
@@ -341,6 +342,81 @@ pub mod swift_date {
     }
 }
 
+/// Serde adapter for every persisted instant.
+///
+/// Writes RFC 3339 strings. Reads RFC 3339 strings, or numbers in the Swift `JSONEncoder`
+/// default format (seconds since 2001-01-01), so the 1.14.x JSON files decode directly into the
+/// Rust types. Use `#[serde(with = "crate::time::flex_date")]` on `Timestamp` fields,
+/// `flex_date::option` (plus `#[serde(default)]`) on `Option<Timestamp>`, and `flex_date::map` on
+/// `BTreeMap<String, Timestamp>` (Swift `[String: Date]`).
+pub mod flex_date {
+    use super::*;
+    use serde::{Deserializer, Serializer, de::Error};
+    use std::collections::BTreeMap;
+
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Raw {
+        Number(f64),
+        Text(String),
+    }
+
+    fn convert<E: Error>(raw: Raw) -> Result<Timestamp, E> {
+        match raw {
+            Raw::Number(n) => Ok(swift_date::to_timestamp(n)),
+            Raw::Text(t) => t.parse::<Timestamp>().map_err(E::custom),
+        }
+    }
+
+    pub fn serialize<S: Serializer>(ts: &Timestamp, s: S) -> Result<S::Ok, S::Error> {
+        s.collect_str(ts)
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<Timestamp, D::Error> {
+        convert(Raw::deserialize(d)?)
+    }
+
+    pub mod option {
+        use super::*;
+
+        pub fn serialize<S: Serializer>(ts: &Option<Timestamp>, s: S) -> Result<S::Ok, S::Error> {
+            match ts {
+                Some(ts) => s.collect_str(ts),
+                None => s.serialize_none(),
+            }
+        }
+
+        pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<Option<Timestamp>, D::Error> {
+            Option::<Raw>::deserialize(d)?.map(convert).transpose()
+        }
+    }
+
+    pub mod map {
+        use super::*;
+        use serde::ser::SerializeMap;
+
+        pub fn serialize<S: Serializer>(
+            map: &BTreeMap<String, Timestamp>,
+            s: S,
+        ) -> Result<S::Ok, S::Error> {
+            let mut out = s.serialize_map(Some(map.len()))?;
+            for (k, v) in map {
+                out.serialize_entry(k, &v.to_string())?;
+            }
+            out.end()
+        }
+
+        pub fn deserialize<'de, D: Deserializer<'de>>(
+            d: D,
+        ) -> Result<BTreeMap<String, Timestamp>, D::Error> {
+            BTreeMap::<String, Raw>::deserialize(d)?
+                .into_iter()
+                .map(|(k, v)| convert(v).map(|ts| (k, ts)))
+                .collect()
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -382,5 +458,22 @@ mod tests {
     fn swift_reference_dates() {
         let ts = swift_date::to_timestamp(0.0);
         assert_eq!(wire_date::utc_string(ts), "2001-01-01T00:00:00Z");
+    }
+
+    #[test]
+    fn flex_dates_read_swift_numbers_and_write_rfc3339() {
+        #[derive(Serialize, Deserialize, PartialEq, Debug)]
+        struct Probe {
+            #[serde(with = "flex_date")]
+            at: Timestamp,
+            #[serde(default, with = "flex_date::option")]
+            maybe: Option<Timestamp>,
+        }
+        let legacy: Probe = serde_json::from_str(r#"{"at": 0}"#).unwrap();
+        assert_eq!(wire_date::utc_string(legacy.at), "2001-01-01T00:00:00Z");
+        assert_eq!(legacy.maybe, None);
+        let json = serde_json::to_string(&legacy).unwrap();
+        assert_eq!(json, r#"{"at":"2001-01-01T00:00:00Z","maybe":null}"#);
+        assert_eq!(serde_json::from_str::<Probe>(&json).unwrap(), legacy);
     }
 }
