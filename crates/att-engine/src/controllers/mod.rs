@@ -296,7 +296,8 @@ pub async fn handle(engine: &Engine, intent: ControllerIntent) -> Result<Value, 
 pub async fn tick(engine: &Engine) {
     let (page, previous) =
         engine.read(|state| (state.visible_page.clone(), state.controllers.last_page.clone()));
-    if page != previous {
+    let appeared = page != previous;
+    if appeared {
         engine.update(|state| state.controllers.last_page = page.clone());
         if previous.as_deref() == Some(pages::WEEKLY_REPORT) {
             weekly::flush_now(engine);
@@ -308,7 +309,7 @@ pub async fn tick(engine: &Engine) {
     let preview = engine.preview();
     let connected = engine.read(|state| crate::session::hooks::tracking_state(state).is_some());
     let busy = engine.inner.busy.is_busy();
-    if !preview && connected && !busy {
+    if !appeared && !preview && connected && !busy {
         match page.as_deref() {
             Some(pages::STATISTICS) => spawn(engine, |engine| async move {
                 statistics::load(&engine, false).await;
@@ -424,14 +425,13 @@ pub(crate) fn request_titles(engine: &Engine, ids: Vec<i64>) {
     if ids.is_empty() {
         return;
     }
-    let seam = engine.update(|state| match &mut state.controllers.title_seam {
-        Some(seam) => {
-            seam.requests.push(ids.clone());
-            true
-        }
-        None => false,
-    });
-    if !seam {
+    if engine.read(|state| state.controllers.title_seam.is_some()) {
+        engine.update(|state| {
+            if let Some(seam) = state.controllers.title_seam.as_mut() {
+                seam.requests.push(ids);
+            }
+        });
+    } else {
         crate::session::hooks::request_titles(engine, ids);
     }
 }

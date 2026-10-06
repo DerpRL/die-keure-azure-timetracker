@@ -325,21 +325,16 @@ pub(crate) async fn load(engine: &Engine, force: bool) {
     let Some(clients) = engine.clients() else { return };
     let cal = engine.cal();
     let now = engine.now();
+    // Checked under the read lock first: a throttled tick must not schedule a publish.
+    if !engine.read(|state| should_load(&state.controllers.statistics, force, now, &cal)) {
+        return;
+    }
     let started = engine.update(|state| {
         let stats = &mut state.controllers.statistics;
+        if !should_load(stats, force, now, &cal) {
+            return None;
+        }
         let requested = stats.range(&cal);
-        if stats.loading && stats.pending_range == Some(requested) {
-            return None;
-        }
-        let throttle = if stats.issue.is_none() { REFRESH_SECONDS } else { RETRY_SECONDS };
-        if !force
-            && stats.last_attempt_range == Some(requested)
-            && (stats.issue.is_some()
-                || (stats.loaded_range == Some(requested) && stats.synced_at.is_some()))
-            && stats.last_attempt.is_some_and(|last| diff_secs(now, last) < throttle)
-        {
-            return None;
-        }
         stats.generation += 1;
         stats.pending_range = Some(requested);
         stats.loading = true;
@@ -404,6 +399,20 @@ pub(crate) async fn load(engine: &Engine, force: bool) {
         request_titles(engine, missing.into_iter().collect());
         rebuild(engine);
     }
+}
+
+/// Swift's guards at the top of `load(force:)`.
+fn should_load(stats: &StatisticsState, force: bool, now: Timestamp, cal: &Cal) -> bool {
+    let requested = stats.range(cal);
+    if stats.loading && stats.pending_range == Some(requested) {
+        return false;
+    }
+    let throttle = if stats.issue.is_none() { REFRESH_SECONDS } else { RETRY_SECONDS };
+    force
+        || stats.last_attempt_range != Some(requested)
+        || !(stats.issue.is_some()
+            || (stats.loaded_range == Some(requested) && stats.synced_at.is_some()))
+        || stats.last_attempt.is_none_or(|last| diff_secs(now, last) >= throttle)
 }
 
 /// Swift `install(_:range:)`.

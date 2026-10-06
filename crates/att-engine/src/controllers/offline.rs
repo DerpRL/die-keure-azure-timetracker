@@ -85,12 +85,13 @@ impl OfflineState {
         self.ledger.drafts.iter().any(|stored| stored == draft)
     }
 
-    /// Swift `configure(_:workspace:)`, refused while a check or upload runs.
+    /// Swift `configure(_:workspace:)`. While a check or upload runs only the connection flag
+    /// follows (Swift refused the whole call; the session also refuses to reconnect then).
     pub(crate) fn configure(&mut self, configured: bool) {
+        self.configured = configured;
         if self.working {
             return;
         }
-        self.configured = configured;
         self.generation += 1;
         self.review = None;
         self.message = None;

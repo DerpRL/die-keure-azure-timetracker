@@ -78,24 +78,33 @@ pub(crate) async fn refresh(engine: &Engine) -> Result<Value, IpcError> {
     done()
 }
 
+/// Swift's guards at the top of `load(force:)`.
+fn should_load(review: &DayReviewState, force: bool, now: Timestamp) -> bool {
+    let requested = review.selected_day;
+    if review.loading && review.pending_day == Some(requested) {
+        return false;
+    }
+    force
+        || review.attempted_day != Some(requested)
+        || !(review.issue.is_some() || review.loaded_day == Some(requested))
+        || review.last_attempt.is_none_or(|last| diff_secs(now, last) >= THROTTLE_SECONDS)
+}
+
 /// Swift `load(force:)`: the selected day and the day before, at most once a minute unless forced.
 pub(crate) async fn load(engine: &Engine, force: bool) {
     let Some(clients) = engine.clients() else { return };
     let cal = engine.cal();
     let now = engine.now();
+    // Checked under the read lock first: a throttled tick must not schedule a publish.
+    if !engine.read(|state| should_load(&state.controllers.day_review, force, now)) {
+        return;
+    }
     let started = engine.update(|state| {
         let review = &mut state.controllers.day_review;
+        if !should_load(review, force, now) {
+            return None;
+        }
         let requested = review.selected_day;
-        if review.loading && review.pending_day == Some(requested) {
-            return None;
-        }
-        if !force
-            && review.attempted_day == Some(requested)
-            && (review.issue.is_some() || review.loaded_day == Some(requested))
-            && review.last_attempt.is_some_and(|last| diff_secs(now, last) < THROTTLE_SECONDS)
-        {
-            return None;
-        }
         review.generation += 1;
         review.pending_day = Some(requested);
         review.loading = true;
