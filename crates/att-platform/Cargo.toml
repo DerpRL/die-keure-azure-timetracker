@@ -44,3 +44,36 @@ windows = { version = "0.62", features = [
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_UI_WindowsAndMessaging",
 ] }
+
+# macOS implementation (src/macos). Framework bindings use only the features they need, so the
+# Tauri app does not compile every AppKit/Security binding through feature unification.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+block2 = "0.6"
+dispatch2 = { version = "0.3", default-features = false, features = ["std", "objc2"] }
+libc = "0.2"
+objc2-foundation = { version = "0.3", default-features = false, features = [
+    "std", "block2", "NSArray", "NSBundle", "NSDate", "NSDistributedNotificationCenter",
+    "NSEnumerator", "NSError", "NSNotification", "NSObject", "NSOperation", "NSPathUtilities",
+    "NSProcessInfo", "NSString", "NSURL",
+] }
+objc2-app-kit = { version = "0.3", default-features = false, features = [
+    "std", "libc", "NSRunningApplication", "NSWorkspace",
+] }
+objc2-event-kit = { version = "0.3", default-features = false, features = [
+    "std", "block2", "objc2-core-graphics", "EKCalendar", "EKCalendarItem", "EKEvent",
+    "EKEventStore", "EKObject", "EKParticipant", "EKSource", "EKTypes",
+] }
+objc2-core-foundation = { version = "0.3", default-features = false, features = [
+    "std", "CFArray", "CFData", "CFDictionary", "CFNumber", "CFString", "CFURL",
+] }
+objc2-core-graphics = { version = "0.3", default-features = false, features = [
+    "std", "objc2", "CGColor", "CGColorSpace", "CGEventSource", "CGEventTypes", "CGSession",
+] }
+objc2-core-audio = { version = "0.3", default-features = false, features = ["std", "AudioHardware"] }
+objc2-application-services = { version = "0.3", default-features = false, features = [
+    "std", "libc", "AXError", "AXUIElement", "HIServices",
+] }
+objc2-security = { version = "0.3", default-features = false, features = ["std", "SecBase", "SecItem"] }
+sha2.workspace = true
+unicode-normalization.workspace = true
