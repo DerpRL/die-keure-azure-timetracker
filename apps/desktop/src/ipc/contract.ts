@@ -5,7 +5,9 @@
  */
 import type {
   AgendaSlice,
+  AppIdentity,
   AppSlice,
+  BranchPatternTest,
   ConnectionSlice,
   ControllerIntent,
   DayReviewSlice,
@@ -104,8 +106,10 @@ export type IntentArgs<T extends IntentType> = Omit<IntentOf<T>, 'type'>;
 export interface IntentResults {
   'app.snapshot': SliceUpdate[];
   'statistics.entries': EntriesPage;
-  /** The Settings tester line for the branch under the pattern. */
-  'settings.testBranchPattern': string;
+  /** The Settings tester line for the branch under the pattern, and whether the pattern is valid. */
+  'settings.testBranchPattern': BranchPatternTest;
+  /** The bundle id (macOS) or executable name (Windows) and display name of a picked app. */
+  'settings.resolveWorkApp': AppIdentity;
 }
 
 export type IntentResult<T extends IntentType> = T extends keyof IntentResults ? IntentResults[T] : null;

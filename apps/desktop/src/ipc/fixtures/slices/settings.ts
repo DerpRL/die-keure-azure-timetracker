@@ -155,9 +155,9 @@ export const saveValidationError: IpcError = {
 export const microphoneInUse: SettingsSlice['microphone'] = {
   supported: true,
   owners: [
-    { id: 'com.microsoft.teams2', name: 'Microsoft Teams', pid: 812, path: null },
-    { id: 'com.apple.WebKit.GPU', name: 'WebKit', pid: 913, path: null },
-    { id: 'com.apple.VoiceMemos', name: 'Voice Memos', pid: 1022, path: null },
+    { id: 'com.microsoft.teams2', name: 'Microsoft Teams', pid: 812, path: null, category: 'Microsoft Teams' },
+    { id: 'com.apple.WebKit.GPU', name: 'WebKit', pid: 913, path: null, category: 'Web browsers' },
+    { id: 'com.apple.VoiceMemos', name: 'Voice Memos', pid: 1022, path: null, category: null },
   ],
   fresh: true,
   issue: null,

@@ -82,6 +82,11 @@ const figma: FigmaSlice = {
   lastWorkedTicket: 4821,
   history,
   storageIssue: null,
+  observing: true,
+  label: 'Checkout redesign',
+  lastForegroundAt: '2026-10-06T07:59:30Z',
+  lastWorked: [checkout],
+  historyCount: history.length,
 };
 
 export default { figma } satisfies Partial<SliceMap>;

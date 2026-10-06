@@ -51,6 +51,13 @@ export type AnalysisView = {
   entriesPreview: Array<ExplorerEntry>;
 };
 
+export type AppIdentity = {
+  /** macOS bundle ID, or Windows executable file name in lower case. */
+  id: string;
+  name: string;
+  path: string | null;
+};
+
 export type AppSlice = {
   version: string;
   os: HostOs;
@@ -96,6 +103,12 @@ export type BranchChange = {
   ticketId?: number | null;
   detectedAt: string;
 };
+
+/**
+ * The result of `settings.testBranchPattern`: the tester line and whether the pattern is
+ * valid (`false` with "Invalid pattern: …").
+ */
+export type BranchPatternTest = { text: string; valid: boolean };
 
 export type BranchPromptView = {
   change: BranchChange;

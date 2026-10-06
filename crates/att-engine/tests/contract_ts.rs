@@ -75,6 +75,9 @@ fn generate() -> String {
     c.visit::<session::AgendaSlice>();
     c.visit::<session::SettingsSlice>();
     c.visit::<session::FigmaSlice>();
+    // Session intent results.
+    c.visit::<session::BranchPatternTest>();
+    c.visit::<att_platform::AppIdentity>();
     // Controller slices and results.
     c.visit::<controllers::StatisticsSlice>();
     c.visit::<controllers::EntriesPage>();

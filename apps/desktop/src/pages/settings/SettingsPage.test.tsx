@@ -232,10 +232,10 @@ describe('validation', () => {
     const { engine, user } = renderWithEngine(<SettingsPage />);
     engine.handle('settings.testBranchPattern', ({ branch, pattern }) =>
       pattern.includes('(') && !pattern.includes(')')
-        ? 'Invalid pattern: The value “(” is invalid.'
+        ? { text: 'Invalid pattern: The value “(” is invalid.', valid: false }
         : branch.includes('33624')
-          ? 'Ticket #33624'
-          : 'No unique ticket found',
+          ? { text: 'Ticket #33624', valid: true }
+          : { text: 'No unique ticket found', valid: true },
     );
     await user.click(tab('Tracking'));
     expect(await screen.findByText('Ticket #33624')).toBeInTheDocument();

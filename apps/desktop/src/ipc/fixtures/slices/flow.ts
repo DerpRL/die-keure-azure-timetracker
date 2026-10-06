@@ -103,6 +103,14 @@ export const ticketDraft: DraftView = {
   requiredActivity: null,
   defaultComment: '',
   resume: false,
+  standup: false,
+  isFigma: false,
+  remark: null,
+  commentWithTicket: null,
+  commentWithoutTicket: null,
+  meetingTitle: null,
+  canChooseTicket: true,
+  startableActivityIds: ['dev', 'design', 'meeting', 'standup', 'review'],
 };
 
 /** The activity chooser for #4790 in the panel. */
@@ -138,6 +146,14 @@ export const standupDraftFlow: FlowSlice = {
     requiredActivity: null,
     defaultComment: 'daily standup',
     resume: false,
+    standup: true,
+    isFigma: false,
+    remark: 'daily standup',
+    commentWithTicket: null,
+    commentWithoutTicket: 'daily standup',
+    meetingTitle: null,
+    canChooseTicket: false,
+    startableActivityIds: ['standup'],
   },
 };
 
@@ -150,6 +166,7 @@ export const missingStandupDraftFlow: FlowSlice = {
     allowedActivityIds: [],
     preferredActivityId: '',
     requiredActivity: 'The Standup activity is missing in 7pace. Add or enable it before tracking this stand-up.',
+    startableActivityIds: [],
   },
 };
 
@@ -168,6 +185,14 @@ export const figmaDraftFlow: FlowSlice = {
     requiredActivity: null,
     defaultComment: 'Checkout redesign',
     resume: false,
+    standup: false,
+    isFigma: true,
+    remark: null,
+    commentWithTicket: 'Checkout redesign',
+    commentWithoutTicket: 'Checkout redesign',
+    meetingTitle: null,
+    canChooseTicket: false,
+    startableActivityIds: ['design'],
   },
 };
 
@@ -321,6 +346,7 @@ export const meetingReturnPrompts: PromptsSlice = {
     activityName: 'Development',
     end: '2026-10-06T07:59:00Z',
     ready: true,
+    fromMicrophone: false,
   },
 };
 export const figmaPrompts: PromptsSlice = { ...noPrompts, figma: [sampleFigma] };
