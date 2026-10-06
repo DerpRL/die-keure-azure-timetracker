@@ -251,10 +251,10 @@ async fn invalid_worklog_ids_and_writes_never_reach_the_network() {
         api.update_work_log_time(id, &future).await.unwrap_err().to_string(),
         "Choose an end after the start, with no time in the future."
     );
-    // 02:30 on 25 October 2026 happens twice in Brussels; the second one cannot be sent.
-    let second_half_past_two = ts("2026-10-25T01:30:00Z");
-    let ambiguous =
-        WorkLogTimeEdit::new(second_half_past_two, add_secs(second_half_past_two, 60.0));
+    // 02:30 on 25 October 2026 happens twice in Brussels. 7pace's offset-free local time reads
+    // back as the second one (as with 1.14.x's DateFormatter), so the first cannot be sent.
+    let first_half_past_two = ts("2026-10-25T00:30:00Z");
+    let ambiguous = WorkLogTimeEdit::new(first_half_past_two, add_secs(first_half_past_two, 60.0));
     capture.clock.set(ts("2026-10-26T00:00:00Z"));
     assert_eq!(
         api.update_work_log_time(id, &ambiguous).await.unwrap_err().to_string(),

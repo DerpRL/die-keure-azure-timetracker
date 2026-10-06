@@ -5,7 +5,6 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use jiff::Timestamp;
-use jiff::tz::TimeZone;
 use reqwest::{Method, Url};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -17,8 +16,7 @@ use att_core::model::{ActivityType, TrackingState, WorkItem, WorkLog};
 use att_core::service::{
     OfflineDraftService, TrackingService, WorkLogEditingService, WorkLogMutationService,
 };
-use att_core::text::NonEmpty;
-use att_core::time::{add_secs, diff_secs, wire_date};
+use att_core::time::{add_secs, wire_date};
 use att_core::worklog::{WorkLogDraft, WorkLogTimeEdit};
 use att_core::{AppError, Cal, Result};
 
@@ -276,39 +274,6 @@ fn check_id(id: &str, message: &'static str) -> Result<()> {
 }
 
 /// Swift `WorkLogTimeEdit.validate(now:)`, which the API repeated before every write.
-// TODO(merge): call `att_core::worklog` validation once `worklog::edit` and `worklog::ops` land.
-fn validate_time_edit(edit: &WorkLogTimeEdit, now: Timestamp, tz: &TimeZone) -> Result<()> {
-    let duration = diff_secs(edit.end, edit.start);
-    if !(1.0..=f64::from(i32::MAX)).contains(&duration) || edit.end > now {
-        return Err(AppError::message(
-            "Choose an end after the start, with no time in the future.",
-        ));
-    }
-    let round_trip = wire_date::parse(&wire_date::local_string(edit.start, tz), Some(tz));
-    if !round_trip.is_some_and(|start| diff_secs(start, edit.start).abs() < 1.0) {
-        return Err(AppError::message(
-            "This start time is ambiguous during a clock change. Choose an unambiguous local time.",
-        ));
-    }
-    Ok(())
-}
-
-/// Swift `WorkLogDraft.validate()`.
-fn validate_draft(draft: &WorkLogDraft, now: Timestamp, tz: &TimeZone) -> Result<()> {
-    validate_time_edit(&draft.edit(), now, tz)?;
-    let max = i64::from(i32::MAX);
-    let assigned = match draft.ticket_id {
-        Some(ticket) => (1..=max).contains(&ticket),
-        None => draft.comment.non_empty().is_some(),
-    };
-    if !(0..=max).contains(&draft.billable_seconds) || !assigned {
-        return Err(AppError::message(
-            "Choose a valid ticket or add a comment for ticket-free time.",
-        ));
-    }
-    Ok(())
-}
-
 #[async_trait]
 impl TrackingService for SevenPaceApi {
     async fn current(&self) -> Result<TrackingState> {
@@ -374,7 +339,7 @@ impl WorkLogEditingService for SevenPaceApi {
     async fn update_work_log_time(&self, id: &str, edit: &WorkLogTimeEdit) -> Result<WorkLog> {
         // Swift's edit is always whole seconds; normalise in case the fields were set directly.
         let edit = WorkLogTimeEdit::new(edit.start, edit.end);
-        validate_time_edit(&edit, self.now(), self.cal.tz())?;
+        edit.validate(self.now(), &self.cal)?;
         check_id(id, INVALID_LOG_ID)?;
         #[derive(Serialize)]
         #[serde(rename_all = "camelCase")]
@@ -405,7 +370,7 @@ impl WorkLogMutationService for SevenPaceApi {
 
     /// `POST api/rest/workLogs`; unset ticket, comment, activity and user are omitted.
     async fn create_work_log(&self, draft: &WorkLogDraft) -> Result<WorkLog> {
-        validate_draft(draft, self.now(), self.cal.tz())?;
+        draft.validate(self.now(), &self.cal)?;
         #[derive(Serialize)]
         #[serde(rename_all = "camelCase")]
         struct Body<'a> {
@@ -437,7 +402,7 @@ impl WorkLogMutationService for SevenPaceApi {
 
     /// `PATCH api/rest/workLogs/{id}` with `timeStamp`, `length` and `billableLength` only.
     async fn replace_work_log_time(&self, id: &str, draft: &WorkLogDraft) -> Result<WorkLog> {
-        validate_draft(draft, self.now(), self.cal.tz())?;
+        draft.validate(self.now(), &self.cal)?;
         check_id(id, INVALID_ID)?;
         #[derive(Serialize)]
         #[serde(rename_all = "camelCase")]
