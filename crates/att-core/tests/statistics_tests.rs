@@ -197,7 +197,8 @@ fn ranges_cover_each_period_and_serialize_period_names() {
     assert_eq!(day.shifted(-1, &cal()).end, day.start);
     let labels: Vec<_> = StatisticsPeriod::ALL.iter().map(|p| p.label()).collect();
     assert_eq!(labels, ["Day", "Week", "Month", "Year"]);
-    assert_eq!(serde_json::to_value(StatisticsPeriod::Month).unwrap(), "Month");
+    // The wire form is camelCase like the rest of the UI contract; labels keep the Swift names.
+    assert_eq!(serde_json::to_value(StatisticsPeriod::Month).unwrap(), "month");
 }
 
 #[test]

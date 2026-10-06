@@ -19,6 +19,7 @@ use crate::text::NonEmpty;
 use crate::time::{Cal, Interval};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum StatisticsPeriod {
     Day,
     Week,
