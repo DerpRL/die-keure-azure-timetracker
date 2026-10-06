@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Azure timetracker reads your calendars to show your daily agenda next to your tracked work. It does not change events or send them to Azure or 7pace.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Show your agenda beside your tracked work.</string>
+</dict>
+</plist>

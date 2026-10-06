@@ -1,0 +1,34 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "What the React surfaces may call. The global shortcut, positioner, updater, window-state, process and single-instance plugins are driven from Rust and are not exposed to the web views.",
+  "windows": ["main", "panel", "mini"],
+  "permissions": [
+    "core:app:allow-version",
+    "core:app:allow-name",
+    "core:event:default",
+    "core:window:default",
+    "core:window:allow-start-dragging",
+    "allow-shell-show-panel",
+    "allow-shell-hide-panel",
+    "allow-shell-toggle-panel",
+    "allow-shell-show-main",
+    "allow-shell-set-tray",
+    "allow-shell-set-mini-timer",
+    "allow-shell-set-shortcut",
+    "allow-shell-get-shortcut",
+    "allow-shell-quit",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [{ "url": "https://*" }, { "url": "figma://*" }]
+    },
+    "clipboard-manager:allow-write-text",
+    "notification:allow-is-permission-granted",
+    "notification:allow-request-permission",
+    "autostart:allow-enable",
+    "autostart:allow-disable",
+    "autostart:allow-is-enabled"
+  ]
+}
