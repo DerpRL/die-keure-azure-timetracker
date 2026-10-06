@@ -66,6 +66,7 @@ const offline: OfflineSlice = {
   issue: null,
   message: null,
   canCreate: true,
+  configured: true,
 };
 
 /** Reviewed: one overlap with an existing entry; uploading is still allowed. */
@@ -130,7 +131,7 @@ export const offlineWithSynced: OfflineSlice = {
 export const offlineEmpty: OfflineSlice = { ...offline, drafts: [], active: null, readyCount: 0 };
 
 /** No 7pace workspace saved yet. */
-export const offlineNoWorkspace: OfflineSlice = { ...offlineEmpty, workspace: '', canCreate: false, activities: [] };
+export const offlineNoWorkspace: OfflineSlice = { ...offlineEmpty, workspace: '', canCreate: false, activities: [], configured: false };
 
 /** Talking to 7pace. */
 export const offlineWorking: OfflineSlice = { ...offline, working: true };

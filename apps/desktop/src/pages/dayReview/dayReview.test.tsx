@@ -119,7 +119,6 @@ describe('Day review page', () => {
     await user.click(screen.getByRole('button', { name: 'Review gaps & overlaps in Time editor…' }));
     await waitFor(() => expect(engine.dispatched('timeEditor.loadCorrections')).toHaveLength(1));
     expect(engine.dispatched('timeEditor.setDay')).toEqual([{ type: 'timeEditor.setDay', day: '2026-10-05' }]);
-    expect(engine.dispatched('timeEditor.showCorrections')).toEqual([{ type: 'timeEditor.showCorrections', show: true }]);
     expect(onOpen).toHaveBeenCalledWith('timeEditor');
   });
 
@@ -143,9 +142,7 @@ describe('Day review page', () => {
   });
 
   it('asks to connect when 7pace is not set up', async () => {
-    const { user, onOpen } = renderReview(dayReviewUnconfigured, {
-      connection: { ...sampleSlices().connection!, health: 'unconfigured' },
-    });
+    const { user, onOpen } = renderReview(dayReviewUnconfigured);
     expect(screen.getByRole('heading', { name: 'Connect to review your day' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Open Settings' }));
     expect(onOpen).toHaveBeenCalledWith('settings');
@@ -153,7 +150,7 @@ describe('Day review page', () => {
   });
 
   it('explains a day without entries', () => {
-    renderReview(dayReviewEmptyDay);
+    renderReview({ ...dayReviewEmptyDay, gapMinutes: 20 });
     expect(screen.getByText('No entries recorded for this day.')).toBeInTheDocument();
     expect(screen.getByText('No gaps of 20 minutes or longer in your configured workday so far.')).toBeInTheDocument();
   });

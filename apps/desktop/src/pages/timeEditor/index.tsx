@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useId, useState } from 'react';
 import { Banner } from '../../components/Banner';
 import { Button } from '../../components/Button';
 import { Heading } from '../../components/Card';
@@ -44,20 +44,13 @@ export default function TimeEditorPage() {
   const [filter, setFilterDraft] = useEchoDraft(editor?.filter ?? '');
   const headingId = useId();
 
-  const { run: runLoad } = load;
-  // 1.14 loaded the day whenever the page appeared.
-  useEffect(() => {
-    void runLoad({ type: 'timeEditor.load' });
-  }, [runLoad]);
-
   const busy = app?.busy ?? false;
   const working = editor?.working ?? false;
   const loading = editor?.loading ?? false;
   const blocked = working || busy;
 
-  const openCorrections = () => {
-    void corrections.run({ type: 'timeEditor.showCorrections', show: true }).then(() => corrections.run({ type: 'timeEditor.loadCorrections' }));
-  };
+  // Opens the sheet (the engine sets `corrections.show`) and checks the day.
+  const openCorrections = () => void corrections.run({ type: 'timeEditor.loadCorrections' });
   const beginMerge = () => void merge.run({ type: 'timeEditor.beginMerge' });
 
   useCommands([
@@ -99,7 +92,7 @@ export default function TimeEditorPage() {
     );
   }
 
-  const configured = !!connection && connection.health !== 'unconfigured';
+  const configured = editor.configured;
   const preview = app?.preview ?? false;
   const device = deviceName(app?.os);
   const selected = editor.selected;
@@ -213,6 +206,7 @@ export default function TimeEditorPage() {
         <CorrectionsSheet
           day={editor.day}
           issues={editor.corrections.issues}
+          choices={editor.corrections.choices}
           loading={editor.corrections.loading}
           issue={editor.corrections.issue}
           working={working}

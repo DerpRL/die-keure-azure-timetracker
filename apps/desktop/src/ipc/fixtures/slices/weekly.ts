@@ -38,6 +38,8 @@ const weekly: WeeklySlice = {
   storageIssue: null,
   message: null,
   syncedAt: '2026-10-06T07:55:00Z',
+  configured: true,
+  exportFileName: 'weekly-status-2026-10-05.md',
 };
 
 /** Time loaded, nothing generated yet. */
@@ -71,6 +73,10 @@ export const weeklyPrevious: WeeklySlice = {
   range: { period: 'week', start: '2026-09-27T22:00:00Z', end: '2026-10-04T22:00:00Z' },
   text: '',
   hasDraft: false,
+  exportFileName: 'weekly-status-2026-09-28.md',
 };
+
+/** No 7pace connection. */
+export const weeklyUnconfigured: WeeklySlice = { ...weeklyEmpty, hasData: false, configured: false, syncedAt: null };
 
 export default { weekly } satisfies Partial<SliceMap>;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Banner } from '../../components/Banner';
 import { Button, IconButton } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -9,12 +9,44 @@ import { TextField } from '../../components/Fields';
 import { ChevronLeftIcon, ChevronRightIcon, SpinnerIcon } from '../../components/icons';
 import { useToast } from '../../components/Toast';
 import { PageRefresh } from '../../features/app/PageHeaderActions';
-import { useEchoDraft } from '../../features/ticketContext/drafts';
 import { deviceName, formatClockTime, formatDayShort, instantToDay, localToday, parseInstant } from '../../features/ticketContext/format';
 import { chooseSavePath, copyToClipboard } from '../../features/ticketContext/native';
 import { useCommands } from '../../shortcuts/hooks';
-import { ipcErrorKind, useAction, useSlice } from '../../state/hooks';
+import { ipcErrorKind, useAction, useSlice, useStore } from '../../state/hooks';
 import styles from './WeeklyReport.module.css';
+
+interface TextState {
+  /** The week the text belongs to (`range.start`). */
+  week: string;
+  value: string;
+  /** The last slice text seen. */
+  source: string;
+  /** Take the slice text as it arrives (right after a generate, until the next keystroke). */
+  follow: boolean;
+}
+
+/**
+ * The report text is controlled here while the user types: the slice echoes every edit, and taking
+ * those echoes would move the cursor. The slice text replaces the field only for another week or
+ * after a generate.
+ */
+function useWeeklyText(week: string, source: string): [string, (value: string) => void, (generated: string) => void] {
+  const [state, setState] = useState<TextState>({ week, value: source, source, follow: false });
+  let current = state;
+  if (state.week !== week) {
+    current = { week, value: source, source, follow: false };
+    setState(current);
+  } else if (state.source !== source) {
+    current = state.follow ? { ...state, value: source, source } : { ...state, source };
+    setState(current);
+  }
+  const type = useCallback((value: string) => setState((previous) => ({ ...previous, value, follow: false })), []);
+  const adopt = useCallback(
+    (generated: string) => setState((previous) => ({ ...previous, value: generated, source: generated, follow: true })),
+    [],
+  );
+  return [current.value, type, adopt];
+}
 
 /**
  * Weekly report (1.14 `WeeklyReportView`): an editable Markdown status update generated from the
@@ -24,7 +56,6 @@ import styles from './WeeklyReport.module.css';
 export default function WeeklyReportPage() {
   const weekly = useSlice('weekly');
   const app = useSlice('app');
-  const connection = useSlice('connection');
   const toast = useToast();
   const refresh = useAction();
   const navigate = useAction();
@@ -32,14 +63,9 @@ export default function WeeklyReportPage() {
   const text = useAction();
   const exporter = useAction();
   const [confirmReplace, setConfirmReplace] = useState(false);
-  const [draft, setDraft] = useEchoDraft(weekly?.text ?? '');
+  const store = useStore();
+  const [draft, setDraft, adoptGenerated] = useWeeklyText(weekly?.range.start ?? '', weekly?.text ?? '');
   const [choosing, setChoosing] = useState(false);
-
-  const { run: runRefresh } = refresh;
-  // 1.14 loaded the week's time whenever the page appeared.
-  useEffect(() => {
-    void runRefresh({ type: 'weekly.refresh' });
-  }, [runRefresh]);
 
   const today = localToday();
   const weekStart = instantToDay(weekly?.range.start);
@@ -53,13 +79,15 @@ export default function WeeklyReportPage() {
 
   const generate = async () => {
     const result = await generator.run({ type: 'weekly.generate', replace: false });
-    if (!result.ok && ipcErrorKind(result.error) === 'needsConfirmation') {
+    if (result.ok) adoptGenerated(store.get('weekly')?.text ?? '');
+    else if (ipcErrorKind(result.error) === 'needsConfirmation') {
       generator.clearError();
       setConfirmReplace(true);
     }
   };
   const replace = async () => {
-    await generator.run({ type: 'weekly.generate', replace: true });
+    const result = await generator.run({ type: 'weekly.generate', replace: true });
+    if (result.ok) adoptGenerated(store.get('weekly')?.text ?? '');
     setConfirmReplace(false);
   };
   const copy = async () => {
@@ -75,7 +103,7 @@ export default function WeeklyReportPage() {
     let path: string | null = null;
     try {
       path = await chooseSavePath({
-        defaultPath: `weekly-status-${weekStart?.toString() ?? 'draft'}.md`,
+        defaultPath: weekly?.exportFileName || `weekly-status-${weekStart?.toString() ?? 'draft'}.md`,
         filters: [{ name: 'Markdown', extensions: ['md'] }],
         title: 'Export weekly report',
       });
@@ -124,7 +152,7 @@ export default function WeeklyReportPage() {
     );
   }
 
-  const configured = !!connection && connection.health !== 'unconfigured';
+  const configured = weekly.configured;
   const synced = parseInstant(weekly.syncedAt);
   const failure = generator.error ?? navigate.error ?? exporter.error ?? text.error ?? null;
 

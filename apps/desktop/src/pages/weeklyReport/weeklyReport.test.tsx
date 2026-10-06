@@ -11,6 +11,7 @@ import {
   weeklyLoading,
   weeklyPrevious,
   weeklyStorageIssue,
+  weeklyUnconfigured,
 } from '../../ipc/fixtures/slices/weekly';
 import { MockEngineError } from '../../ipc/mockEngine';
 import type { SliceMap, WeeklySlice } from '../../ipc/contract';
@@ -50,9 +51,9 @@ function renderWeekly(weekly: WeeklySlice | undefined, extra: Partial<SliceMap> 
 const editor = () => screen.getByRole('textbox', { name: 'Editable weekly status report' });
 
 describe('Weekly report page', () => {
-  it('loads the week on open and shows the editable draft', async () => {
+  it('shows the week and its editable draft (the engine loads the week when the page appears)', async () => {
     const { engine } = renderWeekly(sampleSlices().weekly);
-    await waitFor(() => expect(engine.dispatched('weekly.refresh')).toHaveLength(1));
+    expect(engine.dispatched('weekly.refresh')).toHaveLength(0);
     const start = instantToDay(sampleSlices().weekly!.range.start)!;
     const last = instantToDay(sampleSlices().weekly!.range.end)!.subtract({ days: 1 });
     expect(screen.getByText(`${formatDayShort(start.toString())} – ${formatDayShort(last.toString())}`)).toBeInTheDocument();
@@ -72,18 +73,31 @@ describe('Weekly report page', () => {
     expect(editor()).toHaveValue('Done');
   });
 
-  it('follows a draft the engine replaced', () => {
-    const { engine } = renderWeekly(weeklyEmpty);
-    act(() => engine.setSlice('weekly', weeklyGenerated));
-    expect(editor()).toHaveValue(weeklyDraftText);
-    expect(editor()).toHaveAccessibleDescription('Draft generated. Review outcomes and blockers before sharing.');
+  it('keeps the typed text when the slice text changes, and takes it for another week', async () => {
+    const { engine, user } = renderWeekly(weeklyEmpty);
+    await user.type(editor(), 'Mine');
+    act(() => engine.patchSlice('weekly', { text: 'Mi' }));
+    expect(editor()).toHaveValue('Mine');
+    act(() => engine.setSlice('weekly', { ...weeklyPrevious, text: 'Last week’s notes' }));
+    expect(editor()).toHaveValue('Last week’s notes');
   });
 
-  it('generates a first draft', async () => {
+  it('generates a first draft and shows it', async () => {
     const { engine, user } = renderWeekly(weeklyEmpty);
+    engine.handle('weekly.generate', (_intent, mock) => mock.setSlice('weekly', weeklyGenerated));
     await user.click(screen.getByRole('button', { name: 'Generate draft' }));
     expect(engine.dispatched('weekly.generate')).toEqual([{ type: 'weekly.generate', replace: false }]);
     expect(screen.queryByRole('alertdialog')).toBeNull();
+    await waitFor(() => expect(editor()).toHaveValue(weeklyDraftText));
+    expect(editor()).toHaveAccessibleDescription('Draft generated. Review outcomes and blockers before sharing.');
+  });
+
+  it('shows a generated draft that arrives after the intent returned', async () => {
+    const { engine, user } = renderWeekly(weeklyEmpty);
+    await user.click(screen.getByRole('button', { name: 'Generate draft' }));
+    await waitFor(() => expect(engine.dispatched('weekly.generate')).toHaveLength(1));
+    act(() => engine.setSlice('weekly', weeklyGenerated));
+    expect(editor()).toHaveValue(weeklyDraftText);
   });
 
   it('asks before replacing an edited draft, then resends with replace', async () => {
@@ -136,8 +150,7 @@ describe('Weekly report page', () => {
     vi.mocked(save).mockResolvedValue('/Users/sam/Documents/weekly.md');
     const { engine, user } = renderWeekly(sampleSlices().weekly);
     await user.click(screen.getByRole('button', { name: 'Export Markdown…' }));
-    const start = instantToDay(sampleSlices().weekly!.range.start)!.toString();
-    expect(save).toHaveBeenCalledWith(expect.objectContaining({ defaultPath: `weekly-status-${start}.md` }));
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ defaultPath: 'weekly-status-2026-10-05.md' }));
     await waitFor(() =>
       expect(engine.dispatched('weekly.exportMarkdown')).toEqual([{ type: 'weekly.exportMarkdown', path: '/Users/sam/Documents/weekly.md' }]),
     );
@@ -179,7 +192,7 @@ describe('Weekly report page', () => {
   });
 
   it('asks to connect when 7pace is not set up', () => {
-    renderWeekly(weeklyEmpty, { connection: { ...sampleSlices().connection!, health: 'unconfigured' } });
+    renderWeekly(weeklyUnconfigured);
     expect(screen.getByText('Connect to 7pace in Settings to generate a draft.')).toBeInTheDocument();
   });
 });

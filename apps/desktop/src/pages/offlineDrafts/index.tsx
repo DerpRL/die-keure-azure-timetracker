@@ -158,7 +158,6 @@ function newPastDraft(workspace: string): OfflineDraft {
 export default function OfflineDraftsPage() {
   const offline = useSlice('offline');
   const app = useSlice('app');
-  const connection = useSlice('connection');
   const tracking = useSlice('tracking');
   const settings = useSlice('settings');
   const items = useSlice('workItems');
@@ -216,7 +215,7 @@ export default function OfflineDraftsPage() {
   const busy = app?.busy ?? false;
   const preview = app?.preview ?? false;
   const device = deviceName(app?.os);
-  const configured = !!connection && connection.health !== 'unconfigured' && connection.hasSevenPaceToken;
+  const configured = offline.configured;
   const rowsDisabled = offline.working || busy;
   const shown = offline.drafts.slice(0, visible);
 

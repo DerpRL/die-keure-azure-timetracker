@@ -214,7 +214,9 @@ function IdleSection({
             comment: 'Comment for the separate entry',
             defaultActivity: '7pace default',
           }}
-          onChange={(entry) => void split.run({ type: 'timeEditor.setSplit', ...entry })}
+          onChange={({ ticket, comment, activityId }) =>
+            void split.run({ type: 'timeEditor.setSecondEntry', ticket, comment, activityId })
+          }
         />
       ) : null}
     </div>
@@ -397,6 +399,8 @@ export function EditSheet({ editor, items, activities, busy, preview }: EditShee
               ) : (
                 <OverlapNotice conflicts={editor.review.conflicts} issue={editor.review.overlapIssue} />
               )
+            ) : editor.loadedConflicts.length > 0 ? (
+              <OverlapNotice conflicts={editor.loadedConflicts} issue={null} />
             ) : null}
           </div>
 

@@ -7,11 +7,11 @@ import { TimeField } from '../../components/DateFields';
 import { Dialog } from '../../components/Dialog';
 import { SuccessIcon, WarningIcon } from '../../components/icons';
 import { ProgressBar } from '../../components/Progress';
-import type { TimeCorrectionIssue, WorkItemsSlice, WorkLog } from '../../ipc/contract';
+import type { CorrectionChoices, TimeCorrectionIssue, WorkItemsSlice, WorkLog } from '../../ipc/contract';
 import { formatDayComplete, formatTimeRange, parseInstant, secondsBetween, toZoned } from '../../features/ticketContext/format';
 import { useAction } from '../../state/hooks';
 import { formatShortDuration } from '../../utils/duration';
-import { boundaryOption, CORRECTION_OPTIONS, correctionIssueId } from './labels';
+import { CORRECTION_OPTIONS, correctionIssueId } from './labels';
 import styles from './TimeEditor.module.css';
 
 function entryTitle(log: WorkLog, items: WorkItemsSlice | undefined): string {
@@ -30,16 +30,20 @@ function midpoint(issue: TimeCorrectionIssue): ZonedDateTime | null {
 
 function IssueCard({
   issue,
+  options,
   items,
   disabled,
   onPrepare,
 }: {
   issue: TimeCorrectionIssue;
+  /** The options with a valid plan (from the engine). */
+  options: readonly string[];
   items: WorkItemsSlice | undefined;
   disabled: boolean;
-  onPrepare: (option: string) => void;
+  onPrepare: (option: string, boundary?: string) => void;
 }) {
   const [boundary, setBoundary] = useState<ZonedDateTime | null>(() => midpoint(issue));
+  const offered = (option: string) => !disabled && options.includes(option);
   const seconds = secondsBetween(issue.start, issue.end);
   const gap = issue.kind === 'gap';
   const title = `${gap ? 'Possible gap' : 'Overlapping time'} · ${formatShortDuration(seconds)}`;
@@ -54,20 +58,20 @@ function IssueCard({
       {issue.later ? <p>{`Later: ${entryTitle(issue.later, items)}`}</p> : null}
       {gap ? (
         <div className={styles.actions}>
-          <Button isDisabled={disabled || !issue.earlier} onPress={() => onPrepare(CORRECTION_OPTIONS.extendEarlier)}>
+          <Button isDisabled={!offered(CORRECTION_OPTIONS.extendEarlier)} onPress={() => onPrepare(CORRECTION_OPTIONS.extendEarlier)}>
             Extend earlier task…
           </Button>
-          <Button isDisabled={disabled || !issue.later} onPress={() => onPrepare(CORRECTION_OPTIONS.startLaterEarlier)}>
+          <Button isDisabled={!offered(CORRECTION_OPTIONS.startLaterEarlier)} onPress={() => onPrepare(CORRECTION_OPTIONS.startLaterEarlier)}>
             Start later task earlier…
           </Button>
         </div>
       ) : (
         <>
           <div className={styles.actions}>
-            <Button isDisabled={disabled || !issue.earlier} onPress={() => onPrepare(CORRECTION_OPTIONS.trimEarlier)}>
+            <Button isDisabled={!offered(CORRECTION_OPTIONS.removeFromEarlier)} onPress={() => onPrepare(CORRECTION_OPTIONS.removeFromEarlier)}>
               Remove overlap from earlier…
             </Button>
-            <Button isDisabled={disabled || !issue.later} onPress={() => onPrepare(CORRECTION_OPTIONS.trimLater)}>
+            <Button isDisabled={!offered(CORRECTION_OPTIONS.removeFromLater)} onPress={() => onPrepare(CORRECTION_OPTIONS.removeFromLater)}>
               Remove overlap from later…
             </Button>
           </div>
@@ -80,12 +84,12 @@ function IssueCard({
               maxValue={toZoned(issue.end) ?? undefined}
               hourCycle={24}
               hideTimeZone
-              isDisabled={disabled || !issue.earlier || !issue.later}
+              isDisabled={!offered(CORRECTION_OPTIONS.boundary)}
             />
             <Button
-              isDisabled={disabled || !issue.earlier || !issue.later || !boundary}
+              isDisabled={!offered(CORRECTION_OPTIONS.boundary) || !boundary}
               onPress={() => {
-                if (boundary) onPrepare(boundaryOption(boundary.toAbsoluteString()));
+                if (boundary) onPrepare(CORRECTION_OPTIONS.boundary, boundary.toAbsoluteString());
               }}
             >
               Preview boundary…
@@ -104,6 +108,8 @@ function IssueCard({
 export interface CorrectionsSheetProps {
   day: string;
   issues: readonly TimeCorrectionIssue[];
+  /** Per issue, in the same order: its id and the options with a valid plan. */
+  choices: readonly CorrectionChoices[];
   loading: boolean;
   issue: string | null;
   working: boolean;
@@ -112,7 +118,7 @@ export interface CorrectionsSheetProps {
 }
 
 /** Gaps & overlaps for the editor's day (1.14 `TimeCorrectionReview`), open while `corrections.show`. */
-export function CorrectionsSheet({ day, issues, loading, issue, working, busy, items }: CorrectionsSheetProps) {
+export function CorrectionsSheet({ day, issues, choices, loading, issue, working, busy, items }: CorrectionsSheetProps) {
   const close = useAction();
   const refresh = useAction();
   const prepare = useAction();
@@ -160,15 +166,23 @@ export function CorrectionsSheet({ day, issues, loading, issue, working, busy, i
         ) : null}
         {issues.length > 0 ? (
           <ul role="list" className={styles.issueList} aria-label="Gaps and overlaps">
-            {issues.map((entry) => {
-              const issueId = correctionIssueId(entry);
+            {issues.map((entry, index) => {
+              const choice = choices[index];
+              const issueId = choice?.issueId ?? correctionIssueId(entry);
               return (
                 <IssueCard
                   key={issueId}
                   issue={entry}
+                  options={choice?.options ?? []}
                   items={items}
                   disabled={disabled}
-                  onPrepare={(option) => void prepare.run({ type: 'timeEditor.prepareCorrection', issueId, option })}
+                  onPrepare={(option, boundary) =>
+                    void prepare.run(
+                      boundary === undefined
+                        ? { type: 'timeEditor.prepareCorrection', issueId, option }
+                        : { type: 'timeEditor.prepareCorrection', issueId, option, boundary },
+                    )
+                  }
                 />
               );
             })}

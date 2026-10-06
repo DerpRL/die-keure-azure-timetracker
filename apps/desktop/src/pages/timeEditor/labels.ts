@@ -37,22 +37,19 @@ export const STATUS_LABELS: Record<WorkLogChangeStatus, { label: string; tone: T
   applying: { label: 'Needs review', tone: 'warning' },
 };
 
-/** The corrections a Gaps & overlaps card offers (`timeEditor.prepareCorrection` `option`). */
+/** The corrections a Gaps & overlaps card can offer (`corrections.choices[].options`). */
 export const CORRECTION_OPTIONS = {
   /** Gap: extend the earlier entry to the start of the later one. */
   extendEarlier: 'extendEarlier',
   /** Gap: start the later entry at the end of the earlier one. */
   startLaterEarlier: 'startLaterEarlier',
   /** Overlap: cut the shared time out of the earlier entry. */
-  trimEarlier: 'trimEarlier',
+  removeFromEarlier: 'removeFromEarlier',
   /** Overlap: cut the shared time out of the later entry. */
-  trimLater: 'trimLater',
+  removeFromLater: 'removeFromLater',
+  /** Overlap: end the earlier and start the later entry at one shared instant (`boundary`). */
+  boundary: 'boundary',
 } as const;
-
-/** Overlap: end the earlier and start the later entry at one shared instant. */
-export function boundaryOption(instant: string): string {
-  return `boundary:${instant}`;
-}
 
 /** Swift's `Double` text of Unix seconds: "1790575200.0", or "1790575200.5" with a fraction. */
 function swiftSeconds(instant: string): string {
@@ -61,8 +58,8 @@ function swiftSeconds(instant: string): string {
 }
 
 /**
- * `TimeCorrectionIssue::id()` from att-core (`kind|startSeconds|earlierID|laterID`). The slice does
- * not carry the id yet (see the contract requests), so the UI derives the same text.
+ * `TimeCorrectionIssue::id()` from att-core (`kind|startSeconds|earlierID|laterID`). The engine
+ * sends it in `corrections.choices`; this is only the fallback when a choice is missing.
  */
 export function correctionIssueId(issue: TimeCorrectionIssue): string {
   return [issue.kind, swiftSeconds(issue.start), issue.earlier?.id ?? '', issue.later?.id ?? ''].join('|');

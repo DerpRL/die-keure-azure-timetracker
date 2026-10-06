@@ -1,4 +1,5 @@
 import type {
+  CorrectionChoices,
   SliceMap,
   TimeCorrectionIssue,
   TimeEditorSlice,
@@ -110,6 +111,20 @@ export const correctionIssues: TimeCorrectionIssue[] = [
   { kind: 'overlap', start: '2026-10-05T14:20:00Z', end: '2026-10-05T14:30:00Z', earlier: sampleLogs.design, later: sampleLogs.review },
 ];
 
+/**
+ * The corrections with a valid plan, per issue (`TimeCorrectionIssue::id()`), in the order of
+ * `correctionIssues`. The second gap leaves out "Start later task earlier" to show an unavailable
+ * option.
+ */
+export const correctionChoices: CorrectionChoices[] = [
+  { issueId: `gap|1791196800.0|${sampleLogs.cardRetry.id}|${sampleLogs.invoice.id}`, options: ['extendEarlier', 'startLaterEarlier'] },
+  { issueId: `gap|1791205500.0|${sampleLogs.invoice.id}|${sampleLogs.design.id}`, options: ['extendEarlier'] },
+  {
+    issueId: `overlap|1791210000.0|${sampleLogs.design.id}|${sampleLogs.review.id}`,
+    options: ['removeFromEarlier', 'removeFromLater', 'boundary'],
+  },
+];
+
 const timeEditor: TimeEditorSlice = {
   day: '2026-10-05',
   filter: '',
@@ -139,10 +154,12 @@ const timeEditor: TimeEditorSlice = {
   requiresReview: false,
   journalIssue: null,
   needsReload: false,
-  corrections: { show: false, issues: [], loading: false, issue: null },
+  corrections: { show: false, issues: [], loading: false, issue: null, choices: [] },
   guidedPlan: null,
   idleInterval: null,
   separateIdle: false,
+  configured: true,
+  loadedConflicts: [],
 };
 
 /** The edit sheet: the long morning entry shortened by 10 minutes, checked without overlaps. */
@@ -184,6 +201,13 @@ export const timeEditorConflicts: TimeEditorSlice = {
     conflicts: [overlapConflict],
     overlapIssue: null,
   },
+};
+
+/** The same edit before "Check overlaps": the loaded day already shows the overlap. */
+export const timeEditorLoadedConflicts: TimeEditorSlice = {
+  ...timeEditorConflicts,
+  review: null,
+  loadedConflicts: [overlapConflict],
 };
 
 /** The end is before the start: no plan, and saving is unavailable. */
@@ -305,7 +329,7 @@ export const timeEditorNeedsReview: TimeEditorSlice = {
 /** Gaps & overlaps is open with three issues. */
 export const timeEditorCorrections: TimeEditorSlice = {
   ...timeEditor,
-  corrections: { show: true, issues: correctionIssues, loading: false, issue: null },
+  corrections: { show: true, issues: correctionIssues, loading: false, issue: null, choices: correctionChoices },
 };
 
 export const timeEditorLoading: TimeEditorSlice = { ...timeEditor, logs: [], loading: true };
@@ -317,5 +341,8 @@ export const timeEditorFailed: TimeEditorSlice = {
 };
 
 export const timeEditorEmpty: TimeEditorSlice = { ...timeEditor, logs: [], changes: [] };
+
+/** No 7pace connection. */
+export const timeEditorUnconfigured: TimeEditorSlice = { ...timeEditorEmpty, configured: false };
 
 export default { timeEditor } satisfies Partial<SliceMap>;

@@ -109,7 +109,7 @@ function ticketRows(sessions: readonly ReviewSession[], items: WorkItemsSlice | 
     }));
 }
 
-function Summary({ review, gapMinutes }: { review: DayReviewSlice & { summary: NonNullable<DayReviewSlice['summary']> }; gapMinutes: number | null }) {
+function Summary({ review }: { review: DayReviewSlice & { summary: NonNullable<DayReviewSlice['summary']> } }) {
   const items = useSlice('workItems');
   const tracking = useSlice('tracking');
   const connection = useSlice('connection');
@@ -232,9 +232,7 @@ function Summary({ review, gapMinutes }: { review: DayReviewSlice & { summary: N
             </p>
           ) : summary.gaps.length === 0 ? (
             <p className={styles.caption}>
-              {gapMinutes !== null
-                ? `No gaps of ${gapMinutes} minutes or longer in your configured workday so far.`
-                : 'No gaps in your configured workday so far.'}
+              {`No gaps of ${review.gapMinutes} minutes or longer in your configured workday so far.`}
             </p>
           ) : (
             <>
@@ -272,9 +270,9 @@ function Summary({ review, gapMinutes }: { review: DayReviewSlice & { summary: N
             <Button
               isDisabled={busy}
               onPress={() => {
+                // loadCorrections also opens the Gaps & overlaps sheet.
                 void toEditor
                   .run({ type: 'timeEditor.setDay', day: review.selectedDay })
-                  .then(() => toEditor.run({ type: 'timeEditor.showCorrections', show: true }))
                   .then(() => toEditor.run({ type: 'timeEditor.loadCorrections' }));
                 openPage('timeEditor');
               }}
@@ -357,8 +355,6 @@ function Summary({ review, gapMinutes }: { review: DayReviewSlice & { summary: N
 /** Day review (1.14 `DayReviewView`): a final, read-only check of one day's time. */
 export default function DayReviewPage() {
   const review = useSlice('dayReview');
-  const settings = useSlice('settings');
-  const connection = useSlice('connection');
   const app = useSlice('app');
   const refresh = useAction();
   const setDay = useAction();
@@ -367,7 +363,7 @@ export default function DayReviewPage() {
   const [day, setDayDraft] = useEngineDraft(review?.selectedDay ?? '');
 
   const today = localToday().toString();
-  const configured = !!connection && connection.health !== 'unconfigured';
+  const configured = review?.configured ?? false;
   const changeDay = (next: string) => {
     if (next > today) return;
     setDayDraft(next);
@@ -403,7 +399,6 @@ export default function DayReviewPage() {
     );
   }
 
-  const gapMinutes = settings?.configuration.dayReview.gapMinutes ?? null;
   const summary = review.summary;
 
   return (
@@ -452,7 +447,7 @@ export default function DayReviewPage() {
       >
         {summary ? (
           <div className={styles.page}>
-            <Summary review={{ ...review, summary }} gapMinutes={gapMinutes} />
+            <Summary review={{ ...review, summary }} />
           </div>
         ) : !review.issue ? (
           <Card>

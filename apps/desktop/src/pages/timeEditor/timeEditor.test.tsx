@@ -12,12 +12,14 @@ import {
   timeEditorGuidedGap,
   timeEditorIdle,
   timeEditorInvalid,
+  timeEditorLoadedConflicts,
   timeEditorLoading,
   timeEditorMerge,
   timeEditorNeedsReview,
   timeEditorSaved,
   timeEditorSplit,
   timeEditorUndo,
+  timeEditorUnconfigured,
 } from '../../ipc/fixtures/slices/timeEditor';
 import { MockEngineError } from '../../ipc/mockEngine';
 import type { AppSlice, SliceMap, TimeEditorSlice } from '../../ipc/contract';
@@ -45,9 +47,9 @@ function app(patch: Partial<AppSlice> = {}): AppSlice {
 }
 
 describe('Time editor page', () => {
-  it('loads the day on open and lists its entries', async () => {
+  it('lists the day’s entries (the engine loads them when the page appears)', async () => {
     const { engine } = renderEditor(sampleSlices().timeEditor);
-    await waitFor(() => expect(engine.dispatched('timeEditor.load')).toHaveLength(1));
+    expect(engine.dispatched('timeEditor.load')).toHaveLength(0);
     const table = screen.getByRole('grid', { name: 'Entries · Monday 5 October' });
     // Header row plus six entries.
     expect(within(table).getAllByRole('row')).toHaveLength(7);
@@ -69,7 +71,7 @@ describe('Time editor page', () => {
   it('explains an empty day, and asks to connect when 7pace is not configured', () => {
     const { engine } = renderEditor(timeEditorEmpty);
     expect(screen.getByText('No entries match this date or filter.')).toBeInTheDocument();
-    act(() => engine.setSlice('connection', { ...sampleSlices().connection!, health: 'unconfigured' }));
+    act(() => engine.setSlice('timeEditor', timeEditorUnconfigured));
     expect(screen.getByText('Connect to 7pace in Settings to edit your recorded time.')).toBeInTheDocument();
   });
 
@@ -112,8 +114,7 @@ describe('Time editor page', () => {
   it('opens Gaps & overlaps and Recent edits', async () => {
     const { engine, user } = renderEditor(sampleSlices().timeEditor);
     await user.click(screen.getByRole('button', { name: 'Gaps & overlaps…' }));
-    await waitFor(() => expect(engine.dispatched('timeEditor.loadCorrections')).toHaveLength(1));
-    expect(engine.dispatched('timeEditor.showCorrections')).toEqual([{ type: 'timeEditor.showCorrections', show: true }]);
+    expect(engine.dispatched('timeEditor.loadCorrections')).toHaveLength(1);
 
     await user.click(screen.getByRole('button', { name: 'Recent edits' }));
     const sheet = await screen.findByRole('dialog', { name: 'Recent edits' });
@@ -225,6 +226,25 @@ describe('Edit sheet', () => {
     expect(within(sheet).getByRole('button', { name: 'Save time changes' })).toBeEnabled();
   });
 
+  it('shows overlaps with the loaded day before the full check', () => {
+    renderEditor(timeEditorLoadedConflicts);
+    const sheet = screen.getByRole('dialog', { name: 'Edit time · recorded time' });
+    expect(within(sheet).getByText('Overlapping time')).toBeInTheDocument();
+    expect(within(sheet).getByText('Reviewing pull requests')).toBeInTheDocument();
+  });
+
+  it('shows a save refused because another 7pace write runs', async () => {
+    const { engine, user } = renderEditor(timeEditorEditing);
+    engine.handle('timeEditor.save', () => {
+      throw new MockEngineError('busy', 'Another change is being saved in 7pace. Try again when it finishes.');
+    });
+    const sheet = await screen.findByRole('dialog', { name: 'Edit time · recorded time' });
+    await user.click(within(sheet).getByRole('button', { name: 'Save time changes' }));
+    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Save time changes' }));
+    expect(await within(sheet).findByText('Another change is being saved in 7pace. Try again when it finishes.')).toBeInTheDocument();
+    expect(engine.dispatched('timeEditor.save')).toHaveLength(1);
+  });
+
   it('blocks saving with a validation issue, a pending review or while busy', () => {
     const { engine } = renderEditor(timeEditorInvalid);
     const sheet = screen.getByRole('dialog', { name: 'Edit time · recorded time' });
@@ -268,7 +288,13 @@ describe('Edit sheet', () => {
     await expectNoA11yViolations();
     await user.click(within(sheet).getByRole('radio', { name: 'Separate into its own entry' }));
     expect(engine.dispatched('timeEditor.setSeparateIdle')).toEqual([{ type: 'timeEditor.setSeparateIdle', separate: true }]);
-    expect(within(sheet).getByRole('textbox', { name: 'Comment for the separate entry' })).toHaveValue('Idle time');
+    const comment = within(sheet).getByRole('textbox', { name: 'Comment for the separate entry' });
+    expect(comment).toHaveValue('Idle time');
+    await user.type(comment, '!');
+    expect(engine.dispatched('timeEditor.setSecondEntry')).toEqual([
+      { type: 'timeEditor.setSecondEntry', ticket: '', comment: 'Idle time!', activityId: 'dev' },
+    ]);
+    expect(engine.dispatched('timeEditor.setSplit')).toHaveLength(0);
   });
 
   it('previews a guided gap correction', () => {
@@ -329,30 +355,50 @@ describe('Gaps & overlaps', () => {
         option: 'extendEarlier',
       },
     ]);
+    // The engine offers only the options with a valid plan.
+    expect(within(sheet).getAllByRole('button', { name: 'Start later task earlier…' }).map((button) => button.hasAttribute('disabled'))).toEqual([
+      false,
+      true,
+    ]);
     await user.click(within(sheet).getByRole('button', { name: 'Remove overlap from later…' }));
     expect(engine.dispatched('timeEditor.prepareCorrection').at(-1)).toEqual({
       type: 'timeEditor.prepareCorrection',
       issueId: `overlap|1791210000.0|${sampleLogs.design.id}|${sampleLogs.review.id}`,
-      option: 'trimLater',
+      option: 'removeFromLater',
     });
     await user.click(within(sheet).getByRole('button', { name: 'Preview boundary…' }));
-    expect(engine.dispatched('timeEditor.prepareCorrection').at(-1)?.option).toBe('boundary:2026-10-05T14:25:00.000Z');
+    expect(engine.dispatched('timeEditor.prepareCorrection').at(-1)).toEqual({
+      type: 'timeEditor.prepareCorrection',
+      issueId: `overlap|1791210000.0|${sampleLogs.design.id}|${sampleLogs.review.id}`,
+      option: 'boundary',
+      boundary: '2026-10-05T14:25:00.000Z',
+    });
 
     await user.click(within(sheet).getByRole('button', { name: 'Done' }));
     expect(engine.dispatched('timeEditor.showCorrections')).toEqual([{ type: 'timeEditor.showCorrections', show: false }]);
   });
 
+  it('shows a correction that no longer exists verbatim', async () => {
+    const { engine, user } = renderEditor(timeEditorCorrections);
+    engine.handle('timeEditor.prepareCorrection', () => {
+      throw new MockEngineError('notFound', 'This gap or overlap changed. Refresh the review.');
+    });
+    const sheet = await screen.findByRole('dialog', { name: 'Gaps & overlaps' });
+    await user.click(within(sheet).getAllByRole('button', { name: 'Extend earlier task…' })[0]!);
+    expect(await within(sheet).findByText('This gap or overlap changed. Refresh the review.')).toBeInTheDocument();
+  });
+
   it('shows the loading, issue and nothing-found states', () => {
-    const { engine } = renderEditor({ ...timeEditorCorrections, corrections: { show: true, issues: [], loading: true, issue: null } });
+    const { engine } = renderEditor({ ...timeEditorCorrections, corrections: { show: true, issues: [], loading: true, issue: null, choices: [] } });
     expect(screen.getByRole('progressbar', { name: 'Checking recorded time…' })).toBeInTheDocument();
     act(() =>
       engine.setSlice('timeEditor', {
         ...timeEditorCorrections,
-        corrections: { show: true, issues: [], loading: false, issue: 'There is no elapsed workday to review for this date.' },
+        corrections: { show: true, issues: [], loading: false, issue: 'There is no elapsed workday to review for this date.', choices: [] },
       }),
     );
     expect(screen.getByText('There is no elapsed workday to review for this date.')).toBeInTheDocument();
-    act(() => engine.setSlice('timeEditor', { ...timeEditorCorrections, corrections: { show: true, issues: [], loading: false, issue: null } }));
+    act(() => engine.setSlice('timeEditor', { ...timeEditorCorrections, corrections: { show: true, issues: [], loading: false, issue: null, choices: [] } }));
     expect(screen.getByText('No gaps or overlaps found in the elapsed workday.')).toBeInTheDocument();
   });
 });

@@ -57,6 +57,8 @@ const dayReview: DayReviewSlice = {
   loading: false,
   issue: null,
   syncedAt: '2026-10-06T07:55:00Z',
+  gapMinutes: 20,
+  configured: true,
 };
 
 /** Today until 10:00, with the 7pace timer still running. */
@@ -98,7 +100,7 @@ export const dayReviewFailed: DayReviewSlice = {
 export const dayReviewLoading: DayReviewSlice = { ...dayReview, summary: null, record: null, loading: true, syncedAt: null };
 
 /** Not connected: nothing to review. */
-export const dayReviewUnconfigured: DayReviewSlice = { ...dayReview, summary: null, record: null, syncedAt: null };
+export const dayReviewUnconfigured: DayReviewSlice = { ...dayReview, summary: null, record: null, syncedAt: null, configured: false };
 
 /** A day without entries. */
 export const dayReviewEmptyDay: DayReviewSlice = {
