@@ -115,6 +115,14 @@ describe('TicketPickerSheet', () => {
     ]);
   });
 
+  it('sends one start for a double click or repeated Return', async () => {
+    const { engine, user } = renderWithEngine(<TicketPickerSheet />, { with: { flow: pickerDraftFlow } });
+    engine.handle('tracking.start', () => new Promise((resolve) => setTimeout(() => resolve(null), 50)));
+    await user.dblClick(await screen.findByRole('button', { name: 'Start tracking' }));
+    await user.keyboard('{Enter}{Enter}');
+    expect(engine.dispatched('tracking.start')).toHaveLength(1);
+  });
+
   it('never starts without a click', async () => {
     const { engine } = renderWithEngine(<TicketPickerSheet />, { with: { flow: pickerDraftFlow } });
     await screen.findByRole('dialog', { name: 'Choose an activity' });

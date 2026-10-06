@@ -49,6 +49,8 @@ export interface IntentRunner {
   run: (key: string, ...intents: Intent[]) => Promise<boolean>;
   /** Something from this runner is in flight (any key, or the given one). */
   isPending: (key?: string) => boolean;
+  /** Synchronous check for a sequence in flight, for guards that cannot wait for a render. */
+  inFlight: () => boolean;
   /** The last refusal, shown verbatim; `needsConfirmation` refusals open the dialog instead. */
   error: IpcError | null;
   clearError: () => void;
@@ -105,6 +107,8 @@ export function useIntents(): IntentRunner {
     [action.pending, pressed],
   );
 
+  const inFlightNow = useCallback(() => inFlight.current > 0, []);
+
   const error = action.errorKind === 'needsConfirmation' ? null : action.error;
 
   const confirmation = (
@@ -121,7 +125,7 @@ export function useIntents(): IntentRunner {
     />
   );
 
-  return { run, isPending, error, clearError, confirmation };
+  return { run, isPending, inFlight: inFlightNow, error, clearError, confirmation };
 }
 
 /** An engine refusal, verbatim, next to the controls that caused it. */

@@ -83,7 +83,8 @@ export function useActivityForm(flow: FlowSlice | undefined, draft: DraftView | 
     setIncludeTicket: (include) => setState({ ...current, includeTicket: include }),
     canStart,
     start: () => {
-      if (!canStart) return;
+      // A double click or a second Return must never send a second start.
+      if (!canStart || actions.inFlight()) return;
       void actions.run('start', {
         type: 'tracking.start',
         draftId: draft.id,
