@@ -24,7 +24,7 @@
 use jiff::{
     Span, Timestamp, Zoned,
     civil::{self, Date, DateTime},
-    tz::TimeZone,
+    tz::{AmbiguousOffset, TimeZone},
 };
 use serde::{Deserialize, Serialize};
 
@@ -274,6 +274,11 @@ pub mod wire_date {
     /// Parses ISO 8601 with an offset (with or without fractional seconds), then
     /// `yyyy-MM-dd'T'HH:mm:ss[.fraction]` without an offset. Offset-free values are local time in
     /// `local` when given, otherwise UTC.
+    ///
+    /// Offset-free local times follow Foundation's `DateFormatter`, which 1.14.x used: a repeated
+    /// hour (autumn DST change) resolves to the *later* instant, and a time inside the spring gap
+    /// does not exist (`None`). Calendar arithmetic ([`Cal::at`]) differs on purpose, like
+    /// Foundation's `Calendar`.
     pub fn parse(text: &str, local: Option<&TimeZone>) -> Option<Timestamp> {
         let text = text.trim();
         if text.is_empty() {
@@ -287,7 +292,11 @@ pub mod wire_date {
         }
         let dt = text.parse::<DateTime>().ok()?;
         let tz = local.cloned().unwrap_or(TimeZone::UTC);
-        tz.to_ambiguous_zoned(dt).compatible().ok().map(|z| z.timestamp())
+        match tz.to_ambiguous_timestamp(dt).offset() {
+            AmbiguousOffset::Unambiguous { offset }
+            | AmbiguousOffset::Fold { after: offset, .. } => offset.to_timestamp(dt).ok(),
+            AmbiguousOffset::Gap { .. } => None,
+        }
     }
 
     /// `yyyy-MM-dd'T'HH:mm:ss` in `tz`, without an offset, as 7pace expects.
@@ -452,6 +461,22 @@ mod tests {
         assert!(diff_secs(fraction, local) > 0.12 && diff_secs(fraction, local) < 0.13);
         assert_eq!(wire_date::local_string(utc, cal.tz()), "2026-09-29T10:00:00");
         assert_eq!(wire_date::parse("garbage", None), None);
+    }
+
+    /// Values confirmed against Foundation's `DateFormatter` (`Europe/Brussels`, en_US_POSIX).
+    #[test]
+    fn wire_dates_resolve_dst_changes_like_date_formatter() {
+        let cal = Cal::brussels();
+        let parse = |text| wire_date::parse(text, Some(cal.tz())).map(wire_date::utc_string);
+        assert_eq!(parse("2025-10-26T02:30:00").as_deref(), Some("2025-10-26T01:30:00Z"), "later");
+        assert_eq!(parse("2025-10-26T01:59:59").as_deref(), Some("2025-10-25T23:59:59Z"));
+        assert_eq!(parse("2025-10-26T03:00:00").as_deref(), Some("2025-10-26T02:00:00Z"));
+        assert_eq!(parse("2026-03-29T02:30:00"), None, "inside the spring gap");
+        assert_eq!(parse("2026-03-29T03:00:00").as_deref(), Some("2026-03-29T01:00:00Z"));
+        // Calendar arithmetic keeps Foundation Calendar's choice: earlier instant, gap forward.
+        let at = |d, h, m| wire_date::utc_string(cal.date_at(d, h, m));
+        assert_eq!(at(date(2025, 10, 26), 2, 30), "2025-10-26T00:30:00Z");
+        assert_eq!(at(date(2026, 3, 29), 2, 30), "2026-03-29T01:30:00Z");
     }
 
     #[test]

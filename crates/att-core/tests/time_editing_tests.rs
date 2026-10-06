@@ -252,8 +252,8 @@ fn validation_accepts_one_second_up_to_int32_max_ending_now() {
 }
 
 /// 2025-10-26 02:30 happens twice in Brussels (CEST, then CET). 7pace receives the offset-free
-/// local string, so only the instant that string parses back to may be saved. The Swift app's
-/// `DateFormatter` resolved repeated times to the later instant; `wire_date::parse` decides here.
+/// local string, so only the instant that string parses back to may be saved. Like the Swift
+/// app's `DateFormatter`, `wire_date::parse` resolves repeated times to the later instant.
 #[test]
 fn repeated_local_hour_accepts_only_the_instant_its_local_time_parses_to() {
     let cal = cal();
@@ -261,7 +261,8 @@ fn repeated_local_hour_accepts_only_the_instant_its_local_time_parses_to() {
     let second: Timestamp = "2025-10-26T01:30:00Z".parse().unwrap();
     assert_eq!(local_string(first), local_string(second));
     let resolved = wire_date::parse("2025-10-26T02:30:00", Some(cal.tz())).unwrap();
-    assert!(resolved == first || resolved == second);
+    // Like 1.14.x (`DateFormatter`): the later instant, so only the second 02:30 may be saved.
+    assert_eq!(resolved, second);
     for start in [first, second] {
         let result = WorkLogTimeEdit::new(start, add_secs(start, 600.0)).validate(now(), &cal);
         if start == resolved {
