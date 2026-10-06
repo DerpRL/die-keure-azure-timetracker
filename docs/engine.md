@@ -144,7 +144,12 @@ still return every slice, for diagnostics and tests.) The UI keeps one store key
 | `weekly` | `range`, `text`, `hasData`, `loading`, `issue`, `storageIssue`, `message`, `syncedAt` | `WeeklyReportModel` |
 | `offline` | `drafts` (workspace, newest first), `showSynced`, `active`, `readyCount`, `activities`, `review`, `working`, `issue`, `message`, `canCreate` | `OfflineDraftModel` |
 | `ticketContext` | `request` (ticket id), `details` (`TicketContext`), `loading`, `issue` | `TicketContextModel` |
-| `updates` | `phase` (idle/checking/available/downloading/ready/installing/failed), `version`, `notes`, `progress`, `error`, `automatic` | Tauri updater |
+
+Updates are not an engine slice: the shell owns the updater (`apps/desktop/src-tauri/src/updates.rs`).
+It sends its status (`phase` idle/checking/available/downloading/ready/installing/failed,
+version, notes, progress, error, automatic) as the event `shell://update`, answers
+`shell_update_status` / `shell_update_check` / `shell_update_install`, and calls
+`app.prepareForRestart` before every install.
 
 Live values: the engine does not publish every second. The UI computes running clocks from
 `elapsedBase + (now − confirmedAt)` when `extrapolate` is true, and progress the same way from
