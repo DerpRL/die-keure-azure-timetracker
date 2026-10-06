@@ -30,7 +30,7 @@ use crate::state::AppState;
 
 use super::connection::{self, confirmed, reconcile_after_error, tracking, workspace};
 use super::tracking::{self as flows, Choice};
-use super::{announce, busy, history, progress, update_with};
+use super::{announce, branches, busy, history, progress, update_with};
 
 /// "Snooze 15 min".
 const SNOOZE_SECONDS: f64 = 15.0 * 60.0;
@@ -221,6 +221,10 @@ pub(crate) fn check(engine: &Engine, now: Timestamp) {
         {
             awareness.forgotten_announced = Some(prompt.id);
             effects.announce(PromptKind::ForgottenTimer, Some(announce::forgotten()));
+            // The reminder offers the tickets on watched branches, with their titles.
+            for (_, ticket) in branches::forgotten_tickets(state) {
+                effects.title(ticket);
+            }
         }
     });
 }
