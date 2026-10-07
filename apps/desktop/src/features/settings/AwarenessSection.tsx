@@ -4,8 +4,9 @@ import { NumberField, TextField } from '../../components/Fields';
 import { MinusIcon, PlusIcon } from '../../components/icons';
 import { Switch } from '../../components/Toggles';
 import type { WorkAwarenessPreferences } from '../../ipc/contract';
+import { dispatch } from '../../ipc/engine';
 import { workAppName } from './labels';
-import { chooseExecutables } from './platform';
+import { chooseApplications } from './platform';
 import { Divider, Hint, InlineIssue, SettingsGroup, SettingsSection } from './SettingsSection';
 import { useSettingsForm } from './SettingsForm';
 import { AWARENESS_MINUTES, issueFor } from './validation';
@@ -16,10 +17,21 @@ export function executableName(path: string): string {
   return (path.split(/[\\/]/).pop() ?? path).toLowerCase();
 }
 
+/** The message of a rejected intent or a failed dialog. */
+function messageOf(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'object' && error !== null && 'message' in error) return String(error.message);
+  return String(error);
+}
+
 function WorkApps() {
   const { draft, update, os } = useSettingsForm();
   const [entry, setEntry] = useState('');
   const [issue, setIssue] = useState<string | null>(null);
+  const [choosing, setChoosing] = useState(false);
+  // Names of apps picked in this session. Stored ids have no name lookup, so others show the id.
+  const [names, setNames] = useState<Record<string, string>>({});
+  const nameOf = (id: string) => names[id] ?? workAppName(id);
   const apps = draft.awareness.workAppIds;
   const setApps = (workAppIds: string[]) =>
     update((current) => ({ ...current, awareness: { ...current.awareness, workAppIds } }));
@@ -30,6 +42,30 @@ function WorkApps() {
   };
   const windows = os === 'windows';
   const typed = windows ? executableName(entry.trim()) : entry.trim();
+  const choose = async () => {
+    setIssue(null);
+    setChoosing(true);
+    try {
+      const paths = await chooseApplications(windows ? 'windows' : 'macos');
+      const picked: string[] = [];
+      const failures: string[] = [];
+      for (const path of paths) {
+        try {
+          const identity = await dispatch({ type: 'settings.resolveWorkApp', path });
+          picked.push(identity.id);
+          setNames((current) => ({ ...current, [identity.id]: identity.name }));
+        } catch (error) {
+          failures.push(messageOf(error));
+        }
+      }
+      add(picked);
+      if (failures.length > 0) setIssue(failures.join(' '));
+    } catch (error) {
+      setIssue(messageOf(error));
+    } finally {
+      setChoosing(false);
+    }
+  };
   return (
     <SettingsGroup title="Work applications">
       {apps.length === 0 ? (
@@ -39,14 +75,14 @@ function WorkApps() {
           {apps.map((id) => (
             <li key={id} className={styles.listItem}>
               <span className={styles.listText}>
-                <span>{workAppName(id)}</span>
-                {workAppName(id) !== id ? <span className={styles.listMeta}>{id}</span> : null}
+                <span>{nameOf(id)}</span>
+                {nameOf(id) !== id ? <span className={styles.listMeta}>{id}</span> : null}
               </span>
               <Button
                 size="small"
                 variant="plain"
                 icon={MinusIcon}
-                aria-label={`Remove ${workAppName(id)} from work apps`}
+                aria-label={`Remove ${nameOf(id)} from work apps`}
                 onPress={() => setApps(apps.filter((app) => app !== id))}
               >
                 Remove
@@ -76,19 +112,9 @@ function WorkApps() {
           >
             Add work application
           </Button>
-          {windows ? (
-            <Button
-              onPress={() => {
-                setIssue(null);
-                chooseExecutables().then(
-                  (paths) => add(paths.map(executableName)),
-                  (error: unknown) => setIssue(error instanceof Error ? error.message : String(error)),
-                );
-              }}
-            >
-              Choose applications…
-            </Button>
-          ) : null}
+          <Button onPress={() => void choose()} isPending={choosing}>
+            Choose applications…
+          </Button>
         </div>
       </div>
       {issue ? <InlineIssue tone="warning">{issue}</InlineIssue> : null}

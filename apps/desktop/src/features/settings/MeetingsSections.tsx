@@ -6,7 +6,7 @@ import { Select } from '../../components/Pickers';
 import { Checkbox, Switch } from '../../components/Toggles';
 import type { CalendarChoice, MicrophoneApp } from '../../ipc/contract';
 import { useAction, useSlice } from '../../state/hooks';
-import { calendarAccessText, classifyMicrophoneOwner, MICROPHONE_APPS, microphoneAppLabel } from './labels';
+import { calendarAccessText, formatTime, MICROPHONE_APPS, microphoneAppLabel } from './labels';
 import { Divider, Hint, InlineIssue, SettingsGroup, SettingsSection } from './SettingsSection';
 import { useSettingsForm } from './SettingsForm';
 import { activityOptions, DEFAULT_ACTIVITY_KEY } from './TrackingSection';
@@ -148,16 +148,15 @@ export function MeetingSuggestionsSection() {
 }
 
 function MicrophoneDiagnostics({ apps }: { apps: readonly MicrophoneApp[] }) {
-  const { settings, app, draft } = useSettingsForm();
+  const { settings, app } = useSettingsForm();
+  const check = useAction();
   const diagnostics = settings.microphone;
   const available = diagnostics.supported && (app?.features.microphone ?? true);
   const watching = settings.configuration.microphone.enabled;
   let status: string;
   if (!available) status = 'Microphone detection is not available on this system.';
   else if (!watching) status = 'Microphone meeting suggestions are off';
-  else if (diagnostics.owners.length > 0) status = `Microphone in use: ${diagnostics.owners.map((owner) => owner.name).join(', ')}`;
-  else if (diagnostics.fresh) status = `Watching microphone status · checked every ${draft.cadences.probeSeconds} seconds`;
-  else status = 'Waiting for the first microphone check…';
+  else status = diagnostics.status ?? 'Waiting for the first microphone check…';
   return (
     <SettingsGroup title="Diagnostics">
       <p className={styles.status}>
@@ -173,11 +172,23 @@ function MicrophoneDiagnostics({ apps }: { apps: readonly MicrophoneApp[] }) {
                 <span>{owner.name}</span>
                 <span className={styles.listMeta}>{owner.id}</span>
               </span>
-              <span className={styles.listMeta}>{apps.includes(classifyMicrophoneOwner(owner.id)) ? 'Selected' : 'Ignored'}</span>
+              <span className={styles.listMeta}>{owner.category && apps.includes(owner.category) ? 'Selected' : 'Ignored'}</span>
             </li>
           ))}
         </ul>
       ) : null}
+      <div className={styles.row}>
+        <Button
+          size="small"
+          onPress={() => void check.run({ type: 'microphone.checkNow' })}
+          isDisabled={!available || !watching}
+          isPending={check.pending}
+        >
+          {check.pending ? 'Checking…' : 'Check now'}
+        </Button>
+        {diagnostics.checkedAt ? <span className={styles.listMeta}>Checked {formatTime(diagnostics.checkedAt)}</span> : null}
+      </div>
+      {check.error ? <InlineIssue tone="warning">{check.error.message}</InlineIssue> : null}
     </SettingsGroup>
   );
 }

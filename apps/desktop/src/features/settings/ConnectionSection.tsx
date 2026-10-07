@@ -86,9 +86,8 @@ function PinPairing() {
   const cancel = useAction();
   const toast = useToast();
   const words = osWords(os);
-  const savedWorkspace = settings.configuration.sevenPaceUrl.trim();
+  // The workspace as typed: 1.14 paired with the unsaved form, and so does `pairing.generatePin`.
   const workspace = draft.sevenPaceUrl.trim();
-  const unsavedWorkspace = workspace !== savedWorkspace;
 
   // 1.14 cancelled pairing when the workspace changed or the view disappeared.
   const busyRef = useRef(pairing.busy);
@@ -116,7 +115,7 @@ function PinPairing() {
     if (status) announce(status);
   }, [status]);
 
-  const canGenerate = !preview && !busy && !pairing.busy && workspace !== '' && !unsavedWorkspace;
+  const canGenerate = !preview && !busy && !pairing.busy && workspace !== '';
 
   return (
     <div className={styles.pairing}>
@@ -141,7 +140,7 @@ function PinPairing() {
           variant="primary"
           onPress={() => {
             startedHere.current = true;
-            void generate.run({ type: 'pairing.generatePin' });
+            void generate.run({ type: 'pairing.generatePin', workspace });
           }}
           isDisabled={!canGenerate}
           isPending={generate.pending}
@@ -168,9 +167,6 @@ function PinPairing() {
         ) : null}
       </div>
       {workspace === '' ? <Hint>Enter your 7pace workspace above to pair.</Hint> : null}
-      {workspace !== '' && unsavedWorkspace ? (
-        <Hint>Save changes first: pairing uses the saved 7pace workspace.</Hint>
-      ) : null}
       {status ? (
         <p className={styles.status}>
           {pairing.pairedHost ? <CheckIcon className={styles.statusIcon} /> : null}

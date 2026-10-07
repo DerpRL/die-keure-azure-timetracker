@@ -6,7 +6,6 @@ import { Switch } from '../../components/Toggles';
 import type { FigmaPreferences } from '../../ipc/contract';
 import { useAction, useSlice } from '../../state/hooks';
 import { deepEqual } from './configDraft';
-import { figmaStatusText } from './labels';
 import { Hint, InlineIssue } from './SettingsSection';
 import { FIGMA_DISMISSAL_MINUTES, FIGMA_HISTORY_DAYS } from './validation';
 import styles from './settings.module.css';
@@ -72,7 +71,7 @@ export function FigmaSettings({ onboarding = false }: { onboarding?: boolean }) 
       {preferences.enabled && figma ? (
         <p className={styles.status}>
           {hasAccess || !macos ? <SuccessIcon className={styles.statusIcon} /> : <InfoIcon className={styles.statusIcon} />}
-          <span>{figmaStatusText(figma.status, figma.currentFile)}</span>
+          <span>{figma.label}</span>
         </p>
       ) : null}
       {preferences.enabled && macos && !hasAccess ? (

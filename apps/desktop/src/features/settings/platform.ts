@@ -33,14 +33,18 @@ export async function openExternalLink(url: string): Promise<void> {
   window.open(url, '_blank', 'noopener,noreferrer');
 }
 
-/** Lets the user pick Windows executables (work apps). Returns the chosen paths. */
-export async function chooseExecutables(): Promise<string[]> {
+/**
+ * Lets the user pick work applications: `.app` bundles in /Applications on macOS (1.14
+ * `NSOpenPanel`), executables on Windows. Returns the chosen paths for `settings.resolveWorkApp`.
+ */
+export async function chooseApplications(os: 'macos' | 'windows'): Promise<string[]> {
   if (!isTauri()) return [];
   const selection = await open({
     title: 'Add work applications',
     multiple: true,
     directory: false,
-    filters: [{ name: 'Applications', extensions: ['exe'] }],
+    defaultPath: os === 'macos' ? '/Applications' : undefined,
+    filters: [{ name: 'Applications', extensions: [os === 'macos' ? 'app' : 'exe'] }],
   });
   if (selection === null) return [];
   return Array.isArray(selection) ? selection : [selection];

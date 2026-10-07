@@ -72,7 +72,14 @@ export const configuredSettings: SettingsSlice = {
   hasAzurePat: true,
   hasSevenPaceToken: true,
   pairing: IDLE_PAIRING,
-  microphone: { supported: true, owners: [], fresh: true, issue: null },
+  microphone: {
+    supported: true,
+    owners: [],
+    fresh: true,
+    issue: null,
+    status: 'Watching microphone status · checked every 2 seconds',
+    checkedAt: '2026-10-06T08:02:14Z',
+  },
   interruptions: interruptions(configuration),
 };
 
@@ -161,6 +168,8 @@ export const microphoneInUse: SettingsSlice['microphone'] = {
   ],
   fresh: true,
   issue: null,
+  status: 'Microphone in use: Microsoft Teams, WebKit, Voice Memos',
+  checkedAt: '2026-10-06T08:02:14Z',
 };
 
 /** Calendar access granted with three calendars. */

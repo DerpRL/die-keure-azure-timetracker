@@ -4,7 +4,6 @@ import { defaultConfiguration } from '../../ipc/fixtures/defaults';
 import { configuredSettings, invalidConfiguration } from '../../ipc/fixtures/slices/settings';
 import { configurationToSave, deepEqual, hasDraftChanges, mergeUnderneath, rebaseDraft } from './configDraft';
 import { FEATURES, pageShown, setPageShown } from './features';
-import { classifyMicrophoneOwner } from './labels';
 import { parseSettingsHash } from './sections';
 import {
   addExceptions,
@@ -228,14 +227,6 @@ describe('features', () => {
 });
 
 describe('labels and links', () => {
-  it('classifies microphone owners like MicrophoneApp::classify', () => {
-    expect(classifyMicrophoneOwner('com.microsoft.teams2')).toBe('Microsoft Teams');
-    expect(classifyMicrophoneOwner('com.google.Chrome.helper')).toBe('Web browsers');
-    expect(classifyMicrophoneOwner('com.apple.WebKit.GPU')).toBe('Web browsers');
-    expect(classifyMicrophoneOwner('C:\\Program Files\\Zoom\\Zoom.exe')).toBe('Zoom');
-    expect(classifyMicrophoneOwner('com.apple.VoiceMemos')).toBe('Other apps');
-  });
-
   it('parses deep links to sections and categories', () => {
     expect(parseSettingsHash('#settings/calendar')).toEqual({ category: 'meetings', section: 'calendar' });
     expect(parseSettingsHash('#settings/app')).toEqual({ category: 'app' });

@@ -28,7 +28,9 @@ import SettingsPage from './index';
 const platform = vi.hoisted(() => ({
   readLaunchAtLogin: vi.fn(() => Promise.resolve<boolean | null>(false)),
   writeLaunchAtLogin: vi.fn((on: boolean) => Promise.resolve(on)),
-  chooseExecutables: vi.fn(() => Promise.resolve(['C:\\Program Files\\JetBrains\\Rider64.exe'])),
+  chooseApplications: vi.fn((os: 'macos' | 'windows') =>
+    Promise.resolve(os === 'windows' ? ['C:\\Program Files\\JetBrains\\Rider64.exe'] : ['/Applications/Zed.app']),
+  ),
   openExternalLink: vi.fn(() => Promise.resolve()),
   copyText: vi.fn(() => Promise.resolve()),
 }));
@@ -342,17 +344,22 @@ describe('PIN pairing', () => {
     expect(engine.dispatched('pairing.cancel')).toHaveLength(1);
   });
 
-  it('generates a PIN for the saved workspace only', async () => {
+  it('generates a PIN for the workspace as typed, saved or not', async () => {
     const { engine, user } = renderWithEngine(<SettingsPage />, { with: { settings: pairingComplete } });
+    const saved = pairingComplete.configuration.sevenPaceUrl.trim();
     expect(screen.getByText('Paired with contoso.timehub.7pace.com. Save changes to use this connection.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Generate pairing PIN' }));
-    expect(engine.dispatched('pairing.generatePin')).toEqual([{ type: 'pairing.generatePin' }]);
+    expect(engine.dispatched('pairing.generatePin')).toEqual([{ type: 'pairing.generatePin', workspace: saved }]);
 
-    await user.type(screen.getByLabelText('7pace workspace'), '/');
     await user.clear(screen.getByLabelText('7pace workspace'));
-    await user.type(screen.getByLabelText('7pace workspace'), 'https://fabrikam.timehub.7pace.com');
     expect(screen.getByRole('button', { name: 'Generate pairing PIN' })).toBeDisabled();
-    expect(screen.getByText('Save changes first: pairing uses the saved 7pace workspace.')).toBeInTheDocument();
+    expect(screen.getByText('Enter your 7pace workspace above to pair.')).toBeInTheDocument();
+    await user.type(screen.getByLabelText('7pace workspace'), 'https://fabrikam.timehub.7pace.com');
+    await user.click(screen.getByRole('button', { name: 'Generate pairing PIN' }));
+    expect(engine.dispatched('pairing.generatePin').at(-1)).toEqual({
+      type: 'pairing.generatePin',
+      workspace: 'https://fabrikam.timehub.7pace.com',
+    });
   });
 
   it('cancels pairing when the workspace changes', async () => {
@@ -448,6 +455,24 @@ describe('sections', () => {
       'WebKitcom.apple.WebKit.GPUSelected',
       'Voice Memoscom.apple.VoiceMemosIgnored',
     ]);
+    // 08:02:14Z in Brussels.
+    expect(screen.getByText('Checked 10:02:14')).toBeInTheDocument();
+  });
+
+  it('checks the microphone now, only while suggestions are on', async () => {
+    const { engine, user } = renderWithEngine(<SettingsPage />, { with: { settings: configuredSettings } });
+    await user.click(tab('Meetings'));
+    expect(screen.getByText('Watching microphone status · checked every 2 seconds')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Check now' }));
+    expect(engine.dispatched('microphone.checkNow')).toHaveLength(1);
+    act(() =>
+      engine.setSlice('settings', {
+        ...configuredSettings,
+        configuration: { ...configuredSettings.configuration, microphone: { ...configuredSettings.configuration.microphone, enabled: false } },
+      }),
+    );
+    expect(screen.getByText('Microphone meeting suggestions are off')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Check now' })).toBeDisabled();
   });
 
   it('edits targets, exceptions and work apps in the draft', async () => {
@@ -473,11 +498,37 @@ describe('sections', () => {
       with: { app: appWith({ os: 'windows', features: { calendar: false, microphone: true, figmaTitleOnly: true } }) },
       platform: 'windows',
     });
+    engine.handle('settings.resolveWorkApp', ({ path }) => ({ id: 'rider64.exe', name: 'JetBrains Rider', path }));
     await user.click(tab('Tracking'));
     await user.click(screen.getByRole('button', { name: 'Choose applications…' }));
-    expect(await screen.findByText('rider64.exe')).toBeInTheDocument();
+    expect(platform.chooseApplications).toHaveBeenLastCalledWith('windows');
+    expect(await screen.findByText('JetBrains Rider')).toBeInTheDocument();
+    expect(screen.getByText('rider64.exe')).toBeInTheDocument();
     await user.click(saveButton());
     expect(engine.dispatched('settings.save')[0]?.configuration.awareness.workAppIds.at(-1)).toBe('rider64.exe');
+  });
+
+  it('adds macOS work apps from an app bundle, by bundle identifier, with their name', async () => {
+    const { engine, user } = renderWithEngine(<SettingsPage />);
+    engine.handle('settings.resolveWorkApp', ({ path }) => ({ id: 'dev.zed.Zed', name: 'Zed', path }));
+    await user.click(tab('Tracking'));
+    await user.click(screen.getByRole('button', { name: 'Choose applications…' }));
+    expect(platform.chooseApplications).toHaveBeenLastCalledWith('macos');
+    expect(engine.dispatched('settings.resolveWorkApp')).toEqual([{ type: 'settings.resolveWorkApp', path: '/Applications/Zed.app' }]);
+    expect(await screen.findByText('Zed')).toBeInTheDocument();
+    expect(screen.getByText('dev.zed.Zed')).toBeInTheDocument();
+    await user.click(saveButton());
+    expect(engine.dispatched('settings.save')[0]?.configuration.awareness.workAppIds.at(-1)).toBe('dev.zed.Zed');
+  });
+
+  it('reports an app the engine cannot read', async () => {
+    const { engine, user } = renderWithEngine(<SettingsPage />);
+    engine.handle('settings.resolveWorkApp', () => {
+      throw new MockEngineError('invalidIntent', 'Zed.app has no bundle identifier.');
+    });
+    await user.click(tab('Tracking'));
+    await user.click(screen.getByRole('button', { name: 'Choose applications…' }));
+    expect(await screen.findByText('Zed.app has no bundle identifier.')).toBeInTheDocument();
   });
 
   it('saves automatic update checks from the switch the updater section names', async () => {

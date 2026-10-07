@@ -59,55 +59,6 @@ export function microphoneAppLabel(app: MicrophoneApp): string {
   return app === 'Web browsers' ? 'Google Meet / web browsers' : app;
 }
 
-const BROWSER_BUNDLES = [
-  'com.apple.safari',
-  'com.google.chrome',
-  'com.microsoft.edgemac',
-  'org.mozilla.firefox',
-  'com.brave.browser',
-  'company.thebrowser.browser',
-  'com.operasoftware.opera',
-];
-
-const EXECUTABLES: Record<string, MicrophoneApp> = {
-  'slack.exe': 'Slack',
-  'ms-teams.exe': 'Microsoft Teams',
-  'teams.exe': 'Microsoft Teams',
-  'msteams.exe': 'Microsoft Teams',
-  'zoom.exe': 'Zoom',
-  'chrome.exe': 'Web browsers',
-  'msedge.exe': 'Web browsers',
-  'firefox.exe': 'Web browsers',
-  'brave.exe': 'Web browsers',
-  'opera.exe': 'Web browsers',
-  'vivaldi.exe': 'Web browsers',
-  'arc.exe': 'Web browsers',
-  'msedgewebview2.exe': 'Web browsers',
-  'webex.exe': 'Webex',
-  'ciscocollabhost.exe': 'Webex',
-  'atmgr.exe': 'Webex',
-  'discord.exe': 'Discord',
-};
-
-/**
- * `MicrophoneApp::classify` (crates/att-core/src/microphone.rs), only to label diagnostics as
- * "Selected" or "Ignored". The engine decides which sessions suggest anything.
- */
-export function classifyMicrophoneOwner(ownerId: string): MicrophoneApp {
-  const id = ownerId.toLowerCase();
-  const matches = (prefix: string) => id === prefix || (id.startsWith(prefix) && id.charAt(prefix.length) === '.');
-  if (matches('com.tinyspeck.slackmacgap')) return 'Slack';
-  if (matches('com.microsoft.teams') || matches('com.microsoft.teams2')) return 'Microsoft Teams';
-  if (matches('us.zoom.xos')) return 'Zoom';
-  if (BROWSER_BUNDLES.some(matches)) return 'Web browsers';
-  if (matches('com.cisco.webexmeetingsapp') || matches('com.cisco.webexteams')) return 'Webex';
-  if (matches('com.hnc.discord')) return 'Discord';
-  if (matches('com.apple.webkit')) return 'Web browsers';
-  if (matches('com.apple.facetime')) return 'FaceTime';
-  const name = id.split(/[\\/]/).pop() ?? id;
-  return name.endsWith('.exe') ? (EXECUTABLES[name] ?? 'Other apps') : 'Other apps';
-}
-
 /** Names for the default work apps (1.14 `WorkAwarenessSettings.appName` plus the Windows defaults). */
 const WORK_APP_NAMES: Record<string, string> = {
   'com.microsoft.VSCode': 'Visual Studio Code',
@@ -141,23 +92,6 @@ export function calendarAccessText(access: CalendarAccess): string {
       return 'Calendar access is restricted on this Mac.';
     case 'unsupported':
       return 'Calendars are not available on this system.';
-  }
-}
-
-/** `FigmaService.status` from 1.14, for the engine's observation codes. */
-export function figmaStatusText(status: string, currentFile: string | null): string {
-  switch (status) {
-    case 'missingAccess':
-      return 'Accessibility permission needed';
-    case 'noAddress':
-      return 'Figma is active · no file address found';
-    case 'file':
-      return currentFile ? `File: ${currentFile}` : 'Figma is active';
-    case 'notForeground':
-    case 'waiting':
-      return 'Waiting for Figma';
-    default:
-      return status;
   }
 }
 
