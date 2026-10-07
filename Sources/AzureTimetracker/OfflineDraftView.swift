@@ -89,7 +89,7 @@ struct OfflineDraftView: View {
             if !review.conflicts.isEmpty {
                 Label("Overlapping time · uploading is still allowed", systemImage: "exclamationmark.triangle.fill").foregroundStyle(palette.warning)
                 ForEach(review.conflicts) { conflict in
-                    Text((conflict.ticketID.map { "#" + String($0) + " · " } ?? "") + conflict.title + " · " + conflict.start.formatted(date: .abbreviated, time: .shortened) + " → " + conflict.end.formatted(date: .omitted, time: .shortened) + " · " + DurationText.short(conflict.overlap) + (conflict.active ? " · timer running" : "")).font(.callout)
+                    Text(Self.conflictLine(conflict)).font(.callout)
                 }
             } else if review.overlapIssue == nil { Label("No overlapping entries found", systemImage: "checkmark.circle").foregroundStyle(palette.accent) }
             if !review.matches.isEmpty {
@@ -104,6 +104,15 @@ struct OfflineDraftView: View {
                 }.buttonStyle(.borderedProminent).tint(palette.action).disabled(model.preview)
             }
         }.disabled(offline.working || model.busy)
+    }
+    // Built outside the view builder with explicit types: compilers older than the release Mac's
+    // Swift 6.4 (Xcode 26 in CI) give up type-checking the long `+` chain inline.
+    private static func conflictLine(_ conflict: WorkLogConflict) -> String {
+        let ticket: String = conflict.ticketID.map { "#" + String($0) + " · " } ?? ""
+        let start: String = conflict.start.formatted(date: .abbreviated, time: .shortened)
+        let end: String = conflict.end.formatted(date: .omitted, time: .shortened)
+        let running: String = conflict.active ? " · timer running" : ""
+        return ticket + "\(conflict.title) · \(start) → \(end) · \(DurationText.short(conflict.overlap))" + running
     }
 }
 

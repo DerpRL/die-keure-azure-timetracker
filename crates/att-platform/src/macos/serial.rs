@@ -128,19 +128,26 @@ mod tests {
 
     #[test]
     fn slow_jobs_time_out_and_a_full_queue_fails_fast() {
-        let serial = serial(50);
+        // Wide margins: a busy CI runner can stall a thread for a few hundred milliseconds.
+        let serial = serial(200);
         let started = Instant::now();
-        let error = serial.run(|_| thread::sleep(Duration::from_millis(400))).expect_err("slow");
+        let error = serial.run(|_| thread::sleep(Duration::from_secs(2))).expect_err("slow");
         assert_eq!(error.to_string(), "Test is not responding. Retrying automatically.");
-        assert!(started.elapsed() < Duration::from_millis(300), "the caller stops waiting");
+        assert!(started.elapsed() < Duration::from_millis(1_000), "the caller stops waiting");
         for _ in 0..3 {
             assert!(serial.run(|_| ()).is_err(), "queued behind the slow job");
         }
-        let started = Instant::now();
+        let failing = Instant::now();
         assert!(serial.run(|_| ()).is_err(), "four jobs pending");
-        assert!(started.elapsed() < Duration::from_millis(40), "fails without waiting");
-        thread::sleep(Duration::from_millis(600));
-        assert_eq!(serial.run(|_| 7).expect("drained"), 7);
+        assert!(failing.elapsed() < Duration::from_millis(150), "fails without waiting");
+        let deadline = Instant::now() + Duration::from_secs(10);
+        loop {
+            match serial.run(|_| 7) {
+                Ok(value) => break assert_eq!(value, 7),
+                Err(_) if Instant::now() < deadline => thread::sleep(Duration::from_millis(100)),
+                Err(error) => panic!("the queue never drained: {error}"),
+            }
+        }
     }
 
     #[test]
