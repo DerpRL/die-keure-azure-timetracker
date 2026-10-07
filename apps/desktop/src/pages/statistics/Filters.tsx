@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import { Button } from '../../components/Button';
 import { SearchField } from '../../components/Fields';
 import { CloseIcon } from '../../components/icons';
-import { Select } from '../../components/Pickers';
+import { ComboBox, PickerItem, Select } from '../../components/Pickers';
 import type { ExplorerFilter, StatisticsSlice } from '../../ipc/contract';
 import { useAction } from '../../state/hooks';
-import { filterChips, isFilterActive } from './model';
+import { filterChips, isFilterActive, taskLabel } from './model';
 import styles from './Statistics.module.css';
 
 const ALL_ACTIVITIES = '__all__';
@@ -22,8 +22,9 @@ interface SearchDraft {
 }
 
 /**
- * Search, activity and "Clear filters" (1.14 `filters`), with every active filter as a removable
- * chip. The engine owns the filter; the search text is a draft until typing pauses.
+ * Search, activity, ticket and "Clear filters" (1.14 `filters`, plus a ticket picker over the whole
+ * period), with every active filter as a removable chip. The engine owns the filter; the search
+ * text is a draft until typing pauses.
  */
 export function Filters({ slice }: { slice: StatisticsSlice }) {
   const update = useAction();
@@ -59,7 +60,8 @@ export function Filters({ slice }: { slice: StatisticsSlice }) {
       ? [{ id: filter.activityId, label: 'Selected activity (no entries)' }]
       : []),
   ];
-  const chips = filterChips(filter, slice.analysis, slice.availableActivities);
+  const tasks = slice.availableTasks.map((task) => ({ id: task.id, label: taskLabel(task) }));
+  const chips = filterChips(filter, slice.availableTasks, slice.availableActivities);
   const active = isFilterActive(filter);
 
   return (
@@ -84,6 +86,25 @@ export function Filters({ slice }: { slice: StatisticsSlice }) {
             if (activityId !== filter.activityId) send({ ...filter, activityId });
           }}
         />
+        <ComboBox
+          label="Ticket"
+          width="auto"
+          className={styles.activityField}
+          placeholder="All tickets"
+          defaultItems={tasks}
+          selectedKey={filter.taskId}
+          emptyMessage="No ticket in this period matches"
+          onSelectionChange={(key) => {
+            const taskId = key === null ? null : String(key);
+            if (taskId !== filter.taskId) send({ ...filter, taskId });
+          }}
+        >
+          {(task) => (
+            <PickerItem id={task.id} textValue={task.label}>
+              {task.label}
+            </PickerItem>
+          )}
+        </ComboBox>
         {active ? (
           <Button className={styles.clearFilters} onPress={() => void run({ type: 'statistics.clearFilters' })}>
             Clear filters

@@ -1241,6 +1241,8 @@ export type StatisticsSlice = {
   /** Invalid worklogs left out of every total. */
   omitted: number;
   availableActivities: Array<ExplorerActivity>;
+  /** Every task of the downloaded period (unfiltered, unzoomed), by title. */
+  availableTasks: Array<ExplorerTask>;
   analysis: AnalysisView | null;
   visuals: ExplorerVisuals | null;
   /** Targets are compared only for the complete, unfiltered period. */

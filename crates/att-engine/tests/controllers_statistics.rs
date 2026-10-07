@@ -30,6 +30,10 @@ fn ready(stats: &Value) -> bool {
     !stats["analysis"].is_null() && stats["analyzing"] == false && stats["loading"] == false
 }
 
+fn task_ids(tasks: &Value) -> Vec<String> {
+    tasks.as_array().unwrap().iter().map(|task| task["id"].as_str().unwrap().to_string()).collect()
+}
+
 fn task_title(stats: &Value, ticket: i64) -> String {
     stats["analysis"]["tasks"]
         .as_array()
@@ -177,6 +181,8 @@ async fn zoom_filters_and_entry_pages_follow_the_window() {
     assert_eq!(stats["targetComparable"], false);
     assert_eq!(stats["analysis"]["total"], 5400.0);
     assert_eq!(stats["analysis"]["resolution"], "Hourly");
+    assert_eq!(task_ids(&stats["analysis"]["tasks"]), ["ticket:1"]);
+    assert_eq!(task_ids(&stats["availableTasks"]), ["ticket:1", "ticket:2"], "the whole period");
 
     h.ok(json!({"type": "statistics.scale", "factor": 0.5})).await;
     let stats = h
@@ -202,6 +208,7 @@ async fn zoom_filters_and_entry_pages_follow_the_window() {
         h.wait_for("statistics", |stats| ready(stats) && stats["analysis"]["count"] == 1).await;
     assert_eq!(stats["analysis"]["total"], 1800.0);
     assert_eq!(stats["targetComparable"], false);
+    assert_eq!(task_ids(&stats["availableTasks"]), ["ticket:1", "ticket:2"], "unfiltered");
     let page = h.ok(json!({"type": "statistics.entries", "offset": 0, "limit": 10})).await;
     assert_eq!(page["total"], 1);
     assert_eq!(page["entries"][0]["record"]["log"]["id"], "c");

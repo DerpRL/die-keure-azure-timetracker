@@ -151,6 +151,8 @@ pub struct StatisticsSlice {
     /// Invalid worklogs left out of every total.
     pub omitted: i64,
     pub available_activities: Vec<ExplorerActivity>,
+    /// Every task of the downloaded period (unfiltered, unzoomed), by title.
+    pub available_tasks: Vec<ExplorerTask>,
     pub analysis: Option<AnalysisView>,
     pub visuals: Option<ExplorerVisuals>,
     /// Targets are compared only for the complete, unfiltered period.
@@ -388,6 +390,7 @@ fn statistics(state: &AppState, cal: &Cal) -> StatisticsSlice {
         synced_at: stats.synced_at,
         omitted: stats.omitted,
         available_activities: stats.available_activities.clone(),
+        available_tasks: stats.available_tasks.clone(),
         analysis: stats.current_analysis(cal).map(|analysis| AnalysisView::of(analysis)),
         visuals: stats.current_visuals(cal).map(|visuals| (**visuals).clone()),
         target_comparable: window == bounds && !stats.filter.is_active(),

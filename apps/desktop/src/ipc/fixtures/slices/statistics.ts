@@ -578,6 +578,10 @@ function sample({ period, from, to, zoom, filter = NO_FILTER, section = 'time', 
   // One preceding day is downloaded to include overnight work (as the engine does).
   const source = logs ?? worklogs(localDay(bounds.start - DAY), to);
   const explored = explore(source, bounds, window, filter);
+  // The engine lists every task of the period, unfiltered and unzoomed, by title.
+  const availableTasks = explore(source, bounds, bounds, NO_FILTER).analysis.tasks.sort(
+    (a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id),
+  );
   return {
     entries: explored.entries,
     slice: {
@@ -595,6 +599,7 @@ function sample({ period, from, to, zoom, filter = NO_FILTER, section = 'time', 
       syncedAt: SYNCED_AT,
       omitted: 0,
       availableActivities: explored.available,
+      availableTasks,
       analysis: explored.analysis,
       visuals: explored.visuals,
       targetComparable: !zoom && !filterActive(filter),
@@ -642,6 +647,7 @@ export const loadingStatistics: StatisticsSlice = {
   analysis: null,
   visuals: null,
   availableActivities: [],
+  availableTasks: [],
 };
 
 /** A failed refresh keeps the last downloaded worklogs. */

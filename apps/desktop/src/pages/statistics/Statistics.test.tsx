@@ -251,6 +251,20 @@ describe('filters', () => {
     ]);
   });
 
+  it('filters by any ticket of the period, also while another ticket is filtered', async () => {
+    const { engine, user } = renderPage(filteredWeekStatistics);
+    const ticket = screen.getByRole('combobox', { name: 'Ticket' });
+    expect(ticket).toHaveValue('#4821 Checkout: retry failed card payments');
+    await user.clear(ticket);
+    await user.type(ticket, 'VAT');
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual(['#4790 Invoice PDF shows the wrong VAT number']);
+    await user.click(screen.getByRole('option', { name: '#4790 Invoice PDF shows the wrong VAT number' }));
+    expect(engine.dispatched('statistics.setFilter').at(-1)).toEqual({
+      type: 'statistics.setFilter',
+      filter: { ...filteredWeekStatistics.filter, taskId: 'ticket:4790' },
+    });
+  });
+
   it('shows active filters as chips and clears them', async () => {
     const { engine, user } = renderPage(filteredWeekStatistics);
     const chips = screen.getByRole('list', { name: 'Active filters' });

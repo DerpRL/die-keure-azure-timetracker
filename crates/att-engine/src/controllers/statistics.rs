@@ -21,7 +21,7 @@ use serde_json::Value;
 use att_core::AppError;
 use att_core::explorer::{
     ExplorerActivity, ExplorerAnalysis, ExplorerDataset, ExplorerEntry, ExplorerFilter,
-    ExplorerOptions, StatisticsZoom,
+    ExplorerOptions, ExplorerTask, StatisticsZoom,
 };
 use att_core::explorer_visuals::ExplorerVisuals;
 use att_core::statistics::{StatisticsPeriod, StatisticsRange};
@@ -59,6 +59,8 @@ pub(crate) struct StatisticsState {
     pub focus: Option<Interval>,
     pub zoom_history: Vec<Interval>,
     pub available_activities: Vec<ExplorerActivity>,
+    /// Every task of the downloaded period, unfiltered and unzoomed, for the ticket filter.
+    pub available_tasks: Vec<ExplorerTask>,
     pub omitted: i64,
     /// A 7pace connection exists (Swift `configured`).
     pub configured: bool,
@@ -90,6 +92,7 @@ impl Default for StatisticsState {
             focus: None,
             zoom_history: Vec::new(),
             available_activities: Vec::new(),
+            available_tasks: Vec::new(),
             omitted: 0,
             configured: false,
             dataset: Arc::default(),
@@ -145,6 +148,7 @@ impl StatisticsState {
         self.focus = None;
         self.zoom_history.clear();
         self.available_activities.clear();
+        self.available_tasks.clear();
         self.omitted = 0;
         self.title_batch = None;
         self.filter = ExplorerFilter::default();
@@ -518,7 +522,17 @@ async fn analyse(engine: Engine, job: AnalysisJob, cal: Cal) {
     let result = tokio::task::spawn_blocking(move || {
         let analysis = dataset.analyze(window, &options, &run_cal, now);
         let visuals = ExplorerVisuals::new(&analysis, &options.targets, &run_cal, now);
-        (analysis, visuals)
+        let period = range.interval();
+        // The ticket filter offers every task of the period, whatever is filtered or zoomed.
+        let mut tasks = if window == period && !options.filter.is_active() {
+            analysis.tasks.clone()
+        } else {
+            let unfiltered =
+                ExplorerOptions { filter: ExplorerFilter::default(), ..options.clone() };
+            dataset.analyze(period, &unfiltered, &run_cal, now).tasks
+        };
+        tasks.sort_by(|a, b| natural_cmp(&a.title, &b.title).then_with(|| a.id.cmp(&b.id)));
+        (analysis, visuals, tasks)
     })
     .await;
     engine.update(|state| {
@@ -528,9 +542,10 @@ async fn analyse(engine: Engine, job: AnalysisJob, cal: Cal) {
         }
         stats.analyzing = false;
         match result {
-            Ok((analysis, visuals)) => {
+            Ok((analysis, visuals, tasks)) => {
                 stats.analysis = Some(Arc::new(analysis));
                 stats.visuals = Some(Arc::new(visuals));
+                stats.available_tasks = tasks;
             }
             Err(error) => tracing::error!("statistics analysis failed: {error}"),
         }

@@ -3,7 +3,7 @@
  * decides what is analysed; the engine filters, clips and totals, the page only presents.
  */
 import type { ChartSeries } from '../../charts/palette';
-import type { AnalysisView, ExplorerActivity, ExplorerFilter, ExplorerRecord, StatisticsSlice } from '../../ipc/contract';
+import type { AnalysisView, ExplorerActivity, ExplorerFilter, ExplorerRecord, ExplorerTask, StatisticsSlice } from '../../ipc/contract';
 import { lengthBandName, weekdayName } from './format';
 
 /** `StatisticsZoom::MINIMUM`: the engine never zooms below 15 minutes. */
@@ -85,8 +85,13 @@ export interface FilterChip {
   without: ExplorerFilter;
 }
 
+/** "#4821 Checkout: retry failed card payments", or the title of a ticket-free task. */
+export function taskLabel(task: ExplorerTask): string {
+  return task.ticketId ? `#${task.ticketId} ${task.title}` : task.title;
+}
+
 /** The active filters as removable chips, in the order of the filter bar. */
-export function filterChips(filter: ExplorerFilter, analysis: AnalysisView | null, available: readonly ExplorerActivity[]): FilterChip[] {
+export function filterChips(filter: ExplorerFilter, tasks: readonly ExplorerTask[], available: readonly ExplorerActivity[]): FilterChip[] {
   const chips: FilterChip[] = [];
   const query = filter.query.trim();
   if (query) chips.push({ id: 'query', label: `Search: “${query}”`, without: { ...filter, query: '' } });
@@ -95,8 +100,8 @@ export function filterChips(filter: ExplorerFilter, analysis: AnalysisView | nul
     chips.push({ id: 'activityId', label: `Activity: ${name}`, without: { ...filter, activityId: null } });
   }
   if (filter.taskId !== null) {
-    const task = analysis?.tasks.find((item) => item.id === filter.taskId);
-    const title = task ? (task.ticketId ? `#${task.ticketId} ${task.title}` : task.title) : 'Selected task';
+    const task = tasks.find((item) => item.id === filter.taskId);
+    const title = task ? taskLabel(task) : 'Selected task';
     chips.push({ id: 'taskId', label: `Task: ${title}`, without: { ...filter, taskId: null } });
   }
   if (filter.weekday !== null) {
