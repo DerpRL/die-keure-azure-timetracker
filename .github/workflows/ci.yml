@@ -31,7 +31,18 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
-      - run: cargo test --workspace
+      - name: cargo test --workspace
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --workspace --no-fail-fast 2>&1 | tee test.log || {
+            # The failures as one annotation, readable in the run summary and through the API.
+            summary=$(awk '/^failures:$/{on=1} on{print} /^test result:/{on=0}' test.log | head -150)
+            [ -n "$summary" ] || summary=$(tail -40 test.log)
+            summary=${summary//'%'/'%25'}; summary=${summary//$'\r'/'%0D'}; summary=${summary//$'\n'/'%0A'}
+            echo "::error title=cargo test failed::$summary"
+            exit 1
+          }
       # The TypeScript contract (apps/desktop/src/ipc/generated.ts) matches the Rust types.
       - run: cargo test -p att-engine --features ts --test contract_ts
 
@@ -61,4 +72,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: swift --version
-      - run: swift test
+      - name: swift test
+        run: |
+          set -o pipefail
+          swift test 2>&1 | tee swift.log || {
+            summary=$(grep -E 'error:|failed|Fatal|crashed' swift.log | head -80)
+            [ -n "$summary" ] || summary=$(tail -40 swift.log)
+            summary=${summary//'%'/'%25'}; summary=${summary//$'\r'/'%0D'}; summary=${summary//$'\n'/'%0A'}
+            echo "::error title=swift test failed::$summary"
+            exit 1
+          }
