@@ -215,6 +215,8 @@ fn published_update_assets_are_immutable() {
     assert_eq!(listing(&fixture.repo.join("releases/latest")), latest_before);
 }
 
+// The bridge fixtures build the 1.x ZIP, which needs Unix execute bits (see legacy_zip.rs).
+#[cfg(unix)]
 #[test]
 fn bridge_publishes_the_signed_legacy_manifest() {
     let fixture = fixture(true);
@@ -229,6 +231,7 @@ fn bridge_publishes_the_signed_legacy_manifest() {
     assert!(fixture.repo.join("updates/v2/latest.json").is_file());
 }
 
+#[cfg(unix)]
 #[test]
 fn legacy_artifacts_need_the_bridge_flag_and_the_flag_needs_them() {
     let with_legacy = fixture(true);
@@ -240,6 +243,7 @@ fn legacy_artifacts_need_the_bridge_flag_and_the_flag_needs_them() {
     assert!(!without.repo.join("updates/v2/latest.json").exists());
 }
 
+#[cfg(unix)]
 #[test]
 fn bridge_must_be_newer_than_the_published_legacy_release() {
     let fixture = fixture(true);
@@ -249,6 +253,7 @@ fn bridge_must_be_newer_than_the_published_legacy_release() {
     assert!(!fixture.repo.join("releases/updates/2.0.0").exists(), "refused before writing");
 }
 
+#[cfg(unix)]
 #[test]
 fn a_tampered_legacy_manifest_is_refused() {
     let fixture = fixture(true);

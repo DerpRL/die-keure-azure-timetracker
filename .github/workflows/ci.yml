@@ -37,9 +37,15 @@ jobs:
         run: |
           set -o pipefail
           cargo test --workspace --no-fail-fast 2>&1 | tee test.log || {
-            # The failures as one annotation, readable in the run summary and through the API.
-            { awk '/^failures:$/{on=1} on{print} /^test result:/{on=0}' test.log | head -400; tail -15 test.log; } > summary.txt || true
-            echo "::error title=cargo test failed::$(awk 'BEGIN{ORS="%0A"} {gsub(/%/,"%25"); gsub(/\r/,"%0D"); print}' summary.txt)"
+            # Each failing test with its panic, and compile errors with a few lines of context.
+            awk '{ gsub(/\033\[[0-9;]*m/, "") }
+              /^---- .* stdout ----$/ { name = $2; next }
+              /panicked at/ { print name ": " substr($0, index($0, "panicked at")); left = 3; next }
+              / targets? failed:$/ { print; left = 50; next }
+              /^error(\[E[0-9]+\])?: / { print; left = 4; next }
+              /^[[:space:]]*$/ { left = 0; next }
+              left > 0 && !/^note: run with/ { print "  " $0; left-- }' test.log > summary.txt || true
+            bash .github/scripts/annotate.sh "cargo test failed" summary.txt
             exit 1
           }
       # The TypeScript contract (apps/desktop/src/ipc/generated.ts) matches the Rust types.
@@ -76,7 +82,8 @@ jobs:
         run: |
           set -o pipefail
           swift test 2>&1 | tee swift.log || {
-            { grep -E 'error:|✘|recorded an issue|Fatal|crashed' swift.log | head -120; tail -15 swift.log; } > summary.txt || true
-            echo "::error title=swift test failed::$(awk 'BEGIN{ORS="%0A"} {gsub(/%/,"%25"); gsub(/\r/,"%0D"); print}' summary.txt)"
+            # Compiler errors repeat per architecture and in the summary: each one once.
+            { grep -E 'error:|✘|recorded an issue|Fatal|crashed' swift.log | awk '!seen[$0]++' | head -80; tail -15 swift.log; } > summary.txt || true
+            bash .github/scripts/annotate.sh "swift test failed" summary.txt
             exit 1
           }

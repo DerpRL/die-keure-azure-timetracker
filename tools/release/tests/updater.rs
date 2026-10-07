@@ -4,11 +4,15 @@ mod support;
 
 use std::fs;
 
+#[cfg(unix)]
+use att_release::tree;
 use att_release::updater_key::{self, KeySource, KeygenOutcome};
-use att_release::{feed, tarball, tree};
+use att_release::{feed, tarball};
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
-use support::{AppSpec, VERSION, write_app};
+use support::VERSION;
+#[cfg(unix)]
+use support::{AppSpec, write_app};
 
 #[test]
 fn keygen_creates_a_tauri_format_pair_and_is_idempotent() {
@@ -236,6 +240,8 @@ fn feed_checks_reject_mismatches() {
     assert!(feed::parse(r#"{"version":"2.0.0","notes":"n","pub_date":"2026-10-06T09:00:00Z","platforms":{},"extra":1}"#).is_err());
 }
 
+// The archive takes the bundle's modes from the file system, which Windows does not keep.
+#[cfg(unix)]
 #[test]
 fn updater_archive_round_trips_like_the_tauri_plugin() {
     let temp = tempfile::tempdir().unwrap();

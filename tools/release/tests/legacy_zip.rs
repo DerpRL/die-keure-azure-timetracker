@@ -1,4 +1,7 @@
 //! The bridge ZIP: layout like `build-update.py` (minus its allowlist) and the client preflight.
+//! Unix only: the ZIP takes the bundle's execute bits from the file system, which Windows does not
+//! keep (the bridge refuses to run there).
+#![cfg(unix)]
 
 mod support;
 
@@ -103,7 +106,6 @@ fn preflight_accepts_the_bundle_and_reports_its_identity() {
     assert_eq!(release.size as u64, result.size);
 }
 
-#[cfg(unix)]
 #[test]
 fn rejects_symlinks_in_the_bundle() {
     let (_temp, app, out) = build(&AppSpec::default());
@@ -113,7 +115,6 @@ fn rejects_symlinks_in_the_bundle() {
     assert!(!out.exists());
 }
 
-#[cfg(unix)]
 #[test]
 fn rejects_a_bundle_that_is_itself_a_link_outside() {
     let (temp, app, _out) = build(&AppSpec::default());
@@ -149,7 +150,6 @@ fn missing_helper_is_rejected() {
     );
 }
 
-#[cfg(unix)]
 #[test]
 fn helper_without_execute_permission_is_rejected() {
     let (_temp, app, out) = build(&AppSpec::default());
