@@ -195,7 +195,7 @@ function BucketEntries({ bucket, slice, analysis, analysisKey, colors, series, o
 
 /** Totals behind the chart: clock time covered, overlap and billable time (1.14 pattern notes). */
 function Coverage({ analysis }: { analysis: AnalysisView }) {
-  const overlap = Math.max(0, analysis.total - analysis.covered);
+  const { overlap } = analysis;
   return (
     <dl className={styles.coverage}>
       <div>

@@ -68,10 +68,38 @@ pub struct AnalysisView {
     pub billable: f64,
     pub billable_known_count: i64,
     pub target: f64,
-    pub context: ContextInsights,
+    /// Recorded total minus covered clock time.
+    pub overlap: f64,
+    pub context: ContextView,
     pub entry_count: usize,
     /// The first entries, for the always-visible list (8 in 1.14.x).
     pub entries_preview: Vec<ExplorerEntry>,
+}
+
+/// The context insights with their totals, so the UI does not add them up itself.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ContextView {
+    #[serde(flatten)]
+    pub insights: ContextInsights,
+    /// Task switches in the window.
+    pub switches: i64,
+    /// Seconds of the longest continuous block.
+    pub longest_block: f64,
+    /// Mean seconds of the continuous blocks (0 without any).
+    pub average_block: f64,
+}
+
+impl From<&ContextInsights> for ContextView {
+    fn from(insights: &ContextInsights) -> Self {
+        Self {
+            switches: insights.switches(),
+            longest_block: insights.longest_block(),
+            average_block: insights.average_block(),
+            insights: insights.clone(),
+        }
+    }
 }
 
 impl AnalysisView {
@@ -93,7 +121,8 @@ impl AnalysisView {
             billable: analysis.billable,
             billable_known_count: analysis.billable_known_count,
             target: analysis.target,
-            context: analysis.context.clone(),
+            overlap: analysis.overlap(),
+            context: ContextView::from(&analysis.context),
             entry_count: analysis.entries.len(),
             entries_preview: analysis.entries.iter().take(ENTRIES_PREVIEW).cloned().collect(),
         }

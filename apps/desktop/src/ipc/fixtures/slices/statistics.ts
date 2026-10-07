@@ -11,7 +11,7 @@ import type {
   ActivityType,
   AnalysisView,
   ContextDay,
-  ContextInsights,
+  ContextView,
   EntriesPage,
   ExplorerActivity,
   ExplorerBucket,
@@ -322,7 +322,7 @@ function windowDays(window: { start: number; end: number }): number[] {
   return result;
 }
 
-function context(entries: readonly ExplorerEntry[], window: { start: number; end: number }): ContextInsights {
+function context(entries: readonly ExplorerEntry[], window: { start: number; end: number }): ContextView {
   const result: ContextDay[] = [];
   let ambiguous = 0;
   for (const day of windowDays(window)) {
@@ -368,7 +368,14 @@ function context(entries: readonly ExplorerEntry[], window: { start: number; end
     }
     result.push(entry);
   }
-  return { days: result, ambiguousEntries: ambiguous };
+  const blocks = result.flatMap((day) => day.blocks);
+  return {
+    days: result,
+    ambiguousEntries: ambiguous,
+    switches: result.reduce((sum, day) => sum + day.switches, 0),
+    longestBlock: blocks.length ? Math.max(...blocks) : 0,
+    averageBlock: blocks.length ? blocks.reduce((sum, value) => sum + value, 0) / blocks.length : 0,
+  };
 }
 
 function median(values: readonly number[]): number {
@@ -542,6 +549,7 @@ function explore(logs: readonly WorkLog[], bounds: { start: number; end: number 
       billable,
       billableKnownCount: billableLogs.size,
       target: dayList.reduce((sum, day) => sum + scheduled(day), 0),
+      overlap: Math.max(0, total - covered),
       context: context(entries, window),
       entryCount: entries.length,
       entriesPreview: entries.slice(0, 8),

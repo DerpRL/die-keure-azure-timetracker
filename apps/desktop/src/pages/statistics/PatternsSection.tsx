@@ -39,21 +39,18 @@ export interface PatternsSectionProps {
 export function PatternsSection({ slice, analysis, analysisKey, colors, onOpenTimeline }: PatternsSectionProps) {
   const update = useAction();
   const setFilter = (filter: ExplorerFilter) => void update.run({ type: 'statistics.setFilter', filter });
-  const blocks = analysis.context.days.flatMap((day) => day.blocks);
-  const switches = analysis.context.days.reduce((sum, day) => sum + day.switches, 0);
-  const longest = blocks.length ? Math.max(...blocks) : 0;
-  const average = blocks.length ? blocks.reduce((sum, value) => sum + value, 0) / blocks.length : 0;
+  const { switches, longestBlock, averageBlock } = analysis.context;
   const showTargets = slice.targetComparable && analysis.target > 0;
 
   return (
     <div className={styles.stack}>
       <MetricList label="Work pattern totals">
         <Metric title="Context switches" value={String(switches)} note="Between tasks, with breaks up to 15 min" icon={StatisticsIcon} />
-        <Metric title="Longest work block" value={duration(longest)} note="Continuous entries for the same task" icon={HistoryIcon} />
-        <Metric title="Average work block" value={duration(average)} note="Mean length of continuous work" icon={TimeEditorIcon} />
+        <Metric title="Longest work block" value={duration(longestBlock)} note="Continuous entries for the same task" icon={HistoryIcon} />
+        <Metric title="Average work block" value={duration(averageBlock)} note="Mean length of continuous work" icon={TimeEditorIcon} />
         <Metric
           title="Overlapping time"
-          value={duration(Math.max(0, analysis.total - analysis.covered))}
+          value={duration(analysis.overlap)}
           note="Recorded total minus covered clock time"
           icon={CalendarRangeIcon}
         />

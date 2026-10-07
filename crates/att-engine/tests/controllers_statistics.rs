@@ -62,6 +62,12 @@ async fn the_week_and_its_preceding_day_load_when_the_page_appears() {
     assert!(analysis.get("entries").is_none(), "entries are paged, never published");
     assert_eq!(analysis["entriesPreview"].as_array().unwrap().len(), 3);
     assert_eq!(task_title(&stats, 1), "Azure ticket #1");
+    // Totals the UI used to add up: blocks of 30 min and 1 h on Monday, 30 min on Tuesday.
+    assert_eq!(analysis["overlap"], 0.0);
+    assert_eq!(analysis["context"]["switches"], 0);
+    assert_eq!(analysis["context"]["longestBlock"], 3600.0);
+    assert_eq!(analysis["context"]["averageBlock"], 2400.0);
+    assert!(analysis["context"]["days"].is_array(), "the days stay alongside the totals");
     assert_eq!(
         stats["availableActivities"],
         json!([{"id": "activity:dev", "name": "Development", "seconds": 0.0}])

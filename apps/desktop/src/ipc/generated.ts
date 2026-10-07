@@ -45,7 +45,9 @@ export type AnalysisView = {
   billable: number;
   billableKnownCount: number;
   target: number;
-  context: ContextInsights;
+  /** Recorded total minus covered clock time. */
+  overlap: number;
+  context: ContextView;
   entryCount: number;
   /** The first entries, for the always-visible list (8 in 1.14.x). */
   entriesPreview: Array<ExplorerEntry>;
@@ -225,7 +227,14 @@ export type ContextDay = {
   blocks: Array<number>;
 };
 
-export type ContextInsights = {
+/** The context insights with their totals, so the UI does not add them up itself. */
+export type ContextView = {
+  /** Task switches in the window. */
+  switches: number;
+  /** Seconds of the longest continuous block. */
+  longestBlock: number;
+  /** Mean seconds of the continuous blocks (0 without any). */
+  averageBlock: number;
   days: Array<ContextDay>;
   /** Invalid logs plus every segment in an overlapping cluster. */
   ambiguousEntries: number;
