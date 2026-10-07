@@ -178,10 +178,8 @@ describe('TicketPickerSheet', () => {
       { type: 'tracking.chooseSuggestionTicket', draftId: branchDraftFlow.draft!.id },
     ]);
     await user.click(screen.getByRole('button', { name: 'Start tracking' }));
-    expect(engine.dispatched('tracking.start')[0]).toMatchObject({
-      includeTicket: false,
-      comment: 'feature/AB#4790-vat-number',
-    });
+    // The engine adds the branch remark itself; only manual drafts send a typed comment.
+    expect(engine.dispatched('tracking.start')[0]).toMatchObject({ includeTicket: false, comment: '' });
   });
 
   it('offers different work for a Figma draft and says Resume for a paused session', async () => {
@@ -194,6 +192,26 @@ describe('TicketPickerSheet', () => {
     expect(screen.getByText('Resume starts a new session. Paused time is not logged.')).toBeInTheDocument();
   });
 
+  it('follows the engine for Start, the meeting line and choosing another ticket', async () => {
+    const draft = {
+      ...ticketDraft,
+      allowsNoTicket: true,
+      meetingTitle: 'Sprint planning',
+      canChooseTicket: false,
+      startableActivityIds: ['meeting'],
+    };
+    const { engine, user } = renderWithEngine(<TicketPickerSheet />, { with: { flow: { ...pickerDraftFlow, draft } } });
+    expect(await screen.findByText('Sprint planning')).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: 'Use Azure ticket #4790' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Choose (another ticket|a ticket instead)…/ })).not.toBeInTheDocument();
+    // The preferred Development activity is not startable for this draft.
+    expect(screen.getByRole('button', { name: 'Start tracking' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: /Development/ }));
+    await user.click(screen.getByRole('option', { name: 'Meeting' }));
+    await user.click(screen.getByRole('button', { name: 'Start tracking' }));
+    expect(engine.dispatched('tracking.start')[0]).toMatchObject({ activityId: 'meeting' });
+  });
+
   it('shows loading, error and empty activity states', async () => {
     const { engine, user } = renderWithEngine(<TicketPickerSheet />, { with: { flow: picker(loadingActivitiesFlow) } });
     expect(await screen.findByText('Loading 7pace activities…')).toBeInTheDocument();
@@ -201,7 +219,7 @@ describe('TicketPickerSheet', () => {
     act(() => engine.setSlice('flow', picker(activityErrorFlow)));
     expect(await screen.findByText('Could not load activity types: The request timed out.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Reload activity types' }));
-    expect(engine.dispatched('connection.retry')).toHaveLength(1);
+    expect(engine.dispatched('tracking.reloadActivities')).toHaveLength(1);
     act(() => engine.setSlice('flow', picker(noActivitiesFlow)));
     expect(
       await screen.findByText('No activity types are configured in 7pace. Its workspace default will be used.'),

@@ -155,6 +155,13 @@ describe('PanelView', () => {
     expect(shellCalls(engine, 'shell_show_main').at(-1)?.args).toEqual({ page: 'offlineDrafts' });
   });
 
+  it('names the workspace of a local timer from another 7pace workspace', () => {
+    const tracking = { ...localTracking, local: { ...localTracking.local!, otherWorkspace: 'https://fabrikam.timehub.7pace.com' } };
+    renderWithEngine(<PanelView />, { with: { tracking, prompts: noPrompts } });
+    const section = screen.getByRole('region', { name: 'Local tracking · saved on this Mac' });
+    expect(within(section).getByText('Workspace: https://fabrikam.timehub.7pace.com')).toBeInTheDocument();
+  });
+
   it('opens a section of the main window or quits', async () => {
     const { engine, user } = renderWithEngine(<PanelView />);
     await user.click(screen.getByRole('button', { name: 'Overview' }));

@@ -76,6 +76,7 @@ export function TargetProgress({ compact = false }: { compact?: boolean }) {
   return (
     <div className={styles.progress}>
       <ProgressRow label="Today" seconds={totals.today} target={progress.todayTarget} compact={compact} stale={!confirmed} />
+      {progress.todayReason ? <p className={styles.caption}>{progress.todayReason}</p> : null}
       <ProgressRow label="This week" seconds={totals.week} target={progress.weekTarget} compact={compact} stale={!confirmed} />
       {!compact ? (
         <p className={styles.caption}>

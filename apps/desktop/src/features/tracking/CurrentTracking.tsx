@@ -258,6 +258,7 @@ export function LocalTimer({ surface }: { surface: TrackingSurface }) {
         label="Local timer"
       />
       <p className={styles.trackingTitle}>{local.title}</p>
+      {local.otherWorkspace ? <p className={styles.warning}>{`Workspace: ${local.otherWorkspace}`}</p> : null}
       {local.ticketId !== null && local.comment ? <p className={styles.caption}>{local.comment}</p> : null}
       {local.activityName ? <p className={styles.caption}>{local.activityName}</p> : null}
       <div className={styles.actions}>

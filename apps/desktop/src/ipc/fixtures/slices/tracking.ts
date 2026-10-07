@@ -157,6 +157,15 @@ export const reachedProgress: ProgressSlice = {
 };
 
 /** A public holiday: no target today. */
+/** A leave day: no target today, and the reason under Today. */
+export const leaveProgress: ProgressSlice = {
+  ...sampleProgress,
+  todaySeconds: 0,
+  todayTarget: 0,
+  extrapolate: false,
+  todayReason: 'Full-day leave · Autumn break',
+};
+
 export const noTargetProgress: ProgressSlice = { ...sampleProgress, todaySeconds: 0, todayTarget: 0, extrapolate: false };
 
 export const sampleWorkItems: WorkItemsSlice = {

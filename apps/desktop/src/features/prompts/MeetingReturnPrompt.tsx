@@ -5,7 +5,10 @@ import { useIntents, useWriteGuards } from '../tracking/actions';
 import { ReturnIcon } from '../tracking/icons';
 import { PromptCard, promptStyles as styles } from './PromptCard';
 
-/** "Meeting ended" (1.14 `MeetingReturnPrompt`): return to the ticket from before the meeting. */
+/**
+ * "Meeting ended", or "Microphone use stopped" after a microphone session (1.14
+ * `MeetingReturnPrompt`): return to the ticket from before the meeting.
+ */
 export function MeetingReturnPrompt({ view }: { view: MeetingReturnView }) {
   const { busy, connected } = useWriteGuards();
   const actions = useIntents();
@@ -15,7 +18,7 @@ export function MeetingReturnPrompt({ view }: { view: MeetingReturnView }) {
     <PromptCard
       kind="meetingReturn"
       icon={ReturnIcon}
-      title="Meeting ended"
+      title={view.fromMicrophone ? 'Microphone use stopped' : 'Meeting ended'}
       runner={actions}
       actions={
         <>
@@ -39,6 +42,11 @@ export function MeetingReturnPrompt({ view }: { view: MeetingReturnView }) {
         </>
       }
     >
+      {view.fromMicrophone ? (
+        <p className={styles.caption}>
+          You may have ended the call or muted your microphone. Keep tracking if the meeting is continuing.
+        </p>
+      ) : null}
       <p className={styles.strong}>{`Return to #${view.ticketId}?`}</p>
       {title ? <p className={styles.text}>{title}</p> : null}
       {view.activityName ? <p className={styles.caption}>{view.activityName}</p> : null}

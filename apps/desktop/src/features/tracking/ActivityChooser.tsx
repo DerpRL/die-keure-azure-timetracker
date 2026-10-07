@@ -60,16 +60,13 @@ export function useActivityForm(flow: FlowSlice | undefined, draft: DraftView | 
   const comment = current.comment ?? draft.defaultComment;
   const includeTicket = draft.allowsNoTicket ? current.includeTicket : true;
 
-  const activityOk =
-    flow.activityTypes.length === 0 ? draft.allowedActivityIds.length === 0 : ids.includes(activityId);
+  // The engine decides what may start (Swift `canStart`); the local guards only cover the time
+  // until its next slice.
   const canStart =
-    flow.activitiesLoaded &&
-    !flow.loadingActivities &&
+    draft.startableActivityIds.includes(activityId) &&
     !guards.busy &&
     guards.connected &&
     !guards.preview &&
-    !draft.requiredActivity &&
-    activityOk &&
     !actions.isPending();
 
   return {
@@ -89,8 +86,8 @@ export function useActivityForm(flow: FlowSlice | undefined, draft: DraftView | 
         type: 'tracking.start',
         draftId: draft.id,
         activityId,
-        // Ticket-free starts send what the user typed; suggestions send their default remark.
-        comment: draft.manual ? comment.trim() : draft.defaultComment,
+        // Ticket-free starts send what the user typed; the engine adds a suggestion's own remark.
+        comment: draft.manual ? comment.trim() : '',
         includeTicket,
       });
     },
@@ -127,8 +124,8 @@ export function ActivityChooser({ flow, form, variant }: ActivityChooserProps) {
   const { draft, includeTicket } = form;
   const sheet = variant === 'sheet';
   const item = includeTicket ? draft.item : null;
-  const title = includeTicket ? draft.title : draft.defaultComment || draft.title;
-  const suggestion = flow.selectedSuggestion;
+  const title = includeTicket ? draft.title : (draft.remark ?? draft.title);
+  const trackingComment = includeTicket ? draft.commentWithTicket : draft.commentWithoutTicket;
   const startLabel = sheet ? 'Start tracking' : 'Start';
   const resuming = draft.resume || draft.source === 'meetingReturn';
 
@@ -150,7 +147,7 @@ export function ActivityChooser({ flow, form, variant }: ActivityChooserProps) {
             size="small"
             isDisabled={busy}
             isPending={switching.isPending('reload')}
-            onPress={() => void switching.run('reload', { type: 'connection.retry' })}
+            onPress={() => void switching.run('reload', { type: 'tracking.reloadActivities' })}
           >
             {sheet ? 'Reload activity types' : 'Reload activities'}
           </Button>
@@ -187,14 +184,14 @@ export function ActivityChooser({ flow, form, variant }: ActivityChooserProps) {
             <ReturnIcon className={styles.inlineIcon} /> Return to your previous work
           </p>
         ) : null}
-        {suggestion?.kind === 'meeting' ? (
+        {draft.meetingTitle ? (
           <p className={styles.caption}>
-            <CalendarIcon className={styles.inlineIcon} /> {suggestion.title}
+            <CalendarIcon className={styles.inlineIcon} /> {draft.meetingTitle}
           </p>
         ) : null}
         <p className={styles.ticketNumber}>{item ? `#${item.id} · ${item.type ?? 'Work item'}` : 'No Azure ticket'}</p>
         <p className={styles.draftTitle}>{title}</p>
-        {!draft.manual && draft.defaultComment ? <p className={styles.caption}>Comment: {draft.defaultComment}</p> : null}
+        {!draft.manual && trackingComment ? <p className={styles.caption}>Comment: {trackingComment}</p> : null}
         {item?.teamProject ? <p className={styles.caption}>{item.teamProject}</p> : null}
       </div>
 
@@ -210,17 +207,19 @@ export function ActivityChooser({ flow, form, variant }: ActivityChooserProps) {
               {`Use Azure ticket #${draft.item.id}`}
             </Switch>
           ) : null}
-          <div className={styles.row}>
-            <Button
-              variant="plain"
-              size="small"
-              isDisabled={busy}
-              isPending={switching.isPending('another')}
-              onPress={() => void switching.run('another', { type: 'tracking.chooseSuggestionTicket', draftId: draft.id })}
-            >
-              {draft.item ? 'Choose another ticket…' : 'Choose a ticket instead…'}
-            </Button>
-          </div>
+          {draft.canChooseTicket ? (
+            <div className={styles.row}>
+              <Button
+                variant="plain"
+                size="small"
+                isDisabled={busy}
+                isPending={switching.isPending('another')}
+                onPress={() => void switching.run('another', { type: 'tracking.chooseSuggestionTicket', draftId: draft.id })}
+              >
+                {draft.item ? 'Choose another ticket…' : 'Choose a ticket instead…'}
+              </Button>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -232,7 +231,7 @@ export function ActivityChooser({ flow, form, variant }: ActivityChooserProps) {
 
       {activityField}
 
-      {draft.source === 'figma' ? (
+      {draft.isFigma ? (
         <div className={styles.stack}>
           <div className={styles.row}>
             <Button

@@ -236,6 +236,12 @@ describe('meeting and microphone prompts', () => {
     expect(engine.intents.map((intent) => intent.type)).toEqual(['meeting.returnResume', 'meeting.returnDismiss']);
   });
 
+  it('says Microphone use stopped after a microphone session', () => {
+    renderPrompts({ ...meetingReturnPrompts, meetingReturn: { ...meetingReturnPrompts.meetingReturn!, fromMicrophone: true } });
+    expect(screen.getByRole('article', { name: 'Microphone use stopped' })).toBeInTheDocument();
+    expect(screen.getByText(/You may have ended the call or muted your microphone/)).toBeInTheDocument();
+  });
+
   it('waits for a meeting return to be due', () => {
     renderPrompts({ ...meetingReturnPrompts, meetingReturn: { ...meetingReturnPrompts.meetingReturn!, ready: false } });
     expect(screen.queryByRole('article')).not.toBeInTheDocument();

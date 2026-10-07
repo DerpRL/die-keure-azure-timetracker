@@ -101,6 +101,10 @@ export function ConnectionDetails({ headingLevel }: ConnectionDetailsProps) {
       {connection.connectionIssue ? <p className={styles.warning}>{connection.connectionIssue}</p> : null}
       {connection.azureIssue ? <p className={styles.warning}>{`Azure tickets: ${connection.azureIssue}`}</p> : null}
       {connection.progressIssue ? <p className={styles.warning}>{`Time totals: ${connection.progressIssue}`}</p> : null}
+      {connection.completionIssue ? (
+        <p className={styles.warning}>{`Ticket completion check: ${connection.completionIssue}`}</p>
+      ) : null}
+      {connection.shortcutIssue ? <p className={styles.warning}>{connection.shortcutIssue}</p> : null}
       {completionReminders && !connection.hasAzurePat ? (
         <p className={styles.caption}>Add an Azure PAT in Accounts to enable ticket completion reminders.</p>
       ) : null}
@@ -111,7 +115,8 @@ export function ConnectionDetails({ headingLevel }: ConnectionDetailsProps) {
           icon={RefreshIcon}
           isDisabled={busy || preview}
           isPending={actions.isPending('retry')}
-          onPress={() => void actions.run('retry', { type: 'connection.retry' })}
+          // 1.14: retry, then check the tracked ticket's completion state now.
+          onPress={() => void actions.run('retry', { type: 'connection.recheck' })}
         >
           Refresh connection
         </Button>

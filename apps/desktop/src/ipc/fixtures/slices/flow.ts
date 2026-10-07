@@ -128,7 +128,9 @@ export const branchDraftFlow: FlowSlice = {
     id: '7e1d3b2a-9c4f-4a5e-8b6d-1c3e5f7a9b24',
     source: 'branch',
     allowsNoTicket: true,
-    defaultComment: 'feature/AB#4790-vat-number',
+    remark: 'feature/AB#4790-vat-number',
+    commentWithTicket: 'feature/AB#4790-vat-number',
+    commentWithoutTicket: 'feature/AB#4790-vat-number',
   },
 };
 
@@ -183,11 +185,11 @@ export const figmaDraftFlow: FlowSlice = {
     preferredActivityId: 'design',
     allowedActivityIds: ['design'],
     requiredActivity: null,
-    defaultComment: 'Checkout redesign',
+    defaultComment: '',
     resume: false,
     standup: false,
     isFigma: true,
-    remark: null,
+    remark: 'Checkout redesign',
     commentWithTicket: 'Checkout redesign',
     commentWithoutTicket: 'Checkout redesign',
     meetingTitle: null,
@@ -207,11 +209,13 @@ export const resumeDraftFlow: FlowSlice = {
   },
 };
 
+/** Nothing can start until the activity types are known (`startableActivityIds` is empty). */
 export const loadingActivitiesFlow: FlowSlice = {
   ...ticketDraftFlow,
   activityTypes: [],
   activitiesLoaded: false,
   loadingActivities: true,
+  draft: { ...ticketDraft, startableActivityIds: [] },
 };
 
 export const activityErrorFlow: FlowSlice = {
@@ -219,10 +223,15 @@ export const activityErrorFlow: FlowSlice = {
   activityTypes: [],
   activitiesLoaded: false,
   activityError: 'Could not load activity types: The request timed out.',
+  draft: { ...ticketDraft, startableActivityIds: [] },
 };
 
-/** 7pace has no activity types: its workspace default is used. */
-export const noActivitiesFlow: FlowSlice = { ...ticketDraftFlow, activityTypes: [] };
+/** 7pace has no activity types: its workspace default (`""`) is used. */
+export const noActivitiesFlow: FlowSlice = {
+  ...ticketDraftFlow,
+  activityTypes: [],
+  draft: { ...ticketDraft, startableActivityIds: [''] },
+};
 
 // -- prompts ----------------------------------------------------------------------------------
 

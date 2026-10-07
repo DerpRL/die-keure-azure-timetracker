@@ -6,6 +6,7 @@ import { degradedConnection, unconfiguredConnection } from '../../ipc/fixtures/s
 import { noPrompts, pickerDraftFlow, sampleBranch, ticketDraft } from '../../ipc/fixtures/slices/flow';
 import {
   emptyHistory,
+  leaveProgress,
   localTracking,
   pausedTracking,
   sampleHistory,
@@ -68,12 +69,32 @@ describe('Overview page', () => {
     expect(screen.getByText('Connect 7pace to see today’s worklogs.')).toBeInTheDocument();
   });
 
+  it('says why today has a different target', () => {
+    renderWithEngine(<OverviewPage />, { with: { progress: leaveProgress, prompts: noPrompts } });
+    expect(screen.getByText('Full-day leave · Autumn break')).toBeInTheDocument();
+  });
+
   it('reports Azure problems separately from a healthy 7pace connection', () => {
     renderWithEngine(<OverviewPage />, { with: { connection: degradedConnection } });
     const details = screen.getByRole('region', { name: 'Connection details' });
     expect(details).toHaveTextContent('7pace connected');
     expect(within(details).getByText('Azure tickets: The Azure DevOps personal access token has expired.')).toBeInTheDocument();
     expect(within(details).getByText('Time totals: Worklogs could not be downloaded (HTTP 503).')).toBeInTheDocument();
+  });
+
+  it('lists the completion check and shortcut problems, and rechecks everything on Refresh connection', async () => {
+    const connection = {
+      ...degradedConnection,
+      completionIssue: 'Azure DevOps did not respond.',
+      shortcutIssue: 'The quick-switch shortcut is used by another app.',
+    };
+    const { engine, user } = renderWithEngine(<OverviewPage />, { with: { connection } });
+    const details = screen.getByRole('region', { name: 'Connection details' });
+    expect(within(details).getByText('Ticket completion check: Azure DevOps did not respond.')).toBeInTheDocument();
+    expect(within(details).getByText('The quick-switch shortcut is used by another app.')).toBeInTheDocument();
+    await user.click(within(details).getByRole('button', { name: 'Refresh connection' }));
+    expect(engine.dispatched('connection.recheck')).toHaveLength(1);
+    expect(engine.dispatched('connection.retry')).toHaveLength(0);
   });
 
   it('starts from a stopped timer through the picker only', async () => {
