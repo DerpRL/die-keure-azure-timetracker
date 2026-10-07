@@ -11,6 +11,7 @@ import {
   SLICES_EVENT,
   type Intent,
   type IntentOf,
+  type IntentResults,
   type IntentType,
   type SliceMap,
   type SliceName,
@@ -54,6 +55,21 @@ export interface MockEngineOptions {
   ipc?: MockIpc;
   latencyMs?: number;
 }
+
+/**
+ * What an unhandled intent that returns a value answers, so callers never see `null` where the
+ * engine always returns something.
+ */
+const DEFAULT_RESULTS: {
+  [T in Exclude<keyof IntentResults, 'app.snapshot'>]: (intent: IntentOf<T>) => IntentResults[T];
+} = {
+  'statistics.entries': ({ offset }) => ({ offset, total: 0, entries: [] }),
+  'settings.testBranchPattern': () => ({ text: 'No unique ticket found', valid: true }),
+  'settings.resolveWorkApp': ({ path }) => {
+    const file = path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
+    return { id: file.toLowerCase(), name: file.replace(/\.(app|exe)$/i, ''), path };
+  },
+};
 
 function updatesOf(slices: Partial<SliceMap>): SliceUpdate[] {
   return (Object.keys(slices) as SliceName[]).map((name) => ({ name, value: slices[name] }) as SliceUpdate);
@@ -105,7 +121,11 @@ export function installMockEngine({ slices = {}, ipc, latencyMs }: MockEngineOpt
     intents.push(intent);
     if (intent.type === 'app.snapshot') return updatesOf(current);
     const handler = handlers.get(intent.type);
-    return handler ? (handler(intent, engine) ?? null) : null;
+    if (handler) return handler(intent, engine) ?? null;
+    const fallback = DEFAULT_RESULTS[intent.type as keyof typeof DEFAULT_RESULTS] as
+      | ((intent: Intent) => unknown)
+      | undefined;
+    return fallback ? fallback(intent) : null;
   });
   return engine;
 }

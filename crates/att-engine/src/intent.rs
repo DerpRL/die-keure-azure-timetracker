@@ -78,8 +78,3 @@ pub async fn route(engine: &Engine, intent: Intent) -> Result<Value, IpcError> {
 pub(crate) fn done() -> Result<Value, IpcError> {
     Ok(Value::Null)
 }
-
-/// Placeholder result while a handler is being ported.
-pub(crate) fn not_implemented(kind: &str) -> Result<Value, IpcError> {
-    Err(IpcError::new("notImplemented", format!("{kind} is not available yet.")))
-}

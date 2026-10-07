@@ -99,9 +99,8 @@ export type IntentArgs<T extends IntentType> = Omit<IntentOf<T>, 'type'>;
 /**
  * Intents that return a value. Every other intent resolves to `null`; its effect arrives as
  * slices. Failures reject with `{ kind, message }` (`IpcError`): `kind` is stable for logic
- * (`busy`, `invalidIntent`, `notImplemented`, `needsConfirmation`, `authentication`,
- * `accessDenied`, `remoteChanged`, `network`, `timeout`, `storage`, …), `message` is shown
- * verbatim.
+ * (`busy`, `invalidIntent`, `needsConfirmation`, `authentication`, `accessDenied`,
+ * `remoteChanged`, `network`, `timeout`, `storage`, …), `message` is shown verbatim.
  */
 export interface IntentResults {
   'app.snapshot': SliceUpdate[];

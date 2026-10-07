@@ -712,7 +712,7 @@ pub(crate) struct Effects {
     records: Vec<(String, String)>,
     invalidate: bool,
     titles: Vec<i64>,
-    announcements: Vec<(PromptKind, Option<Notification>, bool)>,
+    announcements: Vec<(PromptKind, Option<Notification>)>,
     sync_microphone: bool,
 }
 
@@ -735,16 +735,7 @@ impl Effects {
 
     /// A prompt that may open the panel (see [`announce::announce`]).
     pub(crate) fn announce(&mut self, kind: PromptKind, notification: Option<Notification>) {
-        self.announcements.push((kind, notification, true));
-    }
-
-    /// A prompt that may only notify now (Swift skipped the reveal while busy).
-    pub(crate) fn announce_without_panel(
-        &mut self,
-        kind: PromptKind,
-        notification: Option<Notification>,
-    ) {
-        self.announcements.push((kind, notification, false));
+        self.announcements.push((kind, notification));
     }
 
     pub(crate) fn sync_microphone(&mut self) {
@@ -765,8 +756,8 @@ impl Effects {
         if !self.titles.is_empty() {
             connection::request_titles(engine, self.titles);
         }
-        for (kind, notification, panel) in self.announcements {
-            announce::announce(engine, kind, notification, panel);
+        for (kind, notification) in self.announcements {
+            announce::announce(engine, kind, notification, true);
         }
         if self.sync_microphone {
             microphone::sync(engine);
