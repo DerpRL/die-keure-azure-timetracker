@@ -274,14 +274,24 @@ impl TokenPersistenceFixture {
             async move {
                 fixture.writes.fetch_add(1, Ordering::SeqCst);
                 fixture.saved.lock().unwrap().push((next, previous));
-                let fail = fixture
-                    .failures
-                    .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |left| left.checked_sub(1))
-                    .is_ok();
+                let fail = take_one(&fixture.failures);
                 if fail { Err(AppError::message("Fixture persistence failure")) } else { Ok(()) }
             }
         }
     }
+}
+
+/// Uses up one of the remaining failures: decrements unless already zero (`fetch_update` without
+/// its 1.99 deprecation, and without `try_update`, which older compilers lack).
+fn take_one(counter: &AtomicUsize) -> bool {
+    let mut left = counter.load(Ordering::SeqCst);
+    while left > 0 {
+        match counter.compare_exchange(left, left - 1, Ordering::SeqCst, Ordering::SeqCst) {
+            Ok(_) => return true,
+            Err(actual) => left = actual,
+        }
+    }
+    false
 }
 
 fn expired_tokens() -> SevenPaceTokens {

@@ -56,7 +56,9 @@ jobs:
 
   legacy-swift:
     name: Legacy Swift (bridge release)
-    runs-on: macos-14
+    # Package.swift needs Swift tools 6.0: macos-15 defaults to Xcode 16 (macos-14 to Xcode 15).
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+      - run: swift --version
       - run: swift test
