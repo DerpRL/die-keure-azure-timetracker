@@ -6,6 +6,7 @@ import { Button, IconButton } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { DatePicker } from '../../components/DateFields';
 import { EmptyState, LoadingRegion, Skeleton } from '../../components/EmptyState';
+import { PageHeaderActions } from '../../features/app/PageHeaderActions';
 import { AgendaIcon, ChevronLeftIcon, ChevronRightIcon, SettingsIcon } from '../../components/icons';
 import type { AgendaEventView, AgendaSlice } from '../../ipc/contract';
 import { showMain } from '../../ipc/shell';
@@ -217,6 +218,7 @@ export default function AgendaPage() {
   const agenda = useSlice('agenda');
   const preview = useSlice('app')?.preview ?? false;
   const setDay = useAction();
+  const openCalendar = useAction();
   const day = agenda ? parseDay(agenda.day) : null;
   const ready = !!agenda && agenda.supported && agenda.access === 'authorized' && agenda.enabled && !!day;
 
@@ -253,9 +255,23 @@ export default function AgendaPage() {
     );
   }
 
+  const calendarApp = agenda.supported && agenda.access !== 'unsupported';
+
   return (
     <div className={styles.page}>
+      {calendarApp ? (
+        <PageHeaderActions>
+          <Button onPress={() => void openCalendar.run({ type: 'agenda.openCalendar' })} isPending={openCalendar.pending}>
+            Open Calendar
+          </Button>
+        </PageHeaderActions>
+      ) : null}
       <p className={styles.intro}>Events from the calendars connected to this Mac.</p>
+      {openCalendar.error ? (
+        <Banner tone="error" onDismiss={openCalendar.clearError} dismissLabel="Dismiss error">
+          {openCalendar.error.message}
+        </Banner>
+      ) : null}
       {agenda.issue ? (
         <Banner tone="warning" title="The calendar could not be read" live="off">
           {agenda.issue}

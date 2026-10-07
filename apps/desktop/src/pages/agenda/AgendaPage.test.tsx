@@ -12,6 +12,8 @@ import {
   agendaUnsupported,
   agendaWithIssue,
 } from '../../ipc/fixtures/slices/agenda';
+import { PageHeaderSlotContext } from '../../features/app/PageHeaderActions';
+import { MockEngineError } from '../../ipc/mockEngine';
 import { expectNoA11yViolations } from '../../test/axe';
 import { renderWithEngine } from '../../test/engine';
 import AgendaPage from './index';
@@ -126,6 +128,25 @@ describe('AgendaPage', () => {
     renderWithEngine(<AgendaPage />, { with: { agenda: agendaUnsupported } });
     expect(screen.getByRole('heading', { name: 'Agenda is not available on this computer' })).toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('opens the Calendar app from the page header, except without a calendar source', async () => {
+    const header = document.body.appendChild(document.createElement('div'));
+    const page = (
+      <PageHeaderSlotContext.Provider value={header}>
+        <AgendaPage />
+      </PageHeaderSlotContext.Provider>
+    );
+    const { user, engine } = renderWithEngine(page);
+    engine.handle('agenda.openCalendar', () => {
+      throw new MockEngineError('platform', 'Calendar could not be opened.');
+    });
+    await user.click(within(header).getByRole('button', { name: 'Open Calendar' }));
+    expect(engine.dispatched('agenda.openCalendar')).toHaveLength(1);
+    expect(await screen.findByText('Calendar could not be opened.')).toBeInTheDocument();
+    act(() => engine.setSlice('agenda', agendaUnsupported));
+    expect(within(header).queryByRole('button', { name: 'Open Calendar' })).not.toBeInTheDocument();
+    header.remove();
   });
 
   it('shows a calendar problem above the events', () => {

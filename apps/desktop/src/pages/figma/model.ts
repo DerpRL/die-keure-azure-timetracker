@@ -1,26 +1,18 @@
 import type { FigmaSlice } from '../../ipc/contract';
 
-/** The observation line (1.14 `FigmaService.status`). */
-export function observationText(figma: FigmaSlice, watching: boolean): string {
-  if (!figma.preferences.enabled) return 'Disabled';
-  if (!watching) return 'Paused';
-  const seen = figma.currentFile ? ` · Seen: ${figma.currentFile}` : '';
-  switch (figma.status) {
-    case 'missingAccess':
-      return 'Accessibility permission needed';
-    case 'waiting':
-    case 'notForeground':
-      return `Waiting for Figma${seen}`;
-    case 'noAddress':
-      return 'Figma is active · no file address found';
-    case 'file':
-      return figma.currentFile ? `File: ${figma.currentFile}` : 'Figma is active';
-    default:
-      return figma.status;
-  }
-}
-
 const DATE_TIME = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
+const TIME = new Intl.DateTimeFormat('en-GB', { timeStyle: 'short' });
+const WAITING = 'Waiting for Figma · ';
+
+/**
+ * The observation line: the engine's `label` (1.14 `FigmaService.status`), with the time Figma
+ * was last in front after "Waiting for Figma" ("Waiting for Figma · 10:02 · Seen: …").
+ */
+export function observationText(figma: FigmaSlice): string {
+  const time = figma.lastForegroundAt ? Date.parse(figma.lastForegroundAt) : Number.NaN;
+  if (!figma.label.startsWith(WAITING) || Number.isNaN(time)) return figma.label;
+  return `${WAITING}${TIME.format(time)} · ${figma.label.slice(WAITING.length)}`;
+}
 
 /** "6 Oct 2026, 09:52" in the local time zone. */
 export function formatSeen(instant: string | null | undefined): string | null {

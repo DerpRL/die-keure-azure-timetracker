@@ -83,7 +83,7 @@ const figma: FigmaSlice = {
   history,
   storageIssue: null,
   observing: true,
-  label: 'Checkout redesign',
+  label: `File: ${checkout.name}`,
   lastForegroundAt: '2026-10-06T07:59:30Z',
   lastWorked: [checkout],
   historyCount: history.length,
@@ -95,17 +95,23 @@ export default { figma } satisfies Partial<SliceMap>;
 export const emptyFigma: FigmaSlice = {
   ...figma,
   status: 'waiting',
+  label: 'Waiting for Figma',
+  lastForegroundAt: null,
   currentFile: null,
   files: [],
   suggestions: [],
   lastWorkedTicket: null,
+  lastWorked: [],
   history: [],
+  historyCount: 0,
 };
 
 /** Observation is off (the default). */
 export const disabledFigma: FigmaSlice = {
   ...emptyFigma,
   preferences: defaultConfiguration().figma,
+  observing: false,
+  label: 'Disabled',
 };
 
 /** macOS without the Accessibility permission. */
@@ -113,6 +119,7 @@ export const figmaWithoutAccess: FigmaSlice = {
   ...figma,
   access: false,
   status: 'missingAccess',
+  label: 'Accessibility permission needed',
   currentFile: null,
   suggestions: [],
 };
@@ -134,15 +141,20 @@ export const figmaWithIssues: FigmaSlice = {
   ...figma,
   installed: false,
   status: 'waiting',
+  label: `Waiting for Figma · Seen: ${checkout.name}`,
   storageIssue: 'Figma context could not be saved on this Mac. Resolve the storage error before quitting.',
 };
 
 /** The register filtered by the search "invoice". */
 export const searchedFigma: FigmaSlice = { ...figma, search: 'invoice', files: [invoice] };
 
-/** A full history (the engine sends the newest 200). */
+/** "Pause watching" in the sidebar: observation is on but paused. */
+export const pausedFigma: FigmaSlice = { ...figma, observing: false, label: 'Paused', suggestions: [] };
+
+/** A long history: the engine sends the newest 200 and the total. */
 export const fullHistoryFigma: FigmaSlice = {
   ...figma,
+  historyCount: 340,
   history: Array.from({ length: 200 }, (_, index) =>
     event(`h${index}`, new Date(Date.parse('2026-10-06T07:52:00Z') - index * 3_600_000).toISOString(), index % 2 ? invoice : checkout, index % 2 ? null : 4821),
   ),

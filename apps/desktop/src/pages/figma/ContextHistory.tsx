@@ -8,9 +8,6 @@ import { useAction } from '../../state/hooks';
 import { formatSeen, localDay } from './model';
 import styles from './figma.module.css';
 
-/** The engine sends the newest 200 observations. */
-export const HISTORY_LIMIT = 200;
-
 export interface ContextHistoryProps {
   figma: FigmaSlice;
   /** Controlled so the palette's "Clear Figma history…" opens the same confirmation. */
@@ -84,8 +81,8 @@ export function ContextHistory({ figma, confirming, onConfirmingChange }: Contex
                 );
               })}
             </ol>
-            {history.length >= HISTORY_LIMIT ? (
-              <p className={styles.text}>Showing the latest {HISTORY_LIMIT} observations.</p>
+            {figma.historyCount > history.length ? (
+              <p className={styles.text}>Showing the latest {history.length} observations.</p>
             ) : null}
           </>
         )

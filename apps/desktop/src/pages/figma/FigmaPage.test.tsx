@@ -6,6 +6,7 @@ import {
   figmaWithIssues,
   figmaWithoutAccess,
   fullHistoryFigma,
+  pausedFigma,
   searchedFigma,
   titleOnlyFigma,
 } from '../../ipc/fixtures/slices/figma';
@@ -75,6 +76,24 @@ describe('FigmaPage', () => {
     expect(screen.getByText(/Privacy & Security → Accessibility/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Allow Accessibility…' }));
     expect(engine.dispatched('figma.requestAccess')).toHaveLength(1);
+    await user.click(screen.getByRole('button', { name: 'Check permission again' }));
+    expect(engine.dispatched('figma.refreshAccess')).toHaveLength(1);
+  });
+
+  it('shows the engine’s observation line, with the time Figma was last in front', () => {
+    const { engine } = renderWithEngine(<FigmaPage />, { with: { figma: figmaWithIssues } });
+    // 07:59:30Z in Brussels.
+    expect(screen.getByText('Waiting for Figma · 09:59 · Seen: Checkout – payment retry flows')).toBeInTheDocument();
+    act(() => engine.setSlice('figma', pausedFigma));
+    expect(screen.getByText('Paused')).toBeInTheDocument();
+  });
+
+  it('lists the files the engine reports for the last worked ticket', () => {
+    const linked = figma().files.filter((file) => file.ticketId === 4821);
+    const lastWorked = [{ ...linked[0]!, name: 'Checkout – v2' }, { ...linked[0]!, key: 'other', name: 'Checkout – archive' }];
+    renderWithEngine(<FigmaPage />, { with: { figma: { ...figma(), lastWorked } } });
+    const list = screen.getByRole('list', { name: 'Files linked to this ticket' });
+    expect(within(list).getAllByRole('listitem').map((item) => item.firstChild?.textContent)).toEqual(['Checkout – v2', 'Checkout – archive']);
   });
 
   it('marks title-only detection on Windows and cannot open those files', async () => {
@@ -202,9 +221,12 @@ describe('FigmaPage', () => {
   });
 
   it('notes when only the latest 200 observations are shown', async () => {
-    const { user } = renderWithEngine(<FigmaPage />, { with: { figma: fullHistoryFigma } });
+    const { user, engine } = renderWithEngine(<FigmaPage />, { with: { figma: fullHistoryFigma } });
     await user.click(screen.getByRole('button', { name: 'Show history' }));
     expect(screen.getByText('Showing the latest 200 observations.')).toBeInTheDocument();
+    // Exactly 200 in total: nothing is left out.
+    act(() => engine.setSlice('figma', { ...fullHistoryFigma, historyCount: 200 }));
+    expect(screen.queryByText('Showing the latest 200 observations.')).not.toBeInTheDocument();
   });
 
   it('clears the history only after confirmation', async () => {

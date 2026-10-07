@@ -30,13 +30,11 @@ function useSuggestionAnnouncements(figma: FigmaSlice | undefined) {
   }, [ids]);
 }
 
-/** "Last worked in Figma": the most recently worked linked ticket and its files. */
+/** "Last worked in Figma": the most recently worked linked ticket and its files (from the engine). */
 function LastWorked({ figma }: { figma: FigmaSlice }) {
   const ticketId = figma.lastWorkedTicket;
   if (ticketId === null) return null;
-  const files = figma.files
-    .filter((file) => file.ticketId === ticketId)
-    .sort((left, right) => (right.lastSeen ?? '').localeCompare(left.lastSeen ?? ''));
+  const files = figma.lastWorked;
   const title = files.find((file) => file.ticketTitle)?.ticketTitle;
   return (
     <Section title="Last worked in Figma" subtitle="Based on the most recently seen linked file.">
@@ -65,7 +63,6 @@ function LastWorked({ figma }: { figma: FigmaSlice }) {
 export default function FigmaPage() {
   const figma = useSlice('figma');
   const app = useSlice('app');
-  const repositories = useSlice('repositories');
   const toggle = useAction();
   const [confirmingClear, setConfirmingClear] = useState(false);
   const suggestionsId = useId();
@@ -102,7 +99,6 @@ export default function FigmaPage() {
   }
 
   const titleOnly = figma.titleOnly || (app?.features.figmaTitleOnly ?? false);
-  const watching = repositories?.watching ?? true;
 
   return (
     <div className={styles.page}>
@@ -117,7 +113,7 @@ export default function FigmaPage() {
           {toggle.error.message}
         </Banner>
       ) : null}
-      <ObservationSection figma={figma} watching={watching} titleOnly={titleOnly} />
+      <ObservationSection figma={figma} titleOnly={titleOnly} />
       {figma.suggestions.length > 0 ? (
         <section aria-labelledby={suggestionsId} className={styles.page}>
           <h2 id={suggestionsId} className={styles.sectionTitle}>

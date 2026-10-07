@@ -11,7 +11,6 @@ import styles from './figma.module.css';
 
 export interface ObservationSectionProps {
   figma: FigmaSlice;
-  watching: boolean;
   /** Window titles only (Windows, experimental). */
   titleOnly: boolean;
 }
@@ -21,10 +20,11 @@ export interface ObservationSectionProps {
  * Accessibility permission, the current observation and the suggestion and history settings.
  * Changes save immediately (`figma.setPreferences`).
  */
-export function ObservationSection({ figma, watching, titleOnly }: ObservationSectionProps) {
+export function ObservationSection({ figma, titleOnly }: ObservationSectionProps) {
   const app = useSlice('app');
   const save = useAction();
   const access = useAction();
+  const recheck = useAction();
   const preferences = figma.preferences;
   const macos = !titleOnly && app?.os !== 'windows';
   const needsAccess = preferences.enabled && !figma.access;
@@ -65,7 +65,7 @@ export function ObservationSection({ figma, watching, titleOnly }: ObservationSe
           {figma.access ? <AccessIcon /> : <LockedIcon />}
           <span>
             <span className="visually-hidden">Observation: </span>
-            {observationText(figma, watching)}
+            {observationText(figma)}
           </span>
         </p>
       ) : null}
@@ -82,9 +82,12 @@ export function ObservationSection({ figma, watching, titleOnly }: ObservationSe
               ? 'Enable Azure timetracker in System Settings → Privacy & Security → Accessibility, then return here.'
               : 'Allow Azure timetracker to read window titles, then return here.'}
           </p>
-          {access.error ? (
+          <Button onPress={() => void recheck.run({ type: 'figma.refreshAccess' })} isPending={recheck.pending}>
+            Check permission again
+          </Button>
+          {(access.error ?? recheck.error) ? (
             <p role="alert" className={styles.error}>
-              {access.error.message}
+              {(access.error ?? recheck.error)?.message}
             </p>
           ) : null}
         </div>
