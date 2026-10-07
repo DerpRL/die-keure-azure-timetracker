@@ -1,32 +1,42 @@
-# macOS releases
+# Releases
 
-[Latest installers](latest) contain the current universal DMG and PKG, each with a SHA-256 file. Both support Apple Silicon and Intel, macOS 14 or later. Use either installer; you do not need both. In GitHub, select the file and use **Download raw file**.
+[Latest installers](latest) contain the current version for macOS and Windows, each with a SHA-256 file. In GitHub, select the file and use **Download raw file**.
 
-- DMG: open it and drag Azure timetracker to Applications. A personal `~/Applications` folder is also supported for updates without administrator access.
-- PKG: open it and follow the installation steps.
-- [Older installers](archive) are grouped by version. macOS Installer may reject downgrades.
-- [Update archives](updates) have permanent versioned URLs used by the app. Never remove or overwrite a published update archive.
-- [Release notes](notes) describe each update.
+## macOS
 
-Quit the app from its menu bar before a manual upgrade. Settings and Keychain data are outside the app and are preserved. Current apps use a **persistent local signing certificate**; the PKG installer is unsigned and the release is **not notarized**. The transition from ad-hoc signing may require approving permissions again. This is not Apple Developer ID trust. See the [installation guide](../Resources/Installation%20guide.md) and [Signing and stable identity](../Resources/Signing.md).
+`Azure-timetracker-<version>-universal-local-signed.dmg` runs on Apple Silicon and Intel, macOS 14 or later. Open it and drag Azure timetracker to Applications. A personal `~/Applications` folder also works, and lets updates install without an administrator password.
+
+The app is signed with a **persistent local signing certificate** and is **not notarized**, so macOS cannot verify the developer the first time you open it:
+
+- macOS 15 or later: choose Done, open System Settings > Privacy & Security, choose Open Anyway for Azure timetracker, authenticate and confirm.
+- macOS 14: Control-click the app, choose Open, then Open.
+
+This is needed once. Managed Macs may forbid it. Do not disable Gatekeeper or remove quarantine.
+
+**From 1.13–1.14.x:** accept the update in the app; no manual install is needed. On first launch, 2.0 imports settings, history, offline drafts and edit history; the 1.14 files stay in place.
+
+## Windows
+
+`Azure-timetracker-<version>-x64-setup.exe` is for 64-bit Windows. SmartScreen shows "Windows protected your PC" with an unknown publisher, because the installer has no code-signing certificate: choose More info, then Run anyway. It installs for the current user without administrator rights. Later updates install from inside the app without this prompt.
+
+## Checksums
+
+On macOS run `shasum -a 256 -c <file>.sha256`. On Windows run `Get-FileHash -Algorithm SHA256 <file>` and compare it with the `.sha256` file. A checksum detects a damaged download; it does not prove who published the file.
 
 ## In-app updates
 
-Manually install **1.13.0 or later** once. From 1.13.1, the app checks [updates/latest.json](../updates/latest.json) at startup and every minute, with a manual check in Settings → App. The update banner offers release notes, Download update and Install and restart. Checking never downloads or installs a release automatically. Restarting leaves the 7pace timer running.
+2.x apps check [updates/v2/latest.json](../updates/v2/latest.json) at startup and every minute, with a manual check in Settings > App > App updates. Checking never downloads or installs anything: you choose Download update, then Install and restart. Every update is verified with the release key pinned in the app, including its version. Restarting leaves the 7pace timer running.
 
-The feed is signed with a separate Ed25519 release key. The app pins its public key and verifies signed release metadata, the ZIP's SHA-256 and size, archive paths, bundle identity/version and code signature. It accepts only a newer version/build, a compatible macOS version and this repository's versioned HTTPS download URLs. A separate bundled helper waits for the app to exit, re-verifies the archive, stages beside the installed app and swaps it with a recoverable backup. Failed replacement or a launch error restores the previous app where possible. This is not a watchdog for crashes after a successful launch.
+On macOS the updater replaces the app in place. If you cannot write to its folder (for example a standard user with the app in `/Applications`), macOS asks for an administrator password; `~/Applications` avoids this.
 
-A protected app directory, disk image, App Translocation or macOS launch restriction can prevent in-app installation. Use the linked DMG/PKG in that case. The updater never asks for root privileges, changes Keychain access rules, resets Calendar permissions or removes quarantine. Successful updates leave a hidden `.AzureTimetracker-previous-….app` beside the current app for manual recovery; after confirming the new version works, that backup and the app's `~/Library/Caches/be.yarne.azure-timetracker/Updates` download cache can be removed manually.
+1.13–1.14.x apps read [updates/latest.json](../updates/latest.json), which offers 2.0.0 once (the bridge release) and then stays frozen.
 
-## Publishing the next release
+## Folders
 
-Use the same release-signing key for every version. Its private file belongs **outside this repository**, normally at `~/Library/Application Support/Azure timetracker Releases/update-signing.ed25519`, with mode `600` and parent folder mode `700`. Back it up securely. Losing the key requires a manual-install migration to a new trust key. Only the public verification key in `UpdateTrust.swift` belongs in Git. GitHub SSH deployment keys are separate; neither their public nor private files belong in this repository.
+- [Older installers](archive) are grouped by version.
+- [Update archives](updates) have permanent versioned URLs used by the apps. Never remove or overwrite a published file.
+- [Release notes](notes) describe each version.
 
-1. Increase version **and** build in `Resources/Info.plist`. Add `releases/notes/<version>.md`, and update installation notes and validation. Never reuse a published version with changed bytes.
-2. Keep the persistent local certificate/key and the separate update key backed up outside Git. The build scripts select the configured local identity on the release Mac. Run `bash scripts/test.sh`, then `bash scripts/build-installer.sh /path/to/artifacts`. It builds both architectures and the embedded updater. The `AzureTimetrackerRelease` manifest tool is produced alongside the arm64 and x86_64 SwiftPM release executables; use the one matching the build Mac.
-3. Expand the PKG with `pkgutil --expand-full /path/to/artifacts/<installer>.pkg /path/to/new-expanded-folder`. Its `AzureTimetracker-component.pkg/Payload/Applications/Azure timetracker.app` is the canonical universal app. Build the DMG using `bash scripts/build-dmg.sh '/path/to/expanded/app' /path/to/artifacts`. Complete Developer ID signing/notarization first if available, then regenerate checksums after stapling.
-4. Run `python3 scripts/build-update.py '/path/to/expanded/app' /path/to/artifacts releases/notes/<version>.md /path/to/AzureTimetrackerRelease`. `AZURE_TIME_UPDATE_KEY` can override the external private-key path. It creates a ZIP with only the approved application payload, signs the JSON and writes its checksum. It refuses private keys stored inside the source repository.
-5. Run `python3 scripts/verify-release.py /path/to/artifacts /path/to/AzureTimetrackerRelease` to verify the final app/helper, signatures, architectures, payload and matching app bytes in DMG/PKG/ZIP without launching the app. Then run `python3 scripts/stage-release.py /path/to/artifacts /path/to/AzureTimetrackerRelease`. This authenticates the feed/archive, verifies installer checksums, archives the previous latest installers, saves the immutable update ZIP under `releases/updates/<version>/`, and updates `updates/latest.json`.
-6. Review the source, notes, installers, update archive and JSON together. Scan for secrets. Commit them together, then `git push origin main` to GitHub. Never publish only the JSON or only the ZIP. Verify the public raw JSON and download after pushing.
+## Publishing
 
-The repository includes `scripts/create-update-key.swift` for a **new** trust setup only. Do not rotate the verification key during a normal update. Publishing needs Git write access; no Apple Developer account or GitHub API token is needed for this delivery system. Apple-trusted signing and notarization remain separate.
+Follow [docs/release.md](../docs/release.md). Release secrets (the local signing certificate backup, the 1.x update key and the 2.x updater key) stay outside Git in `~/Library/Application Support/Azure timetracker Releases/`; back them up together.
