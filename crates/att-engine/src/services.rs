@@ -26,4 +26,8 @@ pub struct Services {
     /// folder, tests). Only the app's default data folder imports, so nothing but the real app
     /// ever reads `~/Library/Application Support/Azure timetracker` or writes its marker file.
     pub legacy_dir: Option<PathBuf>,
+    /// Watch the watched repositories' HEAD files, so a checkout is noticed within a second
+    /// instead of on the next probe interval. Off in [`TestEngine`](crate::testing::TestEngine)
+    /// unless a test asks for it, so tick-driven tests stay deterministic.
+    pub file_events: bool,
 }

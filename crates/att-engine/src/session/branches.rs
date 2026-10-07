@@ -36,6 +36,8 @@ pub(crate) struct BranchState {
     pub probe_in_flight: Arc<AtomicBool>,
     /// No settings existed at launch: discover `~/Documents/repositories` on start.
     pub discover_on_start: bool,
+    /// HEAD file events (see [`super::head_watch`]).
+    pub watch: super::head_watch::HeadWatch,
 }
 
 /// Clears the in-flight flag when the probe finishes, also after a panic.

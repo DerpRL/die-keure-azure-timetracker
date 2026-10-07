@@ -158,6 +158,21 @@ impl GitProbe {
     /// `path` is the working-tree root. Its `.git` is either the Git directory itself or a
     /// `gitdir: <path>` pointer file, absolute or relative to `path`.
     pub fn read(path: impl AsRef<Path>) -> Result<GitSnapshot> {
+        let git_dir = Self::git_dir(path)?;
+        let raw = read_head(&git_dir.join("HEAD"))?;
+        if let Some(branch) = raw.strip_prefix("ref: refs/heads/") {
+            let branch = branch.to_string();
+            return Ok(GitSnapshot { branch: Some(branch), head: raw });
+        }
+        if is_object_id(&raw) {
+            return Ok(GitSnapshot { branch: None, head: raw });
+        }
+        Err(head_unreadable())
+    }
+
+    /// The Git directory of the working tree at `path`: `.git` itself, or where its `gitdir:`
+    /// pointer file leads (worktrees and submodules). HEAD lives directly inside it.
+    pub fn git_dir(path: impl AsRef<Path>) -> Result<PathBuf> {
         let root = path.as_ref();
         let root_text = root.to_string_lossy();
         let name = last_path_component(&root_text);
@@ -182,15 +197,7 @@ impl GitProbe {
             };
             resolve_gitdir(root, location)
         };
-        let raw = read_head(&git_dir.join("HEAD"))?;
-        if let Some(branch) = raw.strip_prefix("ref: refs/heads/") {
-            let branch = branch.to_string();
-            return Ok(GitSnapshot { branch: Some(branch), head: raw });
-        }
-        if is_object_id(&raw) {
-            return Ok(GitSnapshot { branch: None, head: raw });
-        }
-        Err(head_unreadable())
+        Ok(git_dir)
     }
 }
 

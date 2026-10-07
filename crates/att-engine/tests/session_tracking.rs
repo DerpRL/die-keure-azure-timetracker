@@ -4,6 +4,8 @@
 
 mod support;
 
+use std::time::Duration;
+
 use serde_json::{Value, json};
 
 use att_core::AppError;
@@ -49,6 +51,33 @@ async fn switch_branch(h: &Harness, root: &std::path::Path, branch: &str) -> Val
     assert_eq!(h.slice("prompts")["branches"], json!([]), "one reading is not enough");
     h.tick().await;
     h.slice("prompts")["branches"][0].clone()
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_checkout_is_confirmed_from_file_events_without_waiting_for_the_poll() {
+    let dir = TempDir::new();
+    let root = dir.repository("webshop", "feature/4821-card-retry");
+    let repository = Repository::new(root.to_string_lossy());
+    let h = Harness::with_file_events(configuration(vec![repository]));
+    h.seven_pace.set_current(running(Some(4821), Some("dev"), None));
+    h.start().await;
+    // The baseline (two polled readings); the first tick also starts watching HEAD.
+    h.tick().await;
+    h.tick().await;
+    assert_eq!(h.slice("prompts")["branches"], json!([]));
+
+    let started = std::time::Instant::now();
+    set_branch(&root, "feature/33984-improve-loading");
+    // No more ticks: only the file events read HEAD, twice.
+    while h.slice("prompts")["branches"][0]["change"]["ticketId"] != 33984 {
+        assert!(started.elapsed() < Duration::from_secs(10), "no prompt from the file events");
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    assert_eq!(
+        h.slice("prompts")["branches"][0]["change"]["previousBranch"],
+        "feature/4821-card-retry"
+    );
+    eprintln!("checkout confirmed after {:?}", started.elapsed());
 }
 
 #[tokio::test]

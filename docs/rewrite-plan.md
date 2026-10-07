@@ -251,11 +251,12 @@ Phases 1–3 can run with the Rust and UI work in parallel; phase 4 depends on p
 6. **Localisation:** English only.
 7. **Figma on Windows:** title-first at launch, marked experimental; URL reading follows the phase 0 spike.
 8. **Update checks:** the 60 s default stays and becomes configurable.
+9. **Behaviour changes:** the list in §16 was signed off on 7 October 2026.
 
-## 16. Behaviour changes proposed (need sign-off)
+## 16. Behaviour changes (signed off 7 October 2026)
 
 - Suggestions no longer steal focus by default; the per-prompt setting restores today's behaviour.
-- Git changes are detected by file events, usually under a second, with the same double-read confirmation.
+- Git changes are detected by file events on the repository's HEAD, confirmed by a second reading 400 ms later (about half a second in total). The scan on the probe interval stays as the fallback.
 - The ⌘-number shortcuts follow the sidebar order.
 - Azure titles load in batches, so statistics and reports show titles sooner.
 - Storage moves from JSON files to SQLite; the files are imported, not shared.

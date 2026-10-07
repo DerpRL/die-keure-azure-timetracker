@@ -242,6 +242,16 @@ impl TestEngine {
     /// Like [`with_store`](Self::with_store), importing 1.14.x data from `legacy_dir` (a
     /// temporary folder in tests; never the real one).
     pub fn with_legacy(store: Arc<Store>, legacy_dir: Option<std::path::PathBuf>) -> Self {
+        Self::build(store, legacy_dir, false)
+    }
+
+    /// Like [`with_store`](Self::with_store), also watching repositories' HEAD files (real file
+    /// events, as in the app).
+    pub fn with_file_events(store: Arc<Store>) -> Self {
+        Self::build(store, None, true)
+    }
+
+    fn build(store: Arc<Store>, legacy_dir: Option<std::path::PathBuf>, file_events: bool) -> Self {
         let now: Timestamp = "2026-10-06T08:00:00Z".parse().expect("timestamp");
         let tz = TimeZone::get("Europe/Brussels").expect("tzdb");
         let clock = Arc::new(ManualClock::new(now, tz));
@@ -268,6 +278,7 @@ impl TestEngine {
             os: HostOs::Macos,
             // Never the developer's real 1.14.x folder.
             legacy_dir,
+            file_events,
         };
         let engine = Engine::new(services).expect("engine");
         Self {

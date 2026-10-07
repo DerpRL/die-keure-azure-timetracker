@@ -451,7 +451,17 @@ impl Harness {
 
     pub fn with_store(store: Arc<Store>, config: Configuration) -> Self {
         store.put(att_store::keys::CONFIGURATION, &config).expect("configuration");
-        let t = TestEngine::with_store(store);
+        Self::with_engine(TestEngine::with_store(store))
+    }
+
+    /// Like [`new`](Self::new), also watching repository HEAD files with real file events.
+    pub fn with_file_events(config: Configuration) -> Self {
+        let store = store();
+        store.put(att_store::keys::CONFIGURATION, &config).expect("configuration");
+        Self::with_engine(TestEngine::with_file_events(store))
+    }
+
+    fn with_engine(t: TestEngine) -> Self {
         let seven_pace = Arc::new(FakeSevenPace::default());
         let azure = Arc::new(FakeAzure::with_items(&[
             (33984, "Improve loading"),

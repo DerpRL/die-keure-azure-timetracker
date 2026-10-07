@@ -45,6 +45,7 @@ mod completion;
 mod connection;
 mod day_review_prompt;
 mod figma;
+mod head_watch;
 mod history;
 mod meeting_return;
 mod meetings;
@@ -585,7 +586,11 @@ pub async fn tick(engine: &Engine) {
         start_now(engine).await;
     }
     let preview = engine.preview();
-    branches::scan(engine).await;
+    head_watch::reconcile(engine).await;
+    // While file events read HEAD, the poll would only add a reading too soon after theirs.
+    if !engine.read(|state| state.session.branches.watch.burst) {
+        branches::scan(engine).await;
+    }
 
     let now = engine.now();
     let refresh_due = engine.read(|state| {

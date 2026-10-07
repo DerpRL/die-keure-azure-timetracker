@@ -134,6 +134,11 @@ in-module tests for the tray, discovery and the persisted date maps.
 20. **Meeting reminders.** No `MeetingPreferences.endReminders` toggle: 1.14.x had none. The
     microphone end prompt follows `microphone.enabled`, the meeting return prompt always runs,
     and both are silenced or raised through their interruption levels.
+21. **Branch file events.** `session::head_watch` watches each enabled repository's Git
+    directory (`notify`: FSEvents, ReadDirectoryChangesW). A HEAD change reads the repositories
+    after 100 ms and again after 400 ms, the two matching readings `BranchDebouncer` needs; the
+    probe-interval scan stays as the fallback and pauses during a burst. `Services::file_events`
+    turns it on (the app); `TestEngine` keeps it off unless built `with_file_events`.
 
 ## Session intents added during the port
 

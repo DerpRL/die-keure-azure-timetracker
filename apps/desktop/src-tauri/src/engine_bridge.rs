@@ -205,6 +205,7 @@ pub fn start(app: &AppHandle) -> Result<(), String> {
         clock: Arc::new(SystemClock),
         clients: Arc::new(clients),
         preview,
+        file_events: true,
         os: HostOs::current(),
         legacy_dir,
     };
