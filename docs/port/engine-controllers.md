@@ -183,24 +183,20 @@ in att-core). Every test here is new and checks a Swift app rule:
 
 ## Requests
 
-For the session engineer:
+For the session engineer (all done in the session port):
 
-- Call `controllers::hooks::prepare_idle_correction_for(engine, correction.id, …)` (new) instead
-  of `prepare_idle_correction`, so a saved correction can call
-  `session::hooks::idle_correction_applied(engine, id)`.
-- Add `session::hooks::tracking_confirmation(&AppState) -> Option<(TrackingState, Timestamp, bool)>`
-  (state, `lastSync`, `health == confirmed`) for the day review summary, and
-  `day_review_record(&AppState, Date) -> Option<DayReviewRecord>` for the `dayReview.record` field.
-- Refuse `connect()`/`settings.save` while `hooks::offline_working` (Swift did).
-- `dayReview.open` can call `controllers::handle(engine, ControllerIntent::SetDayReviewDay {…})`
-  and `RefreshDayReview` after `connection.refresh`.
+- `prepare_idle_correction_for` is called by awareness, so a saved correction reports
+  `session::hooks::idle_correction_applied`.
+- `session::hooks::tracking_confirmation(&AppState, now)` (state, `lastSync`,
+  `health == confirmed`) feeds the day review summary, and `day_review_record(&AppState, Date)`
+  fills `dayReview.record`.
+- `connect()` and `settings.save` return early while `hooks::offline_working`.
+- The day review prompt selects the day with `SetDayReviewDay` and runs `RefreshDayReview`.
 
 For the lead:
 
-- `TestEngine::new()` imports the developer machine's real
-  `~/Library/Application Support/Azure timetracker` (and writes the import marker there): set
-  `legacyImportedAt` in `TestEngine::with_store`, as `tests/support/controllers.rs::store_with`
-  does.
+- Done: `TestEngine` no longer imports the real legacy folder; the import only runs for the
+  folder in `Services::legacy_dir`, which the app sets for the default data folder only.
 - Move `controllers::testing::install_clients` into `testing.rs` (e.g. `TestEngine::connect`).
 - Decide whether `workspace_identity` should keep the URL as typed (1.14.x) instead of adding a
   slash; the session's keys (`dayReviews`, `quickTickets`, `pausedSession`, `meetingReturn`) have

@@ -124,11 +124,31 @@ fn apply_shell_settings(app: &AppHandle, mini_timer: bool, shortcut: Option<Stri
             }
         });
     }
-    if previous.as_ref().map(|p| &p.1) != Some(&next.1)
-        && let Err(error) = shortcut::set(app, next.1.as_deref())
-    {
-        tracing::warn!(%error, "could not apply the quick-switch shortcut");
+    if previous.as_ref().map(|p| &p.1) != Some(&next.1) {
+        let issue = match shortcut::set(app, next.1.as_deref()) {
+            Ok(()) => shortcut::status(app).issue,
+            Err(error) => {
+                tracing::warn!(%error, "could not apply the quick-switch shortcut");
+                Some(error)
+            }
+        };
+        report_shortcut_issue(app, issue);
     }
+}
+
+/// Tells the engine why the quick-switch shortcut is not registered (`None` clears it), for
+/// Settings and the connection details. Before the engine is managed (the first apply at
+/// launch), `start` reports the status itself.
+fn report_shortcut_issue(app: &AppHandle, issue: Option<String>) {
+    let Some(engine) = app.try_state::<Engine>().map(|engine| engine.inner().clone()) else {
+        return;
+    };
+    tauri::async_runtime::spawn(async move {
+        let intent = serde_json::json!({ "type": "app.reportShortcutIssue", "issue": issue });
+        if let Err(error) = engine.dispatch(intent).await {
+            tracing::warn!(%error, "could not report the shortcut status");
+        }
+    });
 }
 
 /// The shortcut the configuration asks for: `None` turns it off; the default when unset.
@@ -201,6 +221,7 @@ pub fn start(app: &AppHandle) -> Result<(), String> {
         }
     }));
     app.manage(engine.clone());
+    report_shortcut_issue(app, shortcut::status(app).issue);
     tauri::async_runtime::spawn(async move { engine.start() });
     Ok(())
 }

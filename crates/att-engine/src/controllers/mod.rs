@@ -436,16 +436,12 @@ pub(crate) fn request_titles(engine: &Engine, ids: Vec<i64>) {
     }
 }
 
-/// The confirmed timer for reviews: the tracking state, when it was confirmed, and whether the
-/// connection is confirmed (Swift `state`, `lastSync`, `connectionHealth == .confirmed`).
-///
-/// `session::hooks` only exposes the state (present while connected), so the confirmation time
-/// is unknown here: a running timer then hides gap estimates instead of guessing (see the port
-/// notes; requested from the session as `tracking_confirmation`).
+/// The confirmed timer for reviews at `now`: the tracking state, when 7pace last confirmed it
+/// and whether the connection is confirmed (Swift `state`, `lastSync`,
+/// `connectionHealth == .confirmed`).
 pub(crate) fn confirmed_timer(
     state: &AppState,
+    now: Timestamp,
 ) -> (Option<att_core::model::TrackingState>, Option<Timestamp>, bool) {
-    let tracking = crate::session::hooks::tracking_state(state);
-    let confirmed = tracking.is_some();
-    (tracking, None, confirmed)
+    crate::session::hooks::tracking_confirmation(state, now)
 }

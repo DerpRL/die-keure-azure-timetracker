@@ -430,7 +430,7 @@ fn day_review(state: &AppState, cal: &Cal, now: Timestamp) -> DayReviewSlice {
     let review = &state.controllers.day_review;
     let preferences = &state.config.day_review;
     let summary = (review.loaded_day == Some(review.selected_day)).then(|| {
-        let (tracking, confirmed_at, confirmed) = super::confirmed_timer(state);
+        let (tracking, confirmed_at, confirmed) = super::confirmed_timer(state, now);
         DayReviewSummary::calculate(
             &review.logs,
             cal.start_of_date(review.selected_day),
@@ -445,8 +445,7 @@ fn day_review(state: &AppState, cal: &Cal, now: Timestamp) -> DayReviewSlice {
     DayReviewSlice {
         selected_day: review.selected_day,
         summary,
-        // Review records belong to the session (requested as a session hook).
-        record: None,
+        record: crate::session::hooks::day_review_record(state, review.selected_day),
         target_seconds: state.config.targets.daily_seconds_on(review.selected_day),
         long_entry_minutes: preferences.long_session_minutes,
         loading: review.loading,
