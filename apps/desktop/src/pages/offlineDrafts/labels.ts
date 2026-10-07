@@ -1,16 +1,10 @@
 import type { Tone } from '../../components/Badge';
-import type { OfflineDraft, OfflineDraftStatus, WorkItemsSlice } from '../../ipc/contract';
+import type { OfflineDraft, OfflineDraftStatus, OfflineDraftView, WorkItemsSlice } from '../../ipc/contract';
 
-/** `OfflineDraft::title()`: `#ticket`, else the comment, else "Untitled draft". */
-export function draftTitle(draft: OfflineDraft): string {
-  if (draft.ticketId) return `#${draft.ticketId}`;
-  return draft.comment.trim() || 'Untitled draft';
-}
-
-/** The title with the ticket's name when the title cache knows it ("#4821 · Checkout …"). */
-export function draftHeading(draft: OfflineDraft, items: WorkItemsSlice | undefined): string {
+/** The engine's title with the ticket's name when the title cache knows it ("#4821 · Checkout …"). */
+export function draftHeading(draft: OfflineDraftView, items: WorkItemsSlice | undefined): string {
   const name = draft.ticketId ? items?.[String(draft.ticketId)]?.title : undefined;
-  return name ? `${draftTitle(draft)} · ${name}` : draftTitle(draft);
+  return name ? `${draft.title} · ${name}` : draft.title;
 }
 
 /** The local timer: no end yet and not uploaded. */

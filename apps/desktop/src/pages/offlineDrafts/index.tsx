@@ -9,7 +9,7 @@ import { EmptyState, Skeleton } from '../../components/EmptyState';
 import { OfflineDraftsIcon, RunningIcon, SuccessIcon, WarningIcon } from '../../components/icons';
 import { ProgressBar } from '../../components/Progress';
 import { Switch } from '../../components/Toggles';
-import type { OfflineDraft, OfflineSlice, WorkItemsSlice } from '../../ipc/contract';
+import type { OfflineDraft, OfflineDraftView, OfflineSlice, WorkItemsSlice } from '../../ipc/contract';
 import { useEngineDraft } from '../../features/ticketContext/drafts';
 import { deviceName, formatInstant, secondsBetween } from '../../features/ticketContext/format';
 import { useCommands } from '../../shortcuts/hooks';
@@ -23,7 +23,7 @@ import styles from './OfflineDrafts.module.css';
 /** Drafts rendered at once; "Show more" adds this many. */
 export const DRAFT_PAGE_SIZE = 50;
 
-function LocalTimer({ active, offline, items, device }: { active: OfflineDraft; offline: OfflineSlice; items: WorkItemsSlice | undefined; device: string }) {
+function LocalTimer({ active, offline, items, device }: { active: OfflineDraftView; offline: OfflineSlice; items: WorkItemsSlice | undefined; device: string }) {
   const stop = useAction();
   const seconds = useLiveSeconds(0, active.start, true);
   const otherWorkspace = active.workspace !== offline.workspace;
@@ -75,7 +75,7 @@ function DraftRow({
   onEdit,
   onRemove,
 }: {
-  draft: OfflineDraft;
+  draft: OfflineDraftView;
   items: WorkItemsSlice | undefined;
   disabled: boolean;
   canReview: boolean;
@@ -254,7 +254,14 @@ export default function OfflineDraftsPage() {
         <Banner tone="error">{(reconnect.error ?? remove.error ?? showSynced.error)?.message}</Banner>
       ) : null}
       {offline.working ? <ProgressBar label="Checking with 7pace…" isIndeterminate /> : null}
-      {offline.review ? <ReviewCard review={offline.review} activities={offline.activities} disabled={rowsDisabled || preview} /> : null}
+      {offline.review ? (
+        <ReviewCard
+          review={offline.review}
+          title={offline.drafts.find((entry) => entry.id === offline.review?.draft.id)?.title ?? 'draft'}
+          activities={offline.activities}
+          disabled={rowsDisabled || preview}
+        />
+      ) : null}
 
       <section aria-labelledby={headingId} className={styles.list}>
         <div className={styles.listHeader}>

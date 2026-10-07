@@ -133,6 +133,8 @@ describe('Offline drafts page', () => {
           start: '2026-10-05T16:00:00.000Z',
           end: '2026-10-05T17:15:00.000Z',
           remoteId: undefined,
+          // The published title is not part of the stored draft.
+          title: undefined,
         },
       },
     ].map((intent) => JSON.parse(JSON.stringify(intent)) as unknown));

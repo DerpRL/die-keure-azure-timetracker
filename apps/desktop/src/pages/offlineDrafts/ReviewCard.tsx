@@ -8,7 +8,6 @@ import type { ActivityType, OfflineReview } from '../../ipc/contract';
 import { formatClockTimeWithSeconds, formatDateTime, formatDayShort, parseInstant, ticketPrefix } from '../../features/ticketContext/format';
 import { useAction } from '../../state/hooks';
 import { formatClock, formatShortDuration } from '../../utils/duration';
-import { draftTitle } from './labels';
 import styles from './OfflineDrafts.module.css';
 
 function preciseTime(value: string | null | undefined): string {
@@ -18,12 +17,14 @@ function preciseTime(value: string | null | undefined): string {
 
 export interface ReviewCardProps {
   review: OfflineReview;
+  /** The reviewed draft's title, from the slice's draft list. */
+  title: string;
   activities: readonly ActivityType[];
   disabled: boolean;
 }
 
 /** The result of `offline.review`: overlaps, matching entries and the upload (1.14 `reviewCard`). */
-export function ReviewCard({ review, activities, disabled }: ReviewCardProps) {
+export function ReviewCard({ review, title, activities, disabled }: ReviewCardProps) {
   const upload = useAction();
   const link = useAction();
   const retry = useAction();
@@ -43,7 +44,7 @@ export function ReviewCard({ review, activities, disabled }: ReviewCardProps) {
   return (
     <Card as="section" aria-labelledby={headingId} className={styles.review}>
       <Heading level={2} id={headingId} className={styles.sectionTitle}>
-        {`Review ${draftTitle(draft)}`}
+        {`Review ${title}`}
       </Heading>
       <p className={styles.caption}>Uploads belong to your currently signed-in 7pace account.</p>
       <p>{`Activity: ${activity ?? 'Choose an activity by editing this draft'}`}</p>

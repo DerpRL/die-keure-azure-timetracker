@@ -1,10 +1,14 @@
-import type { OfflineDraft, OfflineReview, OfflineSlice, SliceMap } from '../../contract';
+import type { OfflineDraft, OfflineDraftView, OfflineReview, OfflineSlice, SliceMap } from '../../contract';
 import { activities } from './history';
 
 const WORKSPACE = 'https://contoso.timehub.7pace.com';
 
-function draft(id: string, start: string, end: string | null, extra: Partial<OfflineDraft> = {}): OfflineDraft {
+/** A draft as the engine publishes it, with the title it derives (`OfflineDraft::title`). */
+function draft(id: string, start: string, end: string | null, extra: Partial<OfflineDraft> = {}): OfflineDraftView {
+  const ticketId = extra.ticketId ?? null;
+  const comment = extra.comment ?? '';
   return {
+    title: ticketId ? `#${ticketId}` : comment.trim() || 'Untitled draft',
     id,
     workspace: WORKSPACE,
     start,

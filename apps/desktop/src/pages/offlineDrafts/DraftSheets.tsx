@@ -6,7 +6,7 @@ import { Dialog } from '../../components/Dialog';
 import { TextField } from '../../components/Fields';
 import { Select, type PickerOption } from '../../components/Pickers';
 import { Switch } from '../../components/Toggles';
-import type { ActivityType, OfflineDraft } from '../../ipc/contract';
+import type { ActivityType, OfflineDraft, OfflineDraftView } from '../../ipc/contract';
 import { toZoned } from '../../features/ticketContext/format';
 import { useAction } from '../../state/hooks';
 import styles from './OfflineDrafts.module.css';
@@ -78,9 +78,10 @@ function DraftFields({
   );
 }
 
-/** Drops empty optional keys: the engine reads a missing key as "none". */
-function compact(draft: OfflineDraft): OfflineDraft {
-  const result: OfflineDraft = { ...draft };
+/** The stored draft only: drops the published `title` and empty optional keys (missing = none). */
+function compact(draft: OfflineDraft | OfflineDraftView): OfflineDraft {
+  const { title: _title, ...stored } = draft as OfflineDraftView;
+  const result: OfflineDraft = stored;
   if (result.end === null || result.end === undefined) delete result.end;
   if (result.ticketId === null || result.ticketId === undefined) delete result.ticketId;
   if (!result.activityId) delete result.activityId;

@@ -273,9 +273,9 @@ pub struct WeeklySlice {
 pub struct OfflineSlice {
     pub workspace: String,
     /// This workspace's drafts, newest first (synced ones only when `show_synced`).
-    pub drafts: Vec<OfflineDraft>,
+    pub drafts: Vec<OfflineDraftView>,
     pub show_synced: bool,
-    pub active: Option<OfflineDraft>,
+    pub active: Option<OfflineDraftView>,
     pub ready_count: usize,
     /// Cached activity types for offline entry.
     pub activities: Vec<ActivityType>,
@@ -286,6 +286,23 @@ pub struct OfflineSlice {
     pub can_create: bool,
     /// A 7pace connection exists (reviews and uploads are available).
     pub configured: bool,
+}
+
+/// A draft as the Offline drafts page shows it: the stored draft plus its title.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OfflineDraftView {
+    #[serde(flatten)]
+    pub draft: OfflineDraft,
+    /// `#ticket`, else the comment, else "Untitled draft" (Swift `OfflineDraft.title`).
+    pub title: String,
+}
+
+impl From<&OfflineDraft> for OfflineDraftView {
+    fn from(draft: &OfflineDraft) -> Self {
+        Self { title: draft.title(), draft: draft.clone() }
+    }
 }
 
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
@@ -481,10 +498,10 @@ fn offline(state: &AppState) -> OfflineSlice {
             .drafts(&workspace)
             .into_iter()
             .filter(|draft| offline.show_synced || draft.status != OfflineDraftStatus::Synced)
-            .cloned()
+            .map(OfflineDraftView::from)
             .collect(),
         show_synced: offline.show_synced,
-        active: offline.ledger.active().cloned(),
+        active: offline.ledger.active().map(OfflineDraftView::from),
         ready_count: offline.ready_count(&workspace),
         activities: offline.activities(&workspace),
         review: offline.review.clone(),

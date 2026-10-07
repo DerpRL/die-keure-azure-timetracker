@@ -864,6 +864,25 @@ export type OfflineDraft = {
 /** Upload state of a draft. Serializes as the Swift raw values. */
 export type OfflineDraftStatus = "Local draft" | "Check 7pace before retrying" | "Synced to 7pace";
 
+/** A draft as the Offline drafts page shows it: the stored draft plus its title. */
+export type OfflineDraftView = {
+  /** `#ticket`, else the comment, else "Untitled draft" (Swift `OfflineDraft.title`). */
+  title: string;
+  id: string;
+  /** The workspace identity (lower-cased 7pace URL) the draft belongs to. */
+  workspace: string;
+  start: string;
+  /** `None` while the local timer runs. */
+  end?: string | null;
+  ticketId?: number | null;
+  comment: string;
+  activityId?: string | null;
+  billable: boolean;
+  status: OfflineDraftStatus;
+  /** The 7pace worklog ID once synced or linked. */
+  remoteId?: string | null;
+};
+
 /** A stopped draft checked against 7pace before upload. Ported from `OfflineReview`. */
 export type OfflineReview = {
   draft: OfflineDraft;
@@ -878,9 +897,9 @@ export type OfflineReview = {
 export type OfflineSlice = {
   workspace: string;
   /** This workspace's drafts, newest first (synced ones only when `show_synced`). */
-  drafts: Array<OfflineDraft>;
+  drafts: Array<OfflineDraftView>;
   showSynced: boolean;
-  active: OfflineDraft | null;
+  active: OfflineDraftView | null;
   readyCount: number;
   /** Cached activity types for offline entry. */
   activities: Array<ActivityType>;
