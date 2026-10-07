@@ -3,26 +3,12 @@ import { ToggleButton } from 'react-aria-components';
 import { Card, Section } from '../../components/Card';
 import { CheckIcon, FilterIcon, HistoryIcon, StatisticsIcon, TimeEditorIcon, WarningIcon, CalendarRangeIcon } from '../../components/icons';
 import { ActivityBars, type ActivityBucket } from '../../charts/ActivityBars';
-import { CalendarHeatmap, type HeatmapDay } from '../../charts/CalendarHeatmap';
 import { ChartFrame } from '../../charts/ChartFrame';
-import { CumulativeProgress } from '../../charts/CumulativeProgress';
 import { DataTable } from '../../charts/DataTable';
-import { HourHeatmap, type HourHeatmapCell, type HourHeatmapRow } from '../../charts/HourHeatmap';
-import type { AnalysisView, ExplorerFilter, ExplorerPattern, ExplorerVisuals, Interval, StatisticsSlice } from '../../ipc/contract';
+import type { AnalysisView, ExplorerFilter, ExplorerPattern, StatisticsSlice } from '../../ipc/contract';
 import { useAction } from '../../state/hooks';
 import { EntriesList } from './EntriesList';
-import {
-  date,
-  duration,
-  fullDateLabel,
-  localDay,
-  longDayTimeLabel,
-  monthLabel,
-  plural,
-  timeLabel,
-  timeZoneLabel,
-  weekdayDayMonthLabel,
-} from './format';
+import { duration, localDay, monthLabel, plural, weekdayDayMonthLabel } from './format';
 import { Metric, MetricList } from './Summary';
 import styles from './Statistics.module.css';
 
@@ -31,16 +17,13 @@ export interface PatternsSectionProps {
   analysis: AnalysisView;
   analysisKey: string;
   colors: ReadonlyMap<string, number>;
-  /** Zoom to a day or hour and show its timeline (1.14 `openTimeline`). */
-  onOpenTimeline: (range: Interval) => void;
 }
 
-/** 1.14 `workPatterns`, the heatmaps and progress chart, and the context insights. */
-export function PatternsSection({ slice, analysis, analysisKey, colors, onOpenTimeline }: PatternsSectionProps) {
+/** 1.14 `workPatterns` and the context insights. */
+export function PatternsSection({ slice, analysis, analysisKey, colors }: PatternsSectionProps) {
   const update = useAction();
   const setFilter = (filter: ExplorerFilter) => void update.run({ type: 'statistics.setFilter', filter });
   const { switches, longestBlock, averageBlock } = analysis.context;
-  const showTargets = slice.targetComparable && analysis.target > 0;
 
   return (
     <div className={styles.stack}>
@@ -87,7 +70,6 @@ export function PatternsSection({ slice, analysis, analysisKey, colors, onOpenTi
       <Card padding="large">
         <HoursChart analysis={analysis} />
       </Card>
-      {slice.visuals ? <Visuals slice={slice} visuals={slice.visuals} analysis={analysis} showTargets={showTargets} onOpenTimeline={onOpenTimeline} /> : null}
       <Card padding="large">
         <ContextSwitches analysis={analysis} slice={slice} />
       </Card>
@@ -199,98 +181,6 @@ function HoursChart({ analysis }: { analysis: AnalysisView }) {
       {peak && peak.seconds > 0 ? (
         <p className={styles.footnoteStrong}>{`Most recorded hour: ${peak.label} · ${duration(peak.seconds)} across the selection.`}</p>
       ) : null}
-    </>
-  );
-}
-
-interface VisualsProps {
-  slice: StatisticsSlice;
-  visuals: ExplorerVisuals;
-  analysis: AnalysisView;
-  showTargets: boolean;
-  onOpenTimeline: (range: Interval) => void;
-}
-
-/** 1.14 `ExplorerHeatmapView` and `ExplorerProgressChart`. */
-function Visuals({ slice, visuals, analysis, showTargets, onOpenTimeline }: VisualsProps) {
-  const days = useMemo<HeatmapDay[]>(
-    () =>
-      visuals.days.map((day) => ({
-        date: localDay(day.date),
-        value: day.seconds,
-        label: fullDateLabel(day.date),
-        detail: `${plural(day.entries, 'entry', 'entries')}${showTargets ? ` · target ${duration(day.target)}` : ''}`,
-        future: day.future,
-      })),
-    [visuals.days, showTargets],
-  );
-  const hours = useMemo(() => {
-    const rows: HourHeatmapRow[] = visuals.days.map((day) => ({ id: day.date, label: weekdayDayMonthLabel(day.date), longLabel: fullDateLabel(day.date) }));
-    const intervals = new Map<string, Interval>();
-    const cells: HourHeatmapCell[] = visuals.hours.map((hour) => {
-      const id = `${hour.day}#${hour.slot}`;
-      intervals.set(id, hour.interval);
-      const label = timeLabel(hour.interval.start);
-      // A repeated daylight-saving hour keeps its own cell, so its label names the zone.
-      const repeated = visuals.hours.some((other) => other !== hour && other.day === hour.day && timeLabel(other.interval.start) === label);
-      return {
-        id,
-        rowId: hour.day,
-        slot: hour.slot,
-        label: repeated ? timeZoneLabel(hour.interval.start) : label,
-        longLabel: repeated ? `${fullDateLabel(hour.interval.start)}, ${timeZoneLabel(hour.interval.start)}` : longDayTimeLabel(hour.interval.start),
-        value: hour.seconds,
-      };
-    });
-    return { rows, cells, intervals };
-  }, [visuals]);
-
-  return (
-    <>
-      {visuals.days.length > 1 ? (
-        <Card padding="large">
-          <CalendarHeatmap
-            title="Calendar heatmap"
-            headingLevel={2}
-            description="Each cell is a day. Select one to open its task timeline. Empty days remain visible."
-            days={days}
-            onSelectDay={(selected) => {
-              const day = visuals.days.find((item) => localDay(item.date) === selected);
-              if (day) onOpenTimeline(day.interval);
-            }}
-          />
-        </Card>
-      ) : null}
-      {visuals.hours.length > 0 ? (
-        <Card padding="large">
-          <HourHeatmap
-            title="Hourly heatmap"
-            headingLevel={2}
-            description="Select an hour to zoom into its timeline. Repeated daylight-saving hours have separate cells."
-            rows={hours.rows}
-            cells={hours.cells}
-            onSelectCell={(cell) => {
-              const range = hours.intervals.get(cell.id);
-              if (range) onOpenTimeline(range);
-            }}
-          />
-        </Card>
-      ) : null}
-      <Card padding="large">
-        <CumulativeProgress
-          title="Progress through the period"
-          headingLevel={2}
-          description={
-            showTargets
-              ? 'Recorded time alongside your scheduled target. Future dates show the target without projecting tracked time.'
-              : 'Cumulative recorded time inside this filtered or zoomed window. Clear filters and reset zoom to compare the complete period with its target.'
-          }
-          domain={{ start: date(slice.window.start), end: date(slice.window.end) }}
-          points={visuals.progress.map((point) => ({ date: date(point.date), value: point.seconds }))}
-          target={showTargets ? visuals.targetProgress.map((point) => ({ date: date(point.date), value: point.target })) : null}
-        />
-        {analysis.total === 0 ? <p className={styles.secondary}>No recorded time in this selection.</p> : null}
-      </Card>
     </>
   );
 }

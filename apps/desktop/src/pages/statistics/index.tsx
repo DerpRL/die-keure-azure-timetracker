@@ -234,13 +234,21 @@ function Explorer({ slice, analysis }: { slice: StatisticsSlice; analysis: Analy
             </TabList>
             <div aria-busy={slice.analyzing || undefined} className={slice.analyzing ? styles.analyzing : undefined}>
               <TabPanel id="time">
-                <TimeSection slice={slice} analysis={analysis} analysisKey={key} colors={colors} chart={chart} onChartChange={setChart} />
+                <TimeSection
+                  slice={slice}
+                  analysis={analysis}
+                  analysisKey={key}
+                  colors={colors}
+                  chart={chart}
+                  onChartChange={setChart}
+                  onOpenTimeline={openTimeline}
+                />
               </TabPanel>
               <TabPanel id="tasks">
                 <TasksSection slice={slice} analysis={analysis} analysisKey={key} colors={colors} onSection={chooseSection} />
               </TabPanel>
               <TabPanel id="patterns">
-                <PatternsSection slice={slice} analysis={analysis} analysisKey={key} colors={colors} onOpenTimeline={openTimeline} />
+                <PatternsSection slice={slice} analysis={analysis} analysisKey={key} colors={colors} />
               </TabPanel>
             </div>
           </TabsRoot>

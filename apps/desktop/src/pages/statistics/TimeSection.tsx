@@ -6,20 +6,25 @@ import { ZoomInIcon } from '../../components/icons';
 import { SegmentedControl } from '../../components/Segmented';
 import { ActivityBars, type ActivityBucket, type TimeRange } from '../../charts/ActivityBars';
 import { DataTable } from '../../charts/DataTable';
-import type { AnalysisView, ExplorerBucket, StatisticsSlice } from '../../ipc/contract';
+import type { AnalysisView, ExplorerBucket, Interval, StatisticsSlice } from '../../ipc/contract';
 import { useAction } from '../../state/hooks';
 import { EntriesList } from './EntriesList';
 import { bucketLabel, bucketLongLabel, date, duration, instant, percent, plural, seconds } from './format';
+import { HeatmapsView } from './HeatmapsView';
 import { activitySeries, MIN_WINDOW_SECONDS } from './model';
+import { ProgressView } from './ProgressView';
 import { TimelineView } from './TimelineView';
 import { ZoomControls } from './ZoomControls';
 import styles from './Statistics.module.css';
 
-export type TimeChart = 'activity' | 'timeline';
+export type TimeChart = 'activity' | 'heatmaps' | 'timeline' | 'progress';
 
+/** The 1.14 chart picker, in its order. */
 const CHARTS: ReadonlyArray<{ id: TimeChart; label: string }> = [
   { id: 'activity', label: 'Activity chart' },
+  { id: 'heatmaps', label: 'Heatmaps' },
   { id: 'timeline', label: 'Timeline' },
+  { id: 'progress', label: 'Progress' },
 ];
 
 export interface TimeSectionProps {
@@ -29,6 +34,8 @@ export interface TimeSectionProps {
   colors: ReadonlyMap<string, number>;
   chart: TimeChart;
   onChartChange: (chart: TimeChart) => void;
+  /** Zoom to a day or hour and show its timeline (1.14 `openTimeline`). */
+  onOpenTimeline: (range: Interval) => void;
 }
 
 function bucketSeconds(bucket: ExplorerBucket): number {
@@ -36,10 +43,11 @@ function bucketSeconds(bucket: ExplorerBucket): number {
 }
 
 /**
- * Time explorer (1.14 `timeExplorer`): the zoomable time chart or the day timeline, then the
- * entries of the window, or of the selected bar (`statistics.entries {start, end}`).
+ * Time explorer (1.14 `timeExplorer`): the zoomable time chart, the heatmaps, the day timeline or
+ * the progress chart, then the entries of the window, or of the selected bar
+ * (`statistics.entries {start, end}`).
  */
-export function TimeSection({ slice, analysis, analysisKey, colors, chart, onChartChange }: TimeSectionProps) {
+export function TimeSection({ slice, analysis, analysisKey, colors, chart, onChartChange, onOpenTimeline }: TimeSectionProps) {
   const zoom = useAction();
   const scale = useAction();
   const chartRef = useRef<HTMLDivElement>(null);
@@ -96,8 +104,12 @@ export function TimeSection({ slice, analysis, analysisKey, colors, chart, onCha
               valueUnit={minutes ? 'minutes' : 'hours'}
               emptyMessage="No recorded time in this window."
             />
-          ) : (
+          ) : chart === 'heatmaps' ? (
+            <HeatmapsView slice={slice} analysis={analysis} onOpenTimeline={onOpenTimeline} />
+          ) : chart === 'timeline' ? (
             <TimelineView slice={slice} analysis={analysis} analysisKey={analysisKey} series={series} colors={colors} onZoom={zoomTo} />
+          ) : (
+            <ProgressView slice={slice} analysis={analysis} />
           )}
         </div>
       </Card>

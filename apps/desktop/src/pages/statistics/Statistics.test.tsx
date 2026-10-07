@@ -223,7 +223,9 @@ describe('sections', () => {
 
   it('has no axe violations in the patterns section', async () => {
     renderPage({ ...weekStatistics, section: 'patterns' });
-    expect(screen.getByRole('grid', { name: 'Calendar heatmap' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Time by weekday' })).toBeInTheDocument();
+    // The heatmaps and the progress chart are time explorer charts, as in 1.14.
+    expect(screen.queryByRole('grid', { name: 'Calendar heatmap' })).not.toBeInTheDocument();
     await expectNoA11yViolations();
   });
 });
@@ -532,31 +534,93 @@ describe('tasks and patterns', () => {
     ]);
   });
 
+});
+
+describe('heatmaps and progress', () => {
+  it('offers the 1.14 charts in their order', () => {
+    renderPage();
+    const picker = screen.getByRole('radiogroup', { name: 'Chart type' });
+    expect(within(picker).getAllByRole('radio').map((radio) => radio.textContent)).toEqual(['Activity chart', 'Heatmaps', 'Timeline', 'Progress']);
+  });
+
+  it('shows the calendar and hourly heatmaps of the week', async () => {
+    const { user } = renderPage();
+    await user.click(screen.getByRole('radio', { name: 'Heatmaps' }));
+    expect(screen.getByRole('heading', { level: 2, name: 'Your work at a glance' })).toBeInTheDocument();
+    expect(screen.getByRole('grid', { name: 'Calendar heatmap' })).toBeInTheDocument();
+    expect(screen.getByRole('grid', { name: 'Hourly heatmap' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Entries in this window' })).toBeInTheDocument();
+    await expectNoA11yViolations();
+  });
+
   it('opens a day of the calendar heatmap in the timeline', async () => {
-    const { engine, user } = renderPage({ ...weekStatistics, section: 'patterns' });
+    const { engine, user } = renderPage();
     followSections(engine);
+    serveEntries(engine);
+    await user.click(screen.getByRole('radio', { name: 'Heatmaps' }));
     const tuesday = weekStatistics.visuals!.days[1]!;
     const cells = within(screen.getByRole('grid', { name: 'Calendar heatmap' })).getAllByRole('gridcell');
     await user.click(cells.find((cell) => cell.getAttribute('aria-label')?.startsWith('Tuesday'))!);
     expect(engine.dispatched('statistics.zoomTo')).toEqual([
       { type: 'statistics.zoomTo', start: tuesday.interval.start, end: tuesday.interval.end },
     ]);
-    expect(engine.dispatched('statistics.setSection')).toEqual([{ type: 'statistics.setSection', section: 'time' }]);
+    expect(screen.getByRole('radio', { name: 'Timeline', checked: true })).toBeInTheDocument();
+    expect(engine.dispatched('statistics.setSection')).toEqual([]);
+  });
+
+  it('opens an hour of the hourly heatmap in the timeline', async () => {
+    const { engine, user } = renderPage();
+    serveEntries(engine);
+    await user.click(screen.getByRole('radio', { name: 'Heatmaps' }));
+    const grid = screen.getByRole('grid', { name: 'Hourly heatmap' });
+    await user.click(within(grid).getAllByRole('gridcell')[0]!);
+    const [zoom] = engine.dispatched('statistics.zoomTo');
+    const intervals = weekStatistics.visuals!.hours.map((hour) => hour.interval);
+    expect(intervals).toContainEqual({ start: zoom!.start, end: zoom!.end });
+    expect(screen.getByRole('radio', { name: 'Timeline', checked: true })).toBeInTheDocument();
+  });
+
+  it('shows the progress chart with the scheduled target', async () => {
+    const { user } = renderPage();
+    await user.click(screen.getByRole('radio', { name: 'Progress' }));
+    expect(screen.getByRole('heading', { level: 2, name: 'Progress through the period' })).toBeInTheDocument();
+    expect(screen.getByText(/Recorded time alongside your scheduled target/)).toBeInTheDocument();
+    await expectNoA11yViolations();
+  });
+
+  it('explains the missing heatmaps until the window is analysed', async () => {
+    const { user } = renderPage({ ...weekStatistics, visuals: null });
+    await user.click(screen.getByRole('radio', { name: 'Heatmaps' }));
+    expect(screen.getByText('The heatmaps appear once this window’s worklogs are analysed.')).toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: 'Progress' }));
+    expect(screen.getByText('The progress chart appears once this window’s worklogs are analysed.')).toBeInTheDocument();
   });
 });
 
 describe('data-table twins', () => {
-  it('shows every chart as a table', async () => {
+  it('shows every pattern chart as a table', async () => {
     const { user } = renderPage({ ...weekStatistics, section: 'patterns' });
     const toggles = screen.getAllByRole('button', { name: 'Show as table' });
-    // Weekdays, lengths, hours, calendar, hourly heatmap, progress and context switches.
-    expect(toggles).toHaveLength(7);
+    // Weekdays, lengths, hours and context switches.
+    expect(toggles).toHaveLength(4);
     for (const toggle of toggles) await user.click(toggle);
-    for (const caption of ['Time by weekday', 'Entry lengths', 'When you record work', 'Calendar heatmap', 'Hourly heatmap', 'Progress through the period']) {
+    for (const caption of ['Time by weekday', 'Entry lengths', 'When you record work', 'Task switches by day']) {
       expect(screen.getByRole('table', { name: caption })).toBeInTheDocument();
     }
-    expect(screen.getByRole('table', { name: 'Task switches by day' })).toBeInTheDocument();
     await expectNoA11yViolations();
+  });
+
+  it('shows the heatmaps and the progress chart as tables', async () => {
+    const { user } = renderPage();
+    await user.click(screen.getByRole('radio', { name: 'Heatmaps' }));
+    const toggles = screen.getAllByRole('button', { name: 'Show as table' });
+    expect(toggles).toHaveLength(2);
+    for (const toggle of toggles) await user.click(toggle);
+    expect(screen.getByRole('table', { name: 'Calendar heatmap' })).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Hourly heatmap' })).toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: 'Progress' }));
+    await user.click(screen.getByRole('button', { name: 'Show as table' }));
+    expect(screen.getByRole('table', { name: 'Progress through the period' })).toBeInTheDocument();
   });
 
   it('shows the time chart and the donut as tables', async () => {
