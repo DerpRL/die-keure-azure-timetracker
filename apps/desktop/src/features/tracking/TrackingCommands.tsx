@@ -1,7 +1,7 @@
 import { useSlice } from '../../state/hooks';
 import { useCommands } from '../../shortcuts/hooks';
 import { useIntents, useWriteGuards } from './actions';
-import { flowIntents, type TrackingSurface } from './CurrentTracking';
+import { flowSurface, openFlow, type TrackingSurface } from './CurrentTracking';
 
 /**
  * The 1.14 Tracking menu as palette commands and shortcuts: Choose ticket… (⌘N / Ctrl+N), Stop,
@@ -22,7 +22,7 @@ export function TrackingCommands({ surface }: { surface: TrackingSurface }) {
       keywords: ['track', 'switch', 'start', 'ticket'],
       shortcut: { key: 'n', mod: true },
       isDisabled: busy,
-      onAction: () => void actions.run('choose', ...flowIntents(surface)),
+      onAction: () => void actions.run('choose', openFlow(surface)),
     },
     {
       id: 'tracking.stop',
@@ -44,10 +44,7 @@ export function TrackingCommands({ surface }: { surface: TrackingSurface }) {
       group: 'Tracking',
       isDisabled: !connected || !paused || busy,
       onAction: () =>
-        void actions.run(
-          'resume',
-          ...(surface === 'panel' ? flowIntents('panel', { type: 'tracking.resume' }) : [{ type: 'tracking.resume' } as const]),
-        ),
+        void actions.run('resume', { type: 'tracking.resume', surface: flowSurface(surface) }),
     },
     {
       id: 'tracking.reviewToday',

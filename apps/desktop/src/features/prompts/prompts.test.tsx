@@ -121,20 +121,20 @@ describe('branch prompt', () => {
     await press(user, 'Choose another ticket…');
     const id = sampleBranch.change.id;
     expect(engine.dispatched('branch.keep')).toEqual([{ type: 'branch.keep', id }]);
-    expect(engine.dispatched('branch.track')).toEqual([{ type: 'branch.track', id }]);
-    expect(engine.dispatched('branch.chooseAnother')).toEqual([{ type: 'branch.chooseAnother', id }]);
+    expect(engine.dispatched('branch.track')).toEqual([{ type: 'branch.track', id, surface: 'picker' }]);
+    expect(engine.dispatched('branch.chooseAnother')).toEqual([{ type: 'branch.chooseAnother', id, surface: 'picker' }]);
     expect(engine.dispatched('tracking.beginPanel')).toHaveLength(0);
   });
 
-  it('prepares the choice in the panel first when shown there', async () => {
+  it('runs the choice in the panel when shown there', async () => {
     const { engine, user } = renderPrompts(branchPrompts, {}, 'panel');
     const id = sampleBranch.change.id;
     await press(user, 'Track #4790…');
-    expect(engine.intents.map((intent) => intent.type)).toEqual(['tracking.beginPanel', 'branch.track']);
-    expect(engine.dispatched('tracking.beginPanel')).toEqual([{ type: 'tracking.beginPanel', branchId: id }]);
     await press(user, 'Choose another ticket…');
-    expect(engine.dispatched('tracking.beginPanel')).toHaveLength(2);
-    expect(engine.dispatched('branch.chooseAnother')).toHaveLength(0);
+    expect(engine.intents).toEqual([
+      { type: 'branch.track', id, surface: 'panel' },
+      { type: 'branch.chooseAnother', id, surface: 'panel' },
+    ]);
   });
 
   it('offers an activity without a ticket and says Dismiss without a timer', async () => {
@@ -144,7 +144,7 @@ describe('branch prompt', () => {
     await press(user, 'Dismiss');
     await press(user, 'Choose activity…');
     expect(engine.dispatched('branch.keep')).toEqual([{ type: 'branch.keep', id: ticketlessBranch.change.id }]);
-    expect(engine.dispatched('branch.track')).toEqual([{ type: 'branch.track', id: ticketlessBranch.change.id }]);
+    expect(engine.dispatched('branch.track')).toEqual([{ type: 'branch.track', id: ticketlessBranch.change.id, surface: 'picker' }]);
   });
 
   it('offers Pause, Stop or Keep for an integration branch', async () => {
@@ -310,7 +310,7 @@ describe('Figma, awareness and completion prompts', () => {
   it('switches from a completed ticket in the panel', async () => {
     const { engine, user } = renderPrompts(completionPrompts, {}, 'panel');
     await press(user, 'Switch ticket…');
-    expect(engine.intents).toEqual([{ type: 'tracking.beginPanel', branchId: null }]);
+    expect(engine.intents).toEqual([{ type: 'completion.switch', surface: 'panel' }]);
   });
 });
 

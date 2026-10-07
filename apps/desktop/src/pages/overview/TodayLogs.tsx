@@ -7,7 +7,6 @@ import { useSlice, useWorkItem } from '../../state/hooks';
 import { formatShortDuration } from '../../utils/duration';
 import { TicketLink } from '../../features/ticketContext/TicketLink';
 import { ActionError, useIntents, useWriteGuards } from '../../features/tracking/actions';
-import { flowIntents } from '../../features/tracking/CurrentTracking';
 import { openMainPage } from '../../features/tracking/platform';
 import styles from './overview.module.css';
 
@@ -45,7 +44,7 @@ export function LogRow({ log }: { log: WorkLog }) {
           aria-label={`Track again: #${ticketId}`}
           isDisabled={busy || !connected}
           isPending={actions.isPending('again')}
-          onPress={() => void actions.run('again', ...flowIntents('main', { type: 'tracking.chooseTicket', ticketId }))}
+          onPress={() => void actions.run('again', { type: 'tracking.chooseTicket', ticketId, surface: 'picker' })}
         >
           Track again
         </Button>

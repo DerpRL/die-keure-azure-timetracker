@@ -66,7 +66,7 @@ describe('History page', () => {
   it('tracks a ticket again through the activity chooser', async () => {
     const { engine, user } = renderHistory(sampleSlices().history);
     await user.click(screen.getAllByRole('button', { name: 'Track again, #4790' })[0]!);
-    expect(engine.dispatched('tracking.chooseTicket')).toEqual([{ type: 'tracking.chooseTicket', ticketId: 4790 }]);
+    expect(engine.dispatched('tracking.chooseTicket')).toEqual([{ type: 'tracking.chooseTicket', ticketId: 4790, surface: 'picker' }]);
     expect(engine.dispatched('tracking.start')).toHaveLength(0);
   });
 

@@ -68,7 +68,7 @@ function LogRow({ log, items, trackDisabled }: { log: WorkLog; items: WorkItemsS
           variant="plain"
           icon={PlayIcon}
           isDisabled={trackDisabled}
-          onPress={() => void track.run({ type: 'tracking.chooseTicket', ticketId: ticket })}
+          onPress={() => void track.run({ type: 'tracking.chooseTicket', ticketId: ticket, surface: 'picker' })}
           aria-label={`Track again, #${ticket}`}
         >
           Track again

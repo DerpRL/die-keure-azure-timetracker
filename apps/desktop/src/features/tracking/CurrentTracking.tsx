@@ -1,7 +1,7 @@
 import { Button } from '../../components/Button';
 import { Skeleton } from '../../components/EmptyState';
 import { PauseIcon, PlayIcon, StopIcon } from '../../components/icons';
-import type { Intent, TrackingSlice } from '../../ipc/contract';
+import type { FlowSurface, Intent, TrackingSlice } from '../../ipc/contract';
 import { useSlice, useWorkItem } from '../../state/hooks';
 import { TimerDisplay } from '../../timer/TimerDisplay';
 import { formatShortDuration } from '../../utils/duration';
@@ -22,10 +22,14 @@ import styles from './tracking.module.css';
 
 export type TrackingSurface = 'panel' | 'main';
 
-/** The intents that open the ticket search on this surface before `then` (if any). */
-export function flowIntents(surface: TrackingSurface, then?: Intent): Intent[] {
-  const open: Intent = surface === 'panel' ? { type: 'tracking.beginPanel', branchId: null } : { type: 'tracking.openPicker' };
-  return then ? [open, then] : [open];
+/** The intent that opens the ticket search on this surface. */
+export function openFlow(surface: TrackingSurface): Intent {
+  return surface === 'panel' ? { type: 'tracking.beginPanel', branchId: null } : { type: 'tracking.openPicker' };
+}
+
+/** The engine's name for this surface, sent with prompt and resume actions (`surface`). */
+export function flowSurface(surface: TrackingSurface): FlowSurface {
+  return surface === 'panel' ? 'panel' : 'picker';
 }
 
 /** The paused session's title as 1.14 showed it ("#4790 · Title" in the panel). */
@@ -112,9 +116,7 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
         data-current-primary=""
         isDisabled={writeDisabled}
         isPending={actions.isPending('resume')}
-        onPress={() =>
-          void actions.run('resume', ...(panel ? flowIntents('panel', { type: 'tracking.resume' }) : [{ type: 'tracking.resume' } as const]))
-        }
+        onPress={() => void actions.run('resume', { type: 'tracking.resume', surface: flowSurface(surface) })}
       >
         {panel ? 'Resume…' : 'Resume tracking…'}
       </Button>
@@ -134,7 +136,7 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
       data-current-primary=""
       isDisabled={writeDisabled}
       isPending={actions.isPending('switch')}
-      onPress={() => void actions.run('switch', ...flowIntents(surface))}
+      onPress={() => void actions.run('switch', openFlow(surface))}
     >
       {running ? 'Switch ticket…' : 'Start tracking…'}
     </Button>

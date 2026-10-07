@@ -101,16 +101,13 @@ describe('Overview page', () => {
     const { engine, user } = renderWithEngine(<OverviewPage />, { with: { tracking: pausedTracking, prompts: noPrompts } });
     expect(screen.getByText('Paused · no time logged')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Resume tracking…' }));
-    expect(engine.intents).toEqual([{ type: 'tracking.resume' }]);
+    expect(engine.intents).toEqual([{ type: 'tracking.resume', surface: 'picker' }]);
   });
 
   it('tracks a worklog’s ticket again and opens its context', async () => {
     const { engine, user } = renderWithEngine(<OverviewPage />, { with: { history: sampleHistory, prompts: noPrompts } });
     await user.click(screen.getByRole('button', { name: 'Track again: #4790' }));
-    expect(engine.intents).toEqual([
-      { type: 'tracking.openPicker' },
-      { type: 'tracking.chooseTicket', ticketId: 4790 },
-    ]);
+    expect(engine.intents).toEqual([{ type: 'tracking.chooseTicket', ticketId: 4790, surface: 'picker' }]);
     await user.click(screen.getByRole('button', { name: '#4790 Invoice PDF shows the wrong VAT number, show details' }));
     expect(engine.dispatched('ticket.showContext')).toEqual([{ type: 'ticket.showContext', ticketId: 4790 }]);
     // A ticket-free worklog cannot be tracked again from here.

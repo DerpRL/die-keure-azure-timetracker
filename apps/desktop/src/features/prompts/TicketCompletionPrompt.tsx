@@ -2,6 +2,7 @@ import { Button } from '../../components/Button';
 import { SuccessIcon } from '../../components/icons';
 import type { TicketCompletionPrompt as CompletionView } from '../../ipc/contract';
 import { useIntents, useWriteGuards } from '../tracking/actions';
+import { flowSurface } from '../tracking/CurrentTracking';
 import { PromptCard, promptStyles as styles, usePromptContext } from './PromptCard';
 
 /**
@@ -39,13 +40,8 @@ export function TicketCompletionPrompt({ prompt }: { prompt: CompletionView }) {
             data-prompt-primary=""
             isDisabled={busy || preview}
             isPending={actions.isPending('switch')}
-            onPress={() =>
-              void actions.run(
-                'switch',
-                // In the panel 1.14 opened the quick switch there; the main window opens its sheet.
-                surface === 'panel' ? { type: 'tracking.beginPanel', branchId: null } : { type: 'completion.switch' },
-              )
-            }
+            // The panel's ticket search there, the main window's picker sheet otherwise.
+            onPress={() => void actions.run('switch', { type: 'completion.switch', surface: flowSurface(surface) })}
           >
             Switch ticket…
           </Button>

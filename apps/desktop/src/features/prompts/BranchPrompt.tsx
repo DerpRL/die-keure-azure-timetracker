@@ -2,6 +2,7 @@ import { Button } from '../../components/Button';
 import type { BranchPromptView, Intent } from '../../ipc/contract';
 import { useWorkItem } from '../../state/hooks';
 import { useIntents, useWriteGuards } from '../tracking/actions';
+import { flowSurface } from '../tracking/CurrentTracking';
 import { BranchIcon } from '../tracking/icons';
 import { PromptCard, promptStyles as styles, usePromptContext } from './PromptCard';
 
@@ -18,13 +19,12 @@ export function BranchPrompt({ view }: { view: BranchPromptView }) {
   const ticketId = change.ticketId ?? null;
   const item = useWorkItem(ticketId);
   const title = view.ticketTitle ?? item?.title ?? null;
-  const panel = surface === 'panel';
   const writeDisabled = busy || !connected;
 
-  // The panel prepares the choice in the panel (1.14 `beginMenuTracking(change)` first).
-  const begin: Intent = { type: 'tracking.beginPanel', branchId: change.id };
-  const track: Intent[] = panel ? [begin, { type: 'branch.track', id: change.id }] : [{ type: 'branch.track', id: change.id }];
-  const another: Intent = panel ? begin : { type: 'branch.chooseAnother', id: change.id };
+  // The engine runs the choice where the user clicked: the panel flow or the window's picker.
+  const where = flowSurface(surface);
+  const track: Intent = { type: 'branch.track', id: change.id, surface: where };
+  const another: Intent = { type: 'branch.chooseAnother', id: change.id, surface: where };
 
   const keep = (
     <Button
@@ -72,7 +72,7 @@ export function BranchPrompt({ view }: { view: BranchPromptView }) {
         data-prompt-primary=""
         isDisabled={writeDisabled}
         isPending={actions.isPending('track')}
-        onPress={() => void actions.run('track', ...track)}
+        onPress={() => void actions.run('track', track)}
       >
         {ticketId !== null ? `Track #${ticketId}…` : 'Choose activity…'}
       </Button>

@@ -94,8 +94,7 @@ describe('PanelView', () => {
     await user.click(screen.getByRole('button', { name: 'Resume…' }));
     await user.click(screen.getByRole('button', { name: 'Clear pause' }));
     expect(engine.intents).toEqual([
-      { type: 'tracking.beginPanel', branchId: null },
-      { type: 'tracking.resume' },
+      { type: 'tracking.resume', surface: 'panel' },
       { type: 'tracking.discardPause' },
     ]);
   });
