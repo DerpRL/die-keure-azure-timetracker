@@ -5,7 +5,7 @@ import { SAMPLE_NOW, sampleSlices } from '../../ipc/fixtures';
 import { historyEmpty, historyLoading, historyNotLoaded, manyHistoryLogs } from '../../ipc/fixtures/slices/history';
 import { MockEngineError } from '../../ipc/mockEngine';
 import type { HistorySlice, SliceMap } from '../../ipc/contract';
-import { PageFrame, resetAriaAnnouncer } from '../../features/ticketContext/testing';
+import { PageFrame } from '../../features/ticketContext/testing';
 import { MainSurface } from '../../surfaces/MainSurface';
 import { expectNoA11yViolations } from '../../test/axe';
 import { renderWithEngine } from '../../test/engine';
@@ -21,7 +21,6 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
-  resetAriaAnnouncer();
 });
 
 function renderHistory(history: HistorySlice | undefined, extra: Partial<SliceMap> = {}) {
@@ -140,6 +139,27 @@ describe('History page', () => {
     act(() => engine.setSlice('history', historyNotLoaded));
     expect(screen.getByRole('heading', { name: 'Your history is waiting' })).toBeInTheDocument();
     await expectNoA11yViolations();
+  });
+
+  it('shows the engine’s history issue and retries the load', async () => {
+    const { engine, user } = renderHistory({ ...sampleSlices().history!, issue: 'History: the 7pace request timed out.' });
+    const banner = screen.getByText('History: the 7pace request timed out.').closest('[role="alert"]') as HTMLElement;
+    expect(within(banner).getByText('History could not be loaded')).toBeInTheDocument();
+    await expectNoA11yViolations();
+    engine.handle('history.load', (_intent, mock) => mock.patchSlice('history', { issue: null }));
+    await user.click(within(banner).getByRole('button', { name: 'Retry' }));
+    expect(engine.dispatched('history.load')).toHaveLength(1);
+    await waitFor(() => expect(screen.queryByText('History: the 7pace request timed out.')).toBeNull());
+  });
+
+  it('shows a rejected load once when the slice carries the same issue', async () => {
+    const { engine, user } = renderHistory(sampleSlices().history);
+    engine.handle('history.load', (_intent, mock) => {
+      mock.patchSlice('history', { issue: 'The request timed out.' });
+      throw new MockEngineError('timeout', 'The request timed out.');
+    });
+    await user.click(screen.getByRole('button', { name: 'Load' }));
+    await waitFor(() => expect(screen.getAllByText('The request timed out.')).toHaveLength(1));
   });
 
   it('shows a failed load verbatim', async () => {

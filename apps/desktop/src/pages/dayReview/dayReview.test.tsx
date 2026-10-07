@@ -10,7 +10,7 @@ import {
   dayReviewUnconfigured,
 } from '../../ipc/fixtures/slices/dayReview';
 import type { DayReviewSlice, SliceMap } from '../../ipc/contract';
-import { FakePageCommands, PageFrame, resetAriaAnnouncer } from '../../features/ticketContext/testing';
+import { FakePageCommands, PageFrame } from '../../features/ticketContext/testing';
 import { MainSurface } from '../../surfaces/MainSurface';
 import { expectNoA11yViolations } from '../../test/axe';
 import { renderWithEngine } from '../../test/engine';
@@ -24,7 +24,6 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
-  resetAriaAnnouncer();
 });
 
 function renderReview(dayReview: DayReviewSlice | undefined, extra: Partial<SliceMap> = {}, onOpen = vi.fn()) {

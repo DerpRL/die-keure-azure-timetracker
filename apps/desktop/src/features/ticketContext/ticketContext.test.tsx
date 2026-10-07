@@ -1,12 +1,11 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MockEngineError } from '../../ipc/mockEngine';
 import { contextFailed, contextLoaded, contextLoading, contextSparse } from '../../ipc/fixtures/slices/ticketContext';
 import { expectNoA11yViolations } from '../../test/axe';
 import { renderWithEngine } from '../../test/engine';
 import { TicketContextSheet } from './TicketContextSheet';
-import { resetAriaAnnouncer } from './testing';
 import { TicketLink } from './TicketLink';
 
 vi.mock('@tauri-apps/plugin-opener', () => ({ openUrl: vi.fn(() => Promise.resolve()) }));
@@ -14,8 +13,6 @@ vi.mock('@tauri-apps/plugin-opener', () => ({ openUrl: vi.fn(() => Promise.resol
 beforeEach(() => {
   vi.mocked(openUrl).mockClear();
 });
-
-afterEach(resetAriaAnnouncer);
 
 describe('TicketContextSheet', () => {
   it('renders nothing while no ticket is requested', () => {

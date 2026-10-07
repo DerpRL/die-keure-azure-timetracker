@@ -16,7 +16,7 @@ import {
 } from '../../ipc/fixtures/slices/offline';
 import { MockEngineError } from '../../ipc/mockEngine';
 import type { OfflineDraft, OfflineSlice, SliceMap } from '../../ipc/contract';
-import { PageFrame, resetAriaAnnouncer } from '../../features/ticketContext/testing';
+import { PageFrame } from '../../features/ticketContext/testing';
 import { expectNoA11yViolations } from '../../test/axe';
 import { renderWithEngine } from '../../test/engine';
 import OfflineDraftsPage from './index';
@@ -28,7 +28,6 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
-  resetAriaAnnouncer();
 });
 
 function renderOffline(offline: OfflineSlice | undefined, extra: Partial<SliceMap> = {}) {

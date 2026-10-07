@@ -1,5 +1,5 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { sampleSlices } from '../../ipc/fixtures';
 import {
   journal,
@@ -24,12 +24,10 @@ import {
 import { MockEngineError } from '../../ipc/mockEngine';
 import { PageHeaderSlotContext } from '../../features/app/PageHeaderActions';
 import type { AppSlice, SliceMap, TimeEditorSlice } from '../../ipc/contract';
-import { PageFrame, resetAriaAnnouncer } from '../../features/ticketContext/testing';
+import { PageFrame } from '../../features/ticketContext/testing';
 import { expectNoA11yViolations } from '../../test/axe';
 import { renderWithEngine } from '../../test/engine';
 import TimeEditorPage from './index';
-
-afterEach(resetAriaAnnouncer);
 
 function renderEditor(timeEditor: TimeEditorSlice | undefined, extra: Partial<SliceMap> = {}) {
   const slices = sampleSlices();

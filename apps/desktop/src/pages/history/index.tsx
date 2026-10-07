@@ -310,7 +310,11 @@ export default function HistoryPage() {
     );
   }
 
-  const failure = load.error ?? range.error ?? exporter.error ?? null;
+  // The engine reports failed loads and exports in the slice; a rejected intent with the same
+  // message is not shown twice.
+  const issue = history.issue ?? null;
+  const rejected = load.error ?? range.error ?? exporter.error ?? null;
+  const failure = rejected && rejected.message !== issue ? rejected : null;
 
   const worklogs = (
     <div className={styles.tab}>
@@ -374,6 +378,19 @@ export default function HistoryPage() {
       {exportButton}
       <PageRefresh onRefresh={runLoad} isRefreshing={loading} isDisabled={!connected} label="Refresh" />
       <p className={styles.intro}>Your 7pace worklogs and tracking decisions.</p>
+      {issue ? (
+        <Banner
+          tone="error"
+          title="History could not be loaded"
+          actions={
+            <Button size="small" isDisabled={loading || !connected} isPending={load.pending} onPress={runLoad}>
+              Retry
+            </Button>
+          }
+        >
+          {issue}
+        </Banner>
+      ) : null}
       <Tabs<HistoryTab>
         label="History"
         selectedKey={tab}

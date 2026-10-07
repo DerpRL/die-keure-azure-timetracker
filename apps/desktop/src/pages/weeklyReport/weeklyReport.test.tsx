@@ -16,7 +16,7 @@ import {
 import { MockEngineError } from '../../ipc/mockEngine';
 import type { SliceMap, WeeklySlice } from '../../ipc/contract';
 import { formatDayShort, instantToDay } from '../../features/ticketContext/format';
-import { PageFrame, resetAriaAnnouncer } from '../../features/ticketContext/testing';
+import { PageFrame } from '../../features/ticketContext/testing';
 import { expectNoA11yViolations } from '../../test/axe';
 import { renderWithEngine } from '../../test/engine';
 import WeeklyReportPage from './index';
@@ -33,7 +33,6 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
-  resetAriaAnnouncer();
 });
 
 function renderWeekly(weekly: WeeklySlice | undefined, extra: Partial<SliceMap> = {}) {
