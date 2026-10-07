@@ -131,8 +131,9 @@ mod tests {
         let sample = WindowsPresence::new().sample();
         assert!(sample.idle_seconds >= 0.0 && sample.idle_seconds < 60.0 * 60.0 * 24.0 * 50.0);
         if let Some(app) = sample.foreground {
+            // The lower-case file name; usually `….exe`, but the GitHub runner's agent has none.
             assert_eq!(app.id, app.id.to_lowercase());
-            assert!(app.id.ends_with(".exe"), "{app:?}");
+            assert!(!app.id.is_empty() && !app.id.contains(['\\', '/']), "{app:?}");
         }
     }
 

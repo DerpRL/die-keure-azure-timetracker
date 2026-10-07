@@ -197,10 +197,12 @@ fn canonical_paths_are_standardized_and_resolved() {
     assert_eq!(canonical(&real.join("sub")), expected);
     if link_dir(&real, &root.join("link")) {
         assert_eq!(canonical(&root.join("link/sub")), expected);
-        // Missing paths stay unresolved, like Foundation.
+        // Missing paths stay unresolved, like Foundation: the root as given, which on Windows
+        // can be an 8.3 short name (`RUNNER~1`) that only resolving would expand.
+        let given = root.to_string_lossy();
         assert_eq!(
             canonical(&root.join("link/missing")),
-            format!("{base}{separator}link{separator}missing")
+            format!("{given}{separator}link{separator}missing")
         );
     }
     // Relative paths are resolved against the current directory.

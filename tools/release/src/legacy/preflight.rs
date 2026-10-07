@@ -86,9 +86,16 @@ pub fn preflight_zip(
     }
     for relative in [EXECUTABLE_PATH, HELPER_PATH] {
         let path = app.join(relative);
-        let meta =
-            fs::metadata(&path).ok().filter(|meta| meta.is_file() && fsx::is_executable(meta));
-        if meta.is_none() {
+        let is_file = fs::metadata(&path).is_ok_and(|meta| meta.is_file());
+        // ditto restores the mode on disk. The portable extraction cannot on every host (Windows
+        // has no execute bit), so there the archive's own mode is what the client will get.
+        let executable = if options.use_ditto {
+            fs::metadata(&path).is_ok_and(|meta| fsx::is_executable(&meta))
+        } else {
+            let name = format!("{APP_DIR_NAME}/{relative}");
+            entries.iter().any(|entry| entry.name == name && entry.unix_mode & 0o111 != 0)
+        };
+        if !(is_file && executable) {
             bail!(
                 "The update is missing its application or installer helper ({relative} must be an executable file)."
             );

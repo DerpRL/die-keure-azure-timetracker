@@ -438,13 +438,13 @@ mod git_tests {
         fs::create_dir_all(empty.join(".git")).unwrap();
         assert_eq!(GitProbe::read(&empty).unwrap_err().to_string(), missing_head);
 
-        // A pointer through a regular file: Foundation has no specific reason for this failure.
+        // A pointer through a regular file: Foundation has no specific reason for this failure
+        // (ENOTDIR). Windows reports the path as not found.
         fs::write(temp.path().join("file"), "x").unwrap();
         fs::write(pointer.join(".git"), "gitdir: ../file/.git\n").unwrap();
-        assert_eq!(
-            GitProbe::read(&pointer).unwrap_err().to_string(),
-            "The file “HEAD” couldn’t be opened."
-        );
+        let through_a_file =
+            if cfg!(windows) { missing_head } else { "The file “HEAD” couldn’t be opened." };
+        assert_eq!(GitProbe::read(&pointer).unwrap_err().to_string(), through_a_file);
     }
 
     /// `state.json` fragments as Swift 1.14.2 wrote them (`JSONEncoder`, pretty-printed, sorted).

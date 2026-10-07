@@ -21,7 +21,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, windows-2022]
+        # macos-15: the release tool's tests build the legacy Swift signer (Swift tools 6.0).
+        os: [macos-15, windows-2022]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -37,10 +38,8 @@ jobs:
           set -o pipefail
           cargo test --workspace --no-fail-fast 2>&1 | tee test.log || {
             # The failures as one annotation, readable in the run summary and through the API.
-            summary=$(awk '/^failures:$/{on=1} on{print} /^test result:/{on=0}' test.log | head -150)
-            [ -n "$summary" ] || summary=$(tail -40 test.log)
-            summary=${summary//'%'/'%25'}; summary=${summary//$'\r'/'%0D'}; summary=${summary//$'\n'/'%0A'}
-            echo "::error title=cargo test failed::$summary"
+            { awk '/^failures:$/{on=1} on{print} /^test result:/{on=0}' test.log | head -400; tail -15 test.log; } > summary.txt || true
+            echo "::error title=cargo test failed::$(awk 'BEGIN{ORS="%0A"} {gsub(/%/,"%25"); gsub(/\r/,"%0D"); print}' summary.txt)"
             exit 1
           }
       # The TypeScript contract (apps/desktop/src/ipc/generated.ts) matches the Rust types.
@@ -73,12 +72,11 @@ jobs:
       - uses: actions/checkout@v4
       - run: swift --version
       - name: swift test
+        shell: bash
         run: |
           set -o pipefail
           swift test 2>&1 | tee swift.log || {
-            summary=$(grep -E 'error:|failed|Fatal|crashed' swift.log | head -80)
-            [ -n "$summary" ] || summary=$(tail -40 swift.log)
-            summary=${summary//'%'/'%25'}; summary=${summary//$'\r'/'%0D'}; summary=${summary//$'\n'/'%0A'}
-            echo "::error title=swift test failed::$summary"
+            { grep -E 'error:|✘|recorded an issue|Fatal|crashed' swift.log | head -120; tail -15 swift.log; } > summary.txt || true
+            echo "::error title=swift test failed::$(awk 'BEGIN{ORS="%0A"} {gsub(/%/,"%25"); gsub(/\r/,"%0D"); print}' summary.txt)"
             exit 1
           }

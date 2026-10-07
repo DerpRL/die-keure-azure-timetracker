@@ -39,6 +39,12 @@ pub struct BridgeOutcome {
 }
 
 pub fn bridge(app: &Path, options: &BridgeOptions) -> Result<BridgeOutcome> {
+    if cfg!(windows) {
+        bail!(
+            "Build the bridge release on a Mac: Windows file systems do not keep the execute bits \
+             the 1.x update ZIP needs."
+        );
+    }
     log::step(format!("Checking {}", app.display()));
     let release = bundle::check_release_bundle(app, true)?;
     for warning in bundle::parity_warnings(&release) {

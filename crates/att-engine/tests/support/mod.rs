@@ -425,6 +425,11 @@ pub fn configuration(repositories: Vec<Repository>) -> Configuration {
         seven_pace_auth_mode: SevenPaceAuthMode::ApiToken,
         repositories,
         interface_setup_completed: Some(true),
+        // `TestEngine` runs as macOS everywhere, so its work apps are the macOS bundle IDs (the
+        // default follows the OS the tests are built for).
+        awareness: att_core::awareness::WorkAwarenessPreferences::default_for(
+            att_core::model::HostOs::Macos,
+        ),
         // Prompts open the panel without focus by default; tests check the shell calls.
         ..Configuration::default()
     }

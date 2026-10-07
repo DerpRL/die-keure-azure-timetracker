@@ -1,6 +1,8 @@
 //! `bridge` orchestration in a temporary repository whose legacy feed is the real, signed 1.14.2
 //! manifest. Portable checks only (no ditto, codesign or swift); the legacy key path is printed,
-//! never opened.
+//! never opened. Unix only: the bridge refuses to run on Windows, whose file systems do not keep
+//! the bundle's execute bits.
+#![cfg(unix)]
 
 mod support;
 
