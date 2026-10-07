@@ -138,29 +138,16 @@ struct TimeEditorView: View {
                     .font(.headline).foregroundStyle(palette.warning)
                 ForEach(conflicts) { conflict in
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(Self.conflictTitle(conflict)).font(.callout.weight(.semibold))
-                        Text(Self.conflictSpan(conflict)).font(.callout).foregroundStyle(palette.secondary)
+                        Text((conflict.ticketID.map { "#\($0) · " } ?? "") + conflict.title).font(.callout.weight(.semibold))
+                        Text(conflict.start.formatted(date: .abbreviated, time: .shortened) + " → " + (conflict.active ? "still running" : conflict.end.formatted(date: .abbreviated, time: .shortened)) + " · " + DurationText.short(conflict.overlap) + " overlap")
+                            .font(.callout).foregroundStyle(palette.secondary)
                     }
                 }
             }
             if let issue { Label(issue, systemImage: "exclamationmark.triangle").foregroundStyle(palette.warning) }
-            Text(Self.overlapFootnote(conflicts, saved: saved)).font(.callout).foregroundStyle(palette.secondary)
+            Text(saved ? (conflicts.isEmpty ? "Your changes were saved. Check nearby entries in 7pace if needed." : "Your changes were saved. Overlapping entries were kept.") : "Overlaps are informational. You can still save without extra confirmation.")
+                .font(.callout).foregroundStyle(palette.secondary)
         }.fixedSize(horizontal: false, vertical: true)
-    }
-    // The texts are built outside the view builders with explicit types: Swift 6.1 (Xcode 16)
-    // gives up type-checking the long `+` chains inline.
-    private static func conflictTitle(_ conflict: WorkLogConflict) -> String {
-        let ticket: String = conflict.ticketID.map { "#\($0) · " } ?? ""
-        return ticket + conflict.title
-    }
-    private static func conflictSpan(_ conflict: WorkLogConflict) -> String {
-        let start: String = conflict.start.formatted(date: .abbreviated, time: .shortened)
-        let end: String = conflict.active ? "still running" : conflict.end.formatted(date: .abbreviated, time: .shortened)
-        return "\(start) → \(end) · \(DurationText.short(conflict.overlap)) overlap"
-    }
-    private static func overlapFootnote(_ conflicts: [WorkLogConflict], saved: Bool) -> String {
-        guard saved else { return "Overlaps are informational. You can still save without extra confirmation." }
-        return conflicts.isEmpty ? "Your changes were saved. Check nearby entries in 7pace if needed." : "Your changes were saved. Overlapping entries were kept."
     }
     private var recentEdits: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -169,55 +156,41 @@ struct TimeEditorView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     if editor.recentChanges.isEmpty { Text("Your confirmed edits, splits and merges will appear here.").foregroundStyle(palette.secondary) }
-                    ForEach(editor.recentChanges) { change in recentEdit(change) }
+                    ForEach(editor.recentChanges) { change in
+                        Card {
+                            VStack(alignment: .leading, spacing: 10) {
+                                HStack {
+                                    Text(change.title).font(.headline); Spacer()
+                                    Text(change.date.formatted(date: .abbreviated, time: .shortened)).font(.caption).foregroundStyle(palette.secondary)
+                                }
+                                Text(change.status == .complete ? "Ready to undo" : change.status == .undone ? "Undone" : change.status == .reviewed ? "Reviewed" : "Needs review")
+                                    .foregroundStyle(change.status == .needsReview ? palette.warning : palette.accent)
+                                Text(change.detail).font(.callout).textSelection(.enabled)
+                                DisclosureGroup("Affected entries") {
+                                    ForEach(change.before) { entry in
+                                        Text((entry.workItemId.map { "#\($0) · " } ?? "") + entry.timestamp + " · " + DurationText.short(entry.length) + "\n" + entry.id).font(.caption).textSelection(.enabled)
+                                    }
+                                    ForEach(change.after.filter { after in !change.before.contains { $0.id == after.id } }) { entry in Text("Created: " + entry.id).font(.caption).textSelection(.enabled) }
+                                }
+                                DisclosureGroup("Planned result") {
+                                    ForEach(Array(change.desired.enumerated()), id: \.offset) { _, draft in
+                                        Text((draft.ticketID.map { "#\($0) · " } ?? "No Azure ticket · ") + draft.start.formatted(date: .abbreviated, time: .shortened) + " → " + draft.edit.end.formatted(date: .omitted, time: .shortened) + " · " + (draft.comment ?? ""))
+                                            .font(.caption).textSelection(.enabled)
+                                    }
+                                }
+                                if change.status == .complete {
+                                    Button("Undo…") { editor.beginUndo(change); showHistory = false }.disabled(editor.requiresReview || editor.working || model.busy)
+                                } else if change.status == .needsReview || change.status == .applying {
+                                    Text("Compare the affected entries in 7pace before acknowledging. This acknowledgment does not undo or retry anything.").font(.caption).foregroundStyle(palette.secondary)
+                                    if let url = try? Endpoint.sevenPace(model.configuration.sevenPaceURL) { Link("Open 7pace", destination: url) }
+                                    Button("I checked the entries in 7pace") { editor.acknowledge(change) }.disabled(editor.working || model.busy)
+                                }
+                            }
+                        }
+                    }
                 }.padding(24)
             }
         }.frame(width: 780, height: 620).background(palette.background).buttonStyle(.bordered).controlSize(.large)
-    }
-    private func recentEdit(_ change: WorkLogChange) -> some View {
-        Card {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Text(change.title).font(.headline); Spacer()
-                    Text(change.date.formatted(date: .abbreviated, time: .shortened)).font(.caption).foregroundStyle(palette.secondary)
-                }
-                Text(Self.statusText(change.status))
-                    .foregroundStyle(change.status == .needsReview ? palette.warning : palette.accent)
-                Text(change.detail).font(.callout).textSelection(.enabled)
-                DisclosureGroup("Affected entries") {
-                    ForEach(change.before) { entry in Text(Self.affectedEntry(entry)).font(.caption).textSelection(.enabled) }
-                    ForEach(change.after.filter { after in !change.before.contains { $0.id == after.id } }) { entry in Text("Created: " + entry.id).font(.caption).textSelection(.enabled) }
-                }
-                DisclosureGroup("Planned result") {
-                    ForEach(Array(change.desired.enumerated()), id: \.offset) { _, draft in Text(Self.plannedEntry(draft)).font(.caption).textSelection(.enabled) }
-                }
-                if change.status == .complete {
-                    Button("Undo…") { editor.beginUndo(change); showHistory = false }.disabled(editor.requiresReview || editor.working || model.busy)
-                } else if change.status == .needsReview || change.status == .applying {
-                        Text("Compare the affected entries in 7pace before acknowledging. This acknowledgment does not undo or retry anything.").font(.caption).foregroundStyle(palette.secondary)
-                        if let url = try? Endpoint.sevenPace(model.configuration.sevenPaceURL) { Link("Open 7pace", destination: url) }
-                        Button("I checked the entries in 7pace") { editor.acknowledge(change) }.disabled(editor.working || model.busy)
-                }
-            }
-        }
-    }
-    private static func statusText(_ status: WorkLogChangeStatus) -> String {
-        switch status {
-        case .complete: "Ready to undo"
-        case .undone: "Undone"
-        case .reviewed: "Reviewed"
-        case .applying, .needsReview: "Needs review"
-        }
-    }
-    private static func affectedEntry(_ entry: WorkLog) -> String {
-        let ticket: String = entry.workItemId.map { "#\($0) · " } ?? ""
-        return ticket + "\(entry.timestamp) · \(DurationText.short(entry.length))\n\(entry.id)"
-    }
-    private static func plannedEntry(_ draft: WorkLogDraft) -> String {
-        let ticket: String = draft.ticketID.map { "#\($0) · " } ?? "No Azure ticket · "
-        let start: String = draft.start.formatted(date: .abbreviated, time: .shortened)
-        let end: String = draft.edit.end.formatted(date: .omitted, time: .shortened)
-        return "\(ticket)\(start) → \(end) · \(draft.comment ?? "")"
     }
     private func editSheet(_ log: WorkLog) -> some View {
         VStack(alignment: .leading, spacing: 0) {

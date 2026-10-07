@@ -22,26 +22,29 @@ use crate::windows_parse::{
 };
 use crate::{Credentials, PlatformError, Result};
 
+/// Serialises Credential Manager calls in this process, across stores: a multi-part secret is
+/// several calls, and parallel callers (the tests, each with its own store) once read back
+/// nothing right after a successful write on the Windows CI runner.
+static LOCK: Mutex<()> = Mutex::new(());
+
 /// Secrets in Windows Credential Manager under one service name.
 #[derive(Debug)]
 pub struct WindowsCredentials {
     service: String,
-    /// Serialises multi-part reads and writes within this process.
-    lock: Mutex<()>,
 }
 
 impl WindowsCredentials {
     /// `service` is [`crate::CREDENTIAL_SERVICE`] in the app; tests use a throwaway name.
     pub fn new(service: impl Into<String>) -> Self {
-        Self { service: service.into(), lock: Mutex::new(()) }
+        Self { service: service.into() }
     }
 
     pub fn service(&self) -> &str {
         &self.service
     }
 
-    fn guard(&self) -> MutexGuard<'_, ()> {
-        self.lock.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+    fn guard(&self) -> MutexGuard<'static, ()> {
+        LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
     fn part_target(&self, account: &str, part: usize) -> String {
@@ -222,7 +225,11 @@ mod tests {
         let full = "x".repeat(CREDENTIAL_BLOB_LIMIT);
         credentials.set(account, &full).unwrap();
         assert_eq!(credentials.get(account), Ok(Some(full)));
-        assert_eq!(read_blob(&credentials.part_target(account, 2)), Ok(None));
+        let part2 = {
+            let _lock = credentials.guard();
+            read_blob(&credentials.part_target(account, 2))
+        };
+        assert_eq!(part2, Ok(None));
         credentials.set(account, "short").unwrap();
         assert_eq!(credentials.get(account), Ok(Some("short".to_string())));
         credentials.delete(account).unwrap();
@@ -236,7 +243,10 @@ mod tests {
         let credentials = store("utf16");
         let account = "azure:fabrikam";
         let utf16: Vec<u8> = "typed-pat".encode_utf16().flat_map(u16::to_le_bytes).collect();
-        write_blob(&credentials.part_target(account, 1), account, &utf16).unwrap();
+        {
+            let _lock = credentials.guard();
+            write_blob(&credentials.part_target(account, 1), account, &utf16).unwrap();
+        }
         assert_eq!(credentials.get(account), Ok(Some("typed-pat".to_string())));
         credentials.delete(account).unwrap();
     }

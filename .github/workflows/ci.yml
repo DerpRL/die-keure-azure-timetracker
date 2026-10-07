@@ -25,7 +25,7 @@ jobs:
         os: [macos-15, windows-2022]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
@@ -58,8 +58,8 @@ jobs:
       run:
         working-directory: apps/desktop
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
@@ -72,11 +72,12 @@ jobs:
 
   legacy-swift:
     name: Legacy Swift (bridge release)
-    # Package.swift needs Swift tools 6.0: macos-15 defaults to Xcode 16 (macos-14 to Xcode 15).
-    runs-on: macos-15
+    # The 1.x sources are built with a current Swift (6.4 on the release Mac); Xcode 16's Swift 6.1
+    # rejects some of them, so this runs on macos-26 (Xcode 26).
+    runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
-      - run: swift --version
+      - uses: actions/checkout@v5
+      - run: xcodebuild -version && swift --version
       - name: swift test
         shell: bash
         run: |
