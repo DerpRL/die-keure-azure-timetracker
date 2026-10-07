@@ -134,6 +134,23 @@ impl PresenceProbe for FakePresence {
         let name = path.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
         Ok(att_platform::AppIdentity { id: name.to_lowercase(), name, path: None })
     }
+    /// `missing.*` ids are not installed and `unknown.*` ids cannot be looked up; any other id is
+    /// installed, named after its last dot-separated part (`com.example.Editor` → `Editor`).
+    fn find_app(&self, id: &str) -> att_platform::AppLookup {
+        if id.starts_with("missing.") {
+            return att_platform::AppLookup::NotInstalled;
+        }
+        if id.starts_with("unknown.") {
+            return att_platform::AppLookup::Unknown;
+        }
+        let stem = id.strip_suffix(".exe").unwrap_or(id);
+        let name = stem.rsplit('.').next().unwrap_or(stem).to_string();
+        att_platform::AppLookup::Found(att_platform::AppIdentity {
+            id: id.to_string(),
+            name,
+            path: None,
+        })
+    }
 }
 
 /// A Figma observation set directly.

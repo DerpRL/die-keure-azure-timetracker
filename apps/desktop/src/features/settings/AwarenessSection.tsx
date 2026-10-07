@@ -25,13 +25,16 @@ function messageOf(error: unknown): string {
 }
 
 function WorkApps() {
-  const { draft, update, os } = useSettingsForm();
+  const { draft, update, os, settings } = useSettingsForm();
   const [entry, setEntry] = useState('');
   const [issue, setIssue] = useState<string | null>(null);
   const [choosing, setChoosing] = useState(false);
-  // Names of apps picked in this session. Stored ids have no name lookup, so others show the id.
+  // Names of apps picked in this session (not saved yet), then what the engine found for saved
+  // ones, then the built-in names, then the id.
   const [names, setNames] = useState<Record<string, string>>({});
-  const nameOf = (id: string) => names[id] ?? workAppName(id);
+  const saved = new Map(settings.workApps.map((app) => [app.id, app]));
+  const nameOf = (id: string) => names[id] ?? saved.get(id)?.name ?? workAppName(id);
+  const notInstalled = (id: string) => !(id in names) && saved.get(id)?.installed === false;
   const apps = draft.awareness.workAppIds;
   const setApps = (workAppIds: string[]) =>
     update((current) => ({ ...current, awareness: { ...current.awareness, workAppIds } }));
@@ -77,6 +80,7 @@ function WorkApps() {
               <span className={styles.listText}>
                 <span>{nameOf(id)}</span>
                 {nameOf(id) !== id ? <span className={styles.listMeta}>{id}</span> : null}
+                {notInstalled(id) ? <span className={styles.listMeta}>Not installed on this Mac</span> : null}
               </span>
               <Button
                 size="small"

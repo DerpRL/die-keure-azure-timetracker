@@ -14,7 +14,9 @@ use super::apps;
 use super::events;
 use super::system::os_version;
 use crate::windows_parse::{idle_millis, is_exe_path, lock_flags_inverted, session_locked};
-use crate::{AppIdentity, PlatformError, PresenceProbe, PresenceSample, Result, SystemEventSink};
+use crate::{
+    AppIdentity, AppLookup, PlatformError, PresenceProbe, PresenceSample, Result, SystemEventSink,
+};
 
 /// Presence signals for the current Windows session.
 #[derive(Debug, Default)]
@@ -58,6 +60,17 @@ impl PresenceProbe for WindowsPresence {
             ));
         }
         Ok(apps::identity_for_path(text))
+    }
+
+    /// Only apps registered under `App Paths` can be found; a miss is not proof of absence.
+    fn find_app(&self, id: &str) -> AppLookup {
+        match apps::registered_path(id) {
+            Some(path) => AppLookup::Found(AppIdentity {
+                id: id.to_string(),
+                ..apps::identity_for_path(&path)
+            }),
+            None => AppLookup::Unknown,
+        }
     }
 }
 

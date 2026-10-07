@@ -475,6 +475,16 @@ describe('sections', () => {
     expect(screen.getByRole('button', { name: 'Check now' })).toBeDisabled();
   });
 
+  it('names saved work apps from the engine and marks the ones missing on this Mac', async () => {
+    const { user } = renderWithEngine(<SettingsPage />, { with: { settings: configuredSettings } });
+    await user.click(tab('Tracking'));
+    const row = (id: string) => screen.getByText(id).closest('li')!;
+    // The engine's name ("iTerm") wins over the built-in one ("iTerm2").
+    expect(within(row('com.googlecode.iterm2')).getByText('iTerm')).toBeInTheDocument();
+    expect(row('com.openai.codex')).toHaveTextContent('Not installed on this Mac');
+    expect(screen.getAllByText('Not installed on this Mac')).toHaveLength(1);
+  });
+
   it('edits targets, exceptions and work apps in the draft', async () => {
     const { engine, user } = renderWithEngine(<SettingsPage />);
     await user.click(tab('Tracking'));

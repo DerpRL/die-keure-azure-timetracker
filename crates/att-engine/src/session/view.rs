@@ -667,6 +667,40 @@ pub struct SettingsSlice {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional = nullable))]
     pub notifications_authorized: Option<bool>,
+    /// The saved work apps in order, with what the platform found about each.
+    pub work_apps: Vec<WorkAppView>,
+}
+
+/// A configured work app as Settings shows it.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkAppView {
+    /// The stored id: bundle ID (macOS) or executable name (Windows).
+    pub id: String,
+    /// The app's display name, when the platform found it.
+    pub name: Option<String>,
+    /// Found on this computer; `false` only where the lookup is complete (macOS), `null` while
+    /// unknown.
+    pub installed: Option<bool>,
+}
+
+impl WorkAppView {
+    pub(crate) fn new(id: String, lookup: att_platform::AppLookup) -> Self {
+        match lookup {
+            att_platform::AppLookup::Found(app) => {
+                Self { id, name: Some(app.name), installed: Some(true) }
+            }
+            att_platform::AppLookup::NotInstalled => {
+                Self { id, name: None, installed: Some(false) }
+            }
+            att_platform::AppLookup::Unknown => Self::unknown(id),
+        }
+    }
+
+    pub(crate) fn unknown(id: String) -> Self {
+        Self { id, name: None, installed: None }
+    }
 }
 
 // -- figma ------------------------------------------------------------------------------------
@@ -1386,6 +1420,19 @@ fn settings_slice(state: &AppState, context: &Context) -> SettingsSlice {
             .collect(),
         saved_at: session.settings_saved_at,
         notifications_authorized: session.notifications_authorized,
+        work_apps: state
+            .config
+            .awareness
+            .work_app_ids
+            .iter()
+            .map(|id| {
+                session
+                    .work_apps
+                    .get(id)
+                    .cloned()
+                    .unwrap_or_else(|| WorkAppView::unknown(id.clone()))
+            })
+            .collect(),
     }
 }
 

@@ -11,6 +11,7 @@ use windows::Win32::Storage::FileSystem::{
     GetFileVersionInfoSizeW, GetFileVersionInfoW, VerQueryValueW,
 };
 use windows::Win32::Storage::Packaging::Appx::GetPackageFamilyName;
+use windows::Win32::System::Registry::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE};
 use windows::Win32::System::Threading::{
     OpenProcess, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION, QueryFullProcessImageNameW,
 };
@@ -20,9 +21,10 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::{BOOL, HSTRING, PWSTR};
 
+use super::registry::RegKey;
 use crate::AppIdentity;
 use crate::windows_parse::{
-    clean_description, exe_name, file_stem, utf16_until_nul, version_string_query,
+    app_paths_value, clean_description, exe_name, file_stem, utf16_until_nul, version_string_query,
     version_translations,
 };
 
@@ -216,6 +218,17 @@ pub(crate) fn describe(path: &str) -> Option<String> {
     }
     entries.insert(key, description.clone());
     description
+}
+
+/// The installed executable registered for `exe` under `App Paths` (current user first), when
+/// the file exists. Many installers register there; portable apps and Store aliases do not.
+pub(crate) fn registered_path(exe: &str) -> Option<String> {
+    const APP_PATHS: &str = r"Software\Microsoft\Windows\CurrentVersion\App Paths";
+    [HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE].into_iter().find_map(|root| {
+        let key = RegKey::open(root, APP_PATHS).ok().flatten()?;
+        let path = app_paths_value(&key.string(exe, "")?)?;
+        std::path::Path::new(&path).is_file().then_some(path)
+    })
 }
 
 /// Identity of an executable: lower-case file name, FileDescription (else the file stem).

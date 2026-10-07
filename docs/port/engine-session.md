@@ -128,8 +128,9 @@ in-module tests for the tray, discovery and the persisted date maps.
     quick-switch shortcut could not be registered → `connection.shortcutIssue`) and
     `app.reportNotificationPermission` (→ `settings.notificationsAuthorized`).
 19. **Work apps.** `settings.resolveWorkApp {path}` returns `{id, name}` read from the app
-    bundle (probe deadline). A `settings.workApps` list with names is not published: the
-    platform has no lookup from a stored id back to its app.
+    bundle (probe deadline). `settings.workApps` names the saved ids through
+    `PresenceProbe::find_app`, looked up in the background and cached: Launch Services on macOS
+    (a miss means not installed), `App Paths` on Windows (a miss means unknown).
 20. **Meeting reminders.** No `MeetingPreferences.endReminders` toggle: 1.14.x had none. The
     microphone end prompt follows `microphone.enabled`, the meeting return prompt always runs,
     and both are silenced or raised through their interruption levels.

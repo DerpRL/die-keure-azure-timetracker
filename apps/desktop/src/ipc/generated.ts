@@ -1206,6 +1206,8 @@ export type SettingsSlice = {
    * `app.reportNotificationPermission`); `null` until known.
    */
   notificationsAuthorized?: boolean | null;
+  /** The saved work apps in order, with what the platform found about each. */
+  workApps: Array<WorkAppView>;
 };
 
 /**
@@ -1432,6 +1434,19 @@ export type WeeklySlice = {
   configured: boolean;
   /** The file name the export dialog suggests: `weekly-status-<yyyy-MM-dd>.md`. */
   exportFileName: string;
+};
+
+/** A configured work app as Settings shows it. */
+export type WorkAppView = {
+  /** The stored id: bundle ID (macOS) or executable name (Windows). */
+  id: string;
+  /** The app's display name, when the platform found it. */
+  name: string | null;
+  /**
+   * Found on this computer; `false` only where the lookup is complete (macOS), `null` while
+   * unknown.
+   */
+  installed: boolean | null;
 };
 
 /**

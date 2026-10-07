@@ -106,6 +106,10 @@ pub struct SessionState {
     pub(crate) shortcut_issue: Option<String>,
     /// Swift `notificationAuthorized`, reported by the shell; `None` until it does.
     pub(crate) notifications_authorized: Option<bool>,
+    /// What the platform found about each work app id (names for Settings).
+    pub(crate) work_apps: BTreeMap<String, view::WorkAppView>,
+    /// A lookup of work apps missing from `work_apps` is running.
+    pub(crate) work_apps_pending: bool,
 }
 
 /// Intents owned by the session. Field names are camelCase on the wire.
@@ -573,6 +577,7 @@ async fn start_now(engine: &Engine) {
 /// One pass of the Swift main loop (`AppModel.start()`, see `docs/engine.md` §3), in the same
 /// order. Statistics and day-review page loads belong to `controllers::tick`.
 pub async fn tick(engine: &Engine) {
+    settings::look_up_work_apps(engine);
     if !engine.read(|state| state.session.started) {
         if onboarding_pending(engine) {
             return;

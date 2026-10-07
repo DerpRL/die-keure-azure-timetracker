@@ -345,3 +345,45 @@ async fn an_unapproved_pin_expires_after_a_minute_and_pairing_can_be_cancelled()
         "Could not pair with 7pace. Use your 7pace workspace URL: https://your-organization.timehub.7pace.com"
     );
 }
+
+/// The settings slice's work apps once the background lookup answered (the first app is installed).
+async fn resolved_work_apps(h: &Harness) -> Value {
+    for _ in 0..200 {
+        let apps = h.slice("settings")["workApps"].clone();
+        if apps[0]["installed"] == true {
+            return apps;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+        h.tick().await;
+    }
+    panic!("work apps were not looked up: {}", h.slice("settings")["workApps"]);
+}
+
+#[tokio::test]
+async fn saved_work_apps_are_named_by_the_platform_in_the_background() {
+    let mut config = configuration(vec![]);
+    config.awareness.work_app_ids =
+        vec!["com.example.Editor".into(), "missing.app".into(), "unknown.tool".into()];
+    let h = Harness::new(config.clone());
+    h.start().await;
+    h.tick().await;
+    let apps = resolved_work_apps(&h).await;
+    assert_eq!(
+        apps,
+        json!([
+            {"id": "com.example.Editor", "name": "Editor", "installed": true},
+            {"id": "missing.app", "name": null, "installed": false},
+            {"id": "unknown.tool", "name": null, "installed": null},
+        ]),
+        "saved order; only the platform's answers"
+    );
+
+    // An app picked in the file dialog is known at once; saving it needs no new lookup.
+    h.ok(json!({"type": "settings.resolveWorkApp", "path": "/Applications/Zed.app"})).await;
+    config.awareness.work_app_ids.push("zed".into());
+    save(&h, &config, "", "").await;
+    assert_eq!(
+        h.slice("settings")["workApps"][3],
+        json!({"id": "zed", "name": "Zed", "installed": true})
+    );
+}

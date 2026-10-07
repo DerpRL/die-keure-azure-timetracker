@@ -207,6 +207,16 @@ pub enum SystemEvent {
 
 pub type SystemEventSink = Arc<dyn Fn(SystemEvent) + Send + Sync>;
 
+/// What the platform knows about an application stored by its id (see [`AppIdentity::id`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AppLookup {
+    Found(AppIdentity),
+    /// The lookup is complete and the app is not there (macOS Launch Services).
+    NotInstalled,
+    /// No reliable answer (Windows: not registered under App Paths; no lookup on this platform).
+    Unknown,
+}
+
 pub trait PresenceProbe: Send + Sync {
     fn sample(&self) -> PresenceSample;
     /// Starts delivering OS notifications to `sink`. Callable from any thread; on macOS delivery
@@ -216,6 +226,12 @@ pub trait PresenceProbe: Send + Sync {
     fn subscribe(&self, sink: SystemEventSink) -> Result<()>;
     /// Reads the identity of an application chosen in a file dialog (`.app` bundle or `.exe`).
     fn app_identity(&self, path: &Path) -> Result<AppIdentity>;
+    /// Finds the installed application with a stored id (bundle ID on macOS, executable name on
+    /// Windows), for the work app names in Settings. Reads the disk; call it off the async
+    /// threads.
+    fn find_app(&self, _id: &str) -> AppLookup {
+        AppLookup::Unknown
+    }
 }
 
 // ---------------------------------------------------------------------------------------------

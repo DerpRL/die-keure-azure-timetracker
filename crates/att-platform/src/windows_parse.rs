@@ -36,6 +36,14 @@ pub fn is_exe_path(path: &str) -> bool {
     exe_name(path).is_some_and(|name| name.len() > 4 && name.ends_with(".exe"))
 }
 
+/// The executable an `App Paths` default value names: trimmed, without surrounding quotes, and
+/// only when it is an `.exe` path.
+pub fn app_paths_value(raw: &str) -> Option<String> {
+    let text = raw.trim_matches(|c: char| c == '\0' || c.is_whitespace());
+    let text = text.strip_prefix('"').and_then(|rest| rest.strip_suffix('"')).unwrap_or(text);
+    is_exe_path(text).then(|| text.to_string())
+}
+
 /// Trims a version-resource string and drops empty ones.
 pub fn clean_description(raw: &str) -> Option<String> {
     let text = raw.trim_matches(|c: char| c == '\0' || c.is_whitespace());
@@ -649,6 +657,17 @@ pub fn find_figma_url<H>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn app_paths_values_name_an_executable() {
+        assert_eq!(
+            app_paths_value("\"C:\\Program Files\\PowerShell\\7\\pwsh.exe\"\0"),
+            Some(r"C:\Program Files\PowerShell\7\pwsh.exe".to_string())
+        );
+        assert_eq!(app_paths_value(r"C:\Tools\code.exe"), Some(r"C:\Tools\code.exe".to_string()));
+        assert_eq!(app_paths_value(r"C:\Tools\readme.txt"), None);
+        assert_eq!(app_paths_value("  "), None);
+    }
 
     #[test]
     fn exe_names_are_lower_case_file_names() {

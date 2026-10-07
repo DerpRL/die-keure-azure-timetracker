@@ -64,6 +64,23 @@ const configuration: Configuration = {
   ],
 };
 
+/** What the engine's background lookup found on this Mac: Codex is not installed. */
+const INSTALLED_APPS: Record<string, string | null> = {
+  'com.microsoft.VSCode': 'Visual Studio Code',
+  'com.apple.Terminal': 'Terminal',
+  'com.googlecode.iterm2': 'iTerm',
+  'com.todesktop.230313mzl4w4u92': 'Cursor',
+  'com.openai.codex': null,
+  'com.apple.dt.Xcode': 'Xcode',
+};
+
+function lookedUp(config: Configuration): SettingsSlice['workApps'] {
+  return config.awareness.workAppIds.map((id) => {
+    const name = INSTALLED_APPS[id];
+    return name === undefined ? { id, name: null, installed: null } : { id, name, installed: name !== null };
+  });
+}
+
 const IDLE_PAIRING: SettingsSlice['pairing'] = { pin: null, expiresAt: null, status: null, pairedHost: null, busy: false };
 
 /** A configured workspace with stored credentials (the browser preview's Settings). */
@@ -81,6 +98,7 @@ export const configuredSettings: SettingsSlice = {
     checkedAt: '2026-10-06T08:02:14Z',
   },
   interruptions: interruptions(configuration),
+  workApps: lookedUp(configuration),
 };
 
 /** First run: the Rust defaults, no credentials. */
@@ -91,6 +109,8 @@ export const unconfiguredSettings: SettingsSlice = {
   pairing: IDLE_PAIRING,
   microphone: { supported: true, owners: [], fresh: false, issue: null },
   interruptions: interruptions(defaultConfiguration()),
+  // Before the background lookup answered.
+  workApps: defaultConfiguration().awareness.workAppIds.map((id) => ({ id, name: null, installed: null })),
 };
 
 /** The app slice of the first run: appearance onboarding instead of the app. */

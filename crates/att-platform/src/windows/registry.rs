@@ -7,7 +7,8 @@ use windows::Win32::Foundation::{
     ERROR_SUCCESS, WIN32_ERROR,
 };
 use windows::Win32::System::Registry::{
-    HKEY, KEY_READ, RRF_RT_REG_QWORD, RegCloseKey, RegEnumKeyExW, RegGetValueW, RegOpenKeyExW,
+    HKEY, KEY_READ, RRF_RT_REG_QWORD, RRF_RT_REG_SZ, RegCloseKey, RegEnumKeyExW, RegGetValueW,
+    RegOpenKeyExW,
 };
 use windows::core::{HSTRING, PWSTR};
 
@@ -81,6 +82,42 @@ impl RegKey {
             )
         };
         (status == ERROR_SUCCESS && size as usize == size_of::<u64>()).then_some(data)
+    }
+}
+
+impl RegKey {
+    /// A string value of a subkey (`""` is the default value). `REG_EXPAND_SZ` values come back
+    /// expanded; `None` when missing or of another type.
+    pub(crate) fn string(&self, subkey: &str, value: &str) -> Option<String> {
+        let subkey = HSTRING::from(subkey);
+        let value = HSTRING::from(value);
+        let mut size = 0_u32;
+        // SAFETY: a size query without a data buffer.
+        let status = unsafe {
+            RegGetValueW(self.0, &subkey, &value, RRF_RT_REG_SZ, None, None, Some(&mut size))
+        };
+        if status != ERROR_SUCCESS || size == 0 {
+            return None;
+        }
+        let mut buffer = vec![0_u16; (size as usize).div_ceil(2)];
+        let mut size = (buffer.len() * 2) as u32;
+        // SAFETY: `buffer` holds `size` writable bytes.
+        let status = unsafe {
+            RegGetValueW(
+                self.0,
+                &subkey,
+                &value,
+                RRF_RT_REG_SZ,
+                None,
+                Some(buffer.as_mut_ptr().cast::<c_void>()),
+                Some(&mut size),
+            )
+        };
+        if status != ERROR_SUCCESS {
+            return None;
+        }
+        let units = (size as usize / 2).min(buffer.len());
+        Some(String::from_utf16_lossy(&buffer[..units]).trim_end_matches('\0').to_string())
     }
 }
 

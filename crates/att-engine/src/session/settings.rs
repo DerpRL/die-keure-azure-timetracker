@@ -11,6 +11,7 @@ use att_core::git::BranchDebouncer;
 use att_core::interface_prefs::InterfacePreferences;
 use att_core::{AppError, Configuration, Result};
 use att_net::Endpoint;
+use att_platform::AppLookup;
 
 use crate::clients::accounts;
 use crate::controllers::hooks as controllers;
@@ -20,6 +21,7 @@ use crate::ipc::IpcError;
 use crate::probes::{PROBE_DEADLINE, blocking};
 use crate::state::AppState;
 
+use super::view::WorkAppView;
 use super::{branches, busy, connection, figma, meetings, microphone, update_with};
 
 /// The appearance onboarding is shown instead of the app (Swift `showAppearanceOnboarding`):
@@ -181,7 +183,57 @@ pub(crate) async fn app_identity(
         .await
         .ok_or_else(|| IpcError::new("timeout", "The application could not be read in time."))?;
     let identity = result.map_err(|error| IpcError::new("message", error.to_string()))?;
+    let known = WorkAppView::new(identity.id.clone(), AppLookup::Found(identity.clone()));
+    engine.update(|state| state.session.work_apps.insert(known.id.clone(), known));
     serde_json::to_value(identity).map_err(|error| IpcError::new("internal", error.to_string()))
+}
+
+/// Looks up the saved work apps the cache does not know yet (their names and whether they are
+/// installed, for Settings) in the background, one lookup at a time. A lookup that does not
+/// answer in time marks its apps as unknown, so it is not retried every tick.
+pub(crate) fn look_up_work_apps(engine: &Engine) {
+    let ids = engine.update(|state| {
+        let session = &mut state.session;
+        if session.work_apps_pending {
+            return Vec::new();
+        }
+        let ids: Vec<String> = state
+            .config
+            .awareness
+            .work_app_ids
+            .iter()
+            .filter(|id| !session.work_apps.contains_key(*id))
+            .cloned()
+            .collect();
+        session.work_apps_pending = !ids.is_empty();
+        ids
+    });
+    if ids.is_empty() {
+        return;
+    }
+    let engine = engine.clone();
+    tokio::spawn(async move {
+        let presence = engine.services().platform.presence.clone();
+        let wanted = ids.clone();
+        let found = blocking(PROBE_DEADLINE, move || {
+            wanted
+                .into_iter()
+                .map(|id| {
+                    let lookup = presence.find_app(&id);
+                    WorkAppView::new(id, lookup)
+                })
+                .collect::<Vec<_>>()
+        })
+        .await
+        .unwrap_or_else(|| ids.into_iter().map(WorkAppView::unknown).collect());
+        engine.update(|state| {
+            let session = &mut state.session;
+            session.work_apps_pending = false;
+            for app in found {
+                session.work_apps.insert(app.id.clone(), app);
+            }
+        });
+    });
 }
 
 /// `app.prepareForRestart` (Swift `installUpdate()` guards): refused while a write, an

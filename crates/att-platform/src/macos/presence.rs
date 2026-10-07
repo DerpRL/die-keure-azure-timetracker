@@ -44,7 +44,8 @@ use objc2_foundation::{
 
 use super::bundle::read_bundle;
 use crate::{
-    AppIdentity, PlatformError, PresenceProbe, PresenceSample, Result, SystemEvent, SystemEventSink,
+    AppIdentity, AppLookup, PlatformError, PresenceProbe, PresenceSample, Result, SystemEvent,
+    SystemEventSink,
 };
 
 /// `kCGAnyInputEventType` (`~0`).
@@ -137,6 +138,26 @@ impl PresenceProbe for MacPresence {
         let bundle = read_bundle(path).ok_or_else(missing)?;
         let id = bundle.id.ok_or_else(missing)?;
         Ok(AppIdentity { id, name: bundle.name, path: Some(bundle.path) })
+    }
+
+    /// Launch Services knows every registered app, so a miss means it is not installed.
+    fn find_app(&self, id: &str) -> AppLookup {
+        autoreleasepool(|_| {
+            let workspace = NSWorkspace::sharedWorkspace();
+            let Some(url) =
+                workspace.URLForApplicationWithBundleIdentifier(&NSString::from_str(id))
+            else {
+                return AppLookup::NotInstalled;
+            };
+            match url.path().map(|path| path.to_string()).as_deref().and_then(read_bundle) {
+                Some(bundle) => AppLookup::Found(AppIdentity {
+                    id: id.to_string(),
+                    name: bundle.name,
+                    path: Some(bundle.path),
+                }),
+                None => AppLookup::Unknown,
+            }
+        })
     }
 }
 
@@ -269,6 +290,21 @@ mod tests {
 
         let missing = format!("{}/Missing.app", dir.path());
         assert!(MacPresence::new().app_identity(Path::new(&missing)).is_err());
+    }
+
+    #[test]
+    fn find_app_looks_up_bundle_ids_through_launch_services() {
+        // Finder is always registered; the lookup reads Launch Services and prompts for nothing.
+        let AppLookup::Found(finder) = MacPresence::new().find_app("com.apple.finder") else {
+            panic!("Finder is installed");
+        };
+        assert_eq!(finder.id, "com.apple.finder");
+        assert_eq!(finder.name, "Finder");
+        assert!(finder.path.is_some_and(|path| path.ends_with("Finder.app")));
+        assert_eq!(
+            MacPresence::new().find_app("be.example.not-an-installed-app"),
+            AppLookup::NotInstalled
+        );
     }
 
     #[test]
