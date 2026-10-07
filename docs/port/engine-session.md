@@ -122,6 +122,8 @@ in-module tests for the tray, discovery and the persisted date maps.
 16. **Settings save** also keeps the repositories, interruption levels and quiet hours of the
     current configuration (applied immediately elsewhere), besides Figma and appearance.
 17. **Preview:** no network, notifications, credential writes, calendar or first-run discovery.
+    No "Preview mode" notice at launch (Swift set one): the UI shows a permanent banner from
+    `app.preview`.
 18. **Shell state.** The shell reports what only it knows: `app.reportShortcutIssue` (the
     quick-switch shortcut could not be registered → `connection.shortcutIssue`) and
     `app.reportNotificationPermission` (→ `settings.notificationsAuthorized`).

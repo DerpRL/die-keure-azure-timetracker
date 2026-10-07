@@ -105,7 +105,7 @@ export default function TimeEditorPage() {
       <PageRefresh
         onRefresh={() => void load.run({ type: 'timeEditor.load' })}
         isRefreshing={loading}
-        isDisabled={blocked || !!selected}
+        isDisabled={blocked || !!selected || !configured}
         label="Refresh"
       />
       <p className={styles.intro}>Edit recorded time in 7pace. Overlap warnings are informational and do not block saving.</p>

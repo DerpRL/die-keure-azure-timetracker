@@ -3,7 +3,8 @@
 //!
 //! - `ATT_DEBUG_SHOW_PANEL=1` opens the panel with focus one second after launch,
 //!   `ATT_DEBUG_SHOW_PANEL=nofocus` opens it without taking focus.
-//! - `ATT_DEBUG_SHOW_MAIN=1` opens the main window.
+//! - `ATT_DEBUG_SHOW_MAIN=1` opens the main window; `ATT_DEBUG_SHOW_MAIN=<page>` (for example
+//!   `settings`) opens it on that page.
 //! - `ATT_DEBUG_MINI=1` turns the mini timer on.
 //! - `ATT_DEBUG_REPORT=1` prints the monitors, the tray rectangle and the window frames to
 //!   stderr afterwards, and every panel show, hide and focus change (there is no log
@@ -22,19 +23,20 @@ use crate::tray;
 
 pub fn apply(app: &AppHandle) {
     let panel = std::env::var("ATT_DEBUG_SHOW_PANEL").ok().filter(|value| !value.is_empty());
-    let main = std::env::var_os("ATT_DEBUG_SHOW_MAIN").is_some();
+    let main = std::env::var("ATT_DEBUG_SHOW_MAIN").ok();
     let mini = std::env::var_os("ATT_DEBUG_MINI").is_some();
     let report = std::env::var_os("ATT_DEBUG_REPORT").is_some();
     let snapshot = std::env::var_os("ATT_DEBUG_SNAPSHOT").map(PathBuf::from);
-    if panel.is_none() && !main && !mini && !report && snapshot.is_none() {
+    if panel.is_none() && main.is_none() && !mini && !report && snapshot.is_none() {
         return;
     }
     let app = app.clone();
     std::thread::spawn(move || {
         // Give the status item and the web views a moment to appear.
         std::thread::sleep(Duration::from_secs(1));
-        if main {
-            surfaces::show_main_or_log(&app, None);
+        if let Some(page) = main {
+            let page = (!page.is_empty() && page != "1").then_some(page.as_str());
+            surfaces::show_main_or_log(&app, page);
             // Let the main window become key before anything else appears.
             std::thread::sleep(Duration::from_millis(500));
         }

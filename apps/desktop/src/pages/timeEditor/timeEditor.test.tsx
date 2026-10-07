@@ -22,6 +22,7 @@ import {
   timeEditorUnconfigured,
 } from '../../ipc/fixtures/slices/timeEditor';
 import { MockEngineError } from '../../ipc/mockEngine';
+import { PageHeaderSlotContext } from '../../features/app/PageHeaderActions';
 import type { AppSlice, SliceMap, TimeEditorSlice } from '../../ipc/contract';
 import { PageFrame, resetAriaAnnouncer } from '../../features/ticketContext/testing';
 import { expectNoA11yViolations } from '../../test/axe';
@@ -73,6 +74,20 @@ describe('Time editor page', () => {
     expect(screen.getByText('No entries match this date or filter.')).toBeInTheDocument();
     act(() => engine.setSlice('timeEditor', timeEditorUnconfigured));
     expect(screen.getByText('Connect to 7pace in Settings to edit your recorded time.')).toBeInTheDocument();
+  });
+
+  it('disables Refresh without a 7pace connection, as the other pages do', () => {
+    const header = document.body.appendChild(document.createElement('div'));
+    const { engine } = renderWithEngine(
+      <PageHeaderSlotContext.Provider value={header}>
+        <TimeEditorPage />
+      </PageHeaderSlotContext.Provider>,
+      { with: { timeEditor: timeEditorEmpty } },
+    );
+    expect(within(header).getByRole('button', { name: 'Refresh' })).toBeEnabled();
+    act(() => engine.setSlice('timeEditor', timeEditorUnconfigured));
+    expect(within(header).getByRole('button', { name: 'Refresh' })).toBeDisabled();
+    header.remove();
   });
 
   it('shows the load issue verbatim', async () => {

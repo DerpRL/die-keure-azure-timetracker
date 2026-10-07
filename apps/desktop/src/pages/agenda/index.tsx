@@ -18,11 +18,21 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** Access not granted, denied or the integration is off: explain and offer the next step. */
-function AccessCard({ agenda }: { agenda: AgendaSlice }) {
+/**
+ * Access not granted, denied or the integration is off: explain and offer the next step. In
+ * preview mode the engine never asks for access, so the button is disabled with a reason.
+ */
+function AccessCard({ agenda, preview }: { agenda: AgendaSlice; preview: boolean }) {
   const enable = useAction();
+  const hintId = useId();
   const button = (label: string) => (
-    <Button variant="primary" isPending={enable.pending} onPress={() => void enable.run({ type: 'settings.enableCalendar' })}>
+    <Button
+      variant="primary"
+      isPending={enable.pending}
+      isDisabled={preview}
+      aria-describedby={preview ? hintId : undefined}
+      onPress={() => void enable.run({ type: 'settings.enableCalendar' })}
+    >
       {label}
     </Button>
   );
@@ -63,6 +73,11 @@ function AccessCard({ agenda }: { agenda: AgendaSlice }) {
   return (
     <Card>
       {content}
+      {preview && agenda.access !== 'restricted' ? (
+        <p id={hintId} className={styles.text}>
+          Preview mode: calendar access is turned off.
+        </p>
+      ) : null}
       {enable.error ? (
         <p role="alert" className={styles.error}>
           {enable.error.message}
@@ -200,6 +215,7 @@ function DayAgenda({ agenda, setDay, day }: { agenda: AgendaSlice; setDay: Actio
 /** Agenda page (1.14 `AgendaView`), macOS only: the events of one day from the selected calendars. */
 export default function AgendaPage() {
   const agenda = useSlice('agenda');
+  const preview = useSlice('app')?.preview ?? false;
   const setDay = useAction();
   const day = agenda ? parseDay(agenda.day) : null;
   const ready = !!agenda && agenda.supported && agenda.access === 'authorized' && agenda.enabled && !!day;
@@ -257,7 +273,7 @@ export default function AgendaPage() {
       ) : ready && day ? (
         <DayAgenda agenda={agenda} setDay={setDay} day={day} />
       ) : (
-        <AccessCard agenda={agenda} />
+        <AccessCard agenda={agenda} preview={preview} />
       )}
     </div>
   );

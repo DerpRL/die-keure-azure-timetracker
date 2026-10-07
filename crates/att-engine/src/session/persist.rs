@@ -62,9 +62,8 @@ pub(crate) fn load(services: &Services, state: &mut AppState) {
     let cal = services.clock.cal();
     let session = &mut state.session;
     session.host_os = Some(services.os);
-    if services.preview {
-        session.notice = Some("Preview mode · no network requests or tracking changes".to_string());
-    }
+    // Swift also set a "Preview mode" notice here; the UI shows a permanent preview banner from
+    // `app.preview` instead, so a notice would only repeat it.
     // The configuration could not be read (the engine stopped writing): no onboarding.
     session.load_failed = !state.can_persist;
     session.branches.discover_on_start =

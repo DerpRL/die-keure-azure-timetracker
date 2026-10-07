@@ -1,6 +1,7 @@
 import { act, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SAMPLE_NOW, sampleSlices } from '../../ipc/fixtures';
+import { sampleApp } from '../../ipc/fixtures/slices/app';
 import {
   agendaAllCalendars,
   agendaDenied,
@@ -101,6 +102,15 @@ describe('AgendaPage', () => {
     act(() => engine.setSlice('agenda', agendaRestricted));
     expect(screen.getByRole('heading', { name: 'Calendar access is restricted' })).toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('disables the access request in preview mode and says why', () => {
+    const app = { ...sampleApp, preview: true };
+    const { engine } = renderWithEngine(<AgendaPage />, { with: { agenda: agendaNotDetermined, app } });
+    const allow = screen.getByRole('button', { name: 'Allow calendar access' });
+    expect(allow).toBeDisabled();
+    expect(allow).toHaveAccessibleDescription('Preview mode: calendar access is turned off.');
+    expect(engine.dispatched('settings.enableCalendar')).toHaveLength(0);
   });
 
   it('shows a refused access request verbatim', async () => {
