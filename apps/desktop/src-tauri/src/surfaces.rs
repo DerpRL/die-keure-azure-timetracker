@@ -9,10 +9,13 @@
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
+#[cfg(target_os = "macos")]
+use tauri::LogicalPosition;
 use tauri::{
     AppHandle, Emitter, Manager, Monitor, PhysicalPosition, WebviewUrl, WebviewWindow,
     WebviewWindowBuilder, Window, WindowEvent,
 };
+#[cfg(not(target_os = "macos"))]
 use tauri_plugin_positioner::{Position as Anchor, WindowExt as _};
 use tauri_plugin_window_state::{AppHandleExt as _, StateFlags};
 
@@ -32,13 +35,6 @@ const MINI_SIZE: (f64, f64) = (260.0, 72.0);
 /// Logical distance of the mini timer from the work-area corner.
 const MINI_MARGIN: f64 = 16.0;
 
-/// The panel opens under the menu bar on macOS and above the taskbar on Windows.
-#[cfg(target_os = "macos")]
-const TRAY_AT_TOP: bool = true;
-#[cfg(not(target_os = "macos"))]
-const TRAY_AT_TOP: bool = false;
-#[cfg(target_os = "macos")]
-const TRAY_ANCHOR: Anchor = Anchor::TrayBottomCenter;
 #[cfg(not(target_os = "macos"))]
 const TRAY_ANCHOR: Anchor = Anchor::TrayCenter;
 /// Logical gap between the tray icon and the panel (macOS popover distance, Windows 11 flyout
@@ -287,14 +283,59 @@ fn window(app: &AppHandle, label: &'static str) -> Result<WebviewWindow, ShellEr
     app.get_webview_window(label).ok_or(ShellError::MissingWindow(label))
 }
 
-/// Puts the hidden panel next to the tray icon.
+/// Puts the hidden panel under the status item, on the screen whose menu bar holds it.
+///
+/// Computed in logical points from AppKit, not with the positioner plugin and physical pixels:
+/// tao moves windows asynchronously, so the panel's monitor read right after a move is still
+/// its old one (the panel then got clamped back onto the main screen), and physical pixels of
+/// screens with different scale factors do not form one coordinate space.
+#[cfg(target_os = "macos")]
+fn anchor_panel(app: &AppHandle, panel: &WebviewWindow) {
+    if let Err(error) = place_panel_under_status_item(app, panel) {
+        tracing::warn!(%error, "could not position the panel");
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn place_panel_under_status_item(app: &AppHandle, panel: &WebviewWindow) -> Result<(), ShellError> {
+    let size = panel.outer_size()?.to_logical::<f64>(panel.scale_factor()?);
+    let size = (size.width, size.height);
+    let placement = match app.tray_by_id(tray::TRAY_ID) {
+        Some(tray) => native::status_item_placement(&tray)?,
+        None => None,
+    };
+    #[cfg(debug_assertions)]
+    crate::debug::trace(|| format!("status item and screen (points): {placement:?}"));
+    let (x, y) = match placement {
+        Some((item, work)) => anchored_origin(item, size, work, PANEL_GAP, PANEL_MARGIN, true),
+        None => {
+            let Some(monitor) = app.primary_monitor()? else {
+                return Ok(());
+            };
+            let scale = monitor.scale_factor();
+            let work = work_area(&monitor);
+            let work = PxRect {
+                x: work.x / scale,
+                y: work.y / scale,
+                w: work.w / scale,
+                h: work.h / scale,
+            };
+            corner_origin(size, work, PANEL_GAP, true)
+        }
+    };
+    panel.set_position(LogicalPosition::new(x, y))?;
+    Ok(())
+}
+
+/// Puts the hidden panel above the tray icon (Windows taskbar).
 ///
 /// The positioner plugin anchors to the tray position it last saw. It is refreshed from the live
 /// tray rectangle first, because pointer events over the icon are its only other source and the
 /// shortcut can open the panel before the pointer ever touched the icon. Its result moves the
 /// panel onto the tray's monitor, so the size read afterwards is in that monitor's scale. The
-/// final position is then computed here: positioner aligns the panel with the top of the menu
-/// bar on macOS and clamps to the whole monitor rather than the work area (taskbar, Dock).
+/// final position is then computed here: positioner clamps to the whole monitor rather than the
+/// work area (taskbar).
+#[cfg(not(target_os = "macos"))]
 fn anchor_panel(app: &AppHandle, panel: &WebviewWindow) {
     let tray_rect = tray::current_rect(app);
     let anchored = tray_rect.is_some() && panel.move_window(TRAY_ANCHOR).is_ok();
@@ -303,6 +344,7 @@ fn anchor_panel(app: &AppHandle, panel: &WebviewWindow) {
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn place_panel(
     app: &AppHandle,
     panel: &WebviewWindow,
@@ -321,20 +363,16 @@ fn place_panel(
     let size = panel.outer_size()?;
     let panel_size = (f64::from(size.width), f64::from(size.height));
     let (x, y) = match tray_rect {
-        Some(tray) => anchored_origin(
-            tray,
-            panel_size,
-            work,
-            PANEL_GAP * scale,
-            PANEL_MARGIN * scale,
-            TRAY_AT_TOP,
-        ),
-        None => corner_origin(panel_size, work, PANEL_GAP * scale, TRAY_AT_TOP),
+        Some(tray) => {
+            anchored_origin(tray, panel_size, work, PANEL_GAP * scale, PANEL_MARGIN * scale, false)
+        }
+        None => corner_origin(panel_size, work, PANEL_GAP * scale, false),
     };
     panel.set_position(PhysicalPosition::new(x.round() as i32, y.round() as i32))?;
     Ok(())
 }
 
+#[cfg(not(target_os = "macos"))]
 fn target_monitor(
     app: &AppHandle,
     tray_rect: Option<PxRect>,

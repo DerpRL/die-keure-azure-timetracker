@@ -58,7 +58,8 @@ struct Applied {
     icon: Option<(TrayState, u32)>,
 }
 
-/// A rectangle in physical pixels.
+/// A screen rectangle, origin at the top left, y growing down: physical pixels, except for the
+/// macOS panel placement, which works in logical points.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PxRect {
     pub x: f64,

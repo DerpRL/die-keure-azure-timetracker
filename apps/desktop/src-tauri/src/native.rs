@@ -8,12 +8,14 @@ mod imp {
     use objc2::rc::Retained;
     use objc2::runtime::AnyObject;
     use objc2_app_kit::{
-        NSAccessibility, NSFont, NSFontWeightMedium, NSStatusBarButton, NSStatusItem, NSWindow,
-        NSWindowCollectionBehavior,
+        NSAccessibility, NSFont, NSFontWeightMedium, NSScreen, NSStatusBarButton, NSStatusItem,
+        NSWindow, NSWindowCollectionBehavior,
     };
-    use objc2_foundation::NSString;
+    use objc2_foundation::{NSRect, NSString};
     use tauri::WebviewWindow;
     use tauri::tray::TrayIcon;
+
+    use crate::tray::PxRect;
 
     /// Shows `window` without activating the app or making the window key, so the frontmost app
     /// (or the main window, when the app is active) keeps keyboard focus. Tauri's `show()` is
@@ -63,6 +65,29 @@ mod imp {
             if let Some(button) = button(inner.ns_status_item()) {
                 describe(&button, &label, &value);
             }
+        })
+    }
+
+    /// The status item's frame and the visible frame (menu bar and Dock excluded) of the screen
+    /// it is on, in logical points with the origin at the top left of the primary screen, the
+    /// space `LogicalPosition` uses. `None` when the item has no window or screen (hidden).
+    ///
+    /// With several displays the item's window sits in the menu bar the user last used, which
+    /// is the one just clicked. Its screen and backing scale can differ from the panel's, so
+    /// everything stays in points: physical pixels from different screens do not share a space.
+    pub fn status_item_placement(tray: &TrayIcon) -> tauri::Result<Option<(PxRect, PxRect)>> {
+        tray.with_inner_tray_icon(|inner| {
+            let mtm = MainThreadMarker::new()?;
+            let window = button(inner.ns_status_item())?.window()?;
+            let screen = window.screen()?;
+            let primary_height = NSScreen::screens(mtm).firstObject()?.frame().size.height;
+            let flip = |rect: NSRect| PxRect {
+                x: rect.origin.x,
+                y: primary_height - rect.origin.y - rect.size.height,
+                w: rect.size.width,
+                h: rect.size.height,
+            };
+            Some((flip(window.frame()), flip(screen.visibleFrame())))
         })
     }
 
