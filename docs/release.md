@@ -215,16 +215,20 @@ A published release is final: its assets are permanent download URLs and its fee
 apps read. To fix a mistake, release a new version. `feed` writes a new `pub_date` on every run;
 pass `--pub-date` to reproduce a feed.
 
-## Bridge release (2.0.0 only)
+## Bridge release (once, shipped with 2.0.1)
+
+The bridge went out with 2.0.1 on 2026-11-04, with the 1.x-facing notes in
+`releases/notes/2.0.1-from-1.x.md` (the 2.0 changes; the 2.0.1 notes only cover installer names).
+The steps are kept for a replacement bridge, which must be newer.
 
 Run the normal macOS steps up to `package-macos` (the app is then notarized and stapled, so the
 bridge ZIP carries the ticket too), then:
 
 ```sh
-cargo run -p att-release -- bridge "$APP" "$OUT" --notes releases/notes/2.0.0.md
+cargo run -p att-release -- bridge "$APP" "$OUT" --notes releases/notes/2.0.1-from-1.x.md
 ```
 
-`bridge` checks the signed app, writes `Azure-timetracker-2.0.0-universal-update.zip` the way
+`bridge` checks the signed app, writes `Azure-timetracker-2.0.1-universal-update.zip` the way
 `build-update.py` did (entries under `Azure timetracker.app/`, sorted, mode 755/644, deflate level
 9, fixed 2026-01-01 timestamps, but without the five-file allowlist), and runs the Rust port of the
 client checks from `AppUpdates.swift` and `UpdateInstallation.swift`: ZIP structure and limits,
@@ -236,9 +240,9 @@ reads the legacy key:
 
 ```sh
 .build-att-release/swift/package/release/AzureTimetrackerRelease "$APP" \
-    "$OUT/Azure-timetracker-2.0.0-universal-update.zip" \
+    "$OUT/Azure-timetracker-2.0.1-universal-update.zip" \
     "$HOME/Library/Application Support/Azure timetracker Releases/update-signing.ed25519" \
-    releases/notes/2.0.0.md "$OUT/legacy-latest.json"
+    releases/notes/2.0.1-from-1.x.md "$OUT/legacy-latest.json"
 ```
 
 The Swift tool refuses a key that does not match the public key pinned in 1.13–1.14.x, extracts and
@@ -249,7 +253,7 @@ identically.
 Exit test, on a test Mac or a copy of an installed 1.14.2:
 
 ```sh
-cargo run -p att-release -- bridge-dry-run "$OUT/Azure-timetracker-2.0.0-universal-update.zip" "$APP" \
+cargo run -p att-release -- bridge-dry-run "$OUT/Azure-timetracker-2.0.1-universal-update.zip" "$APP" \
     --installed "/Applications/Azure timetracker.app"
 ```
 
@@ -268,14 +272,14 @@ identity, publish the GitHub Release **first**, and only then stage the bridge:
 ```sh
 cargo run -p att-release -- verify "$OUT" \
     --reference releases/updates/1.14.2/Azure-timetracker-1.14.2-universal-update.zip
-cargo run -p att-release -- publish 2.0.0 --from "$OUT" --notes releases/notes/2.0.0.md
-cargo run -p att-release -- stage 2.0.0 --from "$OUT" --bridge
+cargo run -p att-release -- publish 2.0.1 --from "$OUT" --notes releases/notes/2.0.1.md
+cargo run -p att-release -- stage 2.0.1 --from "$OUT" --bridge
 ```
 
 `--reference` accepts either the same designated requirement or the Developer ID requirement of
 team 4M2RD85AL6 for `be.yarne.azure-timetracker`, and prints a warning about the identity change.
 `stage --bridge` also runs `AzureTimetrackerRelease verify`, moves the 1.14.2 installers from
-`releases/latest/` to `releases/archive/1.14.2/`, copies the ZIP to `releases/updates/2.0.0/` and
+`releases/latest/` to `releases/archive/1.14.2/`, copies the ZIP to `releases/updates/2.0.1/` and
 writes `updates/latest.json`. Commit and push that in one commit, after the GitHub Release is live:
 a 1.x user who updates must find the v2 feed of the 2.0 app already published. 1.x clients check
 every minute and show the update; users choose Download update and Install and restart, the 1.x

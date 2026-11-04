@@ -87,7 +87,7 @@ pub fn dry_run(
     let staging = tempfile::Builder::new().prefix("att-bridge-dry-run-").tempdir()?;
     Cmd::new(&driver).arg(zip).arg(app).arg(installed).arg(staging.path()).run()?;
     log::step(
-        "Done. Open the app now: Keychain items, Calendar and Accessibility should work without new prompts.",
+        "Done. Open the app now. Coming from the 1.x local certificate, expect one Keychain approval per saved item and new Calendar and Accessibility approvals; saved credentials should then load.",
     );
     log::info("The previous app stays beside it as .AzureTimetracker-previous-*.app for recovery.");
     Ok(())

@@ -1,15 +1,15 @@
 {
   "release" : {
-    "build" : 24,
+    "build" : 26,
     "bundleID" : "be.yarne.azure-timetracker",
     "minimumMacOS" : "14.0.0",
-    "notes" : "# Azure timetracker 1.14.2\n\n- Fixed paused Azure/7pace tracking disappearing when a local timer is still running. The paused ticket, elapsed time and Resume action stay visible in both Overview and the menu panel.\n- Local tracking continues independently. You can resume Azure tracking without stopping the local timer.\n\nUpdate checks remain every minute. This update does not change tracked time or automatically start, pause or stop timers.\n",
-    "publishedAt" : "2026-10-05T14:48:05Z",
-    "sha256" : "ed276cc266bf176a94ddc3e0f786f3338ed8622c434137c29a5779e1958a94dd",
-    "size" : 8244002,
-    "url" : "https://raw.githubusercontent.com/DerpRL/die-keure-azure-timetracker/main/releases/updates/1.14.2/Azure-timetracker-1.14.2-universal-update.zip",
-    "version" : "1.14.2"
+    "notes" : "# Azure timetracker 2.0.1\n\n- Azure timetracker is rebuilt from the ground up and now also runs on Windows. Every 1.14.2 feature stays: tracking and suggestions, offline drafts and the local timer, Time editor, statistics, weekly report, day review, targets and Figma context.\n- On first launch, 2.0 imports your settings, history, offline drafts and edit history. The 1.14 files stay untouched.\n- Suggestions no longer take keyboard focus by default. In Settings > Notifications, choose per suggestion type: Off, Notify only, Open panel or Open and focus.\n- Turn individual features on or off in Settings > Features.\n- Press ⌘K (Ctrl+K on Windows) for the command palette and ? for every keyboard shortcut. The ⌘-number shortcuts now follow the sidebar order.\n- Git branch changes are noticed in about half a second.\n- Every chart can be shown as a table, and every page works with the keyboard and VoiceOver.\n- Slack huddle detection, unused since 1.7, is removed.\n- 2.0 is signed with an Apple Developer ID and notarized by Apple, and downloads come from GitHub Releases. Because the signature changes from the 1.14 local certificate, macOS may ask once to allow Keychain access (choose Always Allow), and Calendar and Accessibility (Figma) access may need to be granted again in System Settings > Privacy & Security.\n\nUpdate checks remain every minute. This update does not change tracked time or automatically start, pause or stop timers.\n",
+    "publishedAt" : "2026-11-04T13:54:21Z",
+    "sha256" : "75ba9677cc5aa309039f83e0b9458d6fd23fccc796c19980b267ee2313a7941b",
+    "size" : 18761044,
+    "url" : "https://raw.githubusercontent.com/DerpRL/die-keure-azure-timetracker/main/releases/updates/2.0.1/Azure-timetracker-2.0.1-universal-update.zip",
+    "version" : "2.0.1"
   },
   "schemaVersion" : 1,
-  "signature" : "ub9zdHY1D/B/lIuk4g3Zxik3tGSMgDpFt8uoFbiCI30TcLn44ffxCHXBt+++wRlZh+bqXRkq1pzJVSezC86ZDA=="
+  "signature" : "etIUkZfUF2E85nqNgg80/XN8ICXCaaFYd763NCDVqWTdzL/gju7TFKczG50d39E891XXSbRmf462DVvzcAYpCA=="
 }
