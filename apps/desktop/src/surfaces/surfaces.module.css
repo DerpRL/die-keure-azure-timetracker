@@ -53,7 +53,7 @@
 
 .sidebarClockRow {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
@@ -88,7 +88,22 @@
   display: none;
 }
 
+/* The activity chip gives way to the clock: its name ends in an ellipsis. */
+.sidebarClockRow > :last-child {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.sidebarClock {
+  flex: none;
+}
+
 /* The status text may wrap; the Pause / Resume button never shrinks. */
+.watchingCard > :first-child {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
 .watchingCard > :last-child {
   flex: none;
 }

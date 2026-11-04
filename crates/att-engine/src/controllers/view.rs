@@ -296,6 +296,56 @@ pub struct WeeklySlice {
     pub configured: bool,
     /// The file name the export dialog suggests: `weekly-status-<yyyy-MM-dd>.md`.
     pub export_file_name: String,
+    /// "Week so far" next to the draft; `None` until this week's worklogs are loaded.
+    pub summary: Option<WeeklySummary>,
+}
+
+/// The loaded week at a glance: what the draft is based on.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WeeklySummary {
+    pub total_seconds: f64,
+    /// The week's target from the daily schedule (0 without valid targets).
+    pub target_seconds: f64,
+    /// Monday to Sunday.
+    pub days: Vec<WeeklySummaryDay>,
+    /// Most time first.
+    pub activities: Vec<WeeklySummaryActivity>,
+    /// Most time first; work without a ticket is one entry with `ticketId: null`.
+    pub tickets: Vec<WeeklySummaryTicket>,
+}
+
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WeeklySummaryDay {
+    /// The instant the local day starts.
+    pub date: Timestamp,
+    pub seconds: f64,
+    pub target_seconds: f64,
+}
+
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WeeklySummaryActivity {
+    /// The 7pace activity ID (as on worklogs), `null` for logs without one.
+    pub activity_id: Option<String>,
+    pub name: String,
+    pub seconds: f64,
+}
+
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WeeklySummaryTicket {
+    pub ticket_id: Option<i64>,
+    /// The ticket's title when known; for work without a ticket, its most-used comment.
+    pub title: Option<String>,
+    pub seconds: f64,
+    /// The activity with the most time on this ticket, for its colour.
+    pub activity_id: Option<String>,
 }
 
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
@@ -519,6 +569,16 @@ fn weekly(state: &AppState, cal: &Cal) -> WeeklySlice {
         synced_at: weekly.synced_at,
         configured: weekly.configured,
         export_file_name: weekly.export_file_name(cal),
+        summary: weekly.has_data(cal).then(|| {
+            let titles = super::known_titles(state);
+            super::weekly::summary(
+                &weekly.logs,
+                &weekly.range(cal),
+                &state.config.targets,
+                &titles,
+                cal,
+            )
+        }),
     }
 }
 

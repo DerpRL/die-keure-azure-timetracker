@@ -48,10 +48,12 @@ document.documentElement.dataset.surface = surface;
  */
 async function installPreviewEngine(): Promise<void> {
   if (isTauri()) return;
-  const [{ installMockEngine }, { sampleSlices }] = await Promise.all([
+  const [{ installMockEngine }, { sampleSlices, SAMPLE_NOW }, { pinClockTo }] = await Promise.all([
     import('./ipc/mockEngine'),
     import('./ipc/fixtures'),
+    import('./ipc/sampleClock'),
   ]);
+  if (new URLSearchParams(location.search).get('clock') !== 'real') pinClockTo(SAMPLE_NOW);
   installMockEngine({ slices: sampleSlices(), latencyMs: 120 });
 }
 

@@ -30,4 +30,4 @@ export {
   type SystemAppearance,
   type ThemePreference,
 } from './preferences';
-export { ThemeProvider, useReducedMotion, useSystemAppearance, useTheme, type ThemeContextValue, type ThemeProviderProps } from './ThemeProvider';
+export { ThemeProvider, useIncreasedContrast, useReducedMotion, useSystemAppearance, useTheme, type ThemeContextValue, type ThemeProviderProps } from './ThemeProvider';

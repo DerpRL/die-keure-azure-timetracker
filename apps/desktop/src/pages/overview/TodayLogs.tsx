@@ -57,7 +57,9 @@ export function LogRow({ log, colors }: { log: WorkLog; colors: ActivityColors }
         >
           Track again
         </Button>
-      ) : null}
+      ) : (
+        <span aria-hidden="true" />
+      )}
       {actions.confirmation}
     </li>
   );

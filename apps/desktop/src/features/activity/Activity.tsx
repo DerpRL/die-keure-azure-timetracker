@@ -17,7 +17,7 @@ export function ActivityChip({ name, colorIndex, className }: { name: string; co
   return (
     <span className={cx(styles.chip, className)} style={swatchStyle(colorIndex)}>
       <span className={styles.chipSwatch} aria-hidden="true" />
-      {name}
+      <span className={styles.chipLabel}>{name}</span>
     </span>
   );
 }

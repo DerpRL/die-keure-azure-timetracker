@@ -87,7 +87,7 @@ export function DayOverview({ day, today, logs, runningLogId, overlaps, issues }
 
   return (
     <div className={styles.dayOverview}>
-      <DayStrip from={from} to={to} blocks={blocks} gaps={gaps} now={isToday ? now : null} label={description} size="large" />
+      <DayStrip from={from} to={to} blocks={blocks} gaps={gaps} overlaps={overlaps} now={isToday ? now : null} label={description} size="large" />
       <div className={styles.legendRow}>
         <ActivityLegend items={legend} />
         {overlaps.length > 0 ? (

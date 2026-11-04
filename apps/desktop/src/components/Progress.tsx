@@ -14,6 +14,8 @@ interface SharedProps {
   /** Text for both the visible value and `aria-valuetext`, e.g. "5h 12m of 7h 36m". */
   valueLabel?: string;
   showValueLabel?: boolean;
+  /** Visible value when it needs emphasis, e.g. <b>2h 23m</b> / 7h 36m; `valueLabel` stays the accessible text. */
+  valueDisplay?: ReactNode;
   tone?: ProgressTone;
   /** Below the bar, e.g. "Last known". */
   detail?: ReactNode;
@@ -85,6 +87,7 @@ export function Meter({
   maxValue = 100,
   valueLabel,
   showValueLabel = true,
+  valueDisplay,
   tone = 'running',
   detail,
   className,
@@ -112,7 +115,7 @@ export function Meter({
         </span>
         {showValueLabel ? (
           <span className={styles.value} aria-hidden="true">
-            {valueText}
+            {valueDisplay ?? valueText}
           </span>
         ) : null}
       </div>

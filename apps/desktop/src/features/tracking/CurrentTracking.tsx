@@ -162,9 +162,11 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
       data-current-primary=""
       isDisabled={writeDisabled}
       isPending={actions.isPending('switch')}
+      // The narrow panel says "Switch…" so the three buttons share one row (the name stays complete).
+      aria-label={running && panel ? 'Switch ticket…' : undefined}
       onPress={() => void actions.run('switch', openFlow(surface))}
     >
-      {running ? 'Switch ticket…' : 'Start tracking…'}
+      {running ? (panel ? 'Switch…' : 'Switch ticket…') : 'Start tracking…'}
     </Button>
   ) : null;
 

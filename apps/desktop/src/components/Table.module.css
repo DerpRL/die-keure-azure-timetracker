@@ -81,10 +81,11 @@
   color: var(--color-text-secondary);
 }
 
-.selectionColumn,
-.selectionCell {
+/* Header and body checkboxes share one x position (the cell padding below would win otherwise). */
+.column.selectionColumn,
+.cell.selectionCell {
   width: 2.75rem;
-  padding-inline: var(--space-3) 0;
+  padding-inline: var(--space-4) 0;
 }
 
 .row {

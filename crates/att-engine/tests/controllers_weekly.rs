@@ -51,6 +51,51 @@ async fn a_draft_is_generated_and_replacing_it_needs_confirmation() {
 }
 
 #[tokio::test]
+async fn the_week_so_far_sums_days_activities_and_tickets() {
+    let mut logs = week_logs();
+    let mut design = log("d", "2026-10-06T10:00:00", 900.0, Some(1), "Spacing");
+    design.activity_type = Some(att_core::model::ActivityType::new("design", "Design"));
+    logs.push(design);
+    logs.push(log("x", "2026-10-07T11:00:00", 2400.0, None, "Reviewing pull requests"));
+    logs.push(log("y", "2026-10-07T12:00:00", 600.0, None, "Support"));
+    let h = Harness::new(logs).await;
+    assert_eq!(h.slice("weekly")["summary"], json!(null), "nothing before the week is loaded");
+    h.show(Some("weeklyReport")).await;
+    h.tick().await;
+    let weekly = h.wait_for("weekly", |weekly| weekly["hasData"] == true).await;
+    let summary = &weekly["summary"];
+    assert_eq!(summary["totalSeconds"], 9300.0);
+    let days: Vec<_> =
+        summary["days"].as_array().unwrap().iter().map(|day| day["seconds"].clone()).collect();
+    assert_eq!(
+        days,
+        [
+            json!(3600.0),
+            json!(2700.0),
+            json!(3000.0),
+            json!(0.0),
+            json!(0.0),
+            json!(0.0),
+            json!(0.0)
+        ]
+    );
+    assert_eq!(
+        summary["activities"][0],
+        json!({"activityId": "dev", "name": "Development", "seconds": 8400.0})
+    );
+    assert_eq!(summary["activities"][1]["activityId"], "design");
+    assert_eq!(
+        summary["tickets"][0],
+        json!({"ticketId": 1, "title": "Ticket 1", "seconds": 4500.0, "activityId": "dev"})
+    );
+    // Work without a ticket is named after its most-used comment.
+    let unassigned =
+        summary["tickets"].as_array().unwrap().iter().find(|t| t["ticketId"].is_null()).unwrap();
+    assert_eq!(unassigned["title"], "Reviewing pull requests");
+    assert_eq!(unassigned["seconds"], 3000.0);
+}
+
+#[tokio::test]
 async fn generating_needs_the_week_to_be_loaded() {
     let h = Harness::new(week_logs()).await;
     h.ok(json!({"type": "weekly.generate", "replace": false})).await;

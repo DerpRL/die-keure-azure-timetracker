@@ -131,20 +131,44 @@
   flex: 1 1 0;
 }
 
+/* The panel is narrow: the buttons share the row in equal widths (no wrapping labels), and the
+   secondary "Choose another ticket…" link takes a centred row of its own. */
+.compact {
+  padding: var(--space-4);
+}
+
+.compact .actions > * {
+  flex: 1 1 0;
+}
+
+.compact .actions > .spacer {
+  display: none;
+}
+
+.compact .actions > .another {
+  flex-basis: 100%;
+}
+
 .branchLines {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: var(--space-1) var(--space-3);
+  align-items: baseline;
+  gap: 0.375rem var(--space-3);
   margin: 0;
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
+  padding: var(--space-3) 0.875rem;
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-sm);
   background: var(--color-surface);
+}
+
+.warning .branchLines {
+  border-color: color-mix(in srgb, var(--color-warning) 30%, var(--color-warning-bg));
 }
 
 .branchLabel {
   color: var(--color-text-secondary);
-  font-size: var(--font-size-caption);
-  font-weight: var(--font-weight-semibold);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-footnote);
 }
 
 .branchName {

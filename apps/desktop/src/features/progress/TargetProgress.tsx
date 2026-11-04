@@ -34,6 +34,12 @@ function ProgressRow({ label, seconds, target, compact, stale }: RowProps) {
       value={seconds}
       maxValue={target}
       valueLabel={value}
+      valueDisplay={
+        <>
+          <b className={styles.amount}>{formatShortDuration(seconds)}</b>
+          {` / ${formatShortDuration(target)}`}
+        </>
+      }
       tone={stale ? 'paused' : 'running'}
       detail={detail}
     />

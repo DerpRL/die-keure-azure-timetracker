@@ -164,7 +164,8 @@
 
 .row {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  /* The action column keeps its width on rows without "Track again", so durations line up. */
+  grid-template-columns: auto minmax(0, 1fr) auto minmax(7.25rem, auto);
   align-items: center;
   gap: 0.875rem;
   padding: 0.875rem var(--space-5);

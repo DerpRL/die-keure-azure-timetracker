@@ -29,6 +29,8 @@ export interface DayStripProps {
   blocks: readonly DayStripBlock[];
   /** Possible gaps, drawn hatched. */
   gaps?: readonly DayStripGap[];
+  /** Times where entries overlap, marked in the danger colour over the blocks. */
+  overlaps?: readonly DayStripGap[];
   /** Current time marker, when inside the window. */
   now?: number | null;
   /** The whole strip is one image for assistive technology: describe what it shows. */
@@ -62,26 +64,36 @@ export function stripTicks(from: number, to: number): number[] {
 }
 
 /**
- * Lanes for overlapping blocks: a block that starts before the previous one ends drops to the
- * second lane, so overlaps stay visible instead of hiding each other.
+ * Lanes for overlapping blocks. A block that overlaps no other keeps the full height (lane 0).
+ * Blocks in a run of overlaps share two half-height lanes (1 = top, 2 = bottom): each takes the
+ * lane that is free at its start, or else the one that frees up first, so overlaps stay visible
+ * instead of hiding each other.
  */
-function lanes(blocks: readonly DayStripBlock[]): Map<string, 0 | 1 | 2> {
-  const sorted = [...blocks].sort((a, b) => a.start - b.start);
+export function stripLanes(blocks: readonly DayStripBlock[]): Map<string, 0 | 1 | 2> {
+  const sorted = [...blocks].sort((a, b) => a.start - b.start || a.end - b.end);
   const result = new Map<string, 0 | 1 | 2>();
-  let lastEnd = -Infinity;
-  let lastId: string | null = null;
-  for (const block of sorted) {
-    if (block.start < lastEnd && lastId) {
-      result.set(lastId, 1);
-      result.set(block.id, 2);
+  let cluster: DayStripBlock[] = [];
+  let clusterEnd = -Infinity;
+  const flush = () => {
+    if (cluster.length === 1) {
+      result.set(cluster[0]!.id, 0);
     } else {
-      result.set(block.id, 0);
+      const laneEnds: [number, number] = [-Infinity, -Infinity];
+      for (const block of cluster) {
+        const free = laneEnds.findIndex((end) => end <= block.start);
+        const lane = free >= 0 ? free : laneEnds[0] <= laneEnds[1] ? 0 : 1;
+        laneEnds[lane] = Math.max(laneEnds[lane]!, block.end);
+        result.set(block.id, lane === 0 ? 1 : 2);
+      }
     }
-    if (block.end > lastEnd) {
-      lastEnd = block.end;
-      lastId = block.id;
-    }
+    cluster = [];
+  };
+  for (const block of sorted) {
+    if (cluster.length > 0 && block.start >= clusterEnd) flush();
+    cluster.push(block);
+    clusterEnd = cluster.length === 1 ? block.end : Math.max(clusterEnd, block.end);
   }
+  if (cluster.length > 0) flush();
   return result;
 }
 
@@ -89,11 +101,11 @@ function lanes(blocks: readonly DayStripBlock[]): Map<string, 0 | 1 | 2> {
  * One day (or part of it) as a horizontal strip of worklog blocks in their activity colours, with
  * hatched gaps and a "now" marker: the Calendar Blocks look from the 2.0 redesign.
  */
-export function DayStrip({ from, to, blocks, gaps = [], now, label, size = 'medium', className }: DayStripProps) {
+export function DayStrip({ from, to, blocks, gaps = [], overlaps = [], now, label, size = 'medium', className }: DayStripProps) {
   const span = Math.max(to - from, 1);
   const pct = (time: number) => `${(Math.min(Math.max(time - from, 0), span) / span) * 100}%`;
   const width = (start: number, end: number) => `${(Math.max(Math.min(end, to) - Math.max(start, from), 0) / span) * 100}%`;
-  const laneOf = lanes(blocks);
+  const laneOf = stripLanes(blocks);
   const visible = blocks.filter((block) => block.end > from && block.start < to);
   return (
     <div className={cx(styles.strip, styles[`strip-${size}`], className)}>
@@ -126,6 +138,15 @@ export function DayStrip({ from, to, blocks, gaps = [], now, label, size = 'medi
             </span>
           );
         })}
+        {overlaps
+          .filter((overlap) => overlap.end > from && overlap.start < to)
+          .map((overlap) => (
+            <span
+              key={`overlap-${overlap.start}`}
+              className={styles.overlap}
+              style={{ left: pct(overlap.start), width: width(overlap.start, overlap.end) }}
+            />
+          ))}
         {now != null && now >= from && now <= to ? <span className={styles.now} style={{ left: pct(now) }} /> : null}
       </div>
       <div className={styles.ticks} aria-hidden="true">

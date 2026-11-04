@@ -33,3 +33,8 @@
   font-size: var(--font-size-footnote);
   overflow-wrap: anywhere;
 }
+
+.amount {
+  color: var(--color-text);
+  font-weight: var(--font-weight-bold);
+}

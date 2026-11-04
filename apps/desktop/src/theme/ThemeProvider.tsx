@@ -100,3 +100,15 @@ export function useReducedMotion(): boolean {
   const system = useSystemAppearance();
   return context ? context.resolved.reducedMotion : system.reducedMotion;
 }
+
+/**
+ * Charts draw fill patterns as a second signal next to colour only with increased contrast
+ * (the 2.0 design uses solid fills; legends, labels and the table view carry the meaning).
+ */
+export function useIncreasedContrast(): boolean {
+  const context = useContext(ThemeContext);
+  const system = useSystemAppearance();
+  // Forced colours flatten every series to one system colour: patterns are the only signal left.
+  if (context) return context.resolved.contrast === 'increased' || context.resolved.forcedColors;
+  return system.increasedContrast || system.forcedColors;
+}

@@ -16,6 +16,7 @@ import { copyText } from './platform';
 import { Divider, Hint, InlineIssue, SettingsGroup, SettingsSection } from './SettingsSection';
 import { useSettingsForm } from './SettingsForm';
 import { issueFor } from './validation';
+import { cx } from '../../utils/cx';
 import styles from './settings.module.css';
 
 interface SecretFieldProps {
@@ -194,7 +195,7 @@ function ConnectionDetails() {
       <SettingsGroup title="Connection details" className={styles.detailsText}>
         <StatusDot tone={connectionTone(connection)} label={connection.status} showLabel />
         {connection.detail ? <Hint>{connection.detail}</Hint> : null}
-        <ul role="list" className={styles.details}>
+        <ul role="list" className={cx(styles.details, styles.detailsInline)}>
           <li>{connection.lastSync ? `Timer checked ${formatDateTime(connection.lastSync)}` : 'The timer has not been checked yet.'}</li>
           {connection.worklogSync ? <li>{`Time entries checked ${formatDateTime(connection.worklogSync)}`}</li> : null}
           {connection.connectionIssue ? <li className={styles.warning}>{connection.connectionIssue}</li> : null}

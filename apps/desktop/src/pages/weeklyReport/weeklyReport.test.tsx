@@ -63,6 +63,38 @@ describe('Weekly report page', () => {
     await expectNoA11yViolations();
   });
 
+  it('shows the week so far next to the draft', async () => {
+    renderWeekly(sampleSlices().weekly);
+    const panel = screen.getByRole('complementary', { name: 'Week so far' });
+    expect(within(panel).getByText('8h 25m')).toBeInTheDocument();
+    expect(within(panel).getByText('of 38h 0m')).toBeInTheDocument();
+    expect(within(panel).getByRole('img', { name: /^8h 25m of 38h 0m, Development 6h 25m, Design 0h 50m/ })).toBeInTheDocument();
+    const tickets = within(within(panel).getByRole('list', { name: 'Time per ticket' })).getAllByRole('listitem');
+    expect(tickets.map((row) => row.textContent)).toEqual([
+      '#4821 Checkout: retry failed card payments4h 25m',
+      '#4790 Invoice PDF shows the wrong VAT number2h 0m',
+      '#4655 Design system: date picker tokens0h 50m',
+      'Reviewing pull requests · no ticket0h 40m',
+      '#4777 Sprint ceremonies0h 30m',
+    ]);
+    const days = within(within(panel).getByRole('list', { name: 'Time per day' })).getAllByRole('listitem');
+    expect(days.map((day) => day.getAttribute('aria-label'))).toEqual([
+      'Monday 7h 15m',
+      'Tuesday 1h 10m',
+      'Wednesday no time',
+      'Thursday no time',
+      'Friday no time',
+      'Saturday no time',
+      'Sunday no time',
+    ]);
+    await expectNoA11yViolations();
+  });
+
+  it('has no week so far until the week is loaded', () => {
+    renderWeekly(weeklyLoading);
+    expect(screen.queryByRole('complementary', { name: 'Week so far' })).not.toBeInTheDocument();
+  });
+
   it('sends every edit and keeps what was typed while the engine echoes it', async () => {
     const { engine, user } = renderWeekly(weeklyEmpty);
     engine.handle('weekly.setText', (intent, mock) => mock.patchSlice('weekly', { text: intent.text }));

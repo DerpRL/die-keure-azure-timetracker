@@ -1,6 +1,6 @@
 import { useId, useMemo, type ReactNode } from 'react';
 import { Badge, StatusDot, type Tone } from '../components/Badge';
-import { ChevronRightIcon, ClockIcon } from '../components/icons';
+import { ClockIcon } from '../components/icons';
 import { pageShortcutDigit, usePageCommands } from '../shortcuts/hooks';
 import { formatKeyCombo } from '../shortcuts/keys';
 import { usePlatform, type Platform } from '../shortcuts/platform';
@@ -111,7 +111,6 @@ export function AppShell({
                             </Badge>
                           ) : null}
                           {indicator?.dot ? <StatusDot tone={indicator.tone ?? 'running'} label={indicator.label} /> : null}
-                          {selected ? <ChevronRightIcon className={styles.chevron} /> : null}
                         </button>
                       </li>
                     );

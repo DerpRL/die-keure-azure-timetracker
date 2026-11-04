@@ -251,7 +251,7 @@
 
 .panelActions {
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .panelActionsWide > * {

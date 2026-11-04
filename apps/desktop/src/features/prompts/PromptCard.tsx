@@ -46,10 +46,10 @@ export interface PromptCardProps {
  * prepares a choice; the timer changes after the user confirms.
  */
 export function PromptCard({ kind, icon: Icon, title, subtitle, tone = 'accent', badge, children, actions, runner }: PromptCardProps) {
-  const { headingLevel } = usePromptContext();
+  const { headingLevel, compact } = usePromptContext();
   const headingId = useId();
   return (
-    <article aria-labelledby={headingId} className={cx(styles.card, styles[tone])} data-prompt={kind}>
+    <article aria-labelledby={headingId} className={cx(styles.card, styles[tone], compact && styles.compact)} data-prompt={kind}>
       <div className={styles.header}>
         <span className={styles.iconTile} aria-hidden="true">
           <Icon />

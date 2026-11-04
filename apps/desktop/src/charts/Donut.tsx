@@ -1,3 +1,4 @@
+import { useIncreasedContrast } from '../theme/ThemeProvider';
 import { arc, pie, type PieArcDatum } from 'd3-shape';
 import { useMemo, useState, type ReactNode } from 'react';
 import { ToggleButton, Toolbar } from 'react-aria-components';
@@ -52,9 +53,11 @@ export function Donut({
   onSelect,
   formatValue = defaultFormatValue,
   totalLabel = 'recorded',
-  patterns = true,
+  patterns: patternsProp,
   emptyMessage = 'No recorded time in this selection.',
 }: DonutProps) {
+  const increasedContrast = useIncreasedContrast();
+  const patterns = patternsProp ?? increasedContrast;
   const patternId = useSvgId();
   const [hovered, setHovered] = useState<string | null>(null);
   const visible = useMemo(() => slices.filter((slice) => slice.value > 0), [slices]);

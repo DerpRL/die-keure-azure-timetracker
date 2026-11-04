@@ -82,3 +82,166 @@
   line-height: 1.65;
   resize: vertical;
 }
+
+/* The draft on the left, "Week so far" beside it; the panel drops below when narrow. */
+.columns {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.draft {
+  display: flex;
+  flex: 999 1 35rem;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.summary {
+  display: flex;
+  flex: 1 1 20rem;
+  flex-direction: column;
+  gap: 1.125rem;
+  min-width: 0;
+}
+
+.summaryTitle {
+  font-size: 1rem;
+  font-weight: var(--font-weight-semibold);
+}
+
+.summaryTotal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.totalLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.total {
+  font-size: var(--font-size-title-1);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: var(--line-height-tight);
+}
+
+.bar {
+  display: flex;
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--color-ring-track);
+}
+
+.bar > span {
+  display: block;
+  height: 100%;
+}
+
+.tickets {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  font-size: var(--font-size-footnote);
+  list-style: none;
+}
+
+.ticketRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.625rem;
+  padding-block: 0.625rem;
+  border-bottom: var(--size-border) solid var(--color-separator);
+}
+
+.ticketRow:first-child {
+  padding-top: 0;
+}
+
+.ticketRow:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.ticketText {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The ticket number reads as inline text, flush with the swatch column. */
+.ticketText > button:first-child {
+  min-height: 1.25rem;
+  margin-inline: -0.375rem -0.25rem;
+  padding: 0 0.375rem;
+  vertical-align: baseline;
+}
+
+.noTicket {
+  color: var(--color-text-secondary);
+}
+
+.ticketTime {
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  font-size: var(--font-size-caption);
+  text-align: center;
+  list-style: none;
+}
+
+.day {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.dayPart {
+  display: inline-block;
+  margin-inline: 0.125rem;
+  white-space: nowrap;
+}
+
+.dayName,
+.dayNone {
+  color: var(--color-text-secondary);
+}
+
+.dayTile {
+  height: 2.5rem;
+  border-radius: 0.375rem;
+  background: var(--level, var(--heat-0));
+}
+
+.dayTime {
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--line-height-tight);
+}
+
+@media (forced-colors: active) {
+  .dayTile,
+  .bar {
+    border: 1px solid CanvasText;
+  }
+}

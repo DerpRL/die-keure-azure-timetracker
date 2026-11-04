@@ -160,6 +160,11 @@
   font-weight: var(--font-weight-semibold);
 }
 
+/* Rows that overlap another entry carry a soft danger tint, plus the "overlaps 10m" text. */
+.overlapRow:not([data-selected], [data-hovered]) {
+  background: color-mix(in srgb, var(--color-danger-bg) 60%, var(--color-surface));
+}
+
 .overlapNote {
   color: var(--color-danger-text);
   font-size: var(--font-size-caption);

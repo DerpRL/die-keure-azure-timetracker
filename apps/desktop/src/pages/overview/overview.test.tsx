@@ -31,7 +31,7 @@ describe('Overview page', () => {
   it('shows suggestions, the timer, today’s worklogs, progress and the connection', async () => {
     renderWithEngine(<OverviewPage />, { with: { history: sampleHistory } });
     expect(screen.getByRole('region', { name: 'Suggestions' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 3, name: 'Branch changed' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Branch changed' })).toBeInTheDocument();
     const current = screen.getByRole('region', { name: 'Current tracking' });
     expect(within(current).getByText('Currently tracking')).toBeInTheDocument();
     expect(within(current).getByText('Checkout: retry failed card payments')).toBeInTheDocument();

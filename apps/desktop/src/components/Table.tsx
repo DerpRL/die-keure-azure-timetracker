@@ -58,6 +58,8 @@ export interface TableProps<Row, Id extends string = string> {
   renderEmptyState?: () => ReactNode;
   density?: 'compact' | 'regular';
   className?: string;
+  /** Extra class for a row, e.g. a tint for rows that need a look. */
+  getRowClassName?: (row: Row) => string | undefined;
 }
 
 /**
@@ -81,6 +83,7 @@ export function Table<Row, Id extends string = string>({
   renderEmptyState,
   density = 'regular',
   className,
+  getRowClassName,
   ...aria
 }: TableProps<Row, Id>) {
   const withCheckboxes = selectionMode === 'multiple';
@@ -134,7 +137,7 @@ export function Table<Row, Id extends string = string>({
           renderEmptyState={renderEmptyState ? () => <div className={styles.empty}>{renderEmptyState()}</div> : undefined}
         >
           {(row) => (
-            <Row id={getRowId(row)} textValue={getRowText?.(row)} className={styles.row}>
+            <Row id={getRowId(row)} textValue={getRowText?.(row)} className={cx(styles.row, getRowClassName?.(row))}>
               {withCheckboxes ? (
                 <Cell className={cx(styles.cell, styles.selectionCell)}>
                   <Checkbox slot="selection" />

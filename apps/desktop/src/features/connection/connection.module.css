@@ -27,7 +27,7 @@
 }
 
 .heading {
-  font-size: var(--font-size-headline);
+  font-size: 1rem;
   font-weight: var(--font-weight-semibold);
 }
 
@@ -41,4 +41,37 @@
   color: var(--color-warning-text);
   font-size: var(--font-size-footnote);
   overflow-wrap: anywhere;
+}
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+  min-width: 0;
+}
+
+.summaryText {
+  display: flex;
+  flex: 1 1 18rem;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.checks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-5);
+}
+
+.checks > :first-child .statusLabel,
+.checks > :first-child {
+  font-weight: var(--font-weight-semibold);
+}
+
+.summary > :last-child {
+  flex: none;
 }

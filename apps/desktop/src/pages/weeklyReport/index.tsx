@@ -13,6 +13,7 @@ import { deviceName, formatClockTime, formatDayShort, instantToDay, localToday, 
 import { chooseSavePath, copyToClipboard } from '../../features/ticketContext/native';
 import { useCommands } from '../../shortcuts/hooks';
 import { ipcErrorKind, useAction, useSlice, useStore } from '../../state/hooks';
+import { WeekSoFar } from './WeekSoFar';
 import styles from './WeeklyReport.module.css';
 
 interface TextState {
@@ -180,55 +181,60 @@ export default function WeeklyReportPage() {
         {weekStart && lastDay ? <p className={styles.range}>{`${formatDayShort(weekStart.toString())} – ${formatDayShort(lastDay.toString())}`}</p> : null}
       </Card>
 
-      <div className={styles.toolbar}>
-        <div className={styles.toolbarGroup}>
-          <Button variant="primary" isDisabled={!hasData || loading} isPending={generator.pending} onPress={() => void generate()}>
-            {empty ? 'Generate draft' : 'Regenerate draft…'}
-          </Button>
-          {loading ? (
-            <span role="status" className={styles.status}>
-              <SpinnerIcon className={styles.spinner} />
-              Loading time…
-            </span>
-          ) : synced ? (
-            <span className={styles.status}>{`Time loaded ${formatClockTime(synced)}`}</span>
+      <div className={styles.columns}>
+        <section aria-label="Draft" className={styles.draft}>
+          <div className={styles.toolbar}>
+            <div className={styles.toolbarGroup}>
+              <Button variant="primary" isDisabled={!hasData || loading} isPending={generator.pending} onPress={() => void generate()}>
+                {empty ? 'Generate draft' : 'Regenerate draft…'}
+              </Button>
+              {loading ? (
+                <span role="status" className={styles.status}>
+                  <SpinnerIcon className={styles.spinner} />
+                  Loading time…
+                </span>
+              ) : synced ? (
+                <span className={styles.status}>{`Time loaded ${formatClockTime(synced)}`}</span>
+              ) : null}
+            </div>
+            <div className={styles.toolbarGroup}>
+              <Button isDisabled={empty} onPress={() => void copy()}>
+                Copy
+              </Button>
+              <Button isDisabled={empty || choosing} isPending={choosing || exporter.pending} onPress={() => void exportMarkdown()}>
+                Export Markdown…
+              </Button>
+            </div>
+          </div>
+
+          {weekly.issue ? <Banner tone="warning">{weekly.issue}</Banner> : null}
+          {weekly.storageIssue ? (
+            <Banner tone="warning" title="Draft not saved">
+              {weekly.storageIssue}
+            </Banner>
           ) : null}
-        </div>
-        <div className={styles.toolbarGroup}>
-          <Button isDisabled={empty} onPress={() => void copy()}>
-            Copy
-          </Button>
-          <Button isDisabled={empty || choosing} isPending={choosing || exporter.pending} onPress={() => void exportMarkdown()}>
-            Export Markdown…
-          </Button>
-        </div>
+          {failure ? <Banner tone="error">{failure.message}</Banner> : null}
+          {!configured && !app?.preview ? <p className={styles.caption}>Connect to 7pace in Settings to generate a draft.</p> : null}
+          {!hasData && !loading && !weekly.issue && configured ? (
+            <p className={styles.caption}>Refresh the week’s time to generate a draft.</p>
+          ) : null}
+
+          <TextField
+            label="Editable weekly status report"
+            multiline
+            rows={18}
+            value={draft}
+            onChange={(value) => {
+              setDraft(value);
+              void text.run({ type: 'weekly.setText', text: value });
+            }}
+            placeholder="Generate a draft, or write your update here."
+            description={weekly.message ?? 'Edits are saved locally as you type. Copy or export when ready; nothing is sent automatically.'}
+            className={styles.editor}
+          />
+        </section>
+        {weekly.summary ? <WeekSoFar summary={weekly.summary} /> : null}
       </div>
-
-      {weekly.issue ? <Banner tone="warning">{weekly.issue}</Banner> : null}
-      {weekly.storageIssue ? (
-        <Banner tone="warning" title="Draft not saved">
-          {weekly.storageIssue}
-        </Banner>
-      ) : null}
-      {failure ? <Banner tone="error">{failure.message}</Banner> : null}
-      {!configured && !app?.preview ? <p className={styles.caption}>Connect to 7pace in Settings to generate a draft.</p> : null}
-      {!hasData && !loading && !weekly.issue && configured ? (
-        <p className={styles.caption}>Refresh the week’s time to generate a draft.</p>
-      ) : null}
-
-      <TextField
-        label="Editable weekly status report"
-        multiline
-        rows={18}
-        value={draft}
-        onChange={(value) => {
-          setDraft(value);
-          void text.run({ type: 'weekly.setText', text: value });
-        }}
-        placeholder="Generate a draft, or write your update here."
-        description={weekly.message ?? 'Edits are saved locally as you type. Copy or export when ready; nothing is sent automatically.'}
-        className={styles.editor}
-      />
 
       <Dialog
         isOpen={confirmReplace}

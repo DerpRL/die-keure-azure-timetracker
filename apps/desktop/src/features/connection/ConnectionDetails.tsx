@@ -89,27 +89,20 @@ export function ConnectionDetails({ headingLevel }: ConnectionDetailsProps) {
   const completionReminders = settings?.configuration.completionReminders ?? false;
   return (
     <div className={styles.details}>
-      {heading}
-      <StatusDot tone={connectionTone(connection)} label={connection.status} showLabel />
-      {connection.detail ? <p className={styles.caption}>{connection.detail}</p> : null}
-      <p className={styles.caption}>
-        {connection.lastSync ? `Timer checked ${stamp(connection.lastSync)}` : 'The timer has not been checked yet.'}
-      </p>
-      {connection.worklogSync ? (
-        <p className={styles.caption}>{`Time entries checked ${stamp(connection.worklogSync)}`}</p>
-      ) : null}
-      {connection.connectionIssue ? <p className={styles.warning}>{connection.connectionIssue}</p> : null}
-      {connection.azureIssue ? <p className={styles.warning}>{`Azure tickets: ${connection.azureIssue}`}</p> : null}
-      {connection.progressIssue ? <p className={styles.warning}>{`Time totals: ${connection.progressIssue}`}</p> : null}
-      {connection.completionIssue ? (
-        <p className={styles.warning}>{`Ticket completion check: ${connection.completionIssue}`}</p>
-      ) : null}
-      {connection.shortcutIssue ? <p className={styles.warning}>{connection.shortcutIssue}</p> : null}
-      {completionReminders && !connection.hasAzurePat ? (
-        <p className={styles.caption}>Add an Azure PAT in Accounts to enable ticket completion reminders.</p>
-      ) : null}
-      <LocalDraftStatus />
-      <div className={styles.actions}>
+      {/* The status and both checks on one line, Refresh on the right (2.0 redesign). */}
+      <div className={styles.summary}>
+        <div className={styles.summaryText}>
+          {heading}
+          <div className={styles.checks}>
+            <StatusDot tone={connectionTone(connection)} label={connection.status} showLabel />
+            <span className={styles.caption}>
+              {connection.lastSync ? `Timer checked ${stamp(connection.lastSync)}` : 'The timer has not been checked yet.'}
+            </span>
+            {connection.worklogSync ? (
+              <span className={styles.caption}>{`Time entries checked ${stamp(connection.worklogSync)}`}</span>
+            ) : null}
+          </div>
+        </div>
         <Button
           size="small"
           icon={RefreshIcon}
@@ -121,6 +114,18 @@ export function ConnectionDetails({ headingLevel }: ConnectionDetailsProps) {
           Refresh connection
         </Button>
       </div>
+      {connection.detail ? <p className={styles.caption}>{connection.detail}</p> : null}
+      {connection.connectionIssue ? <p className={styles.warning}>{connection.connectionIssue}</p> : null}
+      {connection.azureIssue ? <p className={styles.warning}>{`Azure tickets: ${connection.azureIssue}`}</p> : null}
+      {connection.progressIssue ? <p className={styles.warning}>{`Time totals: ${connection.progressIssue}`}</p> : null}
+      {connection.completionIssue ? (
+        <p className={styles.warning}>{`Ticket completion check: ${connection.completionIssue}`}</p>
+      ) : null}
+      {connection.shortcutIssue ? <p className={styles.warning}>{connection.shortcutIssue}</p> : null}
+      {completionReminders && !connection.hasAzurePat ? (
+        <p className={styles.caption}>Add an Azure PAT in Accounts to enable ticket completion reminders.</p>
+      ) : null}
+      <LocalDraftStatus />
       <ActionError error={actions.error} />
     </div>
   );

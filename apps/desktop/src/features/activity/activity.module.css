@@ -19,6 +19,13 @@
   white-space: nowrap;
 }
 
+/* A chip may shrink in a tight row (the sidebar timer); its name then ends in an ellipsis. */
+.chipLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .chipSwatch,
 .swatch {
   display: inline-block;
@@ -103,6 +110,8 @@
   font-size: 0.6875rem;
   font-weight: var(--font-weight-semibold);
   white-space: nowrap;
+  /* The label shows only when the block can hold at least a ticket number ("#4821"). */
+  container-type: inline-size;
 }
 
 .strip-small .block {
@@ -126,6 +135,12 @@
   text-overflow: ellipsis;
 }
 
+@container (max-width: 3.5rem) {
+  .blockLabel {
+    display: none;
+  }
+}
+
 .running {
   outline: 2px dashed var(--activity-color);
   outline-offset: -2px;
@@ -143,6 +158,17 @@
   border: var(--size-border) dashed var(--color-control-border);
   border-radius: 0.4375rem;
   background: repeating-linear-gradient(135deg, transparent 0 5px, var(--color-border) 5px 7px);
+}
+
+.overlap {
+  position: absolute;
+  top: 0.125rem;
+  bottom: 0.125rem;
+  min-width: 4px;
+  border: 1.5px solid var(--color-danger);
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--color-danger-bg) 70%, transparent);
+  pointer-events: none;
 }
 
 .now {

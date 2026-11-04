@@ -1,3 +1,4 @@
+import { useIncreasedContrast } from '../theme/ThemeProvider';
 import { max } from 'd3-array';
 import { scaleBand, scaleLinear } from 'd3-scale';
 import { stack } from 'd3-shape';
@@ -81,11 +82,13 @@ export function ActivityBars({
   onZoomOut,
   valueUnit = 'hours',
   formatValue = defaultFormatValue,
-  patterns = true,
+  patterns: patternsProp,
   actions,
   height = '17rem',
   emptyMessage = 'No recorded time in this window.',
 }: ActivityBarsProps) {
+  const increasedContrast = useIncreasedContrast();
+  const patterns = patternsProp ?? increasedContrast;
   const [containerRef, size] = useElementSize<HTMLDivElement>();
   const svgRef = useRef<SVGSVGElement>(null);
   const patternId = useSvgId();
@@ -98,7 +101,10 @@ export function ActivityBars({
   const [drag, setDrag] = useState<Drag | null>(null);
 
   const font = size.fontSize;
-  const margin = { top: font * 0.75, right: font * 0.5, bottom: font * 2, left: font * 3 };
+  // Up to two weeks of buckets get their total above the bar (2.0 redesign), so the top margin
+  // leaves room for that line.
+  const showTotals = buckets.length > 0 && buckets.length <= 14;
+  const margin = { top: font * (showTotals ? 1.75 : 0.75), right: font * 0.5, bottom: font * 2, left: font * 3 };
   const plotWidth = Math.max(0, size.width - margin.left - margin.right);
   const plotHeight = Math.max(0, size.height - margin.top - margin.bottom);
   const unitSeconds = valueUnit === 'minutes' ? 60 : 3600;
@@ -350,6 +356,25 @@ export function ActivityBars({
                 })}
               </g>
               <line x1={0} x2={plotWidth} y1={plotHeight} y2={plotHeight} className={styles.axisLine} aria-hidden="true" />
+              {showTotals && bandwidth >= font * 3.25 ? (
+                <g aria-hidden="true">
+                  {buckets.map((bucket, index) => {
+                    const total = totals[index] ?? 0;
+                    if (total <= 0) return null;
+                    return (
+                      <text
+                        key={bucket.id}
+                        x={(x(bucket.id) ?? 0) + bandwidth / 2}
+                        y={y(total / unitSeconds) - font * 0.6}
+                        textAnchor="middle"
+                        className={styles.totalLabel}
+                      >
+                        {formatValue(total)}
+                      </text>
+                    );
+                  })}
+                </g>
+              ) : null}
               <g aria-hidden="true">
                 {buckets.map((bucket, index) =>
                   index % labelEvery === 0 || bucket.id === selectedId ? (

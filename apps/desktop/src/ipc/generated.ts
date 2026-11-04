@@ -1434,6 +1434,44 @@ export type WeeklySlice = {
   configured: boolean;
   /** The file name the export dialog suggests: `weekly-status-<yyyy-MM-dd>.md`. */
   exportFileName: string;
+  /** "Week so far" next to the draft; `None` until this week's worklogs are loaded. */
+  summary: WeeklySummary | null;
+};
+
+/** The loaded week at a glance: what the draft is based on. */
+export type WeeklySummary = {
+  totalSeconds: number;
+  /** The week's target from the daily schedule (0 without valid targets). */
+  targetSeconds: number;
+  /** Monday to Sunday. */
+  days: Array<WeeklySummaryDay>;
+  /** Most time first. */
+  activities: Array<WeeklySummaryActivity>;
+  /** Most time first; work without a ticket is one entry with `ticketId: null`. */
+  tickets: Array<WeeklySummaryTicket>;
+};
+
+export type WeeklySummaryActivity = {
+  /** The 7pace activity ID (as on worklogs), `null` for logs without one. */
+  activityId: string | null;
+  name: string;
+  seconds: number;
+};
+
+export type WeeklySummaryDay = {
+  /** The instant the local day starts. */
+  date: string;
+  seconds: number;
+  targetSeconds: number;
+};
+
+export type WeeklySummaryTicket = {
+  ticketId: number | null;
+  /** The ticket's title when known; for work without a ticket, its most-used comment. */
+  title: string | null;
+  seconds: number;
+  /** The activity with the most time on this ticket, for its colour. */
+  activityId: string | null;
 };
 
 /** A configured work app as Settings shows it. */

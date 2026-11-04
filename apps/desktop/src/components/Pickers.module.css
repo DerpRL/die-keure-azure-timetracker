@@ -151,7 +151,8 @@
 .comboInput {
   flex: 1;
   min-width: 0;
-  min-height: var(--size-control-md);
+  /* The group's border is outside: the whole box is as tall as a text field. */
+  min-height: calc(var(--size-control-md) - 2px);
   padding: var(--space-1) var(--space-3);
   border: 0;
   background: transparent;

@@ -233,7 +233,15 @@
 
 .segment {
   stroke: var(--color-surface);
-  stroke-width: 1;
+  stroke-width: 1.5;
+}
+
+/* The bucket's total above its bar. */
+.totalLabel {
+  fill: var(--color-text);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
 }
 
 .rule {

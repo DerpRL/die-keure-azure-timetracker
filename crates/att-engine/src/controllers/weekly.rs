@@ -16,9 +16,12 @@ use serde_json::Value;
 
 use att_core::insights::WeeklyReport;
 use att_core::model::WorkLog;
-use att_core::statistics::{StatisticsPeriod, StatisticsRange};
+use att_core::statistics::{ActivityStatistics, StatisticsPeriod, StatisticsRange};
+use att_core::targets::WorkTargets;
+use att_core::text::NonEmpty;
 use att_core::time::{Cal, wire_date};
 
+use super::view::{WeeklySummary, WeeklySummaryActivity, WeeklySummaryDay, WeeklySummaryTicket};
 use super::{
     detached, done, internal, known_titles, pages, persist, request_titles, spawn, still_current,
     visible,
@@ -250,6 +253,87 @@ pub(crate) async fn load(engine: &Engine) {
         ids.into_iter().filter(|id| !known.contains_key(id)).collect()
     });
     request_titles(engine, missing);
+}
+
+// -- Week so far ----------------------------------------------------------------------------------
+
+/// The loaded week for the "Week so far" panel: the same totals as the draft's Time, Worked on
+/// and Activity breakdown sections, plus each day and each ticket's main activity.
+pub(crate) fn summary(
+    logs: &[WorkLog],
+    range: &StatisticsRange,
+    targets: &WorkTargets,
+    titles: &std::collections::BTreeMap<i64, String>,
+    cal: &Cal,
+) -> WeeklySummary {
+    let data = ActivityStatistics::calculate(logs, range, targets, cal);
+    // Seconds per ticket and activity, and per comment for work without a ticket, counted like
+    // `ActivityStatistics` (each log once, inside the week, with a usable length).
+    let mut by_activity: HashMap<Option<i64>, HashMap<Option<String>, f64>> = HashMap::new();
+    let mut comments: HashMap<String, f64> = HashMap::new();
+    let mut seen = BTreeSet::new();
+    for log in logs {
+        if !seen.insert(log.id.as_str()) || !log.length.is_finite() || log.length < 0.0 {
+            continue;
+        }
+        let Some(date) = log.date(cal.tz()) else { continue };
+        if date < range.start || date >= range.end {
+            continue;
+        }
+        let activity =
+            log.activity_type.as_ref().and_then(|a| a.id.non_empty()).map(str::to_string);
+        *by_activity.entry(log.ticket_id()).or_default().entry(activity).or_default() += log.length;
+        if log.ticket_id().is_none()
+            && let Some(comment) = log.comment.non_empty()
+        {
+            *comments.entry(comment.to_string()).or_default() += log.length;
+        }
+    }
+    let most = |totals: &HashMap<Option<String>, f64>| {
+        totals
+            .iter()
+            .max_by(|a, b| a.1.total_cmp(b.1).then_with(|| b.0.cmp(a.0)))
+            .and_then(|(id, _)| id.clone())
+    };
+    let top_comment = comments
+        .iter()
+        .max_by(|a, b| a.1.total_cmp(b.1).then_with(|| b.0.cmp(a.0)))
+        .map(|(comment, _)| comment.clone());
+    WeeklySummary {
+        total_seconds: data.total_seconds(),
+        target_seconds: data.target_seconds(),
+        days: data
+            .days
+            .iter()
+            .map(|day| WeeklySummaryDay {
+                date: day.date,
+                seconds: day.seconds,
+                target_seconds: day.target_seconds,
+            })
+            .collect(),
+        activities: data
+            .activities
+            .iter()
+            .map(|activity| WeeklySummaryActivity {
+                activity_id: activity.id.strip_prefix("activity:").map(str::to_string),
+                name: activity.name.clone(),
+                seconds: activity.seconds,
+            })
+            .collect(),
+        tickets: data
+            .tickets
+            .iter()
+            .map(|ticket| WeeklySummaryTicket {
+                ticket_id: ticket.ticket_id,
+                title: match ticket.ticket_id {
+                    Some(id) => titles.get(&id).cloned(),
+                    None => top_comment.clone(),
+                },
+                seconds: ticket.seconds,
+                activity_id: by_activity.get(&ticket.ticket_id).and_then(most),
+            })
+            .collect(),
+    }
 }
 
 // -- Draft ----------------------------------------------------------------------------------------

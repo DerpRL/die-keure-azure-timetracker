@@ -40,13 +40,48 @@ const weekly: WeeklySlice = {
   syncedAt: '2026-10-06T07:55:00Z',
   configured: true,
   exportFileName: 'weekly-status-2026-10-05.md',
+  // 8h 25m against 38h: Monday and Tuesday so far (Brussels days, UTC instants).
+  summary: {
+    totalSeconds: 30_300,
+    targetSeconds: 136_800,
+    days: [
+      { date: '2026-10-04T22:00:00Z', seconds: 26_100, targetSeconds: 27_360 },
+      { date: '2026-10-05T22:00:00Z', seconds: 4_200, targetSeconds: 27_360 },
+      { date: '2026-10-06T22:00:00Z', seconds: 0, targetSeconds: 27_360 },
+      { date: '2026-10-07T22:00:00Z', seconds: 0, targetSeconds: 27_360 },
+      { date: '2026-10-08T22:00:00Z', seconds: 0, targetSeconds: 27_360 },
+      { date: '2026-10-09T22:00:00Z', seconds: 0, targetSeconds: 0 },
+      { date: '2026-10-10T22:00:00Z', seconds: 0, targetSeconds: 0 },
+    ],
+    activities: [
+      { activityId: 'dev', name: 'Development', seconds: 23_100 },
+      { activityId: 'design', name: 'Design', seconds: 3_000 },
+      { activityId: 'review', name: 'Code review', seconds: 2_400 },
+      { activityId: 'standup', name: 'Standup', seconds: 1_800 },
+    ],
+    tickets: [
+      { ticketId: 4821, title: 'Checkout: retry failed card payments', seconds: 15_900, activityId: 'dev' },
+      { ticketId: 4790, title: 'Invoice PDF shows the wrong VAT number', seconds: 7_200, activityId: 'dev' },
+      { ticketId: 4655, title: 'Design system: date picker tokens', seconds: 3_000, activityId: 'design' },
+      { ticketId: null, title: 'Reviewing pull requests', seconds: 2_400, activityId: 'review' },
+      { ticketId: 4777, title: 'Sprint ceremonies', seconds: 1_800, activityId: 'standup' },
+    ],
+  },
 };
 
 /** Time loaded, nothing generated yet. */
 export const weeklyEmpty: WeeklySlice = { ...weekly, text: '', hasDraft: false };
 
 /** The week's time is loading. */
-export const weeklyLoading: WeeklySlice = { ...weekly, text: '', hasDraft: false, hasData: false, loading: true, syncedAt: null };
+export const weeklyLoading: WeeklySlice = {
+  ...weekly,
+  text: '',
+  hasDraft: false,
+  hasData: false,
+  loading: true,
+  syncedAt: null,
+  summary: null,
+};
 
 /** The download failed. */
 export const weeklyFailed: WeeklySlice = {
@@ -56,6 +91,7 @@ export const weeklyFailed: WeeklySlice = {
   hasData: false,
   issue: 'Could not load this week from 7pace: the request timed out.',
   syncedAt: null,
+  summary: null,
 };
 
 /** The draft file could not be written. */

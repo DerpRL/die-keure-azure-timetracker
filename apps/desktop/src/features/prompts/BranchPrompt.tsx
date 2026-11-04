@@ -79,6 +79,7 @@ export function BranchPrompt({ view }: { view: BranchPromptView }) {
       {ticketId !== null ? (
         <Button
           variant="plain"
+          className={styles.another}
           isDisabled={writeDisabled}
           isPending={actions.isPending('another')}
           onPress={() => void actions.run('another', another)}
@@ -96,7 +97,7 @@ export function BranchPrompt({ view }: { view: BranchPromptView }) {
       tone="warning"
       title="Branch changed"
       subtitle={change.repositoryName}
-      badge="Review"
+      badge="Needs review"
       actions={buttons}
       runner={actions}
     >

@@ -144,12 +144,7 @@
   overflow-wrap: anywhere;
 }
 
-.chevron {
-  flex: none;
-  font-size: var(--size-icon-sm);
-}
-
-/* Selected: background, text colour, weight and a chevron (not colour alone). */
+/* Selected: background, text colour and weight (not colour alone). */
 .selected,
 .selected:hover {
   background: var(--color-selected-bg);

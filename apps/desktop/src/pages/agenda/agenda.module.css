@@ -411,3 +411,8 @@
     border: 1px solid CanvasText;
   }
 }
+
+/* A text-style button lines up with the list above it; its hover area stays. */
+.flushLink {
+  margin-inline-start: -0.625rem;
+}

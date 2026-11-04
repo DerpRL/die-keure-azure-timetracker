@@ -150,6 +150,7 @@ function CalendarsCard({ agenda }: { agenda: AgendaSlice }) {
           size="small"
           variant="plain"
           icon={SettingsIcon}
+          className={styles.flushLink}
           onPress={() => {
             setOpenError(null);
             showMain('settings').catch((error: unknown) => setOpenError(messageOf(error)));

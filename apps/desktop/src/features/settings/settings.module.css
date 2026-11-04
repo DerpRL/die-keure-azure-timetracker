@@ -39,9 +39,8 @@
 .categoryList .category[data-selected] {
   background: var(--color-accent-bg);
   color: var(--color-accent);
+  /* Weight and background mark the selection, as in the sidebar (not colour alone). */
   font-weight: var(--font-weight-semibold);
-  /* A leading bar marks the selection, not colour alone. */
-  box-shadow: inset 0.1875rem 0 0 var(--color-selected-indicator);
 }
 
 .categoryList .category[data-selected]::after {
@@ -116,6 +115,18 @@
   justify-content: space-between;
   gap: var(--space-4);
   min-width: 0;
+}
+
+/* The two "checked" stamps share a line; warnings and hints take a line of their own. */
+.details.detailsInline {
+  display: flex;
+  flex-flow: row wrap;
+  gap: var(--space-1) var(--space-5);
+}
+
+.detailsInline > .warning,
+.detailsInline > li:nth-child(n + 3) {
+  flex-basis: 100%;
 }
 
 .detailsRow .detailsText {

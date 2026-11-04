@@ -84,6 +84,7 @@ export function EntriesTable({
         }}
         density="compact"
         className={styles.table}
+        getRowClassName={(log) => ((overlaps?.get(log.id) ?? 0) > 0 ? styles.overlapRow : undefined)}
         renderEmptyState={() => emptyMessage}
         renderCell={(log, column) => {
           switch (column) {

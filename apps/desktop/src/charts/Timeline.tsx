@@ -1,3 +1,4 @@
+import { useIncreasedContrast } from '../theme/ThemeProvider';
 import { scaleTime } from 'd3-scale';
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { Button } from '../components/Button';
@@ -79,9 +80,11 @@ export function Timeline({
   formatValue = defaultFormatValue,
   formatTime: formatClock = formatTime,
   formatTick,
-  patterns = true,
+  patterns: patternsProp,
   emptyMessage = 'No entries in this day. Choose another day or adjust the active filters.',
 }: TimelineProps) {
+  const increasedContrast = useIncreasedContrast();
+  const patterns = patternsProp ?? increasedContrast;
   const listRef = useRef<HTMLDivElement>(null);
   const instructionsId = useId();
   // A different set of entries starts on its first page (1.14 resets paging when the data

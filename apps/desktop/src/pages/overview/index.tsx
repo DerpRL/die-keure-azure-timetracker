@@ -127,9 +127,10 @@ export default function OverviewPage() {
       {connection && !connection.hasSevenPaceToken ? <SetupCard /> : null}
 
       {items && items.length > 0 ? (
-        <Section title="Suggestions" subtitle="Review a change before switching your timer." variant="plain">
-          <PromptList items={items} surface="main" headingLevel={3} label="Suggestions" />
-        </Section>
+        // The suggestion cards lead the page without a heading of their own (2.0 redesign).
+        <section aria-label="Suggestions" className={styles.suggestions}>
+          <PromptList items={items} surface="main" headingLevel={2} label="Suggestions" />
+        </section>
       ) : null}
 
       <Card className={styles.current}>
@@ -163,9 +164,9 @@ export default function OverviewPage() {
         </Section>
       </div>
 
-      <Section title="Connection details">
-        <ConnectionDetails headingLevel={null} />
-      </Section>
+      <Card as="section" aria-label="Connection details">
+        <ConnectionDetails headingLevel={2} />
+      </Card>
 
       <p className={styles.privacy}>
         <PrivacyIcon className={styles.privacyIcon} />
