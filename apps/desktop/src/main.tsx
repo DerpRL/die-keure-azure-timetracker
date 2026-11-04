@@ -54,7 +54,10 @@ async function installPreviewEngine(): Promise<void> {
     import('./ipc/sampleClock'),
   ]);
   if (new URLSearchParams(location.search).get('clock') !== 'real') pinClockTo(SAMPLE_NOW);
-  installMockEngine({ slices: sampleSlices(), latencyMs: 120 });
+  installMockEngine({ slices: sampleSlices(), latencyMs: 120 })
+    // Settings → App → "Show onboarding again", and finishing it, like the engine.
+    .handle('app.restartOnboarding', (_intent, mock) => mock.patchSlice('app', { onboarding: true }))
+    .handle('app.finishOnboarding', (_intent, mock) => mock.patchSlice('app', { onboarding: false, visiblePage: 'settings' }));
 }
 
 const container = document.getElementById('root');

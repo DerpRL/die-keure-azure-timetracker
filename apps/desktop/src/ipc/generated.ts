@@ -1089,6 +1089,7 @@ export type SearchView = {
  */
 export type SessionIntent =
   | { type: "app.finishOnboarding" }
+  | { type: "app.restartOnboarding" }
   | { type: "app.setInterface"; preferences: InterfacePreferences }
   | { type: "app.prepareForRestart" }
   | { type: "app.dismissError" }

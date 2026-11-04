@@ -128,6 +128,9 @@ pub struct SessionState {
 pub enum SessionIntent {
     #[serde(rename = "app.finishOnboarding")]
     FinishOnboarding,
+    /// Settings → App: shows the onboarding again. Tracking keeps running meanwhile.
+    #[serde(rename = "app.restartOnboarding")]
+    RestartOnboarding,
     #[serde(rename = "app.setInterface")]
     SetInterface { preferences: InterfacePreferences },
     /// Refuses while a write is in flight; persists before an update restarts the app.
@@ -385,6 +388,7 @@ async fn route(engine: &Engine, intent: SessionIntent) -> Result<Value, IpcError
     use SessionIntent as I;
     match intent {
         I::FinishOnboarding => settings::finish_onboarding(engine).await,
+        I::RestartOnboarding => settings::restart_onboarding(engine)?,
         I::SetInterface { preferences } => settings::set_interface(engine, preferences),
         I::PrepareForRestart => return settings::prepare_for_restart(engine),
         I::DismissError => engine.update(|state| state.session.error = None),

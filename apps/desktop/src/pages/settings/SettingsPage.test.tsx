@@ -317,6 +317,21 @@ describe('immediate settings', () => {
     expect(platform.writeLaunchAtLogin).toHaveBeenCalledWith(true);
     await waitFor(() => expect(toggle).toBeChecked());
   });
+
+  it('shows the onboarding again, only without unsaved changes', async () => {
+    const { engine, user } = renderWithEngine(<SettingsPage />);
+    await user.click(tab('Accounts'));
+    await user.clear(screen.getByRole('textbox', { name: 'Azure organization' }));
+    await user.type(screen.getByRole('textbox', { name: 'Azure organization' }), 'fabrikam');
+    await user.click(tab('App'));
+    const again = screen.getByRole('button', { name: 'Show onboarding again' });
+    expect(again).toBeDisabled();
+    expect(screen.getByText(/^Save or revert your changes first/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Revert' }));
+    expect(again).toBeEnabled();
+    await user.click(again);
+    expect(engine.dispatched('app.restartOnboarding')).toEqual([{ type: 'app.restartOnboarding' }]);
+  });
 });
 
 describe('PIN pairing', () => {

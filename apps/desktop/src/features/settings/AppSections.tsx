@@ -5,6 +5,7 @@ import { KeyboardIcon } from '../../components/icons';
 import { Switch } from '../../components/Toggles';
 import type { Cadences } from '../../ipc/contract';
 import { ShortcutContext } from '../../shortcuts/hooks';
+import { useAction } from '../../state/hooks';
 import { UpdateSettings } from '../updates/UpdateSettings';
 import { AppearanceSettings } from './AppearanceForm';
 import { FigmaSettings } from './FigmaSettings';
@@ -36,7 +37,8 @@ export function AppearanceSection() {
 
 /** Settings → App → Window and startup: launch at login (immediate) and the mini timer. */
 export function WindowSection() {
-  const { draft, update, os } = useSettingsForm();
+  const { draft, update, os, dirty, preview } = useSettingsForm();
+  const onboarding = useAction();
   const launch = useLaunchAtLogin();
   const words = osWords(os);
   return (
@@ -62,6 +64,28 @@ export function WindowSection() {
         Show the mini timer
       </Switch>
       <Hint>{`The app stays in the ${words.trayPlace} when its window closes. Quitting leaves the 7pace timer running.`}</Hint>
+      <Divider />
+      <SettingsGroup
+        title="Onboarding"
+        description={
+          preview
+            ? 'Not available in preview mode.'
+            : dirty
+              ? 'Save or revert your changes first: the onboarding replaces this window until you finish it.'
+              : 'Walk through the first-run setup again. Your settings, accounts and any running timer stay as they are.'
+        }
+      >
+        <div className={styles.row}>
+          <Button
+            isDisabled={dirty || preview}
+            isPending={onboarding.pending}
+            onPress={() => void onboarding.run({ type: 'app.restartOnboarding' })}
+          >
+            Show onboarding again
+          </Button>
+        </div>
+        {onboarding.error ? <InlineIssue>{onboarding.error.message}</InlineIssue> : null}
+      </SettingsGroup>
     </SettingsSection>
   );
 }

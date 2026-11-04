@@ -279,6 +279,25 @@ async fn onboarding_holds_the_start_until_it_finishes() {
     assert_eq!(stored.interface_setup_completed, Some(true));
 }
 
+#[tokio::test]
+async fn onboarding_can_be_shown_again_from_settings() {
+    let t = att_engine::testing::TestEngine::with_store(store());
+    *t.figma.access.lock().unwrap() = true;
+    t.engine.dispatch(json!({"type": "app.finishOnboarding"})).await.unwrap();
+    assert_eq!(slice(&t.engine, "app")["onboarding"], false);
+    t.shell.take();
+
+    t.engine.dispatch(json!({"type": "app.restartOnboarding"})).await.unwrap();
+    assert_eq!(slice(&t.engine, "app")["onboarding"], true);
+    assert_eq!(t.shell.take(), vec!["show_main()".to_string()]);
+    let stored: Configuration = t.store.get(att_store::keys::CONFIGURATION).unwrap().unwrap();
+    assert_eq!(stored.interface_setup_completed, Some(false), "saved, so a restart resumes it");
+
+    t.engine.dispatch(json!({"type": "app.finishOnboarding"})).await.unwrap();
+    assert_eq!(slice(&t.engine, "app")["onboarding"], false);
+    assert_eq!(t.shell.take(), vec!["show_main(settings)".to_string()], "back to Settings");
+}
+
 #[tokio::test(start_paused = true)]
 async fn pin_pairing_polls_until_approved_and_saves_the_tokens() {
     let h = Harness::new(configuration(vec![]));

@@ -173,6 +173,26 @@ pub(crate) async fn finish_onboarding(engine: &Engine) {
     engine.inner.wake.notify_one();
 }
 
+/// `app.restartOnboarding`: marks the setup unfinished again, so the main window shows the
+/// onboarding instead of the pages until it is finished (which returns to Settings). Saved
+/// settings, credentials and a running timer are untouched. Not available in preview, where
+/// onboarding never shows.
+pub(crate) fn restart_onboarding(engine: &Engine) -> std::result::Result<(), IpcError> {
+    if engine.preview() {
+        return Ok(());
+    }
+    let previous = engine.update(|state| state.config.interface_setup_completed.replace(false));
+    if let Err(error) = engine.persist() {
+        engine.update(|state| state.config.interface_setup_completed = previous);
+        return Err(IpcError::new(
+            "message",
+            format!("The onboarding could not be reopened: {}", error.message),
+        ));
+    }
+    engine.services().shell.show_main(None);
+    Ok(())
+}
+
 /// `settings.appIdentity`: the identity of an application chosen in a file dialog.
 pub(crate) async fn app_identity(
     engine: &Engine,
