@@ -174,7 +174,7 @@ fn feed_has_the_tauri_static_shape() {
         platforms.keys().collect::<Vec<_>>(),
         ["darwin-aarch64", "darwin-x86_64", "windows-x86_64"]
     );
-    let base = "https://raw.githubusercontent.com/DerpRL/die-keure-azure-timetracker/main/releases/updates/2.0.0/";
+    let base = "https://github.com/DerpRL/die-keure-azure-timetracker/releases/download/v2.0.0/";
     for target in ["darwin-aarch64", "darwin-x86_64"] {
         assert_eq!(
             platforms[target]["url"],

@@ -1,5 +1,6 @@
-//! `stage` on a synthetic repository in a temporary folder: archiving, immutability, feeds and the
-//! bridge. macOS tools are off here (the macOS tests cover DMG and codesign checks).
+//! `stage --bridge` on a synthetic repository in a temporary folder: archiving the 1.x installers,
+//! immutability of the 1.x ZIP, and the legacy feed. 2.x assets are never committed (they are
+//! GitHub Release assets). macOS tools are off here (the macOS tests cover DMG and codesign).
 
 mod support;
 
@@ -140,19 +141,29 @@ fn listing(dir: &Path) -> Vec<String> {
 }
 
 #[test]
-fn stages_a_release_and_archives_the_previous_installers() {
+fn only_the_bridge_is_staged() {
     let fixture = fixture(false);
-    let legacy_before = fs::read(fixture.repo.join("updates/latest.json")).unwrap();
-    let report = stage::stage(&options(&fixture, false)).unwrap();
+    let error = stage::stage(&options(&fixture, false)).unwrap_err().to_string();
+    assert!(error.contains("att-release publish"), "{error}");
+    assert!(
+        fixture
+            .repo
+            .join("releases/latest/Azure-timetracker-1.14.2-universal-local-signed.dmg")
+            .is_file()
+    );
+    assert!(!fixture.repo.join("releases/updates/2.0.0").exists());
+}
+
+// The bridge fixtures build the 1.x ZIP, which needs Unix execute bits (see legacy_zip.rs).
+#[cfg(unix)]
+#[test]
+fn bridge_archives_the_1x_installers_and_publishes_the_signed_legacy_manifest() {
+    let fixture = fixture(true);
+    let report = stage::stage(&options(&fixture, true)).unwrap();
     assert_eq!(report.archived.len(), 4);
-    assert_eq!(
-        listing(&fixture.repo.join("releases/latest")),
-        [
-            "Azure-timetracker-2.0.0-universal-unsigned.dmg",
-            "Azure-timetracker-2.0.0-universal-unsigned.dmg.sha256",
-            "Azure-timetracker-2.0.0-x64-setup.exe",
-            "Azure-timetracker-2.0.0-x64-setup.exe.sha256",
-        ]
+    assert!(
+        listing(&fixture.repo.join("releases/latest")).is_empty(),
+        "2.x installers are on GitHub Releases"
     );
     assert_eq!(
         listing(&fixture.repo.join("releases/archive/1.14.2")),
@@ -166,23 +177,15 @@ fn stages_a_release_and_archives_the_previous_installers() {
     assert_eq!(
         listing(&fixture.repo.join("releases/updates/2.0.0")),
         [
-            "Azure-timetracker-2.0.0-universal.app.tar.gz",
-            "Azure-timetracker-2.0.0-universal.app.tar.gz.sha256",
-            "Azure-timetracker-2.0.0-universal.app.tar.gz.sig",
-            "Azure-timetracker-2.0.0-x64-setup.exe",
-            "Azure-timetracker-2.0.0-x64-setup.exe.sha256",
-            "Azure-timetracker-2.0.0-x64-setup.exe.sig",
+            "Azure-timetracker-2.0.0-universal-update.zip",
+            "Azure-timetracker-2.0.0-universal-update.zip.sha256",
         ]
     );
     assert_eq!(
-        fs::read(fixture.repo.join("updates/v2/latest.json")).unwrap(),
-        fs::read(fixture.from.join("latest.json")).unwrap()
-    );
-    assert_eq!(
         fs::read(fixture.repo.join("updates/latest.json")).unwrap(),
-        legacy_before,
-        "the legacy feed stays frozen"
+        fs::read(fixture.from.join("legacy-latest.json")).unwrap()
     );
+    assert!(!fixture.repo.join("updates/v2").exists(), "the v2 feed is a release asset");
     assert!(
         fixture
             .repo
@@ -191,56 +194,41 @@ fn stages_a_release_and_archives_the_previous_installers() {
     );
 }
 
-#[test]
-fn staging_again_is_a_no_op() {
-    let fixture = fixture(false);
-    stage::stage(&options(&fixture, false)).unwrap();
-    let again = stage::stage(&options(&fixture, false)).unwrap();
-    assert!(again.copied.is_empty(), "{:?}", again.copied);
-    assert!(again.archived.is_empty());
-    assert_eq!(again.unchanged.len(), 11);
-}
-
-#[test]
-fn published_update_assets_are_immutable() {
-    let fixture = fixture(false);
-    stage::stage(&options(&fixture, false)).unwrap();
-    let published =
-        fixture.repo.join("releases/updates/2.0.0/Azure-timetracker-2.0.0-x64-setup.exe");
-    fs::write(&published, b"MZ different bytes").unwrap();
-    let latest_before = listing(&fixture.repo.join("releases/latest"));
-    let error = stage::stage(&options(&fixture, false)).unwrap_err().to_string();
-    assert!(error.contains("immutable"), "{error}");
-    assert_eq!(fs::read(&published).unwrap(), b"MZ different bytes", "nothing was overwritten");
-    assert_eq!(listing(&fixture.repo.join("releases/latest")), latest_before);
-}
-
-// The bridge fixtures build the 1.x ZIP, which needs Unix execute bits (see legacy_zip.rs).
 #[cfg(unix)]
 #[test]
-fn bridge_publishes_the_signed_legacy_manifest() {
+fn staging_the_bridge_again_is_a_no_op() {
     let fixture = fixture(true);
     stage::stage(&options(&fixture, true)).unwrap();
-    assert_eq!(
-        fs::read(fixture.repo.join("updates/latest.json")).unwrap(),
-        fs::read(fixture.from.join("legacy-latest.json")).unwrap()
-    );
-    let updates = listing(&fixture.repo.join("releases/updates/2.0.0"));
-    assert!(updates.contains(&"Azure-timetracker-2.0.0-universal-update.zip".to_owned()));
-    assert!(updates.contains(&"Azure-timetracker-2.0.0-universal-update.zip.sha256".to_owned()));
-    assert!(fixture.repo.join("updates/v2/latest.json").is_file());
+    let again = stage::stage(&options(&fixture, true)).unwrap();
+    assert!(again.copied.is_empty(), "{:?}", again.copied);
+    assert!(again.archived.is_empty());
+    assert_eq!(again.unchanged.len(), 3);
 }
 
 #[cfg(unix)]
 #[test]
-fn legacy_artifacts_need_the_bridge_flag_and_the_flag_needs_them() {
-    let with_legacy = fixture(true);
-    let error = stage::stage(&options(&with_legacy, false)).unwrap_err().to_string();
-    assert!(error.contains("pass --bridge"), "{error}");
+fn the_published_bridge_zip_is_immutable() {
+    let fixture = fixture(true);
+    stage::stage(&options(&fixture, true)).unwrap();
+    let published =
+        fixture.repo.join("releases/updates/2.0.0/Azure-timetracker-2.0.0-universal-update.zip");
+    fs::write(&published, b"different bytes").unwrap();
+    let error = stage::stage(&options(&fixture, true)).unwrap_err().to_string();
+    assert!(error.contains("immutable"), "{error}");
+    assert_eq!(fs::read(&published).unwrap(), b"different bytes", "nothing was overwritten");
+}
+
+#[test]
+fn the_bridge_flag_needs_the_legacy_artifacts() {
     let without = fixture(false);
     let error = stage::stage(&options(&without, true)).unwrap_err().to_string();
     assert!(error.contains("--bridge needs"), "{error}");
-    assert!(!without.repo.join("updates/v2/latest.json").exists());
+    assert!(
+        without
+            .repo
+            .join("releases/latest/Azure-timetracker-1.14.2-universal-local-signed.dmg")
+            .is_file()
+    );
 }
 
 #[cfg(unix)]
@@ -264,45 +252,35 @@ fn a_tampered_legacy_manifest_is_refused() {
     assert!(error.contains("not signed by the trusted release key"), "{error}");
 }
 
+#[cfg(unix)]
 #[test]
-fn refuses_newer_unexpected_or_conflicting_installers() {
-    let fixture = fixture(false);
+fn refuses_unexpected_or_newer_files_in_releases_latest() {
+    let fixture = fixture(true);
     let latest = fixture.repo.join("releases/latest");
     fs::write(latest.join("Azure-timetracker-2.1.0-x64-setup.exe"), b"MZ newer").unwrap();
     assert!(
-        stage::stage(&options(&fixture, false)).unwrap_err().to_string().contains("newer release")
+        stage::stage(&options(&fixture, true)).unwrap_err().to_string().contains("not older than")
     );
     fs::remove_file(latest.join("Azure-timetracker-2.1.0-x64-setup.exe")).unwrap();
 
     fs::write(latest.join("notes.txt"), b"?").unwrap();
     assert!(
-        stage::stage(&options(&fixture, false))
-            .unwrap_err()
-            .to_string()
-            .contains("Unexpected file")
-    );
-    fs::remove_file(latest.join("notes.txt")).unwrap();
-
-    fs::write(latest.join("Azure-timetracker-2.0.0-x64-setup.exe"), b"MZ other build").unwrap();
-    assert!(
-        stage::stage(&options(&fixture, false))
-            .unwrap_err()
-            .to_string()
-            .contains("already staged with different bytes")
+        stage::stage(&options(&fixture, true)).unwrap_err().to_string().contains("Unexpected file")
     );
     // Nothing moved during the refused runs.
     assert!(latest.join("Azure-timetracker-1.14.2-universal-local-signed.dmg").is_file());
 }
 
+#[cfg(unix)]
 #[test]
 fn checksum_or_signature_problems_stop_staging() {
-    let fixture = fixture(false);
+    let fixture = fixture(true);
     fs::write(
         fixture.from.join("Azure-timetracker-2.0.0-x64-setup.exe"),
         b"MZ swapped after signing",
     )
     .unwrap();
-    let error = stage::stage(&options(&fixture, false)).unwrap_err().to_string();
+    let error = stage::stage(&options(&fixture, true)).unwrap_err().to_string();
     assert!(error.contains("checksum") && error.contains("signature"), "{error}");
     assert!(!fixture.repo.join("releases/updates/2.0.0").exists());
 }

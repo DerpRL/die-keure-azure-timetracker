@@ -192,6 +192,8 @@ Also user-controlled: every polling cadence within bounds, per-prompt interrupti
 
 ## 11. Build, signing, distribution and updates
 
+> **Superseded on 2026-11-04** for signing, distribution and the Windows build: macOS releases are Developer ID signed and notarized, everything 2.x is published on GitHub Releases, and the Windows installer is cross-compiled on the release Mac. [docs/release.md](release.md) is current; the text below records the original plan.
+
 - **Build:** Tauri CLI; macOS `universal-apple-darwin` `.app` in a `.dmg` (plus the `.pkg` the installation guide documents, if still wanted); Windows NSIS per-user installer, so updates never need admin rights. No MSI unless IT asks for one.
 - **Signing (decided: no Apple Developer Program, no Windows certificate):**
   - macOS builds are signed with the existing "Azure timetracker Local Signing" certificate and the same bundle ID. That keeps the designated requirement stable across updates, so Keychain items and the Calendar and Accessibility grants survive, exactly the reason 1.14.0 introduced the certificate. The release tool runs `codesign` itself, mirroring `scripts/sign-app.sh` (hardened runtime, calendar entitlement, `--timestamp=none`), because Tauri's bundler assumes a Developer ID flow. There is no notarization: Gatekeeper shows the "unidentified developer" warning on first install and the installation guide keeps documenting the approval steps.

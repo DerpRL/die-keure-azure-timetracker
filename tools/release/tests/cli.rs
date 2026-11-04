@@ -1,5 +1,6 @@
-//! The `att-release` binary itself: help, the stdout contract, and feed → verify → stage on a
-//! synthetic Windows-only release in a temporary repository. No real key or identity is used.
+//! The `att-release` binary itself: help, the stdout contract, and feed → verify on a synthetic
+//! Windows-only release, with `stage` refusing anything but the 1.x bridge. No real key or
+//! identity is used, and nothing is uploaded.
 
 mod support;
 
@@ -39,6 +40,7 @@ fn help_lists_every_subcommand() {
         "feed",
         "build-windows",
         "sign-update",
+        "publish",
         "stage",
         "verify",
     ] {
@@ -61,7 +63,7 @@ fn keygen_prints_only_the_public_key_on_stdout() {
 }
 
 #[test]
-fn feed_verify_and_stage_a_windows_release() {
+fn feed_and_verify_a_windows_release() {
     let temp = tempfile::tempdir().unwrap();
     let key = support::updater_key(temp.path());
     let artifacts = temp.path().join("artifacts");
@@ -124,16 +126,16 @@ fn feed_verify_and_stage_a_windows_release() {
         ],
         temp.path(),
     );
-    assert!(stage.status.success(), "{}", text(&stage.stderr));
-    assert!(repo.join("releases/latest/Azure-timetracker-2.0.0-x64-setup.exe").is_file());
-    assert!(
-        repo.join("releases/updates/2.0.0/Azure-timetracker-2.0.0-x64-setup.exe.sig").is_file()
-    );
+    assert!(!stage.status.success(), "2.x assets are not committed to the repository");
+    assert!(text(&stage.stderr).contains("att-release publish"), "{}", text(&stage.stderr));
+    assert!(!repo.join("releases/updates/2.0.0").exists());
+    assert!(!repo.join("updates").exists());
+    let feed: serde_json::Value =
+        serde_json::from_slice(&fs::read(artifacts.join("latest.json")).unwrap()).unwrap();
     assert_eq!(
-        fs::read(repo.join("updates/v2/latest.json")).unwrap(),
-        fs::read(artifacts.join("latest.json")).unwrap()
+        feed["platforms"]["windows-x86_64"]["url"],
+        "https://github.com/DerpRL/die-keure-azure-timetracker/releases/download/v2.0.0/Azure-timetracker-2.0.0-x64-setup.exe"
     );
-    assert!(!repo.join("updates/latest.json").exists(), "no bridge, no legacy feed");
 
     // A wrong public key fails verification with a non-zero exit code.
     let other = tempfile::tempdir().unwrap();

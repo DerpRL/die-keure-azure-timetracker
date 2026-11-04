@@ -106,6 +106,7 @@ fn package_bridge_feed_and_verify_end_to_end() {
         allow_adhoc: true,
         require_universal: false,
         dmg_identity: Identity::AdHoc,
+        notary: None,
     };
     let packaged = package::package_macos(&app, &options).unwrap();
     assert_eq!(packaged.dmg.file_name().unwrap(), "Azure-timetracker-2.0.0-universal-unsigned.dmg");

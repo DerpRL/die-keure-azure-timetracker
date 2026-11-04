@@ -1,11 +1,12 @@
-//! `stage <version> --from <dir>`: copies a verified release into the repository, mirroring
-//! `scripts/stage-release.py`. Everything is checked before the first file moves:
+//! `stage <version> --from <dir> --bridge`: copies the one-time 1.x bridge into the repository.
+//! 2.x installers, update assets and the v2 feed are GitHub Release assets (`publish`); only 1.x
+//! clients still read the repository, through `raw.githubusercontent.com`. Everything is checked
+//! before the first file moves:
 //!
-//! - `releases/latest/*` of older versions moves to `releases/archive/<version>/`;
-//! - installers (DMG, NSIS setup) go to `releases/latest/`;
-//! - update assets go to `releases/updates/<version>/`, which is immutable once published;
-//! - the feed goes to `updates/v2/latest.json`, and only with `--bridge` the signed 1.x manifest
-//!   goes to `updates/latest.json`.
+//! - `releases/latest/*` (the 1.x installers) moves to `releases/archive/<version>/`; new
+//!   installers are downloaded from GitHub Releases instead;
+//! - the 1.x-format update ZIP goes to `releases/updates/<version>/`, immutable once published;
+//! - the signed 1.x manifest goes to `updates/latest.json`.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -14,12 +15,11 @@ use anyhow::{Context, Result, bail};
 
 use crate::bundle::AppVersion;
 use crate::consts::{
-    REPO_ARCHIVE_DIR, REPO_LATEST_DIR, REPO_LEGACY_FEED, REPO_UPDATES_DIR, REPO_V2_FEED,
-    legacy_zip_name,
+    REPO_ARCHIVE_DIR, REPO_LATEST_DIR, REPO_LEGACY_FEED, REPO_UPDATES_DIR, legacy_zip_name,
 };
 use crate::legacy::manifest;
 use crate::verify::{self, Artifacts, VerifyOptions};
-use crate::{checksum, feed, fsx, log};
+use crate::{checksum, fsx, log};
 
 #[derive(Debug, Clone)]
 pub struct StageOptions {
@@ -95,29 +95,17 @@ pub fn stage(options: &StageOptions) -> Result<StageReport> {
     verify_options.expected_version = Some(options.version.clone());
     let artifacts: Artifacts = verify::verify_dir(&options.from, &verify_options)?;
 
-    log::step("Planning the repository changes");
-    let feed_path = artifacts
-        .v2_feed
-        .as_ref()
-        .context("the artifact folder has no latest.json; run `att-release feed` first")?;
-    let has_legacy = artifacts.legacy_zip.is_some() || artifacts.legacy_feed.is_some();
-    if options.bridge {
-        if artifacts.legacy_zip.is_none() || artifacts.legacy_feed.is_none() {
-            bail!(
-                "--bridge needs {} and its signed legacy-latest.json",
-                legacy_zip_name(&options.version)
-            );
-        }
-    } else if has_legacy {
+    if !options.bridge {
         bail!(
-            "legacy bridge artifacts are present; pass --bridge to publish them through updates/latest.json, or remove them"
+            "2.x releases are published as GitHub Release assets with `att-release publish`; `stage --bridge` only writes the 1.x bridge into the repository"
         );
     }
-    let parsed_feed = feed::parse(&fs::read_to_string(feed_path)?)?;
-    let has_mac =
-        feed::MAC_TARGETS.iter().any(|target| parsed_feed.platforms.contains_key(*target));
-    if has_mac && artifacts.dmg.is_none() {
-        bail!("the feed offers macOS but there is no DMG to publish as the manual installer");
+    log::step("Planning the repository changes");
+    if artifacts.legacy_zip.is_none() || artifacts.legacy_feed.is_none() {
+        bail!(
+            "--bridge needs {} and its signed legacy-latest.json",
+            legacy_zip_name(&options.version)
+        );
     }
 
     let root = &options.repository;
@@ -126,17 +114,9 @@ pub fn stage(options: &StageOptions) -> Result<StageReport> {
     let mut plan = Vec::new();
     let mut report = StageReport::default();
 
-    // Update assets: immutable, permanent URLs.
+    // The 1.x update ZIP: immutable, permanent URL.
     let mut update_files = Vec::new();
-    if let Some(path) = &artifacts.mac_archive {
-        update_files.extend(with_sides(path, &[".sig", ".sha256"]));
-    }
-    if let Some(path) = &artifacts.windows_installer {
-        update_files.extend(with_sides(path, &[".sig", ".sha256"]));
-    }
-    if options.bridge
-        && let Some(path) = &artifacts.legacy_zip
-    {
+    if let Some(path) = &artifacts.legacy_zip {
         update_files.extend(with_sides(path, &[".sha256"]));
     }
     for file in &update_files {
@@ -146,13 +126,7 @@ pub fn stage(options: &StageOptions) -> Result<StageReport> {
         plan_copy(file, &updates.join(fsx::file_name(file)?), true, &mut plan, &mut report)?;
     }
 
-    // Installers for manual download.
-    let mut installers = Vec::new();
-    for path in [&artifacts.dmg, &artifacts.windows_installer].into_iter().flatten() {
-        installers.extend(with_sides(path, &[".sha256"]));
-    }
-    let incoming: Vec<String> =
-        installers.iter().map(|path| fsx::file_name(path)).collect::<Result<_>>()?;
+    // The 1.x installers leave releases/latest; 2.x installers are on GitHub Releases.
     if latest.exists() {
         let mut existing: Vec<_> = fs::read_dir(&latest)?
             .filter_map(|entry| entry.ok())
@@ -164,18 +138,10 @@ pub fn stage(options: &StageOptions) -> Result<StageReport> {
             let Some(previous_version) = latest_file_version(&name) else {
                 bail!("Unexpected file in releases/latest: {name}");
             };
-            if previous_version == version {
-                let same = incoming.contains(&name)
-                    && fsx::same_bytes(&options.from.join(&name), &previous)?;
-                if !same {
-                    bail!(
-                        "{name}: this version is already staged with different bytes. Increment the version first."
-                    );
-                }
-                continue;
-            }
-            if previous_version > version {
-                bail!("Refusing to replace the newer release {previous_version} with {version}.");
+            if previous_version >= version {
+                bail!(
+                    "releases/latest holds {name}, which is not older than {version}; refusing to archive it"
+                );
             }
             let archived =
                 root.join(REPO_ARCHIVE_DIR).join(previous_version.to_string()).join(&name);
@@ -190,29 +156,8 @@ pub fn stage(options: &StageOptions) -> Result<StageReport> {
             report.archived.push(archived);
         }
     }
-    for file in &installers {
-        plan_copy(file, &latest.join(fsx::file_name(file)?), false, &mut plan, &mut report)?;
-    }
-
-    // Feeds.
-    let v2_target = root.join(REPO_V2_FEED);
-    if v2_target.exists() {
-        let published = feed::parse(&fs::read_to_string(&v2_target)?)?;
-        let published_version =
-            AppVersion::parse(&published.version).map_err(anyhow::Error::msg)?;
-        if published_version > version {
-            bail!("updates/v2/latest.json already offers the newer {published_version}");
-        }
-        if published_version == version && !fsx::same_bytes(feed_path, &v2_target)? {
-            bail!(
-                "updates/v2/latest.json already offers {version} with different content; increment the version"
-            );
-        }
-    }
-    plan_copy(feed_path, &v2_target, false, &mut plan, &mut report)?;
-    if options.bridge
-        && let Some(legacy_feed) = &artifacts.legacy_feed
-    {
+    // Feed.
+    if let Some(legacy_feed) = &artifacts.legacy_feed {
         let legacy_target = root.join(REPO_LEGACY_FEED);
         let incoming =
             manifest::parse_envelope(&fs::read(legacy_feed)?).map_err(anyhow::Error::msg)?;
@@ -275,7 +220,7 @@ pub fn stage(options: &StageOptions) -> Result<StageReport> {
         }
     }
     log::step(format!(
-        "Staged {}: {} copied, {} unchanged, {} archived. Review, commit everything together, then push.",
+        "Staged the {} bridge: {} copied, {} unchanged, {} archived. Publish the GitHub Release first, then review, commit and push.",
         options.version,
         report.copied.len(),
         report.unchanged.len(),

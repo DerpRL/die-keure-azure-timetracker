@@ -1,6 +1,8 @@
 //! Code signing, mirroring `scripts/sign-app.sh` and `scripts/signing-config.sh`: inner code
-//! first, the helper with its own identifier, then the app with Hardened Runtime and the calendar
-//! entitlement. Tauri's bundler assumes a Developer ID flow, so it does not sign 2.x releases.
+//! first, the helper with its own identifier, then the app with Hardened Runtime, a secure
+//! timestamp and the calendar entitlement. Releases use the Developer ID Application certificate
+//! of team [`DEVELOPER_ID_TEAM`] and are notarized afterwards (`notary`); the 1.x local
+//! certificate and ad-hoc signatures remain for development builds.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -9,7 +11,8 @@ use anyhow::{Context, Result, bail};
 
 use super::macho;
 use crate::consts::{
-    self, BUNDLE_ID, CALENDAR_ENTITLEMENT, EXECUTABLE_PATH, HELPER_ID, HELPER_PATH,
+    self, BUNDLE_ID, CALENDAR_ENTITLEMENT, DEVELOPER_ID_TEAM, EXECUTABLE_PATH, HELPER_ID,
+    HELPER_PATH,
 };
 use crate::process::{Cmd, combined};
 use crate::{bundle, fsx, log, tree};
@@ -21,7 +24,7 @@ pub const ENTITLEMENTS: &str = include_str!("../../assets/App.entitlements");
 pub enum Kind {
     /// The persistent "Azure timetracker Local Signing" certificate: `--timestamp=none`.
     Local,
-    /// A Developer ID Application certificate, should one ever exist: secure timestamp.
+    /// A Developer ID Application certificate (releases): secure timestamp, notarized later.
     DeveloperId,
 }
 
@@ -53,17 +56,95 @@ pub struct ResolvedIdentity {
     pub source: String,
 }
 
-fn kind_from_env() -> Result<Kind> {
-    match std::env::var("AZURE_TIME_SIGN_KIND").as_deref() {
-        Err(_) | Ok("") | Ok("local") => Ok(Kind::Local),
-        Ok("developer-id") => Ok(Kind::DeveloperId),
-        Ok(other) => bail!("AZURE_TIME_SIGN_KIND must be `local` or `developer-id`, not {other:?}"),
+/// One valid code-signing identity from `security find-identity -v -p codesigning`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KeychainIdentity {
+    pub sha1: String,
+    pub name: String,
+}
+
+impl KeychainIdentity {
+    pub fn is_developer_id(&self) -> bool {
+        self.name.starts_with("Developer ID Application:")
+    }
+
+    /// `codesign --sign` accepts the SHA-1 or a (prefix of the) certificate name.
+    fn matches(&self, selector: &str) -> bool {
+        self.sha1.eq_ignore_ascii_case(selector) || self.name.starts_with(selector)
     }
 }
 
-/// `--adhoc`, then `--identity`, then `AZURE_TIME_SIGN_IDENTITY`, then the local selector file
-/// written by `scripts/setup-local-signing.sh`, else ad-hoc.
+/// Parses lines such as `  3) CEC9…E7 "Developer ID Application: Name (TEAMID)"`.
+pub fn parse_identities(listing: &str) -> Vec<KeychainIdentity> {
+    listing
+        .lines()
+        .filter_map(|line| {
+            let (_, rest) = line.trim().split_once(") ")?;
+            let (sha1, name) = rest.split_once(' ')?;
+            let name = name.trim().strip_prefix('"')?.strip_suffix('"')?;
+            (sha1.len() == 40 && sha1.bytes().all(|b| b.is_ascii_hexdigit()))
+                .then(|| KeychainIdentity { sha1: sha1.to_owned(), name: name.to_owned() })
+        })
+        .collect()
+}
+
+/// Valid signing identities in the user's keychains (empty off macOS or on errors).
+pub fn keychain_identities() -> Vec<KeychainIdentity> {
+    if !cfg!(target_os = "macos") {
+        return Vec::new();
+    }
+    Cmd::new("security")
+        .args(["find-identity", "-v", "-p", "codesigning"])
+        .quiet()
+        .stdout_text()
+        .map(|text| parse_identities(&text))
+        .unwrap_or_default()
+}
+
+/// The Developer ID Application identity of [`DEVELOPER_ID_TEAM`], if exactly one is installed.
+pub fn find_developer_id(identities: &[KeychainIdentity]) -> Result<Option<KeychainIdentity>> {
+    let suffix = format!("({DEVELOPER_ID_TEAM})");
+    let mut found: Vec<_> = identities
+        .iter()
+        .filter(|identity| identity.is_developer_id() && identity.name.ends_with(&suffix))
+        .cloned()
+        .collect();
+    found.dedup_by(|left, right| left.sha1 == right.sha1);
+    match found.len() {
+        0 => Ok(None),
+        1 => Ok(found.pop()),
+        _ => bail!(
+            "several Developer ID Application certificates for team {DEVELOPER_ID_TEAM}; choose one with --identity <SHA-1>: {found:?}"
+        ),
+    }
+}
+
+/// `AZURE_TIME_SIGN_KIND` when set, else what the keychain says about the selector.
+fn kind_for(selector: &str, identities: &[KeychainIdentity]) -> Result<Kind> {
+    match std::env::var("AZURE_TIME_SIGN_KIND").as_deref() {
+        Ok("local") => return Ok(Kind::Local),
+        Ok("developer-id") => return Ok(Kind::DeveloperId),
+        Err(_) | Ok("") => {}
+        Ok(other) => {
+            bail!("AZURE_TIME_SIGN_KIND must be `local` or `developer-id`, not {other:?}")
+        }
+    }
+    let developer_id = identities
+        .iter()
+        .find(|identity| identity.matches(selector))
+        .is_some_and(KeychainIdentity::is_developer_id)
+        || selector.starts_with("Developer ID Application:");
+    Ok(if developer_id { Kind::DeveloperId } else { Kind::Local })
+}
+
+/// `--adhoc`, then `--identity`, then `AZURE_TIME_SIGN_IDENTITY`, then the Developer ID
+/// Application certificate of [`DEVELOPER_ID_TEAM`] in the keychain, then the 1.x local selector
+/// file (development builds only), else ad-hoc.
 pub fn resolve_identity(adhoc: bool, explicit: Option<&str>) -> Result<ResolvedIdentity> {
+    if adhoc {
+        return Ok(ResolvedIdentity { identity: Identity::AdHoc, source: "--adhoc".to_owned() });
+    }
+    let identities = keychain_identities();
     let certificate = |selector: &str, source: String| -> Result<ResolvedIdentity> {
         if selector == "-" {
             return Ok(ResolvedIdentity { identity: Identity::AdHoc, source });
@@ -71,14 +152,11 @@ pub fn resolve_identity(adhoc: bool, explicit: Option<&str>) -> Result<ResolvedI
         Ok(ResolvedIdentity {
             identity: Identity::Certificate {
                 selector: selector.to_owned(),
-                kind: kind_from_env()?,
+                kind: kind_for(selector, &identities)?,
             },
             source,
         })
     };
-    if adhoc {
-        return Ok(ResolvedIdentity { identity: Identity::AdHoc, source: "--adhoc".to_owned() });
-    }
     if let Some(selector) = explicit {
         return certificate(selector, "--identity".to_owned());
     }
@@ -87,10 +165,19 @@ pub fn resolve_identity(adhoc: bool, explicit: Option<&str>) -> Result<ResolvedI
     {
         return certificate(selector.trim(), "AZURE_TIME_SIGN_IDENTITY".to_owned());
     }
+    if let Some(identity) = find_developer_id(&identities)? {
+        return Ok(ResolvedIdentity {
+            source: format!("{} ({})", identity.name, identity.sha1),
+            identity: Identity::Certificate { selector: identity.sha1, kind: Kind::DeveloperId },
+        });
+    }
     let selector_file = consts::local_identity_selector_path()?;
     if selector_file.is_file() {
         let selector = fs::read_to_string(&selector_file)?.trim().to_owned();
         if !selector.is_empty() {
+            log::warn(format!(
+                "no Developer ID Application certificate for team {DEVELOPER_ID_TEAM} in the keychain; falling back to the 1.x local certificate (not notarizable, development only)"
+            ));
             return Ok(ResolvedIdentity {
                 identity: Identity::Certificate { selector, kind: Kind::Local },
                 source: selector_file.display().to_string(),
@@ -107,11 +194,12 @@ pub fn warn_adhoc(source: &str) {
     log::loud(&[
         "AD-HOC SIGNATURE (development only)",
         &format!("Reason: {source}."),
-        "An ad-hoc build is NOT the persistent local identity: installing it",
-        "loses Keychain access and Calendar/Accessibility grants, and the",
-        "bridge update would ask for them again. `stage` refuses ad-hoc apps.",
-        "Configure the local certificate (scripts/setup-local-signing.sh) or",
-        "set AZURE_TIME_SIGN_IDENTITY for a release.",
+        "An ad-hoc build is NOT the Developer ID release identity: installing it",
+        "loses Keychain access and Calendar/Accessibility grants, and it cannot",
+        "be notarized. `verify`, `stage` and `publish` refuse ad-hoc apps.",
+        format!("Install the Developer ID Application certificate of team {DEVELOPER_ID_TEAM}")
+            .as_str(),
+        "or set AZURE_TIME_SIGN_IDENTITY for a release.",
     ]);
 }
 
@@ -212,6 +300,12 @@ pub fn sign_app(app: &Path, identity: &Identity, entitlements: Option<&Path>) ->
                     "Use Developer ID, or set AZURE_TIME_SIGN_KIND=local for the local certificate."
                 );
             }
+            if signature.team_identifier.as_deref() != Some(DEVELOPER_ID_TEAM) {
+                bail!(
+                    "signed by team {:?}; releases use team {DEVELOPER_ID_TEAM}",
+                    signature.team_identifier
+                );
+            }
             Cmd::new("codesign")
                 .args(["--verify", "--strict", "-R=anchor apple generic"])
                 .arg(app)
@@ -246,6 +340,19 @@ impl SignatureInfo {
             (requirement.contains("certificate") || requirement.contains("anchor"))
                 && !requirement.contains("cdhash")
         })
+    }
+
+    /// Developer ID signed by [`DEVELOPER_ID_TEAM`], with the matching designated requirement.
+    pub fn is_team_developer_id(&self) -> bool {
+        self.label() == "developer-id"
+            && self.team_identifier.as_deref() == Some(DEVELOPER_ID_TEAM)
+            && self.designated_requirement.as_deref().is_some_and(|requirement| {
+                requirement.contains("anchor apple generic")
+                    && requirement.contains(&format!("identifier \"{BUNDLE_ID}\""))
+                    && (requirement
+                        .contains(&format!("leaf[subject.OU] = \"{DEVELOPER_ID_TEAM}\""))
+                        || requirement.contains(&format!("leaf[subject.OU] = {DEVELOPER_ID_TEAM}")))
+            })
     }
 
     /// The installer label: `developer-id`, `local-signed` or `unsigned` (ad-hoc).
@@ -320,7 +427,7 @@ pub fn check_release_signature(app: &Path, allow_adhoc: bool) -> Result<Signatur
     if info.adhoc {
         if !allow_adhoc {
             bail!(
-                "the app has an ad-hoc signature; release builds must use the persistent local certificate"
+                "the app has an ad-hoc signature; release builds must use the Developer ID certificate"
             );
         }
     } else if !info.has_stable_requirement() {
@@ -373,6 +480,38 @@ mod tests {
         assert!(info.has_stable_requirement());
         assert_eq!(info.label(), "local-signed");
         assert_eq!(info.authorities, ["Azure timetracker Local Signing"]);
+    }
+
+    #[test]
+    fn finds_the_team_developer_id_in_the_keychain_listing() {
+        let listing = "  1) 462D332AC6E7FA9BF8854EFAE82C5C4C6478766A \"Azure timetracker Local Signing\"\n\
+            \x20 2) 05AACF9A764E40B35D9994AA25545E0AE5C1C147 \"Apple Development: someone@example.com (R99RMV8524)\"\n\
+            \x20 3) CEC9B34189FDEF3742B3882CDF2539E23A0818E7 \"Developer ID Application: Example Person (4M2RD85AL6)\"\n\
+            \x20    3 valid identities found\n";
+        let identities = parse_identities(listing);
+        assert_eq!(identities.len(), 3);
+        let found = find_developer_id(&identities).unwrap().unwrap();
+        assert_eq!(found.sha1, "CEC9B34189FDEF3742B3882CDF2539E23A0818E7");
+        assert!(identities[2].matches("cec9b34189fdef3742b3882cdf2539e23a0818e7"));
+        assert!(identities[2].matches("Developer ID Application: Example"));
+        assert!(!identities[0].is_developer_id());
+        let others = parse_identities(&listing.replace("4M2RD85AL6", "OTHERTEAM1"));
+        assert_eq!(find_developer_id(&others).unwrap(), None);
+    }
+
+    #[test]
+    fn parses_developer_id_details() {
+        let details = "Identifier=be.yarne.azure-timetracker\n\
+            CodeDirectory v=20500 size=443 flags=0x10000(runtime) hashes=3+7 location=embedded\n\
+            Authority=Developer ID Application: Example Person (4M2RD85AL6)\n\
+            Authority=Developer ID Certification Authority\nAuthority=Apple Root CA\n\
+            Timestamp=4 Nov 2026\nTeamIdentifier=4M2RD85AL6\n";
+        let requirement = "designated => identifier \"be.yarne.azure-timetracker\" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = \"4M2RD85AL6\"\n";
+        let info = parse_signature_details(details, requirement);
+        assert_eq!(info.label(), "developer-id");
+        assert_eq!(info.team_identifier.as_deref(), Some(DEVELOPER_ID_TEAM));
+        assert!(info.has_stable_requirement());
+        assert!(info.is_team_developer_id());
     }
 
     #[test]

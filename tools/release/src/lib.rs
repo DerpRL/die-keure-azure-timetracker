@@ -1,10 +1,11 @@
-//! `att-release`: builds, signs, packages, verifies and stages Azure timetracker 2.x releases,
-//! including the one-time bridge through the 1.x update feed. See `docs/release.md`.
+//! `att-release`: builds, signs, notarizes, packages, verifies and publishes Azure timetracker
+//! 2.x releases, including the one-time bridge through the 1.x update feed. See `docs/release.md`.
 //!
-//! Distribution decisions (rewrite plan §11, §15): no Apple Developer Program, no Windows
-//! code-signing certificate, no GitHub Releases. macOS builds are signed with the persistent local
-//! certificate; installers, update assets and feeds are committed to the repository and served
-//! from raw.githubusercontent.com.
+//! Distribution (decided 2026-11-04, replacing rewrite plan §11 and §15): macOS builds are signed
+//! with the Developer ID of team 4M2RD85AL6 and notarized; the Windows installer is cross-compiled
+//! on the release Mac and has no Authenticode signature. Installers, update assets and the v2
+//! feed are GitHub Release assets. Only the 1.x bridge (ZIP and signed manifest) is committed to
+//! the repository, because 1.x clients read raw.githubusercontent.com.
 
 pub mod bridge;
 pub mod bundle;
@@ -18,6 +19,7 @@ pub mod log;
 pub mod macos;
 pub mod package;
 pub mod process;
+pub mod publish;
 pub mod repo;
 pub mod stage;
 pub mod tarball;

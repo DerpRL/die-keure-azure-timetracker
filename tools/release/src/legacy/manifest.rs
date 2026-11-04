@@ -12,7 +12,7 @@ use ed25519_dalek::{Signature, VerifyingKey};
 use serde::{Deserialize, Serialize};
 
 use crate::bundle::AppVersion;
-use crate::consts::{BUNDLE_ID, LEGACY_PUBLIC_KEY_B64, asset_url, legacy_zip_name};
+use crate::consts::{self, BUNDLE_ID, LEGACY_PUBLIC_KEY_B64};
 use crate::dates;
 
 pub const MAX_SIZE: i64 = 200 * 1024 * 1024;
@@ -44,7 +44,7 @@ pub struct SignedAppRelease {
 
 /// `UpdateTrust.assetURL(version:)`.
 pub fn legacy_asset_url(version: &str) -> String {
-    asset_url(version, &legacy_zip_name(version))
+    consts::legacy_asset_url(version)
 }
 
 pub fn pinned_public_key() -> [u8; 32] {

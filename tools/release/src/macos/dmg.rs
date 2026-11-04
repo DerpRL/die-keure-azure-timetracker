@@ -1,6 +1,7 @@
 //! The drag-to-Applications disk image, adapted from `scripts/build-dmg.sh`: compressed and
-//! read-only (UDZO, HFS+), an `Applications` link and an installation note that explains the
-//! Gatekeeper approval, because releases are not notarized.
+//! read-only (UDZO, HFS+), an `Applications` link and an installation note. Release images are
+//! Developer ID signed and notarized; the note only explains a Gatekeeper approval for the
+//! development labels.
 
 use std::path::{Path, PathBuf};
 
@@ -17,12 +18,14 @@ pub const INSTALL_NOTE: &str = "Install Azure timetracker.txt";
 pub fn signing_note(label: &str) -> &'static str {
     match label {
         "developer-id" => {
-            "The app is Developer ID signed. Notarization is a separate release step; verify it before sharing this image."
+            "The app is signed with the Apple Developer ID of Yarne Savaete and notarized by Apple.\n\
+             Coming from 1.14 (signed with a local certificate): the new signature means macOS may ask once\n\
+             to allow Keychain access (choose Always Allow), and Calendar and Accessibility (Figma) access\n\
+             may need to be granted again in System Settings > Privacy & Security."
         }
         "local-signed" => {
-            "The app is signed with the persistent Azure timetracker local certificate, the same identity as 1.14,\n\
-             so Keychain items and Calendar and Accessibility permissions carry over. It is not signed with an\n\
-             Apple Developer ID and not notarized; that is why macOS asks you to approve the first opening."
+            "This development image is signed with the Azure timetracker local certificate and is not\n\
+             notarized; that is why macOS asks you to approve the first opening. Do not distribute it."
         }
         _ => {
             "This app has an ad-hoc development signature and is not notarized. Permission approvals may be\n\
@@ -40,10 +43,27 @@ fn short_macos(minimum: &str) -> String {
     parts.join(".")
 }
 
+const GATEKEEPER_STEP: &str =
+    "4. The first time, macOS says it cannot verify the developer, because this build
+   is not notarized by Apple. If you trust where you downloaded it from:
+   - macOS 15 or later: choose Done, open System Settings > Privacy & Security,
+     scroll to Security, choose Open Anyway next to \"Azure timetracker\", confirm
+     with your password or Touch ID, then choose Open Anyway again.
+   - macOS 14: Control-click the app in Applications, choose Open, then Open.
+   This approval is needed once. Later versions are installed by the app itself.
+   Do not disable Gatekeeper or remove the quarantine attribute as a workaround.
+";
+
+const NOTARIZED_STEP: &str =
+    "4. The first time, macOS asks whether to open an app downloaded from the internet.
+   Choose Open. Later versions are installed by the app itself.
+";
+
 pub fn install_text(version: &str, label: &str, minimum_macos: &str) -> String {
     let image = dmg_name(version, label);
     let note = signing_note(label);
     let macos = short_macos(minimum_macos);
+    let first_open = if label == "developer-id" { NOTARIZED_STEP } else { GATEKEEPER_STEP };
     format!(
         "{PRODUCT_NAME} {version}
 
@@ -52,19 +72,10 @@ pub fn install_text(version: &str, label: &str, minimum_macos: &str) -> String {
 2. Drag Azure timetracker.app onto the Applications shortcut.
    When upgrading, choose Replace. macOS may ask for administrator authorization.
 3. Eject this disk image and open Azure timetracker from Applications.
-4. The first time, macOS says it cannot verify the developer, because this build
-   is not notarized by Apple. If you trust where you downloaded it from:
-   - macOS 15 or later: choose Done, open System Settings > Privacy & Security,
-     scroll to Security, choose Open Anyway next to \"Azure timetracker\", confirm
-     with your password or Touch ID, then choose Open Anyway again.
-   - macOS 14: Control-click the app in Applications, choose Open, then Open.
-   This approval is needed once. Later versions are installed by the app itself.
-   Do not disable Gatekeeper or remove the quarantine attribute as a workaround.
-   Managed Macs may not allow Open Anyway; ask your administrator.
-5. Click the clock in the menu bar to open the overview or Settings.
+{first_open}5. Click the clock in the menu bar to open the overview or Settings.
    The app does not appear in the Dock or Command-Tab.
 
-Your existing settings and Keychain credentials are preserved.
+Your existing settings are preserved.
 For a new setup, use Mobile PIN pairing (or an API token) for 7pace and your own Azure PAT in Settings.
 
 Supports Apple Silicon and Intel; requires macOS {macos} or later.
@@ -158,6 +169,10 @@ mod tests {
         assert!(text.contains("Azure-timetracker-2.0.0-universal-local-signed.dmg.sha256"));
         assert!(text.contains("requires macOS 14 or later"));
         assert!(text.contains("Open Anyway"));
+        let release = install_text("2.0.0", "developer-id", "14.0.0");
+        assert!(release.contains("Azure-timetracker-2.0.0-universal-developer-id.dmg.sha256"));
+        assert!(release.contains("notarized by Apple") && !release.contains("Open Anyway"));
+        assert!(release.contains("\n5. Click the clock"));
         assert_eq!(short_macos("14.2.0"), "14.2");
         assert_eq!(short_macos("10.13.0"), "10.13");
     }

@@ -11,7 +11,7 @@ use crate::bundle::{self, AppVersion};
 use crate::consts::{APP_DIR_NAME, EXECUTABLE_PATH, HELPER_PATH, LEGACY_FEED_FILE, V2_FEED_FILE};
 use crate::legacy::preflight::{self, Preflight, PreflightOptions};
 use crate::legacy::{manifest, swift};
-use crate::macos::{codesign, dmg, macho};
+use crate::macos::{codesign, dmg, macho, notary};
 use crate::process::Cmd;
 use crate::tree::{self, FileFacts};
 use crate::{checksum, feed, fsx, log, tarball, updater_key};
@@ -29,8 +29,11 @@ pub struct VerifyOptions {
     pub expected_version: Option<String>,
     /// `AzureTimetrackerRelease` for its key-free `verify` mode.
     pub swift_signer: Option<PathBuf>,
-    /// An app (or 1.x update ZIP) whose designated requirement the new app must share.
+    /// An app (or 1.x update ZIP) whose designated requirement the new app must share, or which
+    /// the new app may replace with the Developer ID requirement of the release team.
     pub reference: Option<PathBuf>,
+    /// Accept Developer ID artifacts without a notarization ticket (test builds only).
+    pub allow_unnotarized: bool,
 }
 
 impl VerifyOptions {
@@ -44,6 +47,7 @@ impl VerifyOptions {
             expected_version: None,
             swift_signer: None,
             reference: None,
+            allow_unnotarized: false,
         }
     }
 }
@@ -178,6 +182,28 @@ fn check_app(app: &Path, version: &str, options: &VerifyOptions) -> Result<Strin
             ", {} signature, hardened runtime, calendar entitlement",
             signature.label()
         ));
+        match signature.label() {
+            "developer-id" => {
+                if !signature.is_team_developer_id() {
+                    bail!(
+                        "Developer ID of team {:?}, expected {}",
+                        signature.team_identifier,
+                        crate::consts::DEVELOPER_ID_TEAM
+                    );
+                }
+                match notary::validate(app).and_then(|()| notary::assess(app, false)) {
+                    Ok(()) => summary.push_str(", notarized and stapled"),
+                    Err(error) if options.allow_unnotarized => {
+                        log::warn(format!("not notarized (allowed for testing): {error:#}"));
+                    }
+                    Err(error) => return Err(error),
+                }
+            }
+            label if !options.allow_adhoc => bail!(
+                "{label} signature: releases must be Developer ID signed and notarized (--allow-adhoc for tests)"
+            ),
+            _ => {}
+        }
     }
     let executable = fs::read(app.join(EXECUTABLE_PATH))?;
     let needle = options.pubkey_b64.as_bytes();
@@ -305,6 +331,20 @@ pub fn verify_dir(dir: &Path, options: &VerifyOptions) -> Result<Artifacts> {
             );
             if let Some(mount) = mounted {
                 let app = mount.path.join(APP_DIR_NAME);
+                let signed_image = codesign::signature_info(image).ok();
+                if signed_image.as_ref().is_some_and(|info| info.label() == "developer-id") {
+                    checks.run("the DMG is notarized and stapled (Gatekeeper accepts it)", || {
+                        match notary::validate(image).and_then(|()| notary::assess(image, true)) {
+                            Err(error) if options.allow_unnotarized => {
+                                log::warn(format!(
+                                    "not notarized (allowed for testing): {error:#}"
+                                ));
+                                Ok(())
+                            }
+                            other => other,
+                        }
+                    });
+                }
                 checks.run("DMG layout: app, Applications link and installation note", || {
                     let link = fs::read_link(mount.path.join("Applications"))
                         .context("no Applications link")?;
@@ -391,16 +431,27 @@ pub fn verify_dir(dir: &Path, options: &VerifyOptions) -> Result<Artifacts> {
             Some(app) if options.macos_tools => {
                 checks.run(
                     &format!(
-                        "same designated requirement as {} (Keychain and permission continuity)",
+                        "designated requirement of {} kept, or replaced by the release team's Developer ID",
                         reference.display()
                     ),
                     || {
                         let expected = reference_requirement(reference)?;
-                        let actual = designated_requirement(app)?;
-                        if expected != actual {
-                            bail!("{actual:?} differs from {expected:?}");
+                        let signature = codesign::signature_info(app)?;
+                        let actual =
+                            signature.designated_requirement.clone().unwrap_or_default();
+                        if expected == actual {
+                            return Ok(());
                         }
-                        Ok(())
+                        if signature.is_team_developer_id() {
+                            log::loud(&[
+                                "SIGNING IDENTITY CHANGES",
+                                "1.x was signed with the local certificate; this release is Developer ID.",
+                                "Updating users may be asked once to allow Keychain access, and to",
+                                "grant Calendar and Accessibility (Figma) access again.",
+                            ]);
+                            return Ok(());
+                        }
+                        bail!("{actual:?} differs from {expected:?}");
                     },
                 );
             }

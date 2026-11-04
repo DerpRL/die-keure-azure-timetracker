@@ -1,8 +1,9 @@
 # Releasing Azure timetracker 2.x
 
-`att-release` (`tools/release`) replaces the 1.x release scripts (`scripts/build-installer.sh`,
-`build-dmg.sh`, `sign-app.sh`, `build-update.py`, `verify-release.py`, `stage-release.py`). Run it
-from the repository root on the release Mac (and once per release on a Windows machine):
+`att-release` (`tools/release`) builds, signs, notarizes, packages, verifies and publishes every
+release from the release Mac, including the Windows installer, which it cross-compiles. It replaces
+the 1.x release scripts (`scripts/build-installer.sh`, `build-dmg.sh`, `sign-app.sh`,
+`build-update.py`, `verify-release.py`, `stage-release.py`).
 
 ```sh
 cargo run -p att-release -- --help
@@ -10,24 +11,26 @@ cargo run -p att-release -- --help
 
 Every subcommand prints what it does and each external command before it runs it. Progress goes to
 stderr; stdout carries only results (the app path, the public key, the legacy signing command), so
-`APP="$(cargo run -q -p att-release -- build-macos)"` works. The tool never pushes, never opens the
-legacy Ed25519 key and never changes the Keychain.
+`APP="$(cargo run -q -p att-release -- build-macos)"` works. The tool never pushes Git commits,
+never opens the legacy Ed25519 key and never changes the Keychain. Only `publish` talks to GitHub.
 
 ## Decisions
 
-Taken with the rewrite plan (§11, §14, §15). Items marked *tool* were decided while building it.
+Originally taken with the rewrite plan (§11, §14, §15); signing, hosting and the Windows build were
+changed on 2026-11-04. Items marked *tool* were decided while building it.
 
 | Topic | Decision |
 |---|---|
-| Apple trust | No Developer Program, no notarization. Apps are signed with the persistent **Azure timetracker Local Signing** certificate that signed 1.14.x, with Hardened Runtime, the calendar entitlement and `--timestamp=none`. The designated requirement therefore stays `identifier "be.yarne.azure-timetracker" and certificate leaf = H"462d332ac6e7fa9bf8854efae82c5c4c6478766a"` (read from the published 1.14.2 app). Gatekeeper asks once on first install. |
+| Apple trust | Signed with the **Developer ID Application** certificate of team `4M2RD85AL6` (Hardened Runtime, secure timestamp, calendar entitlement) and **notarized** with the App Store Connect API key `4U3DC628X5` (issuer `c2b73d0c-5160-413a-b4c8-9d679881bc11`). App and DMG are stapled. The designated requirement changes from the 1.14.x local certificate to `identifier "be.yarne.azure-timetracker" and anchor apple generic and … certificate leaf[subject.OU] = "4M2RD85AL6"`, so users coming from 1.14.x may approve Keychain access and Calendar/Accessibility once. |
 | Windows trust | No Authenticode certificate. SmartScreen asks once on first install. In-app updates are downloaded by the app (no Mark of the Web) and install per user without admin rights. |
-| Hosting | No GitHub Releases. Installers, update assets and both feeds are committed and served from `raw.githubusercontent.com`. |
-| Updates | Tauri updater plugin with a new minisign key pair (v2). Feed: `updates/v2/latest.json`. Every signature binds the release version (`version:<v>` in the trusted comment, as `tauri build` / `tauri signer sign --app-version` write it). |
+| Windows build | Cross-compiled on the release Mac: `tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc --bundles nsis`, with Homebrew's LLVM (clang-cl), LLD (lld-link) and NSIS (makensis). No Windows machine is needed. |
+| Hosting | **GitHub Releases** of the public repository: tag `v<version>`, with the DMG, the updater archive, the NSIS installer, their `.sha256`/`.sig` files and `latest.json` as assets. Only the 1.x bridge (ZIP and legacy feed) stays committed, because 1.x clients can only read `raw.githubusercontent.com`. |
+| Updates | Tauri updater plugin with the v2 minisign key pair. Feed: `https://github.com/DerpRL/die-keure-azure-timetracker/releases/latest/download/latest.json`, which follows the newest published (non-draft, non-prerelease) release. Every signature binds the release version (`version:<v>` in the trusted comment, as `tauri build` / `tauri signer sign --app-version` write it). |
+| Publishing | `publish` creates a draft, uploads and checks every asset, then publishes it as latest in one step, so installed apps never see a feed whose assets are missing. Published assets are permanent: a new build means a new version. |
 | 1.x users | One bridge release (2.0.0) through the legacy feed `updates/latest.json`, signed by the existing Swift `AzureTimetrackerRelease` with the existing Ed25519 key. Only `stage --bridge` writes the legacy feed; afterwards it stays frozen. |
 | Formats *tool* | `minisign` 0.9 and `minisign-verify` 0.2, the versions inside the Tauri CLI 2.12 and `tauri-plugin-updater` 2.13. Interoperability with `tauri signer` is tested in both directions (`tests/tauri_interop.rs`). Key files hold base64 of the minisign boxes, exactly like `tauri signer generate`. |
 | PKG *tool* | Not built for 2.x: one DMG per release (the 1.14.2 PKG moves to `releases/archive/1.14.2/`). |
-| Signing kind *tool* | `AZURE_TIME_SIGN_KIND` defaults to `local` (1.x defaulted to `developer-id`). `developer-id` adds a secure timestamp and the Developer ID checks, should a certificate ever exist. |
-| Windows signing *tool* | `sign-update` lets the Windows installer be signed on the release Mac, so the v2 key never leaves it. |
+| Signing identity *tool* | `sign-macos` and the DMG use, in order: `--identity`, `AZURE_TIME_SIGN_IDENTITY`, the Developer ID Application certificate of team 4M2RD85AL6 found with `security find-identity`, the 1.x local certificate (development only, with a warning), ad-hoc. The kind (`developer-id` or `local`) follows the certificate; `AZURE_TIME_SIGN_KIND` overrides it. |
 | Bridge naming *tool* | The signed legacy manifest is `legacy-latest.json` in the artifact folder; `latest.json` there is the v2 feed. |
 | Helper stub *tool* | Compiled with `rustc` per architecture (it has no dependencies) and joined with `lipo`; about 0.6 MB universal. It prints that it only exists for 1.x updates and exits 1. |
 | Bundle rules *tool* | No symbolic links, ASCII file names, at most 4096 files (1.x validator limits). The same rules apply to the Tauri archive, so the app bytes in the DMG, the `.app.tar.gz` and the bridge ZIP are identical and checked to be. |
@@ -39,24 +42,31 @@ Artifact folder (outside the repository, for example `~/Releases/2.0.0`):
 
 | File | Made by | Published to |
 |---|---|---|
-| `Azure-timetracker-<v>-universal-local-signed.dmg` + `.sha256` | `package-macos` | `releases/latest/` |
-| `Azure-timetracker-<v>-universal.app.tar.gz` + `.sha256` + `.sig` | `package-macos` | `releases/updates/<v>/` |
-| `Azure-timetracker-<v>-x64-setup.exe` + `.sha256` + `.sig` | `build-windows`, `sign-update` | `releases/latest/` and `releases/updates/<v>/` (Git stores the bytes once) |
-| `latest.json` | `feed` | `updates/v2/latest.json` |
-| `Azure-timetracker-<v>-universal-update.zip` + `.sha256` (bridge) | `bridge` | `releases/updates/<v>/` |
-| `legacy-latest.json` (bridge) | `AzureTimetrackerRelease`, run by the release owner | `updates/latest.json` |
+| `Azure-timetracker-<v>-universal-developer-id.dmg` + `.sha256` | `package-macos` | GitHub Release `v<v>` |
+| `Azure-timetracker-<v>-universal.app.tar.gz` + `.sha256` + `.sig` | `package-macos` | GitHub Release `v<v>` |
+| `Azure-timetracker-<v>-x64-setup.exe` + `.sha256` + `.sig` | `build-windows` | GitHub Release `v<v>` |
+| `latest.json` | `feed` | GitHub Release `v<v>` |
+| `Azure-timetracker-<v>-universal-update.zip` + `.sha256` (bridge) | `bridge` | `releases/updates/<v>/` in the repository |
+| `legacy-latest.json` (bridge) | `AzureTimetrackerRelease`, run by the release owner | `updates/latest.json` in the repository |
 
-`stage` moves older installers from `releases/latest/` to `releases/archive/<version>/`. Files in
-`releases/updates/<version>/` are permanent URLs and are never overwritten with different bytes.
-Every published URL is `https://raw.githubusercontent.com/DerpRL/die-keure-azure-timetracker/main/releases/updates/<v>/<file>`.
+Every 2.x asset URL is `https://github.com/DerpRL/die-keure-azure-timetracker/releases/download/v<v>/<file>`;
+GitHub redirects it to its download host, and the Tauri updater follows the redirect. The 1.x
+installers and update ZIPs stay in `releases/archive/` and `releases/updates/<version>/`, which
+are permanent URLs and are never overwritten with different bytes.
 
-Release secrets stay outside Git in `~/Library/Application Support/Azure timetracker Releases/`
-(folder 700, files 600). Back them up together:
+Release secrets stay outside Git (folders 700, files 600). Back them up together:
 
-- `local-signing/`: the local certificate backup and `identity.txt` (its public SHA-1 selector).
-- `update-signing.ed25519`: the legacy key. Only the Swift signer opens it; `att-release` prints its path.
-- `updater-v2.key` and `updater-v2.key.pub`: the v2 updater key pair. Without the private key, installed
-  2.x apps cannot be updated any more and everyone has to reinstall manually.
+- The **Developer ID Application** certificate and its private key in the login Keychain (export a
+  `.p12` with a password for the backup). It signs every release.
+- `~/.appstoreconnect/private_keys/AuthKey_4U3DC628X5.p8`: the App Store Connect API key for
+  notarization. Apple lets you download it once; if it is lost, revoke it and create a new key, then
+  change `NOTARY_KEY_ID` in `tools/release/src/consts.rs` (or set `APPLE_API_KEY`).
+- `~/Library/Application Support/Azure timetracker Releases/`:
+  - `updater-v2.key` and `updater-v2.key.pub`: the v2 updater key pair. Without the private key,
+    installed 2.x apps cannot be updated any more and everyone has to reinstall manually.
+  - `update-signing.ed25519`: the legacy key for the bridge. Only the Swift signer opens it;
+    `att-release` prints its path.
+  - `local-signing/`: the 1.x local certificate backup, now only for development builds.
 
 ## Shell configuration
 
@@ -83,7 +93,7 @@ Release secrets stay outside Git in `~/Library/Application Support/Azure timetra
   },
   "plugins": {
     "updater": {
-      "endpoints": ["https://raw.githubusercontent.com/DerpRL/die-keure-azure-timetracker/main/updates/v2/latest.json"],
+      "endpoints": ["https://github.com/DerpRL/die-keure-azure-timetracker/releases/latest/download/latest.json"],
       "pubkey": "<the line printed by keygen-v2>",
       "requireSignedVersion": true,
       "windows": { "installMode": "passive" }
@@ -102,11 +112,12 @@ Required:
   so 2.0.0 is 25). It becomes `CFBundleVersion`; without it Tauri writes `2.0.0`, which 1.x clients
   reject.
 - `bundle.macOS.signingIdentity: null` and `bundle.createUpdaterArtifacts: false`: Tauri neither
-  signs nor archives. `sign-macos` adds the helper stub and signs; `package-macos` archives and signs
-  the final bytes. `build-macos` also passes `--no-sign` (Tauri CLI 2.5+) and removes `APPLE_*` and
-  `TAURI_SIGNING_*` from the build environment.
-- `plugins.updater.endpoints` and `pubkey`: exactly the v2 feed URL, and the public key from
-  `keygen-v2`. `package-macos`, `sign-update` and `build-windows` refuse to sign with any other key.
+  signs, notarizes nor archives. `sign-macos` adds the helper stub and signs; `package-macos`
+  notarizes, archives and signs the final bytes. The builds pass `--no-sign` (Tauri CLI 2.5+) and
+  remove `APPLE_*` and `TAURI_SIGNING_*` from the build environment.
+- `plugins.updater.endpoints` and `pubkey`: exactly the GitHub Releases feed URL, and the public key
+  from `keygen-v2`. `package-macos`, `sign-update` and `build-windows` refuse to sign with any other
+  key.
 
 Recommended (warnings):
 
@@ -119,8 +130,7 @@ Recommended (warnings):
 - `src-tauri/Info.plist`, merged by Tauri: `LSUIElement` = true (menu-bar app),
   `NSCalendarsFullAccessUsageDescription` and `NSCalendarsUsageDescription` (copy the 1.14.x texts
   from `Resources/Info.plist`). `verify` warns when they are missing.
-- Bundle contents: no frameworks or other symbolic links (refused by the 1.x validator; bundled
-  dylibs would also fail library validation under Hardened Runtime without a Team ID), ASCII file
+- Bundle contents: no frameworks or other symbolic links (refused by the 1.x validator), ASCII file
   names, and nothing configured at `Contents/Helpers/AzureTimetrackerUpdater`.
 - `bundle.macOS.entitlements` is not used for releases: `sign-macos` applies
   `tools/release/assets/App.entitlements` (calendar only, as 1.14.x). Pass `--entitlements` if the
@@ -128,12 +138,34 @@ Recommended (warnings):
 
 ## One-time setup on the release Mac
 
-1. Keep the 1.14.x local signing certificate in the login Keychain (`bash scripts/setup-local-signing.sh`
-   is idempotent; on a new Mac restore the backup folder first). Never create a new certificate for a
-   release: a new certificate changes the designated requirement.
-2. Install Rust (rustup), Node/npm and the Swift command line tools (Xcode is not needed).
-   `build-macos` and `sign-macos` add the `aarch64-apple-darwin` and `x86_64-apple-darwin` targets.
-3. Create the v2 updater key once:
+1. **Developer ID certificate.** Keep the Developer ID Application certificate of team
+   `4M2RD85AL6` with its private key in the login Keychain (`security find-identity -v -p
+   codesigning` lists it). The first signing may ask whether `codesign` may use the key; choose
+   Always Allow.
+2. **Notarization key.** In App Store Connect > Users and Access > Integrations > App Store Connect
+   API, download `AuthKey_4U3DC628X5.p8` (Developer role or higher) and store it:
+
+   ```sh
+   mkdir -p ~/.appstoreconnect/private_keys
+   mv ~/Downloads/AuthKey_4U3DC628X5.p8 ~/.appstoreconnect/private_keys/
+   chmod 600 ~/.appstoreconnect/private_keys/AuthKey_4U3DC628X5.p8
+   ```
+
+   Another location works with `APPLE_API_KEY_PATH`; `APPLE_API_KEY` and `APPLE_API_ISSUER` override
+   the key ID and issuer. Notarization needs Xcode's `notarytool` (`xcrun notarytool --version`).
+3. **Toolchains.** Rust (rustup), Node/npm and the Swift tools (for the bridge). `build-macos` adds
+   the `aarch64-apple-darwin` and `x86_64-apple-darwin` targets, `build-windows` adds
+   `x86_64-pc-windows-msvc`. For the Windows cross-build:
+
+   ```sh
+   brew install llvm lld nsis
+   cargo install --locked cargo-xwin
+   ```
+
+   `cargo-xwin` downloads the Microsoft CRT and Windows SDK on its first build.
+4. **GitHub CLI.** `brew install gh`, then `gh auth login` with an account that can create releases
+   in `DerpRL/die-keure-azure-timetracker`.
+5. **Updater key.** Created once (already done for 2.0.0):
 
    ```sh
    cargo run -p att-release -- keygen-v2
@@ -147,9 +179,8 @@ Recommended (warnings):
 ## Normal release (macOS and Windows)
 
 Before: raise `version` and `bundle.macOS.bundleVersion` (and the versions the shell keeps in
-`Cargo.toml`/`package.json`), and write `releases/notes/<v>.md`.
-
-On the release Mac:
+`Cargo.toml`/`package.json`), write `releases/notes/<v>.md`, commit and push. `publish` tags the
+checked-out commit and refuses uncommitted changes or a commit GitHub does not have.
 
 ```sh
 V=2.0.1
@@ -158,41 +189,36 @@ KEY="$HOME/Library/Application Support/Azure timetracker Releases/updater-v2.key
 APP="$(cargo run -q -p att-release -- build-macos)"
 cargo run -p att-release -- sign-macos "$APP"
 cargo run -p att-release -- package-macos "$APP" "$OUT" --key "$KEY"
-```
-
-On a Windows machine, same commit:
-
-```powershell
-cargo run -p att-release -- build-windows --out C:\Releases\2.0.1
-```
-
-Without a key it stops after the installer and its `.sha256` and prints the `sign-update` command.
-Copy `Azure-timetracker-<v>-x64-setup.exe` and its `.sha256` into `$OUT` on the Mac, then:
-
-```sh
-cargo run -p att-release -- sign-update "$OUT/Azure-timetracker-$V-x64-setup.exe" --version $V --key "$KEY"
+cargo run -p att-release -- build-windows --out "$OUT" --key "$KEY"
 cargo run -p att-release -- feed --version $V --notes releases/notes/$V.md \
     --mac-archive "$OUT/Azure-timetracker-$V-universal.app.tar.gz" \
     --windows-installer "$OUT/Azure-timetracker-$V-x64-setup.exe"
 cargo run -p att-release -- verify "$OUT"
-cargo run -p att-release -- stage $V --from "$OUT"
+cargo run -p att-release -- publish $V --from "$OUT" --notes releases/notes/$V.md
 ```
 
-Review `releases/latest`, `releases/archive/<previous>`, `releases/updates/<v>` and
-`updates/v2/latest.json`, scan for secrets, commit everything in one commit and push. Then fetch the
-raw feed and one asset URL. `raw.githubusercontent.com` caches for about five minutes. Always
-publish both platforms in one feed: a feed without `windows-x86_64` makes update checks on Windows
-fail with "target not found".
+`package-macos` notarizes and staples the app, builds and signs the DMG, notarizes and staples it,
+then writes the updater archive from the stapled app. Each submission usually takes a few minutes;
+a rejection prints Apple's log. Running it again skips the app submission when the app already has
+a ticket. `--no-notarize` exists for test builds only: `verify` and `publish` refuse un-notarized
+Developer ID artifacts (`verify --allow-unnotarized` checks the rest).
 
-`stage` is idempotent for identical bytes and refuses different bytes for a version it already
-staged. To redo a staging that was not pushed yet, discard it with Git first
-(`git restore releases updates && git clean -fd releases updates`, which removes only the untracked
-files `stage` added), then stage again. `feed` writes a new `pub_date` on every run; pass
-`--pub-date` to reproduce a feed.
+`publish` verifies the folder again, creates the draft release `v<v>` (title
+`Azure timetracker <v>`, body from the notes), uploads the nine assets, compares their names and
+sizes on GitHub, publishes the draft as the latest release and then fetches the public feed until it
+offers the new version. `--draft` stops before publishing, for a review on the GitHub releases page;
+run it again without `--draft` to publish that draft. Always publish both platforms in one release:
+`publish` refuses a feed without `windows-x86_64` or the macOS targets, because a feed without a
+target makes update checks there fail with "target not found".
+
+A published release is final: its assets are permanent download URLs and its feed is what installed
+apps read. To fix a mistake, release a new version. `feed` writes a new `pub_date` on every run;
+pass `--pub-date` to reproduce a feed.
 
 ## Bridge release (2.0.0 only)
 
-Run the normal macOS steps up to `package-macos`, then:
+Run the normal macOS steps up to `package-macos` (the app is then notarized and stapled, so the
+bridge ZIP carries the ticket too), then:
 
 ```sh
 cargo run -p att-release -- bridge "$APP" "$OUT" --notes releases/notes/2.0.0.md
@@ -231,23 +257,31 @@ It compiles the unmodified `Sources/AzureTimetrackerCore` with a small driver an
 helper does: validate the release, check it is newer and supported, verify the archive, extract,
 verify the bundle and signature, and replace the installed app, keeping
 `.AzureTimetracker-previous-*.app`. Only the manifest signature (checked by `verify` and the Swift
-tool) and the relaunch are skipped. Then open the app and confirm that saved credentials load
-without a Keychain prompt and that Calendar and Accessibility (Figma) still work.
+tool) and the relaunch are skipped. Then open the app and note what macOS asks: because 2.0 is
+Developer ID signed and 1.14.x used the local certificate, expect at most one Keychain prompt per
+saved item (Always Allow) and new Calendar and Accessibility (Figma) approvals. Check that saved
+credentials load after that.
 
-Then, with the Windows installer signed and `feed` written:
+Then, with the Windows installer built and `feed` written, verify against the published 1.14.2
+identity, publish the GitHub Release **first**, and only then stage the bridge:
 
 ```sh
 cargo run -p att-release -- verify "$OUT" \
     --reference releases/updates/1.14.2/Azure-timetracker-1.14.2-universal-update.zip
+cargo run -p att-release -- publish 2.0.0 --from "$OUT" --notes releases/notes/2.0.0.md
 cargo run -p att-release -- stage 2.0.0 --from "$OUT" --bridge
 ```
 
-`stage --bridge` also runs `AzureTimetrackerRelease verify`, requires the designated requirement of
-the published 1.14.2 app, and writes `updates/latest.json`. Push the assets and both feeds in one
-commit. 1.x clients check every minute and show the update; users choose Download update and
-Install and restart, the 1.x helper swaps the app in place and opens 2.0. Later releases never pass
-`--bridge`; it is only needed to replace the bridge for 1.x users who have not updated yet, and the
-replacement must be newer.
+`--reference` accepts either the same designated requirement or the Developer ID requirement of
+team 4M2RD85AL6 for `be.yarne.azure-timetracker`, and prints a warning about the identity change.
+`stage --bridge` also runs `AzureTimetrackerRelease verify`, moves the 1.14.2 installers from
+`releases/latest/` to `releases/archive/1.14.2/`, copies the ZIP to `releases/updates/2.0.0/` and
+writes `updates/latest.json`. Commit and push that in one commit, after the GitHub Release is live:
+a 1.x user who updates must find the v2 feed of the 2.0 app already published. 1.x clients check
+every minute and show the update; users choose Download update and Install and restart, the 1.x
+helper swaps the app in place and opens 2.0. Later releases never pass `--bridge`; it is only
+needed to replace the bridge for 1.x users who have not updated yet, and the replacement must be
+newer.
 
 ## What `verify` checks
 
@@ -255,75 +289,79 @@ replacement must be newer.
   (from `tauri.conf.json` unless `--pubkey`), including the signed version.
 - The feed: shape (`version`, `notes`, `pub_date`, `platforms`), RFC 3339 date, `darwin-aarch64`
   and `darwin-x86_64` pointing at the same universal archive, `windows-x86_64` at the installer,
-  URLs, version, and each signature equal to its `.sig` and valid for the file.
+  GitHub Releases URLs of tag `v<version>`, and each signature equal to its `.sig` and valid for
+  the file.
 - The updater archive unpacked as the Tauri plugin does (one top-level app folder, files and folders
   only); the DMG verified with `hdiutil verify` and mounted read-only (app, `Applications` link,
   installation note). For each app: `Info.plist` identity, version and integer build, universal
-  executable and helper, `codesign --verify --deep --strict`, Hardened Runtime, a certificate-based
-  designated requirement (ad-hoc is refused unless `--allow-adhoc`), the calendar entitlement and the
-  helper's identifier. A warning appears if the public key is not found in the binary.
+  executable and helper, `codesign --verify --deep --strict`, Hardened Runtime, the calendar
+  entitlement and the helper's identifier, and a Developer ID signature of team 4M2RD85AL6 with a
+  stapled ticket that Gatekeeper accepts (`stapler validate`, `spctl` reports "Notarized Developer
+  ID"). Other signatures are refused unless `--allow-adhoc`. A warning appears if the public key is
+  not found in the binary.
+- The DMG itself: Developer ID signed, notarized and stapled (`spctl -t open`).
 - Identical app bytes and executable bits in the DMG, the updater archive and the legacy ZIP.
 - The legacy ZIP preflight and, when present, the legacy manifest: Ed25519 signature with the pinned
   1.x public key, client rules, size, digest and bundle match, plus `AzureTimetrackerRelease verify`
   when the Swift tool is built.
-- With `--reference`: the same designated requirement as that app or 1.x update ZIP.
+- With `--reference`: the same designated requirement as that app or 1.x update ZIP, or the
+  Developer ID requirement of team 4M2RD85AL6 (with a warning about the identity change).
 - The Windows installer starts with an `MZ` header. Authenticode is not checked (there is none).
 
 ## What users see
 
-For `Resources/Installation guide.md` and `releases/README.md`, which still describe 1.14.x and are
-outside this change:
-
-- **macOS, first install**: open the DMG, drag the app to Applications, open it. macOS cannot
-  verify the developer because the build is not notarized. macOS 15 or later: choose Done, open
-  System Settings > Privacy & Security, choose Open Anyway for Azure timetracker, authenticate and
-  confirm. macOS 14: Control-click the app, choose Open, then Open. Needed once. Managed Macs may
-  forbid it. Do not disable Gatekeeper or remove quarantine. The DMG contains the same text.
-- **macOS, from 1.13–1.14.x**: accept the update in the app; no manual install is needed.
+- **Downloads**: the GitHub releases page,
+  `https://github.com/DerpRL/die-keure-azure-timetracker/releases/latest`. The app's download link
+  opens it.
+- **macOS, first install**: open the DMG, drag the app to Applications, open it. macOS asks once
+  whether to open an app downloaded from the internet; choose Open. No Privacy & Security detour.
+- **macOS, from 1.13–1.14.x**: accept the update in the app; no manual install is needed. Because
+  the signature changes, macOS may ask once per saved credential to allow Keychain access (Always
+  Allow), and Calendar and Accessibility (Figma) may need to be granted again.
 - **Windows, first install**: run `Azure-timetracker-<v>-x64-setup.exe`. SmartScreen shows
   "Windows protected your PC" with an unknown publisher: choose More info, then Run anyway. It
   installs for the current user without admin rights. Later updates install from inside the app
   without this prompt.
 - **Checksums**: `shasum -a 256 -c <file>.sha256` on macOS;
-  `Get-FileHash -Algorithm SHA256 <file>` on Windows, compared with the `.sha256` file. A checksum
-  detects corruption; it does not prove who published the file.
+  `Get-FileHash -Algorithm SHA256 <file>` on Windows, compared with the `.sha256` file.
 
 ## Risks
 
-- **Permissions across the bridge are not yet proven.** 1.14.0 validation states that cross-version
-  Keychain, Calendar and Accessibility retention with the local certificate "remain to be validated".
-  The bridge keeps the bundle ID and designated requirement (`verify --reference` and `stage --bridge`
-  enforce it), which is what TCC and Keychain ACLs compare, but Keychain items can also carry a
-  partition list that macOS manages for apps without a Team ID. Run `bridge-dry-run` on a test Mac
-  with real saved credentials, a Calendar grant and an Accessibility grant, and check for prompts
-  before publishing. Expect at most one approval per item if macOS asks.
-- **Gatekeeper on first install.** Locally signed apps are "unidentified developer" on every other
-  Mac; macOS 15+ removed the Control-click bypass, so users need Privacy & Security > Open Anyway.
-  Managed Macs may block it. In-app updates carry no quarantine attribute and are not re-assessed.
+- **One-time prompts across the bridge.** TCC and Keychain ACLs compare the designated requirement,
+  which changes from the local certificate to Developer ID. Expect a Keychain approval per saved
+  item and new Calendar and Accessibility approvals for users coming from 1.14.x. Run
+  `bridge-dry-run` on a test Mac with real saved credentials and grants to see exactly what macOS
+  asks before publishing. 2.x → 2.x updates keep the Developer ID requirement and do not prompt.
 - **Admin prompts during 2.x updates.** The Tauri updater renames the app in place; if the user
   cannot write to its folder (for example a standard user with the app in `/Applications`), it asks
-  for an administrator password. 1.x refused instead. `~/Applications` avoids this.
-- **First update after the bridge.** 2.0 is the first version that uses the v2 feed; a wrong pubkey
-  in the shipped app cannot be fixed by an update. `package-macos` refuses keys that differ from
-  `tauri.conf.json`, and `verify` warns if the key is not in the binary. Test one update 2.0.0 → 2.0.1
-  on a test machine before relying on it.
-- **Lost secrets.** A lost local certificate means new Keychain and permission prompts for everyone;
-  a lost v2 key means no further in-app updates. Rotating the v2 key needs a release signed with the
-  old key that ships the new public key.
+  for an administrator password. `~/Applications` avoids this.
+- **First update after the bridge.** 2.0 is the first version that uses the GitHub Releases feed; a
+  wrong pubkey or endpoint in the shipped app cannot be fixed by an update. `package-macos` refuses
+  keys that differ from `tauri.conf.json`, and `verify` warns if the key is not in the binary. Test
+  one update 2.0.0 → 2.0.1 on a test machine before relying on it.
+- **"Latest" moves with every published release.** The feed always follows GitHub's latest release:
+  never publish a test build as a normal release, and do not remove the Windows or macOS assets
+  from a published release.
+- **Lost secrets.** A lost Developer ID key needs a new certificate (same team, so the designated
+  requirement stays valid); a lost `.p8` needs a new API key; a lost v2 key means no further in-app
+  updates. Rotating the v2 key needs a release signed with the old key that ships the new public
+  key.
 - **SmartScreen and Defender.** Unsigned installers start without reputation and can be flagged;
-  the checksums and reproducible builds are the mitigation until a certificate exists.
+  the checksums are the mitigation until a certificate exists. The installer is cross-compiled
+  (Tauri marks this experimental), so try each new release on a real Windows machine once.
 - **Tooling drift.** `hdiutil create/attach/detach` print deprecation warnings on macOS 26 and later
   (they work); `swift build --build-system native` is deprecated in Swift 6.4 (the tool falls back to
-  the default build system). GitHub refuses files over 100 MB; keep every artifact well below.
+  the default build system). The 1.x bridge ZIP in the repository must stay below GitHub's 100 MB
+  file limit.
 
 ## Tests
 
 `cargo test -p att-release` runs everything with throwaway keys in temporary folders and ad-hoc
-signatures; the real keys, the local certificate and the repository's `releases/` and `updates/`
-are never written. macOS-only tests (codesign, hdiutil, ditto, lipo, swift) cover inside-out
-signing, the DMG, an end-to-end package → bridge → feed → verify run, the published 1.14.2 update
-against the ported client checks and the Swift `verify` mode, `bridge-dry-run` over a copy of the
-1.14.2 app, and the universal stub. Golden vectors: all five published legacy manifests (1.13.0 to
-1.14.2) verify with the pinned key, which pins the Rust rebuild of Swift's signing bytes.
-`cargo test -p att-release --test tauri_interop -- --ignored` checks key and signature
-compatibility with `npx @tauri-apps/cli@2 signer` in both directions.
+signatures; the real keys, the Developer ID certificate, Apple's notary service, GitHub and the
+repository's `releases/` and `updates/` are never touched. macOS-only tests (codesign, hdiutil,
+ditto, lipo, swift) cover inside-out signing, the DMG, an end-to-end package → bridge → feed →
+verify run, the published 1.14.2 update against the ported client checks and the Swift `verify`
+mode, `bridge-dry-run` over a copy of the 1.14.2 app, and the universal stub. Golden vectors: all
+five published legacy manifests (1.13.0 to 1.14.2) verify with the pinned key, which pins the Rust
+rebuild of Swift's signing bytes. `cargo test -p att-release --test tauri_interop -- --ignored`
+checks key and signature compatibility with `npx @tauri-apps/cli@2 signer` in both directions.

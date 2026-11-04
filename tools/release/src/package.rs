@@ -8,6 +8,7 @@ use anyhow::{Result, bail};
 use crate::bundle;
 use crate::consts::{EXECUTABLE_PATH, HELPER_PATH, mac_archive_name};
 use crate::macos::codesign::{self, Identity, ResolvedIdentity, SignatureInfo};
+use crate::macos::notary::{self, Credentials};
 use crate::macos::{dmg, macho, stub};
 use crate::updater_key::{self, UpdaterKey};
 use crate::{checksum, fsx, log, tarball};
@@ -86,9 +87,14 @@ pub struct PackageOptions<'a> {
     pub require_universal: bool,
     /// Identity for signing the disk image (ad-hoc leaves it unsigned, like 1.x).
     pub dmg_identity: Identity,
+    /// Notarize and staple a Developer ID app and its DMG. `None` (`--no-notarize`) is for test
+    /// builds only: `verify` refuses un-notarized Developer ID artifacts.
+    pub notary: Option<Credentials>,
 }
 
-/// DMG + checksum, updater archive + checksum + minisign signature.
+/// Notarizes and staples the app first (so the DMG, the updater archive and the bridge ZIP all
+/// carry the ticket), then makes the DMG + checksum, notarizes and staples it, and writes the
+/// updater archive + checksum + minisign signature.
 pub fn package_macos(app: &Path, options: &PackageOptions<'_>) -> Result<PackageOutput> {
     log::step(format!("Checking {}", app.display()));
     let release = bundle::check_release_bundle(app, true)?;
@@ -114,11 +120,44 @@ pub fn package_macos(app: &Path, options: &PackageOptions<'_>) -> Result<Package
     }
     fs::create_dir_all(&options.out)?;
     let version = &release.version_text;
+    let notary = match (&options.notary, label) {
+        (Some(credentials), "developer-id") => Some(credentials),
+        (None, "developer-id") => {
+            log::loud(&[
+                "NOT NOTARIZED (--no-notarize)",
+                "Gatekeeper blocks this build on other Macs, and `verify` refuses it.",
+                "Do not publish it.",
+            ]);
+            None
+        }
+        (_, other) => {
+            log::warn(format!(
+                "{other} signature: cannot be notarized (needs the Developer ID certificate)"
+            ));
+            None
+        }
+    };
+
+    if let Some(credentials) = notary {
+        log::step("Notarizing the app");
+        if notary::validate(app).is_ok() {
+            log::ok("the app already carries a valid ticket (notarized by an earlier run)");
+        } else {
+            notary::notarize_app(app, credentials)?;
+        }
+        codesign::verify_deep_strict(app)?;
+    }
 
     log::step("Creating the disk image");
     let dmg_identity = if signature.adhoc { &Identity::AdHoc } else { &options.dmg_identity };
     let image =
         dmg::create(app, &options.out, version, label, &release.minimum_macos, dmg_identity)?;
+    if let Some(credentials) = notary {
+        log::step("Notarizing the disk image");
+        notary::notarize_image(&image, credentials)?;
+        notary::assess(&image, true)?;
+        log::ok("Gatekeeper accepts the disk image as notarized");
+    }
     checksum::write_side_file(&image)?;
     log::ok(image.display());
 

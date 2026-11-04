@@ -1,6 +1,6 @@
 # Azure timetracker
 
-Download the current macOS installer from [releases/latest](releases/latest). Older versions are in [releases/archive](releases/archive). See [release instructions](releases/README.md).
+Download the current installers for macOS and Windows from [GitHub Releases](https://github.com/DerpRL/die-keure-azure-timetracker/releases/latest). Versions up to 1.14.2 are in [releases/archive](releases/archive). See [installation notes](releases/README.md).
 
 A native SwiftUI menu bar app for macOS. It watches your local Git branches and helps you keep your 7pace timer on the right Azure DevOps ticket.
 

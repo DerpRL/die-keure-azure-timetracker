@@ -37,8 +37,8 @@ export interface UpdateStatus {
 
 export const UPDATE_EVENT = 'shell://update';
 
-/** Where the installers live (1.14 `UpdateTrust.downloadsURL`). */
-export const DOWNLOADS_URL = 'https://github.com/DerpRL/die-keure-azure-timetracker/tree/main/releases/latest';
+/** Where the installers live: the newest GitHub Release. */
+export const DOWNLOADS_URL = 'https://github.com/DerpRL/die-keure-azure-timetracker/releases/latest';
 
 export const DISABLED_MESSAGE = 'Updates are disabled in preview and development builds.';
 

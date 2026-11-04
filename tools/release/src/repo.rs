@@ -94,7 +94,7 @@ impl TauriConf {
         match self.get("/bundle/macOS/signingIdentity") {
             None | Some(Value::Null) => {}
             Some(other) => errors.push(format!(
-                "/bundle/macOS/signingIdentity must be null: the release tool signs with the local certificate (found {other})"
+                "/bundle/macOS/signingIdentity must be null: the release tool signs (Developer ID) and notarizes after the build (found {other})"
             )),
         }
         let endpoints = self.get("/plugins/updater/endpoints").and_then(Value::as_array);

@@ -9,7 +9,9 @@ use att_release::consts::{self, V2_FEED_FILE};
 use att_release::legacy::preflight::PreflightOptions;
 use att_release::legacy::swift;
 use att_release::macos::codesign;
+use att_release::macos::notary;
 use att_release::package::{self, PackageOptions, SignOptions};
+use att_release::publish::{self, PublishOptions};
 use att_release::repo::{self, TauriConf};
 use att_release::stage::{self, StageOptions};
 use att_release::updater_key::{self, KeygenOutcome};
@@ -21,10 +23,11 @@ use clap::{Parser, Subcommand};
 #[command(
     name = "att-release",
     version,
-    about = "Build, sign, package, verify and stage Azure timetracker 2.x releases (see docs/release.md).",
-    after_help = "Release order: keygen-v2 (once) → build-macos → sign-macos → package-macos → \
-                  [bridge → AzureTimetrackerRelease → bridge-dry-run] → build-windows (on Windows) → \
-                  sign-update → feed → verify → stage → review, commit, push."
+    about = "Build, sign, notarize, package, verify and publish Azure timetracker 2.x releases (see docs/release.md).",
+    after_help = "Release order on the release Mac: build-macos → sign-macos → package-macos (notarizes) → \
+                  build-windows (cross-compiled) → feed → verify → publish (GitHub Release). \
+                  2.0.0 only, afterwards: bridge → AzureTimetrackerRelease → bridge-dry-run → verify → \
+                  stage --bridge → review, commit, push."
 )]
 struct Cli {
     /// Repository root (default: the checkout this tool was built from).
@@ -48,12 +51,13 @@ enum Command {
     /// Prints the app path.
     BuildMacos,
     /// Add the 1.x helper stub, sign inner code, helper and app (Hardened Runtime, calendar
-    /// entitlement, no timestamp) and verify.
+    /// entitlement, secure timestamp for Developer ID) and verify.
     SignMacos {
         /// The `Azure timetracker.app` from build-macos.
         app: PathBuf,
         /// Signing identity (certificate name or SHA-1). Default: AZURE_TIME_SIGN_IDENTITY, then
-        /// the local-signing selector file, else ad-hoc with a warning.
+        /// the Developer ID Application certificate of team 4M2RD85AL6 in the keychain, then the
+        /// 1.x local-signing selector file (development), else ad-hoc with a warning.
         #[arg(long)]
         identity: Option<String>,
         /// Ad-hoc signature for development; never for a release.
@@ -66,8 +70,10 @@ enum Command {
         #[arg(long, value_name = "FILE")]
         entitlements: Option<PathBuf>,
     },
-    /// DMG (+ .sha256) and the updater archive Azure-timetracker-<v>-universal.app.tar.gz
-    /// (+ .sha256, + minisign .sig).
+    /// Notarize and staple the app, then the DMG (+ .sha256, notarized and stapled) and the
+    /// updater archive Azure-timetracker-<v>-universal.app.tar.gz (+ .sha256, + minisign .sig).
+    /// Notarization uses APPLE_API_KEY / APPLE_API_ISSUER / APPLE_API_KEY_PATH, defaulting to key
+    /// 4U3DC628X5 at ~/.appstoreconnect/private_keys/AuthKey_4U3DC628X5.p8.
     PackageMacos {
         /// The signed app from sign-macos.
         app: PathBuf,
@@ -80,6 +86,9 @@ enum Command {
         /// Accept an ad-hoc-signed app (testing only).
         #[arg(long)]
         allow_adhoc: bool,
+        /// Skip notarization (test builds only; `verify` and `publish` refuse the result).
+        #[arg(long)]
+        no_notarize: bool,
     },
     /// The one-time bridge: 1.x-format ZIP + preflight with the 1.x client rules, build the Swift
     /// signer and print the legacy signing command (not run).
@@ -134,8 +143,8 @@ enum Command {
         #[arg(long)]
         pubkey: Option<String>,
     },
-    /// On Windows: frontend build + tauri build --bundles nsis, .sha256, and the updater .sig when
-    /// a key is available (otherwise prints the sign-update command for the release Mac).
+    /// Frontend build + tauri build --bundles nsis (cross-compiled with cargo-xwin on macOS),
+    /// .sha256, and the updater .sig when a key is given (otherwise prints the sign-update command).
     BuildWindows {
         /// Output folder (default: <repo>/target/att-release).
         #[arg(long, value_name = "DIR")]
@@ -155,7 +164,25 @@ enum Command {
         #[arg(long, value_name = "FILE")]
         key: Option<PathBuf>,
     },
-    /// Copy a verified release into releases/ and updates/ (archives the previous installers).
+    /// Upload a verified release to GitHub Releases (draft, check, then publish as latest).
+    Publish {
+        /// Release version, e.g. 2.0.0 (tag v2.0.0 on the checked-out commit).
+        version: String,
+        /// Artifact folder that `verify` accepted.
+        #[arg(long, value_name = "DIR")]
+        from: PathBuf,
+        /// Release notes (Markdown) for the release page, e.g. releases/notes/2.0.0.md.
+        #[arg(long, value_name = "FILE")]
+        notes: PathBuf,
+        /// Upload the draft and stop, for a review on GitHub before publishing.
+        #[arg(long)]
+        draft: bool,
+        /// Updater public key or a file holding it (default: tauri.conf.json plugins.updater.pubkey).
+        #[arg(long)]
+        pubkey: Option<String>,
+    },
+    /// 2.0.0 bridge only: copy the 1.x update ZIP into releases/updates/ and the signed manifest
+    /// into updates/latest.json (archives the 1.x installers in releases/latest).
     Stage {
         /// Release version, e.g. 2.0.0.
         version: String,
@@ -192,6 +219,9 @@ enum Command {
         /// AzureTimetrackerRelease for its key-free verify mode (default: the one `bridge` built).
         #[arg(long, value_name = "FILE")]
         legacy_tool: Option<PathBuf>,
+        /// Accept Developer ID artifacts without a notarization ticket (testing only).
+        #[arg(long)]
+        allow_unnotarized: bool,
     },
 }
 
@@ -287,13 +317,20 @@ fn run(cli: Cli) -> Result<()> {
                 app.display()
             ));
         }
-        Command::PackageMacos { app, out, key, allow_adhoc } => {
+        Command::PackageMacos { app, out, key, allow_adhoc, no_notarize } => {
             let app = absolute(&app)?;
             let source = updater_key::resolve_key_source(key.as_deref())?;
             log::step(format!("Loading the v2 updater key from {}", source.describe()));
             let key =
                 updater_key::load(&source, &updater_key::password_from_env(), Some(&repository))?;
             let dmg_identity = codesign::resolve_identity(false, None)?.identity;
+            let notary = if no_notarize {
+                None
+            } else if codesign::signature_info(&app)?.label() == "developer-id" {
+                Some(notary::Credentials::resolve()?)
+            } else {
+                None
+            };
             let options = PackageOptions {
                 out,
                 key: &key,
@@ -301,6 +338,7 @@ fn run(cli: Cli) -> Result<()> {
                 allow_adhoc,
                 require_universal: true,
                 dmg_identity,
+                notary,
             };
             let output = package::package_macos(&app, &options)?;
             log::step(format!(
@@ -400,6 +438,19 @@ fn run(cli: Cli) -> Result<()> {
                 tauri_build::sign_update(&absolute(&file)?, &version, &key, expected.as_deref())?;
             println!("{}", signature.display());
         }
+        Command::Publish { version, from, notes, draft, pubkey } => {
+            let (pubkey, source) = repo::resolve_pubkey(pubkey.as_deref(), &repository)?;
+            log::info(format!("updater public key: {source}"));
+            let options = PublishOptions {
+                version,
+                from: absolute(&from)?,
+                notes: absolute(&notes)?,
+                repository,
+                draft,
+                verify: VerifyOptions::new(pubkey),
+            };
+            publish::publish(&options)?;
+        }
         Command::Stage { version, from, bridge, allow_adhoc, pubkey, legacy_tool } => {
             let (pubkey, source) = repo::resolve_pubkey(pubkey.as_deref(), &repository)?;
             log::info(format!("updater public key: {source}"));
@@ -410,8 +461,8 @@ fn run(cli: Cli) -> Result<()> {
                     Some(tool) => tool,
                     None => swift::build_signer(&repository)?,
                 });
-                // Keychain and permission continuity: same designated requirement as the
-                // currently published 1.x app.
+                // Keychain and permission continuity: the designated requirement of the
+                // published 1.x app, or the release team's Developer ID (warned about).
                 if !allow_adhoc {
                     verify.reference = published_legacy_zip(&repository)?;
                     match &verify.reference {
@@ -426,11 +477,12 @@ fn run(cli: Cli) -> Result<()> {
                 StageOptions { version, from: absolute(&from)?, repository, bridge, verify };
             stage::stage(&options)?;
         }
-        Command::Verify { dir, allow_adhoc, pubkey, reference, legacy_tool } => {
+        Command::Verify { dir, allow_adhoc, pubkey, reference, legacy_tool, allow_unnotarized } => {
             let (pubkey, source) = repo::resolve_pubkey(pubkey.as_deref(), &repository)?;
             log::info(format!("updater public key: {source}"));
             let mut options = VerifyOptions::new(pubkey);
             options.allow_adhoc = allow_adhoc;
+            options.allow_unnotarized = allow_unnotarized;
             options.reference = reference;
             options.swift_signer = legacy_tool.or_else(|| default_signer(&repository));
             verify::verify_dir(&absolute(&dir)?, &options)?;

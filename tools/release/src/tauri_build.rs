@@ -1,6 +1,9 @@
 //! `build-macos`, `build-windows` and `sign-update`: the Tauri builds without Tauri's own signing
-//! (the release tool signs afterwards), and minisign signatures of update assets.
+//! (the release tool signs afterwards), and minisign signatures of update assets. On macOS,
+//! `build-windows` cross-compiles the NSIS installer with `cargo-xwin` (clang-cl, lld-link and the
+//! Windows SDK it downloads) and Homebrew's `makensis`.
 
+use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -56,7 +59,7 @@ fn frontend(desktop: &Path) -> Result<()> {
 
 /// `npx tauri build …` with the project's pinned CLI, without Tauri signing. `--no-sign` is
 /// added when the CLI knows it (2.5+); signing environment variables are removed either way.
-fn tauri_build(desktop: &Path, args: &[&str]) -> Result<()> {
+fn tauri_build(desktop: &Path, args: &[&str], env: &[(&str, OsString)]) -> Result<()> {
     let npx = node_tool("npx");
     let help = Cmd::new(&npx).args(["--no", "--", "tauri", "build", "--help"]).current_dir(desktop).quiet().output()
         .context("the Tauri CLI is not installed in apps/desktop (npm ci should install @tauri-apps/cli)")?;
@@ -67,6 +70,9 @@ fn tauri_build(desktop: &Path, args: &[&str]) -> Result<()> {
     }
     for key in TAURI_SIGNING_ENV {
         command = command.env_remove(key);
+    }
+    for (key, value) in env {
+        command = command.env(key, value);
     }
     log::step("Building the Tauri app");
     command.run()
@@ -98,7 +104,7 @@ pub fn build_macos(repository: &Path) -> Result<PathBuf> {
     let desktop = desktop_dir(repository)?;
     stub::ensure_rust_targets(&stub::TARGETS)?;
     frontend(&desktop)?;
-    tauri_build(&desktop, &["--target", "universal-apple-darwin", "--bundles", "app"])?;
+    tauri_build(&desktop, &["--target", "universal-apple-darwin", "--bundles", "app"], &[])?;
     let app = target_directory(&desktop)?
         .join("universal-apple-darwin/release/bundle/macos")
         .join(APP_DIR_NAME);
@@ -122,15 +128,37 @@ pub fn build_macos(repository: &Path) -> Result<PathBuf> {
 /// Builds the NSIS installer into `out` as `Azure-timetracker-<v>-x64-setup.exe` with its
 /// checksum, and signs it for the updater when a key is given.
 pub fn build_windows(repository: &Path, out: &Path, key: Option<&UpdaterKey>) -> Result<PathBuf> {
-    if !cfg!(windows) {
-        bail!("build-windows runs on Windows");
+    let cross = cfg!(target_os = "macos");
+    if !cfg!(windows) && !cross {
+        bail!("build-windows runs on Windows, or on macOS (cross-compiled with cargo-xwin)");
     }
     let conf = load_conf(repository)?;
     let version = conf.version().context("tauri.conf.json has no version")?.to_owned();
     let desktop = desktop_dir(repository)?;
-    frontend(&desktop)?;
-    tauri_build(&desktop, &["--bundles", "nsis"])?;
-    let nsis = target_directory(&desktop)?.join("release/bundle/nsis");
+    let nsis = if cross {
+        let env = cross_environment()?;
+        frontend(&desktop)?;
+        tauri_build(
+            &desktop,
+            &[
+                "--runner",
+                "cargo-xwin",
+                "--target",
+                WINDOWS_TARGET,
+                "--bundles",
+                "nsis",
+                // The frontend was just built; Tauri would build it again.
+                "--config",
+                r#"{"build":{"beforeBuildCommand":""}}"#,
+            ],
+            &env,
+        )?;
+        target_directory(&desktop)?.join(WINDOWS_TARGET).join("release/bundle/nsis")
+    } else {
+        frontend(&desktop)?;
+        tauri_build(&desktop, &["--bundles", "nsis"], &[])?;
+        target_directory(&desktop)?.join("release/bundle/nsis")
+    };
     let suffix = format!("_{version}_x64-setup.exe");
     let candidates: Vec<_> = fs::read_dir(&nsis)
         .with_context(|| format!("tauri build did not produce {}", nsis.display()))?
@@ -157,9 +185,7 @@ pub fn build_windows(repository: &Path, out: &Path, key: Option<&UpdaterKey>) ->
             log::ok(format!("{}.sig", installer.display()));
         }
         None => {
-            log::step(
-                "Not signed for the updater (no key on this machine). Copy the installer and its .sha256 to the release Mac and run:",
-            );
+            log::step("Not signed for the updater (no key given). On the release Mac run:");
             log::info(format!(
                 "cargo run -p att-release -- sign-update '{}' --version {version} --key \"$HOME/Library/Application Support/Azure timetracker Releases/updater-v2.key\"",
                 fsx::file_name(&installer)?
@@ -170,6 +196,54 @@ pub fn build_windows(repository: &Path, out: &Path, key: Option<&UpdaterKey>) ->
         "the installer has no Authenticode signature (decided); SmartScreen asks for More info > Run anyway on first install",
     );
     Ok(installer)
+}
+
+pub const WINDOWS_TARGET: &str = "x86_64-pc-windows-msvc";
+
+/// Homebrew prefixes, Apple Silicon first.
+const HOMEBREW_PREFIXES: [&str; 2] = ["/opt/homebrew", "/usr/local"];
+
+fn on_path(program: &str, path: &OsString) -> Option<PathBuf> {
+    std::env::split_paths(path).map(|dir| dir.join(program)).find(|candidate| candidate.is_file())
+}
+
+/// Checks the cross-compilation tools and returns `PATH` (Homebrew's LLVM and LLD first, since
+/// Apple's clang has no clang-cl) and `LC_ALL` (makensis 3.13 aborts with std::bad_alloc on
+/// macOS without a UTF-8 locale).
+fn cross_environment() -> Result<Vec<(&'static str, OsString)>> {
+    log::step("Checking the Windows cross-compilation tools");
+    stub::ensure_rust_targets(&[WINDOWS_TARGET])?;
+    let current = std::env::var_os("PATH").unwrap_or_default();
+    let mut dirs: Vec<PathBuf> = Vec::new();
+    for prefix in HOMEBREW_PREFIXES {
+        for keg in ["llvm", "lld"] {
+            let bin = Path::new(prefix).join("opt").join(keg).join("bin");
+            if bin.is_dir() {
+                dirs.push(bin);
+            }
+        }
+    }
+    dirs.extend(std::env::split_paths(&current));
+    let path = std::env::join_paths(&dirs).context("PATH contains an invalid folder")?;
+    let mut missing = Vec::new();
+    for (program, install) in [
+        ("clang-cl", "brew install llvm"),
+        ("lld-link", "brew install lld"),
+        ("makensis", "brew install nsis"),
+        ("cargo-xwin", "cargo install --locked cargo-xwin"),
+    ] {
+        match on_path(program, &path) {
+            Some(found) => log::info(format!("{program}: {}", found.display())),
+            None => missing.push(format!("{program} ({install})")),
+        }
+    }
+    if !missing.is_empty() {
+        bail!("missing for the Windows cross-build: {}", missing.join(", "));
+    }
+    log::info(
+        "cargo-xwin downloads the Microsoft CRT and Windows SDK on first use (see its license notice)",
+    );
+    Ok(vec![("PATH", path), ("LC_ALL", OsString::from("en_US.UTF-8"))])
 }
 
 fn check_key_matches(key: &UpdaterKey, conf: &TauriConf) -> Result<()> {
