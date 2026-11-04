@@ -10,6 +10,7 @@ import { TimerDisplay } from '../../timer/TimerDisplay';
 import { formatShortDuration } from '../../utils/duration';
 import { TicketLink } from '../ticketContext/TicketLink';
 import { ActionError, useIntents, useWriteGuards } from './actions';
+import { DeleteLocalTimer } from './DeleteLocalTimer';
 import { OpenExternalIcon } from './icons';
 import { openExternal, openMainPage } from './platform';
 import {
@@ -305,6 +306,10 @@ export function LocalTimer({ surface }: { surface: TrackingSurface }) {
         >
           Stop local timer
         </Button>
+        <DeleteLocalTimer
+          draftId={local.draftId}
+          isDisabled={(offline?.working ?? false) || actions.isPending('stopLocal')}
+        />
       </div>
       {offline?.issue ? (
         <p role="alert" className={styles.warning}>

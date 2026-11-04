@@ -45,6 +45,27 @@ async fn reviewed(h: &Harness) -> OfflineDraft {
 }
 
 #[tokio::test]
+async fn a_running_local_timer_can_be_deleted() {
+    let h = Harness::new(Vec::new()).await;
+    h.ok(json!({"type": "offline.startLocal", "ticketId": 5, "comment": "", "activityId": "dev"}))
+        .await;
+    let id = h.slice("offline")["active"]["id"].clone();
+    assert!(h.slice("tracking")["local"].is_object());
+    h.t.clock.advance(600.0);
+    h.ok(json!({"type": "offline.remove", "draftId": id})).await;
+    let offline = h.slice("offline");
+    assert!(offline["active"].is_null());
+    assert_eq!(offline["drafts"], json!([]));
+    assert_eq!(offline["readyCount"], 0);
+    assert!(h.slice("tracking")["local"].is_null(), "no local timer anywhere");
+    assert!(ledger(&h).drafts.is_empty(), "removed from the store");
+    // A new local timer can start right away.
+    h.ok(json!({"type": "offline.startLocal", "ticketId": 6, "comment": "", "activityId": null}))
+        .await;
+    assert_eq!(h.slice("offline")["active"]["ticketId"], 6);
+}
+
+#[tokio::test]
 async fn the_local_timer_starts_stops_and_only_one_may_run() {
     let h = Harness::new(Vec::new()).await;
     h.ok(json!({"type": "offline.startLocal", "ticketId": 5, "comment": "", "activityId": "dev"}))

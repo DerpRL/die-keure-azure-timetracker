@@ -94,6 +94,26 @@ describe('Offline drafts page', () => {
     await waitFor(() => expect(politeAnnouncement()).toBe('Local timer stopped.'));
   });
 
+  it('deletes the running local timer only after confirmation', async () => {
+    const { engine, user } = renderOffline(sampleSlices().offline);
+    await user.click(screen.getByRole('button', { name: 'Delete timer…' }));
+    let dialog = await screen.findByRole('alertdialog', { name: 'Delete this local timer?' });
+    expect(dialog).toHaveAccessibleDescription(
+      'Its time is not saved and not uploaded to 7pace. Your 7pace timer is not changed.',
+    );
+    await expectNoA11yViolations();
+    await user.click(within(dialog).getByRole('button', { name: 'Keep timer' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(engine.dispatched('offline.remove')).toEqual([]);
+
+    await user.click(screen.getByRole('button', { name: 'Delete timer…' }));
+    dialog = await screen.findByRole('alertdialog', { name: 'Delete this local timer?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Delete timer' }));
+    expect(engine.dispatched('offline.remove')).toEqual([{ type: 'offline.remove', draftId: runningDraft.id }]);
+    await waitFor(() => expect(politeAnnouncement()).toBe('Local timer deleted.'));
+    expect(engine.dispatched('offline.stopLocal')).toEqual([]);
+  });
+
   it('starts the local timer with the current ticket and default activity', async () => {
     const { engine, user } = renderOffline(offlineEmpty);
     engine.handle('offline.startLocal', (_intent, mock) => mock.patchSlice('offline', { active: runningDraft, drafts: [runningDraft] }));

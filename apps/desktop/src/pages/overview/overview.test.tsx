@@ -163,6 +163,18 @@ describe('Overview page', () => {
     expect(engine.dispatched('offline.stopLocal')).toHaveLength(1);
   });
 
+  it('deletes the local timer after confirmation', async () => {
+    const { engine, user } = renderWithEngine(<OverviewPage />, { with: { tracking: localTracking, prompts: noPrompts } });
+    const local = screen.getByRole('region', { name: 'Local tracking · saved on this Mac' });
+    await user.click(within(local).getByRole('button', { name: 'Delete timer…' }));
+    const dialog = await screen.findByRole('alertdialog', { name: 'Delete this local timer?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Delete timer' }));
+    expect(engine.dispatched('offline.remove')).toEqual([
+      { type: 'offline.remove', draftId: localTracking.local!.draftId },
+    ]);
+    expect(engine.dispatched('offline.stopLocal')).toEqual([]);
+  });
+
   it('moves focus to the next suggestion when one is resolved', async () => {
     const { engine, user } = renderWithEngine(<OverviewPage />, {
       with: { prompts: { ...noPrompts, branches: [sampleBranch], dayReview: { day: '2026-10-06', canSnooze: true } } },

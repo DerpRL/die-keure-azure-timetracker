@@ -157,6 +157,17 @@ describe('PanelView', () => {
     expect(shellCalls(engine, 'shell_show_main').at(-1)?.args).toEqual({ page: 'offlineDrafts' });
   });
 
+  it('deletes the local timer after confirmation', async () => {
+    const { engine, user } = renderWithEngine(<PanelView />, { with: { tracking: localTracking, prompts: noPrompts } });
+    const section = screen.getByRole('region', { name: 'Local tracking · saved on this Mac' });
+    await user.click(within(section).getByRole('button', { name: 'Delete timer…' }));
+    const dialog = await screen.findByRole('alertdialog', { name: 'Delete this local timer?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Delete timer' }));
+    expect(engine.dispatched('offline.remove')).toEqual([
+      { type: 'offline.remove', draftId: localTracking.local!.draftId },
+    ]);
+  });
+
   it('names the workspace of a local timer from another 7pace workspace', () => {
     const tracking = { ...localTracking, local: { ...localTracking.local!, otherWorkspace: 'https://fabrikam.timehub.7pace.com' } };
     renderWithEngine(<PanelView />, { with: { tracking, prompts: noPrompts } });

@@ -13,6 +13,7 @@ import type { OfflineDraft, OfflineDraftView, OfflineSlice, WorkItemsSlice } fro
 import { activityColorIndex, ActivityPill, useActivityColors } from '../../features/activity';
 import { PageHeaderActions } from '../../features/app/PageHeaderActions';
 import { useEngineDraft } from '../../features/ticketContext/drafts';
+import { DeleteLocalTimer } from '../../features/tracking/DeleteLocalTimer';
 import { deviceName, formatInstant, secondsBetween } from '../../features/ticketContext/format';
 import { useCommands } from '../../shortcuts/hooks';
 import { useAction, useLiveSeconds, useSlice } from '../../state/hooks';
@@ -86,6 +87,7 @@ function LocalTimer({
           >
             Stop local timer
           </Button>
+          <DeleteLocalTimer draftId={active.id} isDisabled={offline.working || stop.pending} />
         </div>
       </div>
       {otherWorkspace ? (

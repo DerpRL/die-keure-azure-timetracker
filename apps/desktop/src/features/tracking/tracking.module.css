@@ -58,6 +58,11 @@
   overflow-wrap: anywhere;
 }
 
+/* Destructive text buttons ("Delete timer…"): the danger colour, like Remove on Offline drafts. */
+.danger:not([data-disabled]) {
+  color: var(--color-danger);
+}
+
 .warning,
 .actionError,
 .rowError {
