@@ -173,11 +173,10 @@ async fn connected(engine: &Engine, clients: Clients) {
     match result {
         Ok(next) => {
             apply(engine, next);
-            let host = clients.host.clone();
-            engine.update(|state| {
-                state.session.error = None;
-                state.session.notice = Some(format!("Connected to {host}"));
-            });
+            // No "Connected to <host>" notice (Swift showed one): connect runs on every launch,
+            // Settings save and reconnect, so the banner kept coming back, and the header's
+            // "7pace connected" status already says it. A 7pace warning from `apply` stays.
+            engine.update(|state| state.session.error = None);
             refresh_activities(engine).await;
             history::load(engine).await;
             progress::load(engine).await;

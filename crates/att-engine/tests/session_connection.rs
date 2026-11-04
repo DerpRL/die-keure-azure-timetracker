@@ -27,7 +27,7 @@ async fn connect_reads_the_timer_then_activities_history_and_progress() {
     assert_eq!(connection["host"], HOST);
     assert_eq!(connection["workspace"], format!("{WORKSPACE}/"), "the 2.0 spelling");
     assert_eq!(connection["indicator"], "running");
-    assert_eq!(h.slice("app")["notice"], format!("Connected to {HOST}"));
+    assert!(h.slice("app")["notice"].is_null(), "no banner for a routine connect");
     let flow = h.slice("flow");
     assert_eq!(flow["activitiesLoaded"], true);
     assert_eq!(flow["activityTypes"].as_array().unwrap().len(), 4);
@@ -90,6 +90,14 @@ async fn connection_failures_show_why() {
     // Retry while configured: a refresh confirms again.
     h.ok(json!({"type": "connection.retry"})).await;
     assert_eq!(h.slice("connection")["health"], "confirmed");
+
+    // Rejected credentials, then a reconnect that succeeds: no "Connected to" banner.
+    *h.t.clients.error.lock().unwrap() = Some(AppError::Authentication(HOST.into()));
+    h.ok(json!({"type": "connection.retry"})).await;
+    *h.t.clients.error.lock().unwrap() = None;
+    h.ok(json!({"type": "connection.retry"})).await;
+    assert_eq!(h.slice("connection")["health"], "confirmed");
+    assert!(h.slice("app")["notice"].is_null(), "a reconnect shows no notice");
 }
 
 #[tokio::test]
