@@ -84,7 +84,7 @@ pub fn windows_installer_name(version: &str) -> String {
     format!("azure-timetracker-{version}-x64.exe")
 }
 
-/// Universal disk image. The signing status is stated in its installation note, not its name.
+/// Universal disk image.
 pub fn dmg_name(version: &str) -> String {
     format!("azure-timetracker-{version}.dmg")
 }

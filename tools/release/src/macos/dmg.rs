@@ -1,7 +1,12 @@
-//! The drag-to-Applications disk image, adapted from `scripts/build-dmg.sh`: compressed and
-//! read-only (UDZO, HFS+), an `Applications` link and an installation note. Release images are
-//! Developer ID signed and notarized; the note only explains a Gatekeeper approval for the
-//! development labels.
+//! The drag-to-Applications disk image: compressed and read-only (UDZO, HFS+), with the app, an
+//! `Applications` link and a background picture showing where to drag it. Release images are
+//! Developer ID signed and notarized.
+//!
+//! Finder keeps a window's layout (size, icon positions, background) in the volume's `.DS_Store`.
+//! The tool builds a writable image, has Finder arrange its window through AppleScript (the
+//! method `create-dmg` and Tauri's bundler use) and then compresses it. That step opens a Finder
+//! window for a moment and needs the terminal to be allowed to control Finder (System Settings >
+//! Privacy & Security > Automation).
 
 use std::path::{Path, PathBuf};
 
@@ -12,104 +17,70 @@ use crate::consts::{APP_DIR_NAME, PRODUCT_NAME, dmg_name};
 use crate::process::Cmd;
 use crate::{fsx, log};
 
-pub const INSTALL_NOTE: &str = "Install Azure timetracker.txt";
+/// The window background, 660 × 400 points at 1x and 2x (the 2.0 design's "DMG background").
+/// Regenerate it with `tools/release/assets/regenerate-dmg-background.sh`.
+const BACKGROUND: &[u8] = include_bytes!("../../assets/dmg-background.tiff");
+pub const BACKGROUND_DIR: &str = ".background";
+pub const BACKGROUND_FILE: &str = "background.tiff";
 
-/// The signing paragraph of the installation note, by installer label.
-pub fn signing_note(label: &str) -> &'static str {
-    match label {
-        "developer-id" => {
-            "The app is signed with the Apple Developer ID of Yarne Savaete and notarized by Apple.\n\
-             Coming from 1.14 (signed with a local certificate): the new signature means macOS may ask once\n\
-             to allow Keychain access (choose Always Allow), and Calendar and Accessibility (Figma) access\n\
-             may need to be granted again in System Settings > Privacy & Security."
-        }
-        "local-signed" => {
-            "This development image is signed with the Azure timetracker local certificate and is not\n\
-             notarized; that is why macOS asks you to approve the first opening. Do not distribute it."
-        }
-        _ => {
-            "This app has an ad-hoc development signature and is not notarized. Permission approvals may be\n\
-             requested again after an update. Do not distribute this image."
-        }
-    }
-}
-
-/// `14.0.0` → `14`, `14.2.0` → `14.2`.
-fn short_macos(minimum: &str) -> String {
-    let mut parts: Vec<&str> = minimum.split('.').collect();
-    while parts.len() > 1 && parts.last() == Some(&"0") {
-        parts.pop();
-    }
-    parts.join(".")
-}
-
-const GATEKEEPER_STEP: &str =
-    "4. The first time, macOS says it cannot verify the developer, because this build
-   is not notarized by Apple. If you trust where you downloaded it from:
-   - macOS 15 or later: choose Done, open System Settings > Privacy & Security,
-     scroll to Security, choose Open Anyway next to \"Azure timetracker\", confirm
-     with your password or Touch ID, then choose Open Anyway again.
-   - macOS 14: Control-click the app in Applications, choose Open, then Open.
-   This approval is needed once. Later versions are installed by the app itself.
-   Do not disable Gatekeeper or remove the quarantine attribute as a workaround.
-";
-
-const NOTARIZED_STEP: &str =
-    "4. The first time, macOS asks whether to open an app downloaded from the internet.
-   Choose Open. Later versions are installed by the app itself.
-";
-
-pub fn install_text(version: &str, label: &str, minimum_macos: &str) -> String {
-    let image = dmg_name(version);
-    let note = signing_note(label);
-    let macos = short_macos(minimum_macos);
-    let first_open = if label == "developer-id" { NOTARIZED_STEP } else { GATEKEEPER_STEP };
-    format!(
-        "{PRODUCT_NAME} {version}
-
-1. Quit any existing Azure timetracker using its menu-bar menu.
-   Quitting does not stop a timer already running in 7pace.
-2. Drag Azure timetracker.app onto the Applications shortcut.
-   When upgrading, choose Replace. macOS may ask for administrator authorization.
-3. Eject this disk image and open Azure timetracker from Applications.
-{first_open}5. Click the clock in the menu bar to open the overview or Settings.
-   The app does not appear in the Dock or Command-Tab.
-
-Your existing settings are preserved.
-For a new setup, use Mobile PIN pairing (or an API token) for 7pace and your own Azure PAT in Settings.
-
-Supports Apple Silicon and Intel; requires macOS {macos} or later.
-
-{note}
-
-Check the download: shasum -a 256 -c {image}.sha256
-"
-    )
-}
+/// Arranges the window of the volume mounted at `argv[1]`. The 104-point icons and the 660 × 400
+/// content size match the drawing in `assets/draw-dmg-background.swift`; the bounds add the
+/// 28-point title bar. Positions are icon centres, inside the picture's two tiles.
+/// `.background` is hidden and parked below the window, out of view even when Finder shows
+/// hidden files.
+const LAYOUT_SCRIPT: &str = r#"on run argv
+	set root to (POSIX file (item 1 of argv)) as alias
+	tell application "Finder"
+		set root to folder root
+		open root
+		set theWindow to container window of root
+		set current view of theWindow to icon view
+		set toolbar visible of theWindow to false
+		set statusbar visible of theWindow to false
+		set bounds of theWindow to {200, 120, 860, 548}
+		set viewOptions to icon view options of theWindow
+		set arrangement of viewOptions to not arranged
+		set icon size of viewOptions to 104
+		set text size of viewOptions to 13
+		set background picture of viewOptions to file ".background:background.tiff" of root
+		set position of item "Azure timetracker.app" of root to {165, 198}
+		set position of item "Applications" of root to {495, 198}
+		try
+			set position of item ".background" of root to {165, 900}
+		end try
+		update root without registering applications
+		delay 1
+		close theWindow
+	end tell
+end run
+"#;
 
 /// Builds `<out_dir>/azure-timetracker-<v>.dmg` (replacing an unpublished one),
 /// signs the image with a certificate identity, and runs `hdiutil verify`.
-pub fn create(
-    app: &Path,
-    out_dir: &Path,
-    version: &str,
-    label: &str,
-    minimum_macos: &str,
-    identity: &Identity,
-) -> Result<PathBuf> {
+pub fn create(app: &Path, out_dir: &Path, version: &str, identity: &Identity) -> Result<PathBuf> {
     let image = out_dir.join(dmg_name(version));
-    let stage = tempfile::Builder::new().prefix("att-dmg-").tempdir()?;
-    Cmd::new("ditto").arg(app).arg(stage.path().join(APP_DIR_NAME)).run()?;
-    fsx::symlink(Path::new("/Applications"), &stage.path().join("Applications"))?;
-    std::fs::write(stage.path().join(INSTALL_NOTE), install_text(version, label, minimum_macos))?;
+    let work = tempfile::Builder::new().prefix("att-dmg-").tempdir()?;
+    let stage = work.path().join("stage");
+    std::fs::create_dir_all(stage.join(BACKGROUND_DIR))?;
+    Cmd::new("ditto").arg(app).arg(stage.join(APP_DIR_NAME)).run()?;
+    fsx::symlink(Path::new("/Applications"), &stage.join("Applications"))?;
+    std::fs::write(stage.join(BACKGROUND_DIR).join(BACKGROUND_FILE), BACKGROUND)?;
+
     log::info("hdiutil prints deprecation warnings on macOS 26 and later; they are harmless");
+    let writable = work.path().join("writable.dmg");
     Cmd::new("hdiutil")
         .args(["create", "-volname"])
         .arg(format!("{PRODUCT_NAME} {version}"))
         .arg("-srcfolder")
-        .arg(stage.path())
-        .args(["-fs", "HFS+", "-format", "UDZO", "-nospotlight", "-ov"])
+        .arg(&stage)
+        .args(["-fs", "HFS+", "-format", "UDRW", "-nospotlight", "-ov"])
+        .arg(&writable)
+        .run()?;
+    arrange_window(&writable, work.path())?;
+    Cmd::new("hdiutil")
+        .args(["convert", "-format", "UDZO", "-ov", "-o"])
         .arg(&image)
+        .arg(&writable)
         .run()?;
     if let Identity::Certificate { selector, .. } = identity {
         Cmd::new("codesign")
@@ -120,6 +91,49 @@ pub fn create(
     }
     verify_image(&image)?;
     Ok(image)
+}
+
+/// Mounts the writable image where Finder can see it, lets Finder write the window layout and
+/// detaches it again.
+fn arrange_window(writable: &Path, work: &Path) -> Result<()> {
+    let mount = work.join("volume");
+    std::fs::create_dir(&mount)?;
+    let script = work.join("layout.applescript");
+    std::fs::write(&script, LAYOUT_SCRIPT)?;
+    Cmd::new("hdiutil")
+        .args(["attach", "-readwrite", "-noverify", "-noautoopen", "-mountpoint"])
+        .arg(&mount)
+        .arg(writable)
+        .output()
+        .with_context(|| format!("could not mount {}", writable.display()))?;
+    // The background folder is hidden in Finder (UF_HIDDEN) besides its leading dot.
+    let arranged = Cmd::new("chflags")
+        .arg("hidden")
+        .arg(mount.join(BACKGROUND_DIR))
+        .output()
+        .context("could not hide the background folder")
+        .and_then(|_| {
+            Cmd::new("osascript").arg(&script).arg(&mount).output().context(
+                "Finder could not arrange the disk image window; allow this terminal to control \
+                 Finder in System Settings > Privacy & Security > Automation",
+            )
+        });
+    let saved = arranged.and_then(|_| {
+        if !mount.join(".DS_Store").is_file() {
+            bail!("Finder did not save the window layout (.DS_Store)");
+        }
+        // Finder's event log for the writable mount; not part of the release.
+        let events = mount.join(".fseventsd");
+        if events.exists() {
+            std::fs::remove_dir_all(&events)?;
+        }
+        Ok(())
+    });
+    let detached = Cmd::new("hdiutil").arg("detach").arg(&mount).quiet().output_any();
+    if !detached.is_ok_and(|output| output.status.success()) {
+        Cmd::new("hdiutil").args(["detach", "-force"]).arg(&mount).quiet().output()?;
+    }
+    saved
 }
 
 pub fn verify_image(image: &Path) -> Result<()> {
@@ -156,24 +170,5 @@ impl Drop for Mounted {
             let _ =
                 Cmd::new("hdiutil").args(["detach", "-force"]).arg(&self.path).quiet().output_any();
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn note_names_the_checksum_file_and_minimum() {
-        let text = install_text("2.0.0", "local-signed", "14.0.0");
-        assert!(text.contains("shasum -a 256 -c azure-timetracker-2.0.0.dmg.sha256"));
-        assert!(text.contains("requires macOS 14 or later"));
-        assert!(text.contains("Open Anyway"));
-        let release = install_text("2.0.0", "developer-id", "14.0.0");
-        assert!(release.contains("shasum -a 256 -c azure-timetracker-2.0.0.dmg.sha256"));
-        assert!(release.contains("notarized by Apple") && !release.contains("Open Anyway"));
-        assert!(release.contains("\n5. Click the clock"));
-        assert_eq!(short_macos("14.2.0"), "14.2");
-        assert_eq!(short_macos("10.13.0"), "10.13");
     }
 }

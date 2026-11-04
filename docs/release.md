@@ -203,6 +203,12 @@ a rejection prints Apple's log. Running it again skips the app submission when t
 a ticket. `--no-notarize` exists for test builds only: `verify` and `publish` refuse un-notarized
 Developer ID artifacts (`verify --allow-unnotarized` checks the rest).
 
+The DMG window layout (background picture, icon positions, window size) is written by Finder:
+`package-macos` mounts a writable image, briefly opens its window through AppleScript and then
+compresses it. Allow the terminal to control Finder the first time (System Settings > Privacy &
+Security > Automation). The background is `tools/release/assets/dmg-background.tiff`; edit
+`draw-dmg-background.swift` next to it and run `regenerate-dmg-background.sh` to change it.
+
 `publish` verifies the folder again, creates the draft release `v<v>` (title
 `Azure timetracker <v>`, body from the notes), uploads the nine assets, compares their names and
 sizes on GitHub, publishes the draft as the latest release and then fetches the public feed until it

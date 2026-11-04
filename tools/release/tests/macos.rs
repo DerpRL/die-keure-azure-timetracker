@@ -115,8 +115,15 @@ fn package_bridge_feed_and_verify_end_to_end() {
     // DMG layout, read-only and compressed.
     let mount = dmg::attach(&packaged.dmg).unwrap();
     assert_eq!(fs::read_link(mount.path.join("Applications")).unwrap(), Path::new("/Applications"));
-    let note = fs::read_to_string(mount.path.join(dmg::INSTALL_NOTE)).unwrap();
-    assert!(note.contains("Open Anyway") && note.contains("not notarized"), "{note}");
+    let names: Vec<_> = fs::read_dir(&mount.path)
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+        .filter(|name| !name.starts_with('.'))
+        .collect();
+    assert_eq!(names.len(), 2, "only the app and the Applications link are visible: {names:?}");
+    assert!(mount.path.join(dmg::BACKGROUND_DIR).join(dmg::BACKGROUND_FILE).is_file());
+    let layout = fs::read(mount.path.join(".DS_Store")).unwrap();
+    assert!(layout.windows(4).any(|w| w == b"icvp"), "Finder saved the icon view options");
     assert!(fs::write(mount.path.join("probe"), b"x").is_err(), "the image is read-only");
     drop(mount);
     let info = Command::new("hdiutil").arg("imageinfo").arg(&packaged.dmg).output().unwrap();

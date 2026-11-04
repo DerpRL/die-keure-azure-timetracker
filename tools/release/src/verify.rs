@@ -364,14 +364,19 @@ pub fn verify_dir(dir: &Path, options: &VerifyOptions) -> Result<Artifacts> {
                         }
                     });
                 }
-                checks.run("DMG layout: app, Applications link and installation note", || {
+                checks.run("DMG layout: app, Applications link and window background", || {
                     let link = fs::read_link(mount.path.join("Applications"))
                         .context("no Applications link")?;
                     if link != Path::new("/Applications") {
                         bail!("Applications points at {}", link.display());
                     }
-                    if !mount.path.join(dmg::INSTALL_NOTE).is_file() {
-                        bail!("missing {}", dmg::INSTALL_NOTE);
+                    let background =
+                        mount.path.join(dmg::BACKGROUND_DIR).join(dmg::BACKGROUND_FILE);
+                    if !background.is_file() {
+                        bail!("missing {}", background.display());
+                    }
+                    if !mount.path.join(".DS_Store").is_file() {
+                        bail!("no Finder window layout (.DS_Store)");
                     }
                     Ok(())
                 });

@@ -150,8 +150,7 @@ pub fn package_macos(app: &Path, options: &PackageOptions<'_>) -> Result<Package
 
     log::step("Creating the disk image");
     let dmg_identity = if signature.adhoc { &Identity::AdHoc } else { &options.dmg_identity };
-    let image =
-        dmg::create(app, &options.out, version, label, &release.minimum_macos, dmg_identity)?;
+    let image = dmg::create(app, &options.out, version, dmg_identity)?;
     if let Some(credentials) = notary {
         log::step("Notarizing the disk image");
         notary::notarize_image(&image, credentials)?;
