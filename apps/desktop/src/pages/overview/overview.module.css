@@ -7,20 +7,51 @@
 }
 
 .today {
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-body);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
 }
 
+.todayText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* An eyebrow over the date, as in the 2.0 redesign; read together as "Today Tuesday 6 October". */
 .todayLabel {
-  color: var(--color-text);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
   font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.todayDate {
+  color: var(--color-text);
+  font-size: var(--font-size-title-1);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.015em;
+  line-height: var(--line-height-tight);
+}
+
+.current {
+  padding: var(--space-5);
+}
+
+.currentBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
 }
 
 .grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  display: flex;
+  flex-direction: column;
   gap: var(--space-6);
-  align-items: start;
 }
 
 .caption {
@@ -83,14 +114,15 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  container-type: inline-size;
 }
 
 .logRow {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: var(--space-2) var(--space-3);
-  padding-block: var(--space-3);
+  gap: var(--space-2) 0.875rem;
+  padding-block: 0.875rem;
   border-bottom: var(--size-border) solid var(--color-separator);
 }
 
@@ -103,26 +135,20 @@
   border-bottom: 0;
 }
 
-.logStripe {
-  flex: none;
-  align-self: stretch;
-  width: 4px;
-  min-height: 2rem;
-  border-radius: var(--radius-full);
-  background: var(--color-accent);
-  opacity: 0.5;
+.strip {
+  margin-bottom: var(--space-2);
 }
 
 .logText {
   display: flex;
-  flex: 1 1 14rem;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 0.125rem;
   min-width: 0;
 }
 
 .logTitle {
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-semibold);
   overflow-wrap: anywhere;
 }
 
@@ -141,8 +167,7 @@
 
 .duration {
   flex: none;
-  font-family: var(--font-family-rounded);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-bold);
   font-variant-numeric: tabular-nums;
 }
 
@@ -157,4 +182,27 @@
 .privacyIcon {
   flex: none;
   color: var(--color-accent);
+}
+
+/* Narrow main column: the button drops under the text instead of squeezing the title. */
+@container (max-width: 28rem) {
+  .logRow {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .logRow > :last-child {
+    grid-column: 2 / -1;
+    justify-self: start;
+  }
+}
+
+/* The ticket link reads as inline text in the meta line: flush with the title, hover area kept. */
+.logMeta > button:first-child {
+  min-height: 1.5rem;
+  margin-inline-start: -0.375rem;
+  padding: 0 0.375rem;
+}
+
+.logComment::before {
+  content: '·';
+  margin-inline-end: var(--space-2);
 }

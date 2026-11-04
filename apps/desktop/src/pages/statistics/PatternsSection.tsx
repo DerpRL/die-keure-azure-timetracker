@@ -1,7 +1,7 @@
 import { useMemo, type ReactNode } from 'react';
 import { ToggleButton } from 'react-aria-components';
 import { Card, Section } from '../../components/Card';
-import { CheckIcon, FilterIcon, HistoryIcon, StatisticsIcon, TimeEditorIcon, WarningIcon, CalendarRangeIcon } from '../../components/icons';
+import { CheckIcon, FilterIcon, WarningIcon } from '../../components/icons';
 import { ActivityBars, type ActivityBucket } from '../../charts/ActivityBars';
 import { ChartFrame } from '../../charts/ChartFrame';
 import { DataTable } from '../../charts/DataTable';
@@ -28,15 +28,10 @@ export function PatternsSection({ slice, analysis, analysisKey, colors }: Patter
   return (
     <div className={styles.stack}>
       <MetricList label="Work pattern totals">
-        <Metric title="Context switches" value={String(switches)} note="Between tasks, with breaks up to 15 min" icon={StatisticsIcon} />
-        <Metric title="Longest work block" value={duration(longestBlock)} note="Continuous entries for the same task" icon={HistoryIcon} />
-        <Metric title="Average work block" value={duration(averageBlock)} note="Mean length of continuous work" icon={TimeEditorIcon} />
-        <Metric
-          title="Overlapping time"
-          value={duration(analysis.overlap)}
-          note="Recorded total minus covered clock time"
-          icon={CalendarRangeIcon}
-        />
+        <Metric title="Context switches" value={String(switches)} note="Between tasks, with breaks up to 15 min" />
+        <Metric title="Longest work block" value={duration(longestBlock)} note="Continuous entries for the same task" />
+        <Metric title="Average work block" value={duration(averageBlock)} note="Mean length of continuous work" />
+        <Metric title="Overlapping time" value={duration(analysis.overlap)} note="Recorded total minus covered clock time" />
       </MetricList>
       <div className={styles.columns}>
         <Card padding="large">

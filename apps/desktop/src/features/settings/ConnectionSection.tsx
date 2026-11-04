@@ -190,31 +190,31 @@ function ConnectionDetails() {
   const retry = useAction();
   if (!connection) return null;
   return (
-    <SettingsGroup title="Connection details">
-      <StatusDot tone={connectionTone(connection)} label={connection.status} showLabel />
-      {connection.detail ? <Hint>{connection.detail}</Hint> : null}
-      <ul role="list" className={styles.details}>
-        <li>{connection.lastSync ? `Timer checked ${formatDateTime(connection.lastSync)}` : 'The timer has not been checked yet.'}</li>
-        {connection.worklogSync ? <li>{`Time entries checked ${formatDateTime(connection.worklogSync)}`}</li> : null}
-        {connection.connectionIssue ? <li className={styles.warning}>{connection.connectionIssue}</li> : null}
-        {connection.azureIssue ? <li className={styles.warning}>{`Azure tickets: ${connection.azureIssue}`}</li> : null}
-        {connection.progressIssue ? <li className={styles.warning}>{`Time totals: ${connection.progressIssue}`}</li> : null}
-        {draft.completionReminders && !settings.hasAzurePat ? (
-          <li>Add an Azure PAT in Accounts to enable ticket completion reminders.</li>
-        ) : null}
-      </ul>
-      <div className={styles.row}>
-        <Button
-          icon={RefreshIcon}
-          onPress={() => void retry.run({ type: 'connection.retry' })}
-          isDisabled={busy || preview}
-          isPending={retry.pending || connection.connecting}
-        >
-          Refresh connection
-        </Button>
-      </div>
-      {retry.error ? <InlineIssue>{retry.error.message}</InlineIssue> : null}
-    </SettingsGroup>
+    <div className={styles.detailsRow}>
+      <SettingsGroup title="Connection details" className={styles.detailsText}>
+        <StatusDot tone={connectionTone(connection)} label={connection.status} showLabel />
+        {connection.detail ? <Hint>{connection.detail}</Hint> : null}
+        <ul role="list" className={styles.details}>
+          <li>{connection.lastSync ? `Timer checked ${formatDateTime(connection.lastSync)}` : 'The timer has not been checked yet.'}</li>
+          {connection.worklogSync ? <li>{`Time entries checked ${formatDateTime(connection.worklogSync)}`}</li> : null}
+          {connection.connectionIssue ? <li className={styles.warning}>{connection.connectionIssue}</li> : null}
+          {connection.azureIssue ? <li className={styles.warning}>{`Azure tickets: ${connection.azureIssue}`}</li> : null}
+          {connection.progressIssue ? <li className={styles.warning}>{`Time totals: ${connection.progressIssue}`}</li> : null}
+          {draft.completionReminders && !settings.hasAzurePat ? (
+            <li>Add an Azure PAT in Accounts to enable ticket completion reminders.</li>
+          ) : null}
+        </ul>
+        {retry.error ? <InlineIssue>{retry.error.message}</InlineIssue> : null}
+      </SettingsGroup>
+      <Button
+        icon={RefreshIcon}
+        onPress={() => void retry.run({ type: 'connection.retry' })}
+        isDisabled={busy || preview}
+        isPending={retry.pending || connection.connecting}
+      >
+        Refresh connection
+      </Button>
+    </div>
   );
 }
 
@@ -241,26 +241,28 @@ export function ConnectionSection() {
         </Banner>
       ) : null}
       <SettingsGroup title="Azure DevOps">
-        <TextField
-          label="Azure organization"
-          description="The name in dev.azure.com/your-organization"
-          placeholder="your-organization"
-          value={draft.organization}
-          onChange={(organization) => update((current) => ({ ...current, organization }))}
-          isInvalid={organizationIssue !== undefined}
-          errorMessage={organizationIssue}
-          autoComplete="off"
-          spellCheck="false"
-        />
-        <TextField
-          label="Azure project"
-          description="Optional. Leave empty to find tickets across your organization."
-          placeholder="Project name"
-          value={draft.project}
-          onChange={(project) => update((current) => ({ ...current, project }))}
-          autoComplete="off"
-          spellCheck="false"
-        />
+        <div className={styles.fieldPair}>
+          <TextField
+            label="Azure organization"
+            description="The name in dev.azure.com/your-organization"
+            placeholder="your-organization"
+            value={draft.organization}
+            onChange={(organization) => update((current) => ({ ...current, organization }))}
+            isInvalid={organizationIssue !== undefined}
+            errorMessage={organizationIssue}
+            autoComplete="off"
+            spellCheck="false"
+          />
+          <TextField
+            label="Azure project"
+            description="Optional. Leave empty to find tickets across your organization."
+            placeholder="Project name"
+            value={draft.project}
+            onChange={(project) => update((current) => ({ ...current, project }))}
+            autoComplete="off"
+            spellCheck="false"
+          />
+        </div>
         <SecretField
           label="Azure DevOps PAT"
           value={form.azurePat}

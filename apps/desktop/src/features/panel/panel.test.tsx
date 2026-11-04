@@ -44,7 +44,9 @@ describe('PanelView', () => {
     expect(within(current).getByText('Checkout: retry failed card payments')).toBeInTheDocument();
     expect(within(current).getByText('Development')).toBeInTheDocument();
     expect(screen.getByText('Tracking')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Progress/ })).toHaveAttribute('aria-expanded', 'false');
+    // 2.0: today's time strip replaces the collapsed Progress section; the target bar is in the timer.
+    expect(within(main).getByRole('heading', { level: 2, name: 'Today' })).toBeInTheDocument();
+    expect(within(current).getByRole('img', { name: /of daily target/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Quit app' })).toBeInTheDocument();
     expect(screen.getByText('Quitting leaves the 7pace timer running')).toBeInTheDocument();
     await expectAccessible();

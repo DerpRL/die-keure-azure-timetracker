@@ -45,6 +45,8 @@ describe('Day review page', () => {
     renderReview(sampleSlices().dayReview);
     expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual([
       'Day at a glance',
+      'Your day',
+      'Time per ticket',
       'Needs a look',
       'Time entries',
       'Finish the review',
@@ -60,8 +62,26 @@ describe('Day review page', () => {
     );
     expect(screen.getByText('1h 25m without a reported entry. Lunch, breaks and time off can explain these gaps.')).toBeInTheDocument();
     const perTicket = screen.getByRole('table', { name: 'Time per ticket' });
-    expect(within(perTicket).getByRole('rowheader', { name: '#4821 · Checkout: retry failed card payments' })).toBeInTheDocument();
-    expect(screen.getAllByText('Long entry')).toHaveLength(2);
+    expect(within(perTicket).getByRole('rowheader', { name: '#4821 Checkout: retry failed card payments' })).toBeInTheDocument();
+    expect(within(perTicket).getAllByRole('row')).toHaveLength(6);
+    // The day strip describes what it draws.
+    expect(
+      screen.getByRole('img', { name: 'Timeline of Monday 5 October: 6 worklogs, 2 possible gaps, 1 long entry' }),
+    ).toBeInTheDocument();
+    expect(within(screen.getByRole('list', { name: 'Activities' })).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Standup',
+      'Development',
+      'Design',
+      'Code review',
+    ]);
+    // Long entries are listed under "Needs a look" and flagged in the time entries.
+    const longEntries = screen.getByRole('heading', { name: 'Long time entries' }).parentElement!.parentElement!;
+    expect(within(longEntries).getByText('3h 25m')).toBeInTheDocument();
+    expect(within(longEntries).getByRole('button', { name: '#4821 Checkout: retry failed card payments, show details' })).toBeInTheDocument();
+    expect(screen.getAllByText('Long entry')).toHaveLength(1);
+    expect(screen.getByText('12:40 – 13:30 · 0h 50m')).toBeInTheDocument();
+    expect(screen.getByText('15:05 – 15:40 · 0h 35m')).toBeInTheDocument();
+    expect(screen.getByText('Not reviewed yet')).toBeInTheDocument();
     await expectNoA11yViolations();
   });
 

@@ -3,7 +3,7 @@
 /* `[data-orientation]` (set by React Aria) outranks the foundation tab styles. */
 .layout[data-orientation] {
   display: grid;
-  grid-template-columns: minmax(10rem, 13rem) minmax(0, 1fr);
+  grid-template-columns: minmax(10rem, 15rem) minmax(0, 1fr);
   align-items: start;
   gap: var(--space-6);
   min-width: 0;
@@ -14,7 +14,7 @@
   top: calc(3.5rem + var(--space-4));
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 0.125rem;
   padding: 0;
   border: 0;
 }
@@ -28,13 +28,17 @@
   min-height: var(--size-control-md);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
-  color: var(--color-text);
-  font-weight: var(--font-weight-regular);
+  color: var(--color-secondary-text);
+  font-weight: var(--font-weight-medium);
+}
+
+.categoryList .category[data-hovered]:not([data-selected]) {
+  background: var(--color-hover);
 }
 
 .categoryList .category[data-selected] {
-  background: var(--color-selected-bg);
-  color: var(--color-selected-text);
+  background: var(--color-accent-bg);
+  color: var(--color-accent);
   font-weight: var(--font-weight-semibold);
   /* A leading bar marks the selection, not colour alone. */
   box-shadow: inset 0.1875rem 0 0 var(--color-selected-indicator);
@@ -80,15 +84,54 @@
   gap: var(--space-4);
 }
 
+/* Section cards: a larger title and more room between the groups (2.0 layout). */
+.sectionCard {
+  gap: var(--space-5);
+}
+
+.sectionCard h2 {
+  font-size: var(--font-size-title-2);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.015em;
+}
+
+.sectionCard > :last-child {
+  gap: var(--space-5);
+}
+
+/* Two short fields side by side when there is room. */
+.fieldPair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  align-items: start;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+/* Connection details: status on the left, Refresh on the right. */
+.detailsRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.detailsRow .detailsText {
+  flex: 1 1 18rem;
+  gap: var(--space-1);
+}
+
 .group {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4);
   min-width: 0;
 }
 
 .groupTitle {
-  font-size: var(--font-size-body);
+  font-size: var(--font-size-headline);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
 }
@@ -126,7 +169,7 @@
 
 .divider {
   width: 100%;
-  margin: var(--space-1) 0;
+  margin: 0;
   border: 0;
   border-top: var(--size-border) solid var(--color-separator);
 }
@@ -454,9 +497,8 @@
   z-index: var(--z-sticky);
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  margin-inline: calc(-1 * var(--space-2));
-  padding: var(--space-3) var(--space-4);
+  gap: var(--space-3);
+  padding: var(--space-5);
   border: var(--size-border) solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface-raised);
@@ -467,16 +509,31 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2) var(--space-3);
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+}
+
+.saveText {
+  display: flex;
+  flex: 1 1 16rem;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.saveButtons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .saveState {
   display: inline-flex;
-  flex: 1 1 12rem;
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-semibold);
 }
 
 .issueList {

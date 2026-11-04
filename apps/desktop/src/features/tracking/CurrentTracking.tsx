@@ -2,7 +2,10 @@ import { Button } from '../../components/Button';
 import { Skeleton } from '../../components/EmptyState';
 import { PauseIcon, PlayIcon, StopIcon } from '../../components/icons';
 import type { FlowSurface, Intent, TrackingSlice } from '../../ipc/contract';
+import { useDateFormatter } from 'react-aria';
 import { useSlice, useWorkItem } from '../../state/hooks';
+import { cx } from '../../utils/cx';
+import { ActivityChip, activityColorIndex, useActivityColors } from '../activity';
 import { TimerDisplay } from '../../timer/TimerDisplay';
 import { formatShortDuration } from '../../utils/duration';
 import { TicketLink } from '../ticketContext/TicketLink';
@@ -41,6 +44,14 @@ export interface CurrentTrackingProps {
   surface: TrackingSurface;
 }
 
+/** When the running session started: the confirmed elapsed time back from its confirmation. */
+function sessionStart(tracking: TrackingSlice): Date | null {
+  if (!tracking.running || !tracking.confirmedAt) return null;
+  const confirmed = Date.parse(tracking.confirmedAt);
+  if (!Number.isFinite(confirmed) || !Number.isFinite(tracking.elapsedBase)) return null;
+  return new Date(confirmed - tracking.elapsedBase * 1000);
+}
+
 /**
  * The 7pace timer: clock, what runs, and Stop / Pause / Switch, or Resume / Clear pause for a
  * paused session (1.14 `MenuPanel` "Current tracking" and the Overview timer card). Every button
@@ -55,6 +66,9 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
   const guards = useWriteGuards();
   const actions = useIntents();
   const pausedItem = useWorkItem(tracking?.paused?.ticketId);
+  const colors = useActivityColors();
+  const clock = useDateFormatter({ hour: '2-digit', minute: '2-digit' });
+  const clockWithDay = useDateFormatter({ day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
   if (!tracking || !connection) {
     return (
@@ -84,8 +98,20 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
       dailyTargetSeconds={progress?.todayTarget ?? 0}
       totalsConfirmed={totalsConfirmed(connection, progress)}
       size={panel ? 'medium' : 'large'}
+      indicator="bar"
+      className={styles.clock}
     />
   );
+
+  const activityId = running ? tracking.activityId : (paused?.activityId ?? null);
+  const activityName = running ? tracking.activityName : (paused?.activityName ?? null);
+  const activityChip = activityName ? (
+    <ActivityChip name={activityName} colorIndex={activityColorIndex(colors, activityId)} />
+  ) : null;
+  const started = sessionStart(tracking);
+  // A session that began before today names its day: "since 6 Oct, 08:36".
+  const startedToday = started ? started.toDateString() === new Date().toDateString() : false;
+  const since = started ? `since ${(startedToday ? clock : clockWithDay).format(started)}` : null;
 
   const pauseStop = running ? (
     <>
@@ -144,24 +170,31 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
 
   if (panel) {
     return (
-      <div className={styles.stack}>
-        {timer}
+      <div className={cx(styles.stack, styles.panelBox)}>
+        <div className={styles.boxHeader}>
+          <p className={styles.eyebrow}>{paused ? 'Paused' : 'Current tracking'}</p>
+          {running || paused ? activityChip : <p className={styles.caption}>No timer running</p>}
+        </div>
         {running ? (
           <div className={styles.summary}>
-            {ticketId !== null && tracking.ticketUrl ? (
-              <Button
-                variant="plain"
-                size="small"
-                trailingIcon={OpenExternalIcon}
-                className={styles.ticketLink}
-                aria-label={`#${ticketId}, open in Azure DevOps`}
-                onPress={() => openExternal(tracking.ticketUrl!)}
-              >
-                {`#${ticketId}`}
-              </Button>
-            ) : null}
             <p className={styles.trackingTitle}>{tracking.title}</p>
-            {tracking.activityName ? <p className={styles.caption}>{tracking.activityName}</p> : null}
+            <div className={styles.metaLine}>
+              {ticketId !== null && tracking.ticketUrl ? (
+                <Button
+                  variant="plain"
+                  size="small"
+                  trailingIcon={OpenExternalIcon}
+                  className={styles.ticketLink}
+                  aria-label={`#${ticketId}, open in Azure DevOps`}
+                  onPress={() => openExternal(tracking.ticketUrl!)}
+                >
+                  {`#${ticketId}`}
+                </Button>
+              ) : ticketId !== null ? (
+                <span className={styles.ticketNumber}>{`#${ticketId}`}</span>
+              ) : null}
+              {since ? <span>{since}</span> : null}
+            </div>
             {tracking.remark && tracking.remark !== tracking.title ? (
               <p className={styles.caption}>{tracking.remark}</p>
             ) : null}
@@ -173,12 +206,11 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
             </p>
             <p className={styles.caption}>Paused · no new time is logged</p>
           </div>
-        ) : (
-          <p className={styles.caption}>No timer running</p>
-        )}
-        <div className={styles.actions}>
+        ) : null}
+        {timer}
+        <div className={cx(styles.actions, running ? styles.panelActions : styles.panelActionsWide)}>
+          {pauseStop}
           {resume ?? switchTicket}
-          {pauseStop ? <div className={styles.trailing}>{pauseStop}</div> : null}
         </div>
         <ActionError error={actions.error} />
         {actions.confirmation}
@@ -201,19 +233,18 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
       <div className={styles.timerText}>
         <p className={styles.eyebrow}>{eyebrow}</p>
         <p className={styles.timerTitle}>{title}</p>
-        {ticketId !== null ? (
-          <div className={styles.row}>
-            <TicketLink ticketId={ticketId} compact />
-          </div>
-        ) : (
+        <div className={styles.metaLine}>
+          {ticketId !== null ? <TicketLink ticketId={ticketId} compact /> : null}
+          {running || paused ? activityChip : null}
+          {since ? <span>{since}</span> : null}
+        </div>
+        {ticketId === null ? (
           <p className={styles.caption}>
             {running || paused
               ? `No Azure ticket · ${remark ?? ''}`
               : 'Choose a ticket, or switch branches to get a suggestion.'}
           </p>
-        )}
-        {running && tracking.activityName ? <p className={styles.caption}>{tracking.activityName}</p> : null}
-        {paused?.activityName ? <p className={styles.caption}>{paused.activityName}</p> : null}
+        ) : null}
       </div>
       <div className={styles.timerSide}>
         {timer}

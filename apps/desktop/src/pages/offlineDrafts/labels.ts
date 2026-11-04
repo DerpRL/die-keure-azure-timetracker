@@ -7,13 +7,19 @@ export function draftHeading(draft: OfflineDraftView, items: WorkItemsSlice | un
   return name ? `${draft.title} · ${name}` : draft.title;
 }
 
+/** The heading as shown: the ticket number (styled apart) and the ticket's name or the draft's title. */
+export function draftTitleParts(draft: OfflineDraftView, items: WorkItemsSlice | undefined): { ticket: string | null; name: string | null } {
+  if (!draft.ticketId) return { ticket: null, name: draft.title };
+  return { ticket: `#${draft.ticketId}`, name: items?.[String(draft.ticketId)]?.title ?? null };
+}
+
 /** The local timer: no end yet and not uploaded. */
 export function isRunning(draft: OfflineDraft): boolean {
   return !draft.end && draft.status === 'Local draft';
 }
 
 export const STATUS_TONES: Record<OfflineDraftStatus, Tone> = {
-  'Local draft': 'info',
+  'Local draft': 'accent',
   'Check 7pace before retrying': 'warning',
   'Synced to 7pace': 'success',
 };

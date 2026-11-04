@@ -24,6 +24,11 @@ export interface TimerDisplayProps {
   size?: 'small' | 'medium' | 'large';
   /** The mini timer can omit the ring. */
   showRing?: boolean;
+  /**
+   * How progress toward the daily target is shown: the 1.14 ring beside the digits, or (2.0
+   * redesign) a bar with its description under them. Ignored when `showRing` is false.
+   */
+  indicator?: 'ring' | 'bar';
   /** Name of the timer value for screen readers. */
   label?: string;
   className?: string;
@@ -65,6 +70,7 @@ export function TimerDisplay({
   detail,
   size = 'medium',
   showRing = true,
+  indicator = 'ring',
   label = 'Elapsed time',
   className,
 }: TimerDisplayProps) {
@@ -85,13 +91,14 @@ export function TimerDisplay({
         styles.timer,
         styles[size],
         styles[`status-${status}`],
+        showRing && indicator === 'bar' && styles.withBar,
         unconfirmed && styles.unconfirmed,
         reducedMotion && styles.reduced,
         className,
       )}
       data-status={status}
     >
-      {showRing ? (
+      {showRing && indicator === 'ring' ? (
         <ProgressRing
           status={status}
           fraction={fraction}
@@ -117,10 +124,24 @@ export function TimerDisplay({
             <RollingDigits key={sessionId} text={clock} animate={animate} />
           </span>
         </div>
-        {showRing ? (
+        {showRing && indicator === 'ring' ? (
           <p className={styles.description} aria-hidden="true">
             {description}
           </p>
+        ) : null}
+        {showRing && indicator === 'bar' ? (
+          <div className={styles.barBlock}>
+            <div
+              role="img"
+              aria-label={`${info.label}. ${description}`}
+              className={cx(styles.bar, !totalsConfirmed && styles.barStale)}
+            >
+              <span className={styles.barFill} style={{ width: `${Math.round((fraction ?? 0) * 100)}%` }} />
+            </div>
+            <p className={styles.description} aria-hidden="true">
+              {description}
+            </p>
+          </div>
         ) : null}
       </div>
     </div>

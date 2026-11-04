@@ -19,7 +19,7 @@ export interface SettingsSectionProps {
 export function SettingsSection({ id, subtitle, actions, children }: SettingsSectionProps) {
   return (
     <div id={sectionAnchorId(id)} className={styles.sectionAnchor} tabIndex={-1}>
-      <Section title={sectionTitle(id)} subtitle={subtitle} actions={actions} headingLevel={2}>
+      <Section title={sectionTitle(id)} subtitle={subtitle} actions={actions} headingLevel={2} padding="large" className={styles.sectionCard}>
         {children}
       </Section>
     </div>
@@ -33,7 +33,7 @@ export function SettingsSection({ id, subtitle, actions, children }: SettingsSec
 export function SettingsCard({ id, children }: { id: SettingsSectionId; children: ReactNode }) {
   return (
     <div id={sectionAnchorId(id)} className={styles.sectionAnchor} tabIndex={-1}>
-      <Card padding="medium" className={styles.card}>
+      <Card padding="large" className={styles.card}>
         {children}
       </Card>
     </div>

@@ -1,5 +1,5 @@
 import { startOfWeek } from '@internationalized/date';
-import { useId, useMemo, useState } from 'react';
+import { useCallback, useId, useMemo, useState } from 'react';
 import { Banner } from '../../components/Banner';
 import { Button } from '../../components/Button';
 import { Card, Heading } from '../../components/Card';
@@ -9,7 +9,9 @@ import { SearchField } from '../../components/Fields';
 import { AttentionIcon, CircleIcon, HistoryIcon, InboxIcon, PlayIcon, SpinnerIcon } from '../../components/icons';
 import { Tabs } from '../../components/Segmented';
 import { useToast } from '../../components/Toast';
+import { seriesColor } from '../../charts/palette';
 import type { AuditEntry, HistorySlice, WorkItemsSlice, WorkLog } from '../../ipc/contract';
+import { ActivityChip, ActivityPill, activityColorIndex, stripWindow, useActivityColors } from '../../features/activity';
 import { PageHeaderActions, PageRefresh } from '../../features/app/PageHeaderActions';
 import { useEngineDraft } from '../../features/ticketContext/drafts';
 import {
@@ -19,6 +21,7 @@ import {
   historyTitle,
   localDayKey,
   localToday,
+  logEnd,
   logStart,
   logTicket,
   toCalendarDay,
@@ -38,6 +41,23 @@ export const AUDIT_PAGE_SIZE = 100;
 
 type HistoryTab = 'worklogs' | 'activity';
 
+type Preset = 'today' | 'thisWeek' | 'lastWeek';
+
+const PRESETS: ReadonlyArray<{ id: Preset; label: string }> = [
+  { id: 'today', label: 'Today' },
+  { id: 'thisWeek', label: 'This week' },
+  { id: 'lastWeek', label: 'Last week' },
+];
+
+/** The `from`/`to` days a quick range loads (weeks start on Monday, as in 1.14). */
+function presetRange(which: Preset): { from: string; to: string } {
+  const today = localToday();
+  const monday = startOfWeek(today, 'en-GB');
+  if (which === 'today') return { from: today.toString(), to: today.toString() };
+  if (which === 'thisWeek') return { from: monday.toString(), to: today.toString() };
+  return { from: monday.subtract({ weeks: 1 }).toString(), to: monday.subtract({ days: 1 }).toString() };
+}
+
 function matches(log: WorkLog, query: string, items: WorkItemsSlice | undefined): boolean {
   if (!query) return true;
   const ticket = log.workItemId ?? 0;
@@ -45,19 +65,33 @@ function matches(log: WorkLog, query: string, items: WorkItemsSlice | undefined)
   return text.toLocaleLowerCase().includes(query.toLocaleLowerCase());
 }
 
-function LogRow({ log, items, trackDisabled }: { log: WorkLog; items: WorkItemsSlice | undefined; trackDisabled: boolean }) {
+/** Palette index per worklog: the shared activity colours (same rule as Statistics). */
+type ColorOf = (log: WorkLog) => number;
+
+function useLogColors(logs: readonly WorkLog[]): ColorOf {
+  const ids = useMemo(() => [...new Set(logs.map((log) => log.activityType?.id ?? '').filter(Boolean))].sort(), [logs]);
+  const colors = useActivityColors(ids);
+  return useCallback((log: WorkLog) => activityColorIndex(colors, log.activityType?.id), [colors]);
+}
+
+function LogRow({ log, items, trackDisabled, colorIndex }: { log: WorkLog; items: WorkItemsSlice | undefined; trackDisabled: boolean; colorIndex: number }) {
   const track = useAction();
   const ticket = logTicket(log);
   const start = logStart(log);
   return (
     <li className={styles.row}>
-      <span className={styles.accent} aria-hidden="true" />
+      <ActivityPill colorIndex={colorIndex} />
       <div className={styles.rowText}>
         <span className={styles.rowTitle}>{historyTitle(log, items)}</span>
         <span className={styles.meta}>
-          {ticket !== null ? <TicketLink ticketId={ticket} compact /> : null}
-          <span>{start ? formatClockTime(start) : log.timestamp}</span>
-          {log.activityType?.name ? <span>{`· ${log.activityType.name}`}</span> : null}
+          {ticket !== null ? (
+            <span className={styles.ticket}>
+              <TicketLink ticketId={ticket} compact />
+            </span>
+          ) : null}
+          <span className={styles.time}>{start ? formatClockTime(start) : log.timestamp}</span>
+          {log.activityType?.name ? <ActivityChip name={log.activityType.name} colorIndex={colorIndex} /> : null}
+          {ticket === null ? <span>No Azure ticket</span> : null}
         </span>
         {track.error ? <span className={styles.error}>{track.error.message}</span> : null}
       </div>
@@ -80,25 +114,69 @@ function LogRow({ log, items, trackDisabled }: { log: WorkLog; items: WorkItemsS
   );
 }
 
-function DayGroup({ day, logs, items, trackDisabled }: { day: string; logs: WorkLog[]; items: WorkItemsSlice | undefined; trackDisabled: boolean }) {
+/**
+ * The day's worklogs as a thin bar of activity-coloured spans (the mockup's mini strip). Purely
+ * decorative: the rows below list the same times.
+ */
+function MiniStrip({ day, logs, colorOf }: { day: string; logs: readonly WorkLog[]; colorOf: ColorOf }) {
+  const spans = logs.flatMap((log) => {
+    const start = logStart(log);
+    const end = logEnd(log);
+    return start && end && end > start ? [{ log, start: start.getTime(), end: end.getTime() }] : [];
+  });
+  if (spans.length === 0) return null;
+  const date = toCalendarDay(day);
+  const { from, to } = stripWindow(
+    date ? new Date(date.year, date.month - 1, date.day) : new Date(spans[0]!.start),
+    spans.flatMap((span) => [span.start, span.end]),
+  );
+  const range = Math.max(to - from, 1);
+  const pct = (time: number) => `${((Math.min(Math.max(time, from), to) - from) / range) * 100}%`;
+  return (
+    <span className={styles.mini} aria-hidden="true">
+      {spans.map(({ log, start, end }) => (
+        <span
+          key={log.id}
+          className={styles.miniBlock}
+          style={{ left: pct(start), width: `calc(${pct(end)} - ${pct(start)})`, background: seriesColor(colorOf(log)) }}
+        />
+      ))}
+    </span>
+  );
+}
+
+function DayGroup({
+  day,
+  logs,
+  items,
+  trackDisabled,
+  colorOf,
+}: {
+  day: string;
+  logs: WorkLog[];
+  items: WorkItemsSlice | undefined;
+  trackDisabled: boolean;
+  colorOf: ColorOf;
+}) {
   const headingId = useId();
   // A plain section (no landmark per day): long ranges would otherwise list dozens of regions.
   return (
-    <section className={styles.day}>
+    <Card as="section" padding="none" className={styles.day}>
       <div className={styles.dayHeader}>
         <Heading level={2} id={headingId} className={styles.dayTitle}>
           {formatDayLong(day)}
         </Heading>
-        <span className={styles.caption}>{formatShortDuration(totalLength(logs))}</span>
+        <div className={styles.daySummary}>
+          <MiniStrip day={day} logs={logs} colorOf={colorOf} />
+          <span className={styles.duration}>{formatShortDuration(totalLength(logs))}</span>
+        </div>
       </div>
-      <Card padding="small">
-        <ul role="list" aria-labelledby={headingId} className={styles.rows}>
-          {logs.map((log) => (
-            <LogRow key={log.id} log={log} items={items} trackDisabled={trackDisabled} />
-          ))}
-        </ul>
-      </Card>
-    </section>
+      <ul role="list" aria-labelledby={headingId} className={styles.rows}>
+        {logs.map((log) => (
+          <LogRow key={log.id} log={log} items={items} trackDisabled={trackDisabled} colorIndex={colorOf(log)} />
+        ))}
+      </ul>
+    </Card>
   );
 }
 
@@ -124,9 +202,10 @@ function Worklogs({ history, filter, trackDisabled }: { history: HistorySlice; f
     return { days: [...groups.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1)), unknown: unreadable, shownCount: shown.length };
   }, [filtered, visible]);
   const tickets = new Set(filtered.map(logTicket).filter((id) => id !== null)).size;
+  const colorOf = useLogColors(history.logs);
 
   return (
-    <>
+    <div className={styles.tab}>
       <dl className={styles.metrics}>
         <Card className={styles.metric}>
           <dt>Tracked time</dt>
@@ -152,16 +231,18 @@ function Worklogs({ history, filter, trackDisabled }: { history: HistorySlice; f
         </Card>
       ) : null}
       {days.map(([day, logs]) => (
-        <DayGroup key={day} day={day} logs={logs} items={items} trackDisabled={trackDisabled} />
+        <DayGroup key={day} day={day} logs={logs} items={items} trackDisabled={trackDisabled} colorOf={colorOf} />
       ))}
       {unknown.length > 0 ? (
-        <Card>
-          <Heading level={2} className={styles.dayTitle}>
-            Unrecognized dates from 7pace
-          </Heading>
+        <Card padding="none" className={styles.day}>
+          <div className={styles.dayHeader}>
+            <Heading level={2} className={styles.dayTitle}>
+              Unrecognized dates from 7pace
+            </Heading>
+          </div>
           <ul role="list" className={styles.rows}>
             {unknown.map((log) => (
-              <LogRow key={log.id} log={log} items={items} trackDisabled={trackDisabled} />
+              <LogRow key={log.id} log={log} items={items} trackDisabled={trackDisabled} colorIndex={colorOf(log)} />
             ))}
           </ul>
         </Card>
@@ -172,7 +253,7 @@ function Worklogs({ history, filter, trackDisabled }: { history: HistorySlice; f
           <Button onPress={() => setVisible((count) => count + HISTORY_PAGE_SIZE)}>Show more worklogs</Button>
         </div>
       ) : null}
-    </>
+    </div>
   );
 }
 
@@ -203,7 +284,7 @@ function AppActivity({ audit }: { audit: readonly AuditEntry[] }) {
   }
   const shown = audit.slice(0, visible);
   return (
-    <Card>
+    <Card padding="none" className={styles.auditCard}>
       <ol role="list" className={styles.audit} aria-label="App activity, newest first">
         {shown.map((entry) => (
           <AuditRow key={entry.id} entry={entry} />
@@ -246,12 +327,9 @@ export default function HistoryPage() {
       if (result.ok && andLoad) runLoad();
     });
   };
-  const preset = (which: 'today' | 'thisWeek' | 'lastWeek') => {
-    const today = localToday();
-    const monday = startOfWeek(today, 'en-GB');
-    if (which === 'today') changeRange(today.toString(), today.toString(), true);
-    else if (which === 'thisWeek') changeRange(monday.toString(), today.toString(), true);
-    else changeRange(monday.subtract({ weeks: 1 }).toString(), monday.subtract({ days: 1 }).toString(), true);
+  const preset = (which: Preset) => {
+    const next = presetRange(which);
+    changeRange(next.from, next.to, true);
   };
   const exportCsv = async () => {
     setChoosing(true);
@@ -338,24 +416,31 @@ export default function HistoryPage() {
         <Button variant="primary" isDisabled={loading || !connected} onPress={runLoad}>
           Load
         </Button>
+        <div className={styles.presets} role="group" aria-label="Quick ranges">
+          {PRESETS.map(({ id, label }) => {
+            const range = presetRange(id);
+            return (
+              <Button
+                key={id}
+                size="small"
+                variant="plain"
+                className={styles.preset}
+                aria-pressed={range.from === from && range.to === to}
+                isDisabled={loading || !connected}
+                onPress={() => preset(id)}
+              >
+                {label}
+              </Button>
+            );
+          })}
+        </div>
         {loading ? (
           <span role="status" className={styles.loadingNote}>
             <SpinnerIcon className={styles.spinner} />
             Loading worklogs…
           </span>
         ) : null}
-        <SearchField label="Filter tickets" value={filter} onChange={setFilter} width="narrow" className={styles.filter} />
-      </div>
-      <div className={styles.presets} role="group" aria-label="Quick ranges">
-        <Button size="small" isDisabled={loading || !connected} onPress={() => preset('today')}>
-          Today
-        </Button>
-        <Button size="small" isDisabled={loading || !connected} onPress={() => preset('thisWeek')}>
-          This week
-        </Button>
-        <Button size="small" isDisabled={loading || !connected} onPress={() => preset('lastWeek')}>
-          Last week
-        </Button>
+        <SearchField label="Filter tickets" value={filter} onChange={setFilter} placeholder="Ticket number or title" width="narrow" className={styles.filter} />
       </div>
       {failure ? <Banner tone="error">{failure.message}</Banner> : null}
       <LoadingRegion

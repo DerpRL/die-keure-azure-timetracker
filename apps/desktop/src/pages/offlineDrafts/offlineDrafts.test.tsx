@@ -1,4 +1,5 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
+import { useState, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SAMPLE_NOW, sampleSlices } from '../../ipc/fixtures';
 import {
@@ -16,6 +17,7 @@ import {
 } from '../../ipc/fixtures/slices/offline';
 import { MockEngineError } from '../../ipc/mockEngine';
 import type { OfflineDraft, OfflineSlice, SliceMap } from '../../ipc/contract';
+import { PageHeaderSlotContext } from '../../features/app/PageHeaderActions';
 import { PageFrame } from '../../features/ticketContext/testing';
 import { expectNoA11yViolations } from '../../test/axe';
 import { renderWithEngine } from '../../test/engine';
@@ -30,14 +32,29 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+/** The page with a header slot for Reconnect, as the main window renders it. */
+function WithHeader({ children }: { children: ReactNode }) {
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  return (
+    <>
+      <header>
+        <div ref={setSlot} />
+      </header>
+      <PageHeaderSlotContext.Provider value={slot}>{children}</PageHeaderSlotContext.Provider>
+    </>
+  );
+}
+
 function renderOffline(offline: OfflineSlice | undefined, extra: Partial<SliceMap> = {}) {
   const slices = sampleSlices();
   if (offline) slices.offline = offline;
   else delete slices.offline;
   return renderWithEngine(
-    <PageFrame title="Offline drafts">
-      <OfflineDraftsPage />
-    </PageFrame>,
+    <WithHeader>
+      <PageFrame title="Offline drafts">
+        <OfflineDraftsPage />
+      </PageFrame>
+    </WithHeader>,
     { slices: { ...slices, ...extra } },
   );
 }
@@ -47,18 +64,23 @@ const politeAnnouncement = () => document.querySelector('[data-announcer="polite
 describe('Offline drafts page', () => {
   it('shows the running local timer and the workspace drafts, newest first', async () => {
     renderOffline(sampleSlices().offline);
-    expect(screen.getByRole('heading', { level: 2, name: 'Local tracking · saved on this Mac' })).toBeInTheDocument();
-    expect(screen.getByText('Local timer · #4790 · Invoice PDF shows the wrong VAT number')).toBeInTheDocument();
-    expect(screen.getByRole('timer')).toHaveTextContent('00:40:00');
+    const local = screen.getByRole('region', { name: 'Local tracking · saved on this Mac' });
+    expect(within(local).getByText('Running locally')).toBeInTheDocument();
+    expect(within(local).getByText('Invoice PDF shows the wrong VAT number', { exact: false })).toHaveTextContent(
+      /^#4790 Invoice PDF shows the wrong VAT number$/,
+    );
+    expect(within(local).getByText(/^Offline: invoice template · Time continues through sleep/)).toBeInTheDocument();
+    expect(within(local).getByRole('timer')).toHaveTextContent('00:40:00');
     expect(screen.getByRole('heading', { level: 2, name: 'This workspace · 3 awaiting review' })).toBeInTheDocument();
     const titles = screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent);
     expect(titles).toEqual([
-      '#4790 · Invoice PDF shows the wrong VAT number',
-      '#4821 · Checkout: retry failed card payments',
+      '#4790 Invoice PDF shows the wrong VAT number',
+      '#4821 Checkout: retry failed card payments',
       'Interview preparation',
-      '#4655 · Design system: date picker tokens',
+      '#4655 Design system: date picker tokens',
     ]);
-    expect(screen.getByText('Running locally', { selector: 'span' })).toBeInTheDocument();
+    // The timer card and the running draft's row.
+    expect(screen.getAllByText('Running locally', { selector: 'span' })).toHaveLength(2);
     expect(screen.getByText('Check 7pace before retrying')).toBeInTheDocument();
     // Only one local timer can run.
     expect(screen.getByRole('button', { name: 'Start local timer…' })).toBeDisabled();

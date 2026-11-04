@@ -48,9 +48,10 @@
   position: relative;
   display: inline-block;
   align-self: flex-start;
-  font-family: var(--font-family-rounded);
+  font-family: var(--font-family-mono);
   font-size: var(--timer-font-size);
-  font-weight: var(--font-weight-light);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
   color: var(--color-text);
@@ -123,6 +124,50 @@
     transform: translateY(-100%);
     opacity: 0;
   }
+}
+
+/* Bar indicator (2.0): digits on top, the target bar and its description below. */
+.withBar {
+  display: flex;
+  align-items: stretch;
+}
+
+.withBar .readout {
+  flex: 1;
+  gap: var(--space-2);
+}
+
+.barBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.bar {
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--color-ring-track);
+}
+
+.small .bar {
+  height: 0.375rem;
+}
+
+.barFill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--timer-status);
+}
+
+.status-running .barFill {
+  background: var(--color-primary);
+}
+
+.barStale .barFill {
+  opacity: 0.55;
 }
 
 .description {

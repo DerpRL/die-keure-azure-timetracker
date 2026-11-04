@@ -2,7 +2,7 @@ import { getLocalTimeZone, today, type CalendarDate } from '@internationalized/d
 import { useEffect, useRef, useState } from 'react';
 import { IconButton, Button } from '../../components/Button';
 import { DatePicker } from '../../components/DateFields';
-import { ChevronLeftIcon, ChevronRightIcon, RefreshIcon, SpinnerIcon } from '../../components/icons';
+import { ChevronLeftIcon, ChevronRightIcon, SpinnerIcon } from '../../components/icons';
 import { SegmentedControl } from '../../components/Segmented';
 import type { StatisticsPeriod, StatisticsSlice } from '../../ipc/contract';
 import { useAction } from '../../state/hooks';
@@ -54,16 +54,6 @@ export function PeriodControls({ slice }: { slice: StatisticsSlice }) {
 
   return (
     <div className={styles.controls}>
-      <div className={styles.periodRow}>
-        <SegmentedControl
-          label="Period"
-          hideLabel
-          options={PERIODS}
-          selectedKey={slice.period}
-          onSelectionChange={(period) => void run({ type: 'statistics.setPeriod', period })}
-        />
-        <Button onPress={() => void run({ type: 'statistics.current' })}>{`Current ${slice.period}`}</Button>
-      </div>
       <div className={styles.controlRow}>
         <div className={styles.rangeNavigator}>
           <IconButton
@@ -72,9 +62,12 @@ export function PeriodControls({ slice }: { slice: StatisticsSlice }) {
             variant="secondary"
             onPress={() => void run({ type: 'statistics.move', amount: -1 })}
           />
-          <p className={styles.rangeTitle} aria-live="polite" aria-atomic="true">
-            {rangeTitle(slice.period, slice.range)}
-          </p>
+          <div className={styles.rangeText}>
+            <p className={styles.rangeTitle} aria-live="polite" aria-atomic="true">
+              {rangeTitle(slice.period, slice.range)}
+            </p>
+            <SyncStatus slice={slice} />
+          </div>
           <IconButton
             label="Next period"
             icon={ChevronRightIcon}
@@ -83,20 +76,23 @@ export function PeriodControls({ slice }: { slice: StatisticsSlice }) {
             onPress={() => void run({ type: 'statistics.move', amount: 1 })}
           />
         </div>
-        <DatePicker<CalendarDate>
-          label="Jump to"
-          className={styles.jumpTo}
-          value={shown}
-          maxValue={now}
-          onChange={jumpTo}
-        />
+        <div className={styles.periodRow}>
+          <SegmentedControl
+            label="Period"
+            hideLabel
+            options={PERIODS}
+            selectedKey={slice.period}
+            onSelectionChange={(period) => void run({ type: 'statistics.setPeriod', period })}
+          />
+          <Button onPress={() => void run({ type: 'statistics.current' })}>{`Current ${slice.period}`}</Button>
+          <DatePicker<CalendarDate> label="Jump to" hideLabel className={styles.jumpTo} value={shown} maxValue={now} onChange={jumpTo} />
+        </div>
       </div>
       {navigate.error ? (
         <p role="alert" className={styles.inlineError}>
           {navigate.error.message}
         </p>
       ) : null}
-      <SyncStatus slice={slice} />
     </div>
   );
 }
@@ -118,12 +114,7 @@ export function SyncStatus({ slice }: { slice: StatisticsSlice }) {
           {busy}
         </span>
       ) : null}
-      {slice.syncedAt ? (
-        <span className={styles.synced}>
-          <RefreshIcon className={styles.inlineIcon} />
-          {`Synced ${syncedLabel(slice.syncedAt)}`}
-        </span>
-      ) : null}
+      {slice.syncedAt ? <span className={styles.synced}>{`Synced ${syncedLabel(slice.syncedAt)}`}</span> : null}
     </p>
   );
 }

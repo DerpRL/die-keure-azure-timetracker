@@ -15,25 +15,44 @@
   font-size: var(--font-size-footnote);
 }
 
+/* Week picker card: the controls on the left, the week's dates on the right (wraps when narrow). */
 .weekBar {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: var(--space-3);
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.weekControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
 }
 
 .range {
-  align-self: center;
-  margin-left: auto;
-  font-weight: var(--font-weight-medium);
+  margin: 0;
+  padding-bottom: 0.5rem;
+  font-size: 1rem;
+  font-weight: var(--font-weight-semibold);
   font-variant-numeric: tabular-nums;
 }
 
+/* Generate and its status on the left, Copy and Export on the right. */
 .toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2) var(--space-3);
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.toolbarGroup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .status {
@@ -53,14 +72,13 @@
   }
 }
 
-.spacer {
-  flex: 1 1 auto;
-}
-
 .editor textarea {
-  min-height: 22rem;
+  min-height: 28.75rem;
+  padding: var(--space-4) 1.125rem;
+  border-radius: var(--radius-md);
   font-family: var(--font-family-mono);
-  font-size: var(--font-size-body);
-  line-height: 1.5;
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-regular);
+  line-height: 1.65;
   resize: vertical;
 }

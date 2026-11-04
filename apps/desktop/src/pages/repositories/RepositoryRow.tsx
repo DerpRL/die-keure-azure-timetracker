@@ -1,5 +1,5 @@
 import { Button } from '../../components/Button';
-import { MinusIcon, PausedIcon, WarningIcon } from '../../components/icons';
+import { PausedIcon, WarningIcon } from '../../components/icons';
 import { Switch } from '../../components/Toggles';
 import { Tooltip } from '../../components/Tooltip';
 import type { RepositoryView } from '../../ipc/contract';
@@ -11,7 +11,7 @@ import styles from './repositories.module.css';
 function RepositoryStatus({ repository }: { repository: RepositoryView }) {
   if (repository.error) {
     return (
-      <p className={`${styles.status} ${styles.issue}`}>
+      <p className={`${styles.rowStatus} ${styles.issue}`}>
         <WarningIcon />
         <span>
           <span className="visually-hidden">Problem: </span>
@@ -22,7 +22,7 @@ function RepositoryStatus({ repository }: { repository: RepositoryView }) {
   }
   if (!repository.enabled) {
     return (
-      <p className={`${styles.status} ${styles.muted}`}>
+      <p className={styles.rowStatus}>
         <PausedIcon />
         <span>Paused</span>
       </p>
@@ -30,17 +30,15 @@ function RepositoryStatus({ repository }: { repository: RepositoryView }) {
   }
   if (repository.detached || repository.branch) {
     return (
-      <p className={`${styles.status} ${styles.branch}`}>
+      <p className={styles.rowStatus}>
         <BranchIcon />
-        <span>
-          <span className="visually-hidden">Current branch: </span>
-          {repository.detached ? 'Detached HEAD' : repository.branch}
-        </span>
+        <span className="visually-hidden">Current branch: </span>
+        {repository.detached ? <span>Detached HEAD</span> : <code className={styles.code}>{repository.branch}</code>}
       </p>
     );
   }
   return (
-    <p className={`${styles.status} ${styles.muted}`}>
+    <p className={styles.rowStatus}>
       <BranchIcon />
       <span>Reading branch…</span>
     </p>
@@ -58,7 +56,9 @@ export function RepositoryRow({ repository, onRemove }: RepositoryRowProps) {
   const toggle = useAction();
   return (
     <li className={styles.row}>
-      <FolderIcon className={styles.rowIcon} strokeWidth={1.5} />
+      <span className={styles.rowIcon}>
+        <FolderIcon />
+      </span>
       <div className={styles.rowMain}>
         <h3 className={styles.rowName}>{repository.name}</h3>
         <p className={styles.path}>{repository.path}</p>
@@ -83,7 +83,7 @@ export function RepositoryRow({ repository, onRemove }: RepositoryRowProps) {
           <Button
             size="small"
             variant="plain"
-            icon={MinusIcon}
+            className={styles.danger}
             onPress={() => onRemove(repository)}
             aria-label={`Remove ${repository.name} from watch list`}
           >

@@ -81,15 +81,17 @@ export function TimeSection({ slice, analysis, analysisKey, colors, chart, onCha
 
   return (
     <div className={styles.stack}>
-      <Card padding="large">
+      <Card padding="medium">
         <div ref={chartRef} className={styles.chartCard}>
           <div className={styles.chartToolbar}>
-            <SegmentedControl label="Chart type" hideLabel options={CHARTS} selectedKey={chart} onSelectionChange={onChartChange} />
-            <Badge tone="neutral" accessibleLabel={`Resolution: ${analysis.resolution}`}>
-              {analysis.resolution}
-            </Badge>
+            <div className={styles.chartPicker}>
+              <SegmentedControl label="Chart type" hideLabel options={CHARTS} selectedKey={chart} onSelectionChange={onChartChange} />
+              <Badge tone="neutral" accessibleLabel={`Resolution: ${analysis.resolution}`}>
+                {analysis.resolution}
+              </Badge>
+            </div>
+            <ZoomControls slice={slice} />
           </div>
-          <ZoomControls slice={slice} />
           {chart === 'activity' ? (
             <ActivityBars
               title="Where your time went"
@@ -221,9 +223,14 @@ function Coverage({ analysis }: { analysis: AnalysisView }) {
       <div>
         <dt>Billable time</dt>
         <dd>
-          {analysis.billableKnownCount > 0
-            ? `${duration(analysis.billable)} · supplied for ${analysis.billableKnownCount} of ${plural(analysis.count, 'entry', 'entries')}`
-            : 'Not supplied by 7pace'}
+          {analysis.billableKnownCount > 0 ? (
+            <>
+              {duration(analysis.billable)}
+              <span className={styles.coverageNote}>{` · supplied for ${analysis.billableKnownCount} of ${plural(analysis.count, 'entry', 'entries')}`}</span>
+            </>
+          ) : (
+            <span className={styles.coverageNote}>Not supplied by 7pace</span>
+          )}
         </dd>
       </div>
     </dl>

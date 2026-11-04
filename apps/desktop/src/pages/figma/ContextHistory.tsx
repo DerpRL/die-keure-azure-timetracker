@@ -37,14 +37,15 @@ export function ContextHistory({ figma, confirming, onConfirmingChange }: Contex
 
   return (
     <Section
+      className={styles.historyCard}
       title="Context history"
       subtitle={`Local observations, not recorded hours. Kept for ${figma.preferences.historyDays} ${figma.preferences.historyDays === 1 ? 'day' : 'days'}, up to 5,000 observations.`}
       actions={
         <>
-          <Button size="small" onPress={() => setExpanded((value) => !value)} aria-expanded={expanded} aria-controls={expanded ? listId : undefined}>
+          <Button onPress={() => setExpanded((value) => !value)} aria-expanded={expanded} aria-controls={expanded ? listId : undefined}>
             {expanded ? 'Hide history' : 'Show history'}
           </Button>
-          <Button size="small" isDisabled={history.length === 0} onPress={() => onConfirmingChange(true)}>
+          <Button variant="plain" className={styles.danger} isDisabled={history.length === 0} onPress={() => onConfirmingChange(true)}>
             Clear history…
           </Button>
         </>
@@ -81,9 +82,7 @@ export function ContextHistory({ figma, confirming, onConfirmingChange }: Contex
                 );
               })}
             </ol>
-            {figma.historyCount > history.length ? (
-              <p className={styles.text}>Showing the latest {history.length} observations.</p>
-            ) : null}
+            {figma.historyCount > history.length ? <p className={styles.text}>Showing the latest {history.length} observations.</p> : null}
           </>
         )
       ) : null}

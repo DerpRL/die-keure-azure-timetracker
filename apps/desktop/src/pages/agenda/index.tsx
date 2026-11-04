@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import type { CalendarDate } from '@internationalized/date';
 import { Badge } from '../../components/Badge';
 import { Banner } from '../../components/Banner';
@@ -12,7 +12,10 @@ import type { AgendaEventView, AgendaSlice } from '../../ipc/contract';
 import { showMain } from '../../ipc/shell';
 import { useCommands } from '../../shortcuts/hooks';
 import { useAction, useSlice, type Action } from '../../state/hooks';
-import { formatDay, formatTime, parseDay, safeColor, todayDate } from './model';
+import { activityColorIndex, useActivityColors } from '../../features/activity';
+import { cx } from '../../utils/cx';
+import { DayCalendar, type RunningBlock, type TrackedBlock, type TrackedDay } from './DayCalendar';
+import { dayBounds, formatDay, formatTime, parseDay, safeColor, todayDate } from './model';
 import styles from './agenda.module.css';
 
 function messageOf(error: unknown): string {
@@ -99,14 +102,14 @@ function EventRow({ event }: { event: AgendaEventView }) {
           {event.allDay ? (
             'All day'
           ) : (
-            <span>
+            <span className={styles.mono}>
               <time dateTime={event.start}>{formatTime(event.start)}</time>
               {' – '}
               <time dateTime={event.end}>{formatTime(event.end)}</time>
             </span>
           )}
           {event.isNow ? (
-            <Badge tone="running" accessibleLabel="Happening now">
+            <Badge tone="accent" accessibleLabel="Happening now" className={styles.nowBadge}>
               Now
             </Badge>
           ) : null}
@@ -119,13 +122,16 @@ function EventRow({ event }: { event: AgendaEventView }) {
 }
 
 /** Which calendars appear, with a link to the selection in Settings. */
-function CalendarsNote({ agenda }: { agenda: AgendaSlice }) {
+function CalendarsCard({ agenda }: { agenda: AgendaSlice }) {
   const [openError, setOpenError] = useState<string | null>(null);
+  const headingId = useId();
   const selected = agenda.calendars.filter((calendar) => calendar.selected);
   const shown = selected.length > 0 ? selected : agenda.calendars;
   return (
-    <div className={styles.calendars}>
-      <span className={styles.text}>{selected.length > 0 ? 'Calendars:' : 'All calendars:'}</span>
+    <Card as="section" aria-labelledby={headingId} className={styles.calendars}>
+      <h2 id={headingId} className={styles.cardTitle}>
+        {selected.length > 0 ? 'Calendars' : 'All calendars'}
+      </h2>
       {shown.length > 0 ? (
         <ul role="list" aria-label="Calendars shown" className={styles.calendarList}>
           {shown.map((calendar) => {
@@ -139,76 +145,135 @@ function CalendarsNote({ agenda }: { agenda: AgendaSlice }) {
           })}
         </ul>
       ) : null}
-      <Button
-        size="small"
-        variant="plain"
-        icon={SettingsIcon}
-        onPress={() => {
-          setOpenError(null);
-          showMain('settings').catch((error: unknown) => setOpenError(messageOf(error)));
-        }}
-      >
-        Choose calendars in Settings
-      </Button>
+      <div>
+        <Button
+          size="small"
+          variant="plain"
+          icon={SettingsIcon}
+          onPress={() => {
+            setOpenError(null);
+            showMain('settings').catch((error: unknown) => setOpenError(messageOf(error)));
+          }}
+        >
+          Choose calendars in Settings
+        </Button>
+      </div>
       {openError ? (
         <p role="alert" className={styles.error}>
           {openError}
         </p>
       ) : null}
-    </div>
+      <p className={styles.text}>
+        Missing a calendar? Add its account in macOS System Settings → Internet Accounts and enable Calendars.
+      </p>
+    </Card>
   );
 }
 
+/**
+ * Today's tracked time from the slices the app already keeps: `history.todayLogs` (completed
+ * worklogs) and the running timer. Other days have no tracked time in any slice, so `null`.
+ */
+function useTrackedDay(day: CalendarDate, isToday: boolean): TrackedDay | null {
+  const history = useSlice('history');
+  const tracking = useSlice('tracking');
+  const workItems = useSlice('workItems');
+  const colors = useActivityColors();
+  return useMemo(() => {
+    if (!isToday || !history?.loaded) return null;
+    const { start: dayStart, end: dayEnd } = dayBounds(day);
+    const titleOf = (ticketId: number | null | undefined, fallback: string | null | undefined) => {
+      const title = ticketId != null ? workItems?.[String(ticketId)]?.title : undefined;
+      if (ticketId != null) return title ? `#${ticketId} ${title}` : `#${ticketId}`;
+      return fallback?.trim() || 'Unassigned time';
+    };
+    const blocks: TrackedBlock[] = [];
+    for (const log of history.todayLogs) {
+      const start = Date.parse(log.timestamp);
+      if (Number.isNaN(start) || start < dayStart || start >= dayEnd) continue;
+      blocks.push({
+        id: log.id,
+        start,
+        end: start + Math.max(log.length, 0) * 1000,
+        colorIndex: activityColorIndex(colors, log.activityType?.id),
+        title: titleOf(log.workItemId, log.comment),
+      });
+    }
+    let running: RunningBlock | null = null;
+    const confirmed = tracking?.running && tracking.confirmedAt ? Date.parse(tracking.confirmedAt) : Number.NaN;
+    if (tracking && !Number.isNaN(confirmed)) {
+      running = {
+        start: confirmed - tracking.elapsedBase * 1000,
+        colorIndex: activityColorIndex(colors, tracking.activityId),
+        title: tracking.ticketId != null ? `#${tracking.ticketId} ${tracking.title}` : tracking.title,
+      };
+    }
+    return { blocks, running };
+  }, [day, isToday, history, tracking, workItems, colors]);
+}
+
 function DayAgenda({ agenda, setDay, day }: { agenda: AgendaSlice; setDay: Action; day: CalendarDate }) {
-  const headingId = useId();
+  const listHeadingId = useId();
   const go = (next: CalendarDate) => void setDay.run({ type: 'agenda.setDay', day: next.toString() });
   const current = todayDate();
   const isToday = day.compare(current) === 0;
   const count = agenda.events.length;
+  const tracked = useTrackedDay(day, isToday);
   return (
     <>
-      <div role="group" aria-label="Day" className={styles.toolbar}>
-        <IconButton label="Previous day" icon={ChevronLeftIcon} variant="secondary" onPress={() => go(day.subtract({ days: 1 }))} />
-        <DatePicker
-          label="Day"
-          hideLabel
-          value={day}
-          onChange={(value) => {
-            if (value && value.compare(day) !== 0) go(value);
-          }}
-        />
-        <IconButton label="Next day" icon={ChevronRightIcon} variant="secondary" onPress={() => go(day.add({ days: 1 }))} />
-        <Button isDisabled={isToday} onPress={() => go(current)}>
-          Today
-        </Button>
-        <span className={styles.count} aria-live="polite">
-          {count} {count === 1 ? 'event' : 'events'}
-        </span>
+      <div role="group" aria-label="Day" className={styles.nav}>
+        <div className={styles.navStart}>
+          <IconButton label="Previous day" icon={ChevronLeftIcon} variant="secondary" onPress={() => go(day.subtract({ days: 1 }))} />
+          <IconButton label="Next day" icon={ChevronRightIcon} variant="secondary" onPress={() => go(day.add({ days: 1 }))} />
+          <h2 className={styles.dayHeading}>
+            {formatDay(day)}
+            {isToday ? <Badge tone="accent">Today</Badge> : null}
+          </h2>
+        </div>
+        <div className={styles.navEnd}>
+          <span className={styles.count} aria-live="polite">
+            {count} {count === 1 ? 'event' : 'events'}
+          </span>
+          <DatePicker
+            label="Day"
+            hideLabel
+            value={day}
+            onChange={(value) => {
+              if (value && value.compare(day) !== 0) go(value);
+            }}
+          />
+          <Button isDisabled={isToday} onPress={() => go(current)}>
+            Today
+          </Button>
+        </div>
       </div>
       {setDay.error ? (
         <p role="alert" className={styles.error}>
           {setDay.error.message}
         </p>
       ) : null}
-      <Card as="section" aria-labelledby={headingId}>
-        <h2 id={headingId} className={styles.dayHeading}>
-          {formatDay(day)}
-          {isToday ? <Badge tone="accent">Today</Badge> : null}
-        </h2>
-        {count === 0 ? (
-          <EmptyState title="An open day" description="No events in your selected calendars." size="compact" />
-        ) : (
-          <ol role="list" aria-label={`Events on ${formatDay(day)}`} className={styles.events}>
-            {agenda.events.map((event) => (
-              <EventRow key={event.id} event={event} />
-            ))}
-          </ol>
-        )}
-      </Card>
-      <p className={styles.text}>
-        Missing a calendar? Add its account in macOS System Settings → Internet Accounts and enable Calendars.
-      </p>
-      <CalendarsNote agenda={agenda} />
+      <div className={styles.layout}>
+        <DayCalendar day={day} events={agenda.events} tracked={tracked} isToday={isToday} />
+        <div className={styles.aside}>
+          <Card as="section" padding="none" aria-labelledby={listHeadingId}>
+            <h2 id={listHeadingId} className={cx(styles.cardTitle, styles.listHeading)}>
+              {isToday ? 'Events today' : 'Events'}
+            </h2>
+            {count === 0 ? (
+              <div className={styles.listEmpty}>
+                <EmptyState title="An open day" description="No events in your selected calendars." size="compact" />
+              </div>
+            ) : (
+              <ol role="list" aria-label={`Events on ${formatDay(day)}`} className={styles.events}>
+                {agenda.events.map((event) => (
+                  <EventRow key={event.id} event={event} />
+                ))}
+              </ol>
+            )}
+          </Card>
+          <CalendarsCard agenda={agenda} />
+        </div>
+      </div>
     </>
   );
 }

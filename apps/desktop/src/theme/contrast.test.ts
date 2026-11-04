@@ -90,17 +90,19 @@ describe('design tokens', () => {
     }
   });
 
-  it('keeps primary buttons dark teal with white text', () => {
+  it('keeps primary buttons blue with a readable label', () => {
     for (const theme of themeNames) {
       const tokens = themeTokens(theme);
-      expect(tokens.get('--color-on-primary'), theme).toBe('#ffffff');
       const primary = parseHexColor(tokens.get('--color-primary') ?? '');
       expect(primary, theme).not.toBeNull();
       if (!primary) continue;
-      // Teal: green and blue dominate red, and the fill is dark.
-      expect(primary.g, theme).toBeGreaterThan(primary.r * 3);
-      expect(primary.b, theme).toBeGreaterThan(primary.r * 3);
-      expect(contrastRatioHex('#ffffff', tokens.get('--color-primary') ?? ''), theme).toBeGreaterThanOrEqual(4.5);
+      // Blue: blue clearly dominates red and green.
+      expect(primary.b, theme).toBeGreaterThan(primary.r * 1.5);
+      expect(primary.b, theme).toBeGreaterThan(primary.g * 1.2);
+      expect(
+        contrastRatioHex(tokens.get('--color-on-primary') ?? '', tokens.get('--color-primary') ?? ''),
+        theme,
+      ).toBeGreaterThanOrEqual(4.5);
     }
   });
 

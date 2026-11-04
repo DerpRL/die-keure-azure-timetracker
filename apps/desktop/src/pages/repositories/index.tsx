@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { StatusDot } from '../../components/Badge';
 import { Banner } from '../../components/Banner';
 import { Button } from '../../components/Button';
 import { Card, Section } from '../../components/Card';
@@ -38,13 +37,7 @@ function WatchingSection({ watching }: { watching: boolean }) {
     <Section
       title="Branch watching"
       subtitle="Suggests the ticket of the branch you switch to. Nothing changes in 7pace until you confirm."
-    >
-      <div className={styles.watching}>
-        <StatusDot
-          tone={watching ? 'running' : 'paused'}
-          label={watching ? 'Watching branches' : 'Observations paused'}
-          showLabel
-        />
+      actions={
         <Switch
           isSelected={watching}
           isDisabled={toggle.pending}
@@ -52,26 +45,41 @@ function WatchingSection({ watching }: { watching: boolean }) {
             if (next !== watching) void toggle.run({ type: 'repositories.toggleWatching' });
           }}
           description="Pausing also pauses Figma observations."
+          className={styles.watchSwitch}
         >
           Watch branches
         </Switch>
-      </div>
+      }
+      className={styles.watchingCard}
+    >
       {toggle.error ? (
         <p role="alert" className={styles.error}>
           {toggle.error.message}
         </p>
       ) : null}
-      <p className={styles.text}>
-        A branch such as <code className={styles.code}>feature/33624-improve-loading</code> suggests ticket 33624.{' '}
-        <code className={styles.code}>develop</code> and <code className={styles.code}>long-feature/*</code> branches
-        suggest Pause, Stop or Keep current instead, and a detached HEAD does not change tracking.
-      </p>
-      <div className={styles.pattern}>
-        <span className={styles.text}>Ticket pattern:</span>
-        {pattern ? <code className={styles.code}>{pattern}</code> : <span className={styles.text}>Loading…</span>}
-        <Button size="small" variant="plain" icon={SettingsIcon} onPress={openSettings}>
-          Change in Settings
-        </Button>
+      <div className={styles.rules}>
+        <div className={styles.rule}>
+          <p className={styles.eyebrow}>Suggests a ticket</p>
+          <code className={styles.code}>feature/33624-improve-loading</code>
+          <p className={styles.text}>
+            <span aria-hidden="true">→ </span>ticket <span className={styles.ticket}>#33624</span>
+          </p>
+        </div>
+        <div className={styles.rule}>
+          <p className={styles.eyebrow}>Suggests Pause, Stop or Keep current</p>
+          <p className={styles.codes}>
+            <code className={styles.code}>develop</code>
+            <code className={styles.code}>long-feature/*</code>
+          </p>
+          <p className={styles.text}>A detached HEAD does not change tracking.</p>
+        </div>
+        <div className={styles.rule}>
+          <p className={styles.eyebrow}>Ticket pattern</p>
+          {pattern ? <code className={styles.code}>{pattern}</code> : <p className={styles.text}>Loading…</p>}
+          <Button size="small" variant="plain" icon={SettingsIcon} onPress={openSettings} className={styles.settingsLink}>
+            Change in Settings
+          </Button>
+        </div>
       </div>
       {openError ? (
         <p role="alert" className={styles.error}>
@@ -196,10 +204,15 @@ export default function RepositoriesPage() {
         </Banner>
       ) : null}
       <WatchingSection watching={repositories.watching} />
-      <section aria-labelledby={listTitleId} className={styles.page}>
+      <section aria-labelledby={listTitleId} className={styles.listSection}>
         <h2 id={listTitleId} ref={listHeading} tabIndex={-1} className={styles.listHeading}>
           Watched repositories
-          {repositories.repositories.length > 0 ? ` (${repositories.repositories.length})` : ''}
+          {repositories.repositories.length > 0 ? (
+            <>
+              {' '}
+              <span className={styles.count}>{`· ${repositories.repositories.length}`}</span>
+            </>
+          ) : null}
         </h2>
         {repositories.repositories.length === 0 ? (
           <Card>
@@ -211,11 +224,13 @@ export default function RepositoriesPage() {
             />
           </Card>
         ) : (
-          <ul role="list" className={styles.list}>
-            {repositories.repositories.map((repository) => (
-              <RepositoryRow key={repository.id} repository={repository} onRemove={setRemoving} />
-            ))}
-          </ul>
+          <Card padding="none" className={styles.listCard}>
+            <ul role="list" className={styles.list}>
+              {repositories.repositories.map((repository) => (
+                <RepositoryRow key={repository.id} repository={repository} onRemove={setRemoving} />
+              ))}
+            </ul>
+          </Card>
         )}
       </section>
       <ScanSheet

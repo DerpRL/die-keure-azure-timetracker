@@ -69,7 +69,7 @@ describe('RepositoriesPage', () => {
 
   it('lists every repository state with its branch, problem or pause', async () => {
     const { container } = renderPage({ with: { repositories: repositoriesWithIssues } });
-    expect(screen.getByRole('heading', { level: 2, name: 'Watched repositories (5)' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Watched repositories · 5' })).toBeInTheDocument();
     const rows = within(screen.getByRole('list', { name: '' })).getAllByRole('listitem');
     expect(rows).toHaveLength(5);
     expect(within(rows[0]!).getByText('feature/AB#4790-vat-number')).toBeInTheDocument();
@@ -79,7 +79,8 @@ describe('RepositoriesPage', () => {
     expect(within(rows[3]!).getByText('Paused')).toBeInTheDocument();
     expect(within(rows[3]!).getByRole('switch', { name: 'Watch legacy-portal' })).not.toBeChecked();
     expect(within(rows[4]!).getByText('Reading branch…')).toBeInTheDocument();
-    expect(screen.getByText('Watching branches')).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: /Watch branches/ })).toBeChecked();
+    expect(screen.getByRole('switch', { name: /Watch branches/ })).toHaveAccessibleDescription('Pausing also pauses Figma observations.');
     expect(screen.getByText(sampleSlices().settings!.configuration.branchPattern)).toBeInTheDocument();
     await expectNoA11yViolations(container);
   });
@@ -88,7 +89,6 @@ describe('RepositoriesPage', () => {
     const { container } = renderPage({ with: { repositories: emptyRepositories } });
     expect(screen.getByRole('heading', { level: 3, name: 'Choose your repositories' })).toBeInTheDocument();
     expect(screen.getByText(/scan its subfolders and select the repositories/)).toBeInTheDocument();
-    expect(screen.getByText('Observations paused')).toBeInTheDocument();
     expect(screen.getByRole('switch', { name: /Watch branches/ })).not.toBeChecked();
     expect(screen.getAllByRole('button', { name: 'Add repositories…' })).toHaveLength(2);
     await expectNoA11yViolations(container);

@@ -7,6 +7,7 @@ import { TicketLink } from '../../features/ticketContext/TicketLink';
 import type { FigmaSlice } from '../../ipc/contract';
 import { useCommands } from '../../shortcuts/hooks';
 import { useAction, useSlice } from '../../state/hooks';
+import { cx } from '../../utils/cx';
 import { ContextHistory } from './ContextHistory';
 import { FileRegister } from './FileRegister';
 import { formatSeen } from './model';
@@ -31,30 +32,35 @@ function useSuggestionAnnouncements(figma: FigmaSlice | undefined) {
 }
 
 /** "Last worked in Figma": the most recently worked linked ticket and its files (from the engine). */
-function LastWorked({ figma }: { figma: FigmaSlice }) {
+function LastWorked({ figma, className }: { figma: FigmaSlice; className?: string }) {
   const ticketId = figma.lastWorkedTicket;
   if (ticketId === null) return null;
   const files = figma.lastWorked;
   const title = files.find((file) => file.ticketTitle)?.ticketTitle;
   return (
-    <Section title="Last worked in Figma" subtitle="Based on the most recently seen linked file.">
-      <p className={styles.ticket}>
-        <TicketLink ticketId={ticketId} title={title ?? undefined} />
-      </p>
-      {files.length > 0 ? (
-        <ul role="list" aria-label="Files linked to this ticket" className={styles.lastWorked}>
-          {files.map((file) => (
-            <li key={file.key}>
-              <span>{file.name}</span>
-              {file.lastSeen ? (
-                <time dateTime={file.lastSeen} className={styles.text}>
-                  {formatSeen(file.lastSeen)}
-                </time>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      ) : null}
+    <Section title="Last worked in Figma" subtitle="Based on the most recently seen linked file." className={className}>
+      <div className={styles.lastWorkedBox}>
+        <span className={styles.pill} aria-hidden="true" />
+        <div className={styles.lastWorkedMain}>
+          {files.length > 0 ? (
+            <ul role="list" aria-label="Files linked to this ticket" className={styles.lastWorked}>
+              {files.map((file) => (
+                <li key={file.key}>
+                  <span className={styles.lastWorkedName}>{file.name}</span>
+                  {file.lastSeen ? (
+                    <time dateTime={file.lastSeen} className={styles.seen}>
+                      {formatSeen(file.lastSeen)}
+                    </time>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <p className={styles.ticket}>
+            <TicketLink ticketId={ticketId} title={title ?? undefined} />
+          </p>
+        </div>
+      </div>
     </Section>
   );
 }
@@ -99,6 +105,8 @@ export default function FigmaPage() {
   }
 
   const titleOnly = figma.titleOnly || (app?.features.figmaTitleOnly ?? false);
+  const hasSuggestions = figma.suggestions.length > 0;
+  const hasLastWorked = figma.lastWorkedTicket !== null;
 
   return (
     <div className={styles.page}>
@@ -114,17 +122,23 @@ export default function FigmaPage() {
         </Banner>
       ) : null}
       <ObservationSection figma={figma} titleOnly={titleOnly} />
-      {figma.suggestions.length > 0 ? (
-        <section aria-labelledby={suggestionsId} className={styles.page}>
-          <h2 id={suggestionsId} className={styles.sectionTitle}>
-            Suggested from Figma
-          </h2>
-          {figma.suggestions.map((prompt) => (
-            <SuggestionCard key={prompt.suggestion.id} prompt={prompt} />
-          ))}
-        </section>
+      {hasSuggestions || hasLastWorked ? (
+        <div className={cx(styles.pair, hasSuggestions && hasLastWorked && styles.pairSplit)}>
+          {hasSuggestions ? (
+            <section aria-labelledby={suggestionsId} className={styles.suggestions}>
+              <h2 id={suggestionsId} className={styles.sectionTitle}>
+                Suggested from Figma
+              </h2>
+              <div className={styles.suggestionCards}>
+                {figma.suggestions.map((prompt) => (
+                  <SuggestionCard key={prompt.suggestion.id} prompt={prompt} />
+                ))}
+              </div>
+            </section>
+          ) : null}
+          <LastWorked figma={figma} className={styles.lastWorkedCard} />
+        </div>
       ) : null}
-      <LastWorked figma={figma} />
       <FileRegister figma={figma} titleOnly={titleOnly} />
       <ContextHistory figma={figma} confirming={confirmingClear} onConfirmingChange={setConfirmingClear} />
     </div>

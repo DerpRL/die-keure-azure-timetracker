@@ -2,7 +2,7 @@ import { parseAbsoluteToLocal, type ZonedDateTime } from '@internationalized/dat
 import { useState } from 'react';
 import { Button, IconButton } from '../../components/Button';
 import { DatePicker } from '../../components/DateFields';
-import { ArrowLeftIcon, ArrowRightIcon, CalendarRangeIcon, HistoryIcon, ZoomInIcon, ZoomOutIcon } from '../../components/icons';
+import { ArrowLeftIcon, ArrowRightIcon } from '../../components/icons';
 import { Popover, PopoverTrigger } from '../../components/Popover';
 import type { StatisticsSlice } from '../../ipc/contract';
 import { useAction } from '../../state/hooks';
@@ -32,13 +32,13 @@ export function ZoomControls({ slice }: { slice: StatisticsSlice }) {
   return (
     <div className={styles.zoomBar}>
       <div role="group" aria-label="Zoom" className={styles.zoomButtons}>
-        <Button size="small" icon={HistoryIcon} isDisabled={slice.zoomDepth === 0} onPress={() => void run({ type: 'statistics.back' })}>
+        <Button size="small" isDisabled={slice.zoomDepth === 0} onPress={() => void run({ type: 'statistics.back' })}>
           Back
         </Button>
-        <Button size="small" icon={ZoomInIcon} isDisabled={!canZoomIn(slice)} onPress={() => void run({ type: 'statistics.scale', factor: 0.5 })}>
+        <Button size="small" isDisabled={!canZoomIn(slice)} onPress={() => void run({ type: 'statistics.scale', factor: 0.5 })}>
           Zoom in
         </Button>
-        <Button size="small" icon={ZoomOutIcon} isDisabled={!slice.isZoomed} onPress={() => void run({ type: 'statistics.scale', factor: 2 })}>
+        <Button size="small" isDisabled={!slice.isZoomed} onPress={() => void run({ type: 'statistics.scale', factor: 2 })}>
           Zoom out
         </Button>
         <IconButton
@@ -59,7 +59,7 @@ export function ZoomControls({ slice }: { slice: StatisticsSlice }) {
         />
       </div>
       <PopoverTrigger>
-        <Button size="small" icon={CalendarRangeIcon}>
+        <Button size="small">
           Choose range…
         </Button>
         <Popover title="Zoom to a time range" width="large" placement="bottom end">

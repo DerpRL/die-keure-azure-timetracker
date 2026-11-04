@@ -16,6 +16,9 @@ import { PAGES, type PageId } from '../layout/navigation';
 import { PageHeader } from '../layout/PageHeader';
 import { PAGE_COMPONENTS } from '../pages/registry';
 import { useAction, useSlice } from '../state/hooks';
+import { ActivityChip, activityColorIndex, useActivityColors } from '../features/activity';
+import { useTrackingSeconds } from '../features/tracking/status';
+import { formatClock } from '../utils/duration';
 import styles from './surfaces.module.css';
 
 function isPageId(value: string | null | undefined): value is PageId {
@@ -51,6 +54,32 @@ function useVisiblePage(page: PageId) {
   }, [page, run]);
 }
 
+/**
+ * The running (or paused) 7pace timer at the bottom of the sidebar, so it stays in view on every
+ * page (2.0 redesign). The clock is plain text, not a live region: nothing is announced per second.
+ */
+function SidebarTracking() {
+  const tracking = useSlice('tracking');
+  const seconds = useTrackingSeconds(tracking);
+  const colors = useActivityColors();
+  if (!tracking || (!tracking.running && !tracking.paused)) return null;
+  const paused = !tracking.running ? tracking.paused : null;
+  const ticketId = paused ? paused.ticketId : tracking.ticketId;
+  const title = paused ? paused.title : tracking.title;
+  const activityId = paused ? paused.activityId : tracking.activityId;
+  const activityName = paused ? paused.activityName : tracking.activityName;
+  return (
+    <section aria-label="Current timer" className={styles.sidebarCard}>
+      <p className={styles.eyebrow}>{paused ? 'Paused' : 'Tracking'}</p>
+      <div className={styles.sidebarClockRow}>
+        <span className={styles.sidebarClock}>{paused ? 'Paused' : formatClock(seconds)}</span>
+        {activityName ? <ActivityChip name={activityName} colorIndex={activityColorIndex(colors, activityId)} /> : null}
+      </div>
+      <p className={styles.sidebarTitle}>{`${ticketId !== null ? `#${ticketId} ` : ''}${title}`}</p>
+    </section>
+  );
+}
+
 function WatchingFooter() {
   const repositories = useSlice('repositories');
   const toggle = useAction();
@@ -58,19 +87,22 @@ function WatchingFooter() {
   const watching = repositories.watching;
   return (
     <div className={styles.sidebarFooter}>
-      <StatusDot
-        tone={watching ? 'running' : 'paused'}
-        label={watching ? 'Watching branches' : 'Observations paused'}
-        showLabel
-      />
-      <Button
-        size="small"
-        fullWidth
-        isPending={toggle.pending}
-        onPress={() => void toggle.run({ type: 'repositories.toggleWatching' })}
-      >
-        {watching ? 'Pause watching' : 'Resume watching'}
-      </Button>
+      <SidebarTracking />
+      <div className={styles.watchingCard}>
+        <StatusDot
+          tone={watching ? 'success' : 'paused'}
+          label={watching ? 'Watching branches' : 'Observations paused'}
+          showLabel
+        />
+        <Button
+          size="small"
+          aria-label={watching ? 'Pause watching' : 'Resume watching'}
+          isPending={toggle.pending}
+          onPress={() => void toggle.run({ type: 'repositories.toggleWatching' })}
+        >
+          {watching ? 'Pause' : 'Resume'}
+        </Button>
+      </div>
     </div>
   );
 }

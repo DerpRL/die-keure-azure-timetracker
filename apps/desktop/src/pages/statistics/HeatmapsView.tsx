@@ -23,7 +23,7 @@ export function HeatmapsView({ slice, analysis, onOpenTimeline }: HeatmapsViewPr
   const visuals = slice.visuals;
   if (!visuals) {
     return (
-      <Section title={TITLE} variant="plain">
+      <Section title={TITLE} variant="plain" className={styles.heatmaps}>
         <p className={styles.secondary}>The heatmaps appear once this window’s worklogs are analysed.</p>
       </Section>
     );
@@ -44,6 +44,7 @@ function Heatmaps({ visuals, showTargets, onOpenTimeline }: HeatmapsProps) {
         date: localDay(day.date),
         value: day.seconds,
         label: fullDateLabel(day.date),
+        shortLabel: weekdayDayMonthLabel(day.date),
         detail: `${plural(day.entries, 'entry', 'entries')}${showTargets ? ` · target ${duration(day.target)}` : ''}`,
         future: day.future,
       })),
@@ -73,8 +74,8 @@ function Heatmaps({ visuals, showTargets, onOpenTimeline }: HeatmapsProps) {
   const hourly = visuals.hours.length > 0;
 
   return (
-    <Section title={TITLE} variant="plain">
-      <div className={styles.stack}>
+    <Section title={TITLE} variant="plain" className={styles.heatmaps}>
+      <div className={styles.heatmapStack}>
         {calendar ? (
           <CalendarHeatmap
             title="Calendar heatmap"

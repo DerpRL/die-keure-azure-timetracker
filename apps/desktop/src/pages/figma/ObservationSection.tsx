@@ -31,7 +31,11 @@ export function ObservationSection({ figma, titleOnly }: ObservationSectionProps
 
   const update = (patch: Partial<FigmaPreferences>) => {
     const next = { ...preferences, ...patch };
-    if (next.enabled === preferences.enabled && next.dismissalMinutes === preferences.dismissalMinutes && next.historyDays === preferences.historyDays) {
+    if (
+      next.enabled === preferences.enabled &&
+      next.dismissalMinutes === preferences.dismissalMinutes &&
+      next.historyDays === preferences.historyDays
+    ) {
       return;
     }
     void save.run({ type: 'figma.setPreferences', preferences: next });
@@ -39,6 +43,7 @@ export function ObservationSection({ figma, titleOnly }: ObservationSectionProps
 
   return (
     <Section
+      className={styles.observation}
       title="Figma Desktop"
       subtitle="Suggest Design tracking when you switch files. Always confirm before a timer changes."
     >
@@ -56,8 +61,8 @@ export function ObservationSection({ figma, titleOnly }: ObservationSectionProps
       </Switch>
       {titleOnly ? (
         <Banner tone="info" title="Title-only detection (experimental)" live="off">
-          Figma files are recognised by their window title. Files with the same title share one entry and one ticket
-          link, and they cannot be opened from here.
+          Figma files are recognised by their window title. Files with the same title share one entry and one ticket link, and they cannot
+          be opened from here.
         </Banner>
       ) : null}
       {preferences.enabled ? (
@@ -116,9 +121,9 @@ export function ObservationSection({ figma, titleOnly }: ObservationSectionProps
           }}
         />
       </div>
-      <p className={styles.text}>
-        Zero suppression allows a new suggestion at the next activation. Pause watching in the sidebar pauses both Git
-        and Figma observations. Changes here save immediately.
+      <p className={styles.note}>
+        Zero suppression allows a new suggestion at the next activation. Pause watching in the sidebar pauses both Git and Figma
+        observations. Changes here save immediately.
       </p>
       {save.error ? (
         <p role="alert" className={styles.error}>

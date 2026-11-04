@@ -1,0 +1,195 @@
+/* Activity chips, swatches, pills and the day strip (2.0 "Calendar Blocks"). Every element gets
+   its colour from --activity-color (a --chart-n token), so forced colours map them to system
+   colours with the chart tokens. Tints mix that colour into the surface; text stays the body text
+   colour, which reads on any tint lighter (or, in dark mode, darker) than the badge backgrounds. */
+
+.chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 1.5rem;
+  padding: 0 0.5625rem;
+  border-radius: 0.375rem;
+  background: color-mix(in srgb, var(--activity-color) 14%, var(--color-surface));
+  color: var(--color-text);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.chipSwatch,
+.swatch {
+  display: inline-block;
+  flex: none;
+  border-radius: 0.125rem;
+  background: var(--activity-color);
+}
+
+.chipSwatch {
+  width: 0.4375rem;
+  height: 0.4375rem;
+}
+
+.swatch {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 0.1875rem;
+}
+
+.pill {
+  display: block;
+  flex: none;
+  align-self: stretch;
+  width: 0.375rem;
+  min-height: 2.25rem;
+  border-radius: 0.1875rem;
+  background: var(--activity-color);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) 0.875rem;
+  margin: 0;
+  padding: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  list-style: none;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+/* ------------------------------------------------------------------ day strip */
+.strip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.track {
+  position: relative;
+  height: 3.5rem;
+  border: var(--size-border) solid var(--color-separator);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+}
+
+.strip-small .track {
+  height: 2.75rem;
+}
+
+.strip-large .track {
+  height: 4.75rem;
+}
+
+.block {
+  position: absolute;
+  top: 0.375rem;
+  bottom: 0.375rem;
+  min-width: 3px;
+  overflow: hidden;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.4375rem;
+  background: color-mix(in srgb, var(--activity-color) 24%, var(--color-surface));
+  box-shadow: inset 3px 0 0 var(--activity-color);
+  color: var(--color-text);
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.strip-small .block {
+  top: 0.3125rem;
+  bottom: 0.3125rem;
+}
+
+.laneTop {
+  bottom: 50%;
+  margin-bottom: 0.0625rem;
+}
+
+.laneBottom {
+  top: 50%;
+  margin-top: 0.0625rem;
+}
+
+.blockLabel {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.running {
+  outline: 2px dashed var(--activity-color);
+  outline-offset: -2px;
+}
+
+.flagged {
+  outline: 2px solid var(--color-warning);
+  outline-offset: -2px;
+}
+
+.gap {
+  position: absolute;
+  top: 0.375rem;
+  bottom: 0.375rem;
+  border: var(--size-border) dashed var(--color-control-border);
+  border-radius: 0.4375rem;
+  background: repeating-linear-gradient(135deg, transparent 0 5px, var(--color-border) 5px 7px);
+}
+
+.now {
+  position: absolute;
+  top: -0.25rem;
+  bottom: -0.25rem;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--color-primary);
+}
+
+.now::before {
+  position: absolute;
+  top: -0.25rem;
+  left: -0.25rem;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  background: var(--color-primary);
+  content: '';
+}
+
+.ticks {
+  position: relative;
+  height: 1.125rem;
+  color: var(--color-text-secondary);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.tick {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.tick:first-child {
+  transform: none;
+}
+
+.tick:last-child {
+  transform: translateX(-100%);
+}
+
+@media (forced-colors: active) {
+  .block,
+  .chip {
+    border: 1px solid CanvasText;
+  }
+}

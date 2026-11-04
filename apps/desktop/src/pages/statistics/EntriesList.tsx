@@ -1,12 +1,12 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useId, useRef, useState, type ReactNode } from 'react';
 import { Banner } from '../../components/Banner';
 import { Button, IconButton } from '../../components/Button';
-import { Section } from '../../components/Card';
+import { Card, SectionHeading } from '../../components/Card';
 import { Skeleton } from '../../components/EmptyState';
 import { TimeEditorIcon } from '../../components/icons';
 import { Table, type TableColumn } from '../../components/Table';
-import { SeriesSwatch } from '../../charts/palette';
 import type { AnalysisView, ExplorerEntry, Interval } from '../../ipc/contract';
+import { ActivityChip } from '../../features/activity';
 import { TicketLink } from '../../features/ticketContext/TicketLink';
 import { useAction } from '../../state/hooks';
 import { duration, entryTimes, instant, localDay, plural } from './format';
@@ -63,10 +63,12 @@ export interface EntryTableProps {
   colors: ReadonlyMap<string, number>;
   /** Show only the time inside this interval. */
   clip?: Interval | null;
+  /** Edge to edge inside a flush card: no frame of its own. */
+  flush?: boolean;
 }
 
 /** Entry rows (1.14 `entryRow`): task, times, activity, comment, duration, Time editor. */
-export function EntryTable({ label, entries, analysis, colors, clip = null }: EntryTableProps) {
+export function EntryTable({ label, entries, analysis, colors, clip = null, flush = false }: EntryTableProps) {
   const titles = taskTitles(analysis);
   const editor = useAction();
   const openPage = useOpenPage();
@@ -81,6 +83,7 @@ export function EntryTable({ label, entries, analysis, colors, clip = null }: En
     <Table<ExplorerEntry, Column>
       aria-label={label}
       density="compact"
+      className={flush ? styles.flushTable : undefined}
       columns={COLUMNS}
       rows={entries}
       getRowId={entryId}
@@ -100,20 +103,15 @@ export function EntryTable({ label, entries, analysis, colors, clip = null }: En
               <span className={styles.strong}>{title}</span>
             );
           case 'when':
-            return <span className={styles.number}>{entryTimes(part.start, part.end)}</span>;
+            return <span className={styles.when}>{entryTimes(part.start, part.end)}</span>;
           case 'activity':
-            return (
-              <span className={styles.activityCell}>
-                <SeriesSwatch index={colors.get(record.activityId) ?? 0} shape="circle" />
-                {record.activityName}
-              </span>
-            );
+            return <ActivityChip name={record.activityName} colorIndex={colors.get(record.activityId) ?? 0} />;
           case 'comment':
             return record.log.comment ? <span className={styles.comment}>{record.log.comment}</span> : null;
           case 'duration':
             return (
               <span className={styles.durationCell}>
-                <span className={styles.number}>{duration(part.seconds)}</span>
+                <span className={styles.duration}>{duration(part.seconds)}</span>
                 {part.partial ? <span className={styles.note}>in selection</span> : null}
               </span>
             );
@@ -156,6 +154,7 @@ export interface EntriesListProps {
  * on its first page.
  */
 export function EntriesList({ title, detail, analysis, analysisKey, colors, within = null, actions, children }: EntriesListProps) {
+  const headingId = useId();
   const statusRef = useRef<HTMLParagraphElement>(null);
   const listKey = within ? `${analysisKey}|${within.start}|${within.end}` : analysisKey;
   const firstPage = within ? 0 : null;
@@ -186,27 +185,30 @@ export function EntriesList({ title, detail, analysis, analysisKey, colors, with
           : `Entries ${total === 0 ? 0 : first + 1}–${Math.min(total, first + rows.length)} of ${total}`;
 
   return (
-    <Section title={title} subtitle={detail} actions={actions}>
-      {children}
-      {page !== null && loaded.error ? (
-        <Banner
-          tone="error"
-          title="Could not load entries"
-          actions={
-            <Button size="small" onPress={loaded.retry}>
-              Retry
-            </Button>
-          }
-        >
-          {loaded.error}
-        </Banner>
-      ) : null}
+    <Card as="section" aria-labelledby={headingId} padding="none" className={styles.entriesCard}>
+      <div className={styles.entriesHead}>
+        <SectionHeading id={headingId} level={2} title={title} subtitle={detail} actions={actions} size="group" />
+        {children}
+        {page !== null && loaded.error ? (
+          <Banner
+            tone="error"
+            title="Could not load entries"
+            actions={
+              <Button size="small" onPress={loaded.retry}>
+                Retry
+              </Button>
+            }
+          >
+            {loaded.error}
+          </Banner>
+        ) : null}
+      </div>
       {page !== null && loaded.loading ? (
         <div aria-hidden="true" className={styles.tableSkeleton}>
           <Skeleton lines={6} />
         </div>
       ) : (
-        <EntryTable label={title} entries={rows} analysis={analysis} colors={colors} clip={within} />
+        <EntryTable label={title} entries={rows} analysis={analysis} colors={colors} clip={within} flush />
       )}
       <div className={styles.pager}>
         <p ref={statusRef} tabIndex={-1} className={styles.pagerStatus} aria-live="polite">
@@ -236,6 +238,6 @@ export function EntriesList({ title, detail, analysis, analysisKey, colors, with
           </>
         )}
       </div>
-    </Section>
+    </Card>
   );
 }

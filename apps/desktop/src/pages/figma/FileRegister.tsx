@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { Section } from '../../components/Card';
 import { Dialog } from '../../components/Dialog';
@@ -9,6 +10,7 @@ import { Menu, MenuItem, MenuPopover, MenuTrigger } from '../../components/Menu'
 import { TicketLink } from '../../features/ticketContext/TicketLink';
 import type { FigmaFileView, FigmaSlice } from '../../ipc/contract';
 import { useAction, useSlice } from '../../state/hooks';
+import { cx } from '../../utils/cx';
 import { BrowserIcon, DesktopAppIcon } from './icons';
 import { formatSeen, parseTicketNumber } from './model';
 import styles from './figma.module.css';
@@ -87,17 +89,19 @@ function FileRow({ file, titleOnly, onLink }: { file: FigmaFileView; titleOnly: 
   const error = open.error ?? unlink.error;
   return (
     <li className={styles.file}>
+      <span className={cx(styles.pill, file.ticketId === null && styles.pillUnlinked)} aria-hidden="true" />
       <div className={styles.fileMain}>
         <h3 className={styles.fileTitle}>{file.name}</h3>
-        {!titleOnly ? <p className={styles.meta}>{file.key}</p> : null}
-        {seen ? <p className={styles.meta}>Last seen: {seen}</p> : null}
+        <div className={styles.meta}>
+          {!titleOnly ? <span className={styles.fileKey}>{file.key}</span> : null}
+          {seen ? <span>Last seen: {seen}</span> : null}
+          {file.ticketId === null ? <Badge tone="neutral">Not linked to a ticket</Badge> : null}
+        </div>
         {file.ticketId !== null ? (
           <p className={styles.ticket}>
             <TicketLink ticketId={file.ticketId} title={file.ticketTitle ?? 'Azure ticket'} />
           </p>
-        ) : (
-          <p className={`${styles.ticket} ${styles.unlinked}`}>Not linked to a ticket</p>
-        )}
+        ) : null}
         {error ? (
           <p role="alert" className={styles.error}>
             {error.message}
@@ -136,6 +140,7 @@ function FileRow({ file, titleOnly, onLink }: { file: FigmaFileView; titleOnly: 
           <Button
             size="small"
             variant="plain"
+            className={styles.danger}
             isDisabled={busy || unlink.pending}
             onPress={() => void unlink.run({ type: 'figma.unlink', fileKey: file.key })}
             aria-label={`Unlink ${file.name}`}
@@ -180,7 +185,7 @@ export function FileRegister({ figma, titleOnly }: { figma: FigmaSlice; titleOnl
   const filtered = figma.search.trim() !== '';
 
   return (
-    <Section title="File register" subtitle="Link or unlink files without changing any tracked time.">
+    <Section title="File register" subtitle="Link or unlink files without changing any tracked time." className={styles.register}>
       <SearchField
         label="Search file, key or linked ticket"
         hideLabel

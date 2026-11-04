@@ -203,6 +203,61 @@
   min-width: 0;
 }
 
+/* 2.0: the digits sit on a target bar the width of the action row. */
+.timerSide .clock {
+  width: min(100%, 17rem);
+}
+
+.metaLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+}
+
+.ticketNumber {
+  color: var(--color-accent);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Tray panel: the current timer in a sunken box (2.0 redesign). */
+.panelBox {
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.boxHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.panelBox .clock {
+  width: 100%;
+}
+
+.panelBox .trackingTitle {
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-semibold);
+}
+
+.panelActions {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+}
+
+.panelActionsWide > * {
+  flex: 1 1 auto;
+}
+
 .eyebrow {
   color: var(--color-text-secondary);
   font-size: var(--font-size-caption);
@@ -212,8 +267,17 @@
 }
 
 .timerTitle {
-  font-size: var(--font-size-title-3);
-  font-weight: var(--font-weight-semibold);
+  font-size: 1.375rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.015em;
   line-height: var(--line-height-tight);
   overflow-wrap: anywhere;
+}
+
+/* Ticket link as inline text in the meta line (2.0 redesign). */
+.metaLine > button:first-child {
+  min-height: 1.5rem;
+  margin-inline-start: -0.375rem;
+  padding: 0 0.375rem;
+  font-size: var(--font-size-body);
 }

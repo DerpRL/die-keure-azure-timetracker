@@ -22,15 +22,40 @@
   gap: var(--space-3);
 }
 
-.filter {
+.controls .filter {
+  width: min(100%, 17.5rem);
   margin-left: auto;
 }
 
+/* Quick ranges: action buttons in a segmented track; the one matching the range reads pressed. */
 .presets {
-  display: flex;
+  display: inline-flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-top: calc(-1 * var(--space-2));
+  gap: 2px;
+  padding: 0.25rem;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+  box-shadow: inset 0 0 0 var(--size-border) var(--color-separator);
+}
+
+.presets .preset {
+  min-height: calc(var(--size-control-md) - 0.5rem);
+  padding-inline: 0.875rem;
+  border-color: transparent;
+  border-radius: calc(var(--radius-md) - 0.1875rem);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+}
+
+.presets .preset[aria-pressed='true'] {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 1px 2px rgb(16 24 40 / 0.08);
+}
+
+.presets .preset[data-disabled] {
+  color: var(--color-text-disabled);
 }
 
 .loadingNote {
@@ -53,7 +78,7 @@
 
 .metrics {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
   gap: var(--space-4);
   margin: 0;
 }
@@ -61,69 +86,94 @@
 .metric {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 0.375rem;
 }
 
 .metric dt {
   color: var(--color-text-secondary);
-  font-size: var(--font-size-caption);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-medium);
 }
 
 .metric dd {
   margin: 0;
-  font-family: var(--font-family-rounded);
-  font-size: var(--font-size-title-1);
-  font-weight: var(--font-weight-medium);
+  font-size: 1.75rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
 }
 
+/* One card per day: a sunken header with the day's strip and total, then the worklog rows. */
 .day {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+  overflow: hidden;
 }
 
 .dayHeader {
   display: flex;
-  align-items: baseline;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: var(--size-border) solid var(--color-separator);
+  background: var(--color-surface-sunken);
 }
 
 .dayTitle {
+  margin: 0;
   font-size: var(--font-size-headline);
   font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.005em;
+}
+
+.daySummary {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.mini {
+  position: relative;
+  flex: 0 1 17.5rem;
+  width: 17.5rem;
+  min-width: 6rem;
+  height: 0.625rem;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--color-separator);
+}
+
+.miniBlock {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 3px;
+  border-radius: var(--radius-full);
 }
 
 .rows,
 .audit {
   display: flex;
   flex-direction: column;
+  margin: 0;
+  padding: 0;
 }
 
 .row {
   display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-2);
+  gap: 0.875rem;
+  padding: 0.875rem var(--space-5);
   border-bottom: var(--size-border) solid var(--color-separator);
 }
 
 .row:last-child,
 .auditRow:last-child {
   border-bottom: none;
-}
-
-.accent {
-  width: 4px;
-  height: 2rem;
-  border-radius: var(--radius-xs);
-  background: var(--color-accent);
-  opacity: 0.5;
 }
 
 .rowText {
@@ -135,7 +185,7 @@
 
 .rowTitle {
   overflow: hidden;
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-semibold);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -149,10 +199,21 @@
   font-size: var(--font-size-footnote);
 }
 
-.duration {
-  font-family: var(--font-family-rounded);
-  font-weight: var(--font-weight-semibold);
+/* The compact ticket button keeps its hit area; the negative margin lines its text up with the title. */
+.ticket {
+  display: inline-flex;
+  margin-inline: -0.625rem -0.25rem;
+}
+
+.time {
+  font-family: var(--font-family-mono);
   font-variant-numeric: tabular-nums;
+}
+
+.duration {
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .error {
@@ -160,12 +221,16 @@
   font-size: var(--font-size-footnote);
 }
 
+.auditCard {
+  overflow: hidden;
+}
+
 .auditRow {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: start;
-  gap: var(--space-3);
-  padding: var(--space-3) 0;
+  gap: 0.875rem;
+  padding: 0.875rem var(--space-5);
   border-bottom: var(--size-border) solid var(--color-separator);
 }
 
@@ -188,4 +253,9 @@
   justify-content: center;
   gap: var(--space-3);
   padding-top: var(--space-3);
+}
+
+.auditCard .more {
+  padding: var(--space-3) var(--space-5) var(--space-4);
+  border-top: var(--size-border) solid var(--color-separator);
 }

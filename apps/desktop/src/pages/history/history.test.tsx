@@ -53,6 +53,25 @@ describe('History page', () => {
     await expectNoA11yViolations();
   });
 
+  it('shows each worklog’s activity and marks work without a ticket', () => {
+    renderHistory(sampleSlices().history);
+    const monday = screen.getByRole('heading', { name: 'Monday 5 October' }).closest('section')!;
+    const review = within(monday).getByText('Reviewing pull requests').closest('li')!;
+    expect(within(review).getByText('Code review')).toBeInTheDocument();
+    expect(within(review).getByText('No Azure ticket')).toBeInTheDocument();
+    expect(within(review).getByText('16:20')).toBeInTheDocument();
+    expect(within(monday).getAllByText('Development')).toHaveLength(3);
+  });
+
+  it('marks the quick range that matches the loaded dates', () => {
+    const { engine } = renderHistory(sampleSlices().history);
+    const quick = screen.getByRole('group', { name: 'Quick ranges' });
+    for (const button of within(quick).getAllByRole('button')) expect(button).toHaveAttribute('aria-pressed', 'false');
+    act(() => engine.setSlice('history', { ...sampleSlices().history!, from: '2026-10-05', to: '2026-10-06' }));
+    expect(within(quick).getByRole('button', { name: 'This week' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(quick).getByRole('button', { name: 'Today' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
   it('shows totals for the filtered view', async () => {
     const { user } = renderHistory(sampleSlices().history);
     const metrics = () => screen.getByText('Worklogs').closest('dl')!;

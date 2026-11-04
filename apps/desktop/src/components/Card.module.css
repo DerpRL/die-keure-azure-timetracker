@@ -64,11 +64,13 @@
   font-family: var(--font-family-rounded);
   font-size: var(--font-size-title-1);
   font-weight: var(--font-weight-bold);
+  letter-spacing: -0.02em;
 }
 
 .title-section {
-  font-size: var(--font-size-title-3);
+  font-size: 1rem;
   font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.005em;
 }
 
 .title-group {

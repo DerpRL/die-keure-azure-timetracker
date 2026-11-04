@@ -42,30 +42,34 @@ export function SaveBar() {
         </Banner>
       ) : null}
       <div className={styles.saveRow}>
-        <p role="status" className={styles.saveState}>
-          {saved && !dirty && !saving ? <SuccessIcon className={styles.statusIcon} /> : null}
-          {dirty && !saving ? <CircleIcon className={styles.statusIcon} /> : null}
-          <span>{state}</span>
-        </p>
-        <Button onPress={form.revert} isDisabled={!dirty || saving}>
-          Revert
-        </Button>
-        <Button
-          variant="primary"
-          onPress={() => void form.save()}
-          isPending={saving}
-          isDisabled={busy || preview}
-          shortcut={SAVE_SHORTCUT}
-          showShortcut
-        >
-          Save changes
-        </Button>
+        <div className={styles.saveText}>
+          <p role="status" className={styles.saveState}>
+            {saved && !dirty && !saving ? <SuccessIcon className={styles.statusIcon} /> : null}
+            {dirty && !saving ? <CircleIcon className={styles.statusIcon} /> : null}
+            <span>{state}</span>
+          </p>
+          <p className={styles.hint}>
+            {preview
+              ? 'Preview mode: saving settings and credentials is turned off.'
+              : `${mod} saves all sections. Appearance, interruptions, quiet hours, Figma and launch-at-login changes apply immediately.`}
+          </p>
+        </div>
+        <div className={styles.saveButtons}>
+          <Button onPress={form.revert} isDisabled={!dirty || saving}>
+            Revert
+          </Button>
+          <Button
+            variant="primary"
+            onPress={() => void form.save()}
+            isPending={saving}
+            isDisabled={busy || preview}
+            shortcut={SAVE_SHORTCUT}
+            showShortcut
+          >
+            Save changes
+          </Button>
+        </div>
       </div>
-      <p className={styles.hint}>
-        {preview
-          ? 'Preview mode: saving settings and credentials is turned off.'
-          : `${mod} saves all sections. Appearance, interruptions, quiet hours, Figma and launch-at-login changes apply immediately.`}
-      </p>
     </div>
   );
 }

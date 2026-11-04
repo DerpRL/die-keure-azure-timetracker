@@ -1,9 +1,9 @@
 import { useId, type ReactNode } from 'react';
 import { Button } from '../../components/Button';
-import { CalendarIcon, ClockIcon, DayReviewIcon, HistoryIcon, StatisticsIcon, type IconComponent } from '../../components/icons';
 import type { AnalysisView, StatisticsSlice } from '../../ipc/contract';
 import { useAction } from '../../state/hooks';
 import { duration, percent, plural, windowTitle } from './format';
+import { cx } from '../../utils/cx';
 import { isFilterActive } from './model';
 import styles from './Statistics.module.css';
 
@@ -11,18 +11,16 @@ export interface MetricProps {
   title: string;
   value: string;
   note: ReactNode;
-  icon: IconComponent;
+  /** `success` colours the value, e.g. a reached target. */
+  tone?: 'default' | 'success';
 }
 
 /** One headline number (1.14 `metric`): title, value and a note. */
-export function Metric({ title, value, note, icon: Icon }: MetricProps) {
+export function Metric({ title, value, note, tone = 'default' }: MetricProps) {
   return (
     <li className={styles.metric}>
-      <p className={styles.metricTitle}>
-        <Icon className={styles.inlineIcon} />
-        {title}
-      </p>
-      <p className={styles.metricValue}>{value}</p>
+      <p className={styles.metricTitle}>{title}</p>
+      <p className={cx(styles.metricValue, tone === 'success' && styles.metricSuccess)}>{value}</p>
       <p className={styles.metricNote}>{note}</p>
     </li>
   );
@@ -66,23 +64,21 @@ export function Summary({ slice, analysis }: { slice: StatisticsSlice; analysis:
           title="Recorded time"
           value={duration(analysis.total)}
           note={`${plural(analysis.count, 'entry', 'entries')} · ${plural(analysis.trackedDays, 'tracked day')}`}
-          icon={ClockIcon}
         />
-        <Metric title="Tasks worked on" value={String(analysis.tasks.length)} note="Tickets and work without a ticket" icon={DayReviewIcon} />
-        <Metric title="Typical entry" value={duration(analysis.median)} note="Median duration inside this window" icon={HistoryIcon} />
+        <Metric title="Tasks worked on" value={String(analysis.tasks.length)} note="Tickets and work without a ticket" />
+        <Metric title="Typical entry" value={duration(analysis.median)} note="Median duration inside this window" />
         {slice.targetComparable ? (
           <Metric
             title="Period target"
             value={analysis.target > 0 ? percent(analysis.total, analysis.target) : 'Not set'}
             note={`of ${duration(analysis.target)} scheduled`}
-            icon={StatisticsIcon}
+            tone={analysis.target > 0 && analysis.total >= analysis.target ? 'success' : 'default'}
           />
         ) : (
           <Metric
             title="Average tracked day"
             value={duration(analysis.trackedDays > 0 ? analysis.total / analysis.trackedDays : 0)}
             note="Across days with matching entries"
-            icon={CalendarIcon}
           />
         )}
       </MetricList>

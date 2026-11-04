@@ -162,41 +162,46 @@ export default function WeeklyReportPage() {
       <p className={styles.intro}>{`Turn your recorded work into an editable status update. Drafts stay on ${deviceName(app?.os)}.`}</p>
 
       <Card className={styles.weekBar}>
-        <IconButton label="Previous week" icon={ChevronLeftIcon} onPress={() => move(-1)} />
-        <DatePicker
-          label="Week of"
-          value={weekStart}
-          maxValue={today}
-          onChange={(value) => {
-            if (value) void navigate.run({ type: 'weekly.jumpTo', date: value.toString() });
-          }}
-        />
-        <IconButton label="Next week" icon={ChevronRightIcon} onPress={() => move(1)} isDisabled={isFuture} />
-        <Button isDisabled={isCurrent} onPress={() => void navigate.run({ type: 'weekly.jumpTo', date: today.toString() })}>
-          This week
-        </Button>
+        <div className={styles.weekControls}>
+          <IconButton label="Previous week" icon={ChevronLeftIcon} variant="secondary" onPress={() => move(-1)} />
+          <DatePicker
+            label="Week of"
+            value={weekStart}
+            maxValue={today}
+            onChange={(value) => {
+              if (value) void navigate.run({ type: 'weekly.jumpTo', date: value.toString() });
+            }}
+          />
+          <IconButton label="Next week" icon={ChevronRightIcon} variant="secondary" onPress={() => move(1)} isDisabled={isFuture} />
+          <Button isDisabled={isCurrent} onPress={() => void navigate.run({ type: 'weekly.jumpTo', date: today.toString() })}>
+            This week
+          </Button>
+        </div>
         {weekStart && lastDay ? <p className={styles.range}>{`${formatDayShort(weekStart.toString())} – ${formatDayShort(lastDay.toString())}`}</p> : null}
       </Card>
 
       <div className={styles.toolbar}>
-        <Button variant="primary" isDisabled={!hasData || loading} isPending={generator.pending} onPress={() => void generate()}>
-          {empty ? 'Generate draft' : 'Regenerate draft…'}
-        </Button>
-        {loading ? (
-          <span role="status" className={styles.status}>
-            <SpinnerIcon className={styles.spinner} />
-            Loading time…
-          </span>
-        ) : synced ? (
-          <span className={styles.status}>{`Time loaded ${formatClockTime(synced)}`}</span>
-        ) : null}
-        <span className={styles.spacer} />
-        <Button isDisabled={empty} onPress={() => void copy()}>
-          Copy
-        </Button>
-        <Button isDisabled={empty || choosing} isPending={choosing || exporter.pending} onPress={() => void exportMarkdown()}>
-          Export Markdown…
-        </Button>
+        <div className={styles.toolbarGroup}>
+          <Button variant="primary" isDisabled={!hasData || loading} isPending={generator.pending} onPress={() => void generate()}>
+            {empty ? 'Generate draft' : 'Regenerate draft…'}
+          </Button>
+          {loading ? (
+            <span role="status" className={styles.status}>
+              <SpinnerIcon className={styles.spinner} />
+              Loading time…
+            </span>
+          ) : synced ? (
+            <span className={styles.status}>{`Time loaded ${formatClockTime(synced)}`}</span>
+          ) : null}
+        </div>
+        <div className={styles.toolbarGroup}>
+          <Button isDisabled={empty} onPress={() => void copy()}>
+            Copy
+          </Button>
+          <Button isDisabled={empty || choosing} isPending={choosing || exporter.pending} onPress={() => void exportMarkdown()}>
+            Export Markdown…
+          </Button>
+        </div>
       </div>
 
       {weekly.issue ? <Banner tone="warning">{weekly.issue}</Banner> : null}

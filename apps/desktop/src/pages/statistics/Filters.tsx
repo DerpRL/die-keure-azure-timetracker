@@ -105,28 +105,37 @@ export function Filters({ slice }: { slice: StatisticsSlice }) {
             </PickerItem>
           )}
         </ComboBox>
-        {active ? (
-          <Button className={styles.clearFilters} onPress={() => void run({ type: 'statistics.clearFilters' })}>
-            Clear filters
-          </Button>
-        ) : null}
       </div>
-      {chips.length > 0 ? (
-        <ul role="list" aria-label="Active filters" className={styles.chips}>
-          {chips.map((chip) => (
-            <li key={chip.id}>
-              <Button
-                size="small"
-                trailingIcon={CloseIcon}
-                className={styles.chip}
-                aria-label={`${chip.label}, remove filter`}
-                onPress={() => send(chip.without)}
-              >
-                {chip.label}
-              </Button>
-            </li>
-          ))}
-        </ul>
+      {chips.length > 0 || active ? (
+        <div className={styles.chipRow}>
+          {chips.length > 0 ? (
+            <ul role="list" aria-label="Active filters" className={styles.chips}>
+              {chips.map((chip) => (
+                <li key={chip.id}>
+                  <Button
+                    size="small"
+                    trailingIcon={CloseIcon}
+                    className={styles.chip}
+                    aria-label={`${chip.label}, remove filter`}
+                    onPress={() => send(chip.without)}
+                  >
+                    {chip.label}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {active ? (
+            <Button
+              size="small"
+              variant="plain"
+              className={styles.clearFilters}
+              onPress={() => void run({ type: 'statistics.clearFilters' })}
+            >
+              Clear filters
+            </Button>
+          ) : null}
+        </div>
       ) : null}
       {update.error ? (
         <p role="alert" className={styles.inlineError}>

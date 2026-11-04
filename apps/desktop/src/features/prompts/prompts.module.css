@@ -14,44 +14,26 @@
   flex-direction: column;
   gap: var(--space-3);
   min-width: 0;
-  padding: var(--space-4);
+  padding: var(--space-5);
   border: var(--size-border) solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
 }
 
+/* Tinted cards: the soft fill sits between the surface and the tone's badge background, so
+   text on it is at least as readable as on the badge colour the contrast test checks. */
 .warning {
-  border-color: var(--color-warning);
-  background: var(--color-warning-bg);
+  border-color: color-mix(in srgb, var(--color-warning) 30%, var(--color-warning-bg));
+  background: color-mix(in srgb, var(--color-warning-bg) 45%, var(--color-surface));
 }
 
 .accent {
-  border-color: var(--color-primary-border);
-  background: var(--color-accent-bg);
+  border-color: color-mix(in srgb, var(--color-accent) 25%, var(--color-accent-bg));
+  background: color-mix(in srgb, var(--color-accent-bg) 60%, var(--color-surface));
 }
 
 .neutral {
   border-color: var(--color-border);
-}
-
-/* The 1.14 accent stripe on the leading edge. */
-.warning::before,
-.accent::before {
-  position: absolute;
-  inset-block: var(--space-4);
-  inset-inline-start: -1px;
-  width: 4px;
-  border-radius: var(--radius-full);
-  background: currentColor;
-  content: '';
-}
-
-.warning::before {
-  color: var(--color-warning);
-}
-
-.accent::before {
-  color: var(--color-accent);
 }
 
 @media (forced-colors: active) {
@@ -72,9 +54,10 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: var(--radius-md);
+  width: 2.5rem;
+  height: 2.5rem;
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-sm);
   background: var(--color-surface);
   color: var(--color-accent);
   font-size: var(--size-icon-md);

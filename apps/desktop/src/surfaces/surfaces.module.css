@@ -20,6 +20,58 @@
   gap: var(--space-2);
 }
 
+/* Sidebar cards (2.0 redesign): the running timer and the branch watcher. */
+.sidebarCard,
+.watchingCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.875rem;
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.watchingCard {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: var(--space-2);
+  padding: 0.625rem 0.75rem 0.625rem 0.875rem;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-semibold);
+}
+
+.eyebrow {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sidebarClockRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.sidebarClock {
+  font-family: var(--font-family-mono);
+  font-size: 1.125rem;
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.sidebarTitle {
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
 .loading {
   padding: var(--space-6);
   color: var(--color-text-secondary);
@@ -34,4 +86,9 @@
 
 .headerActions:empty {
   display: none;
+}
+
+/* The status text may wrap; the Pause / Resume button never shrinks. */
+.watchingCard > :last-child {
+  flex: none;
 }

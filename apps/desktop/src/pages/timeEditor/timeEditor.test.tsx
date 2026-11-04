@@ -59,6 +59,18 @@ describe('Time editor page', () => {
     await expectNoA11yViolations();
   });
 
+  it('shows the day as a strip with activities, overlaps and a summary', () => {
+    renderEditor(sampleSlices().timeEditor);
+    expect(screen.getByRole('img', { name: 'Day timeline with 6 entries, 1 overlap' })).toBeInTheDocument();
+    expect(within(screen.getByRole('list', { name: 'Activities' })).getByText('Development')).toBeInTheDocument();
+    expect(within(screen.getByRole('list', { name: 'Overlaps' })).getByText('Overlap 16:20–16:30')).toBeInTheDocument();
+    const table = screen.getByRole('grid');
+    expect(within(table).getAllByText('· overlaps 10m')).toHaveLength(2);
+    expect(screen.getByText('6 entries')).toBeInTheDocument();
+    expect(screen.getByText('7h 15m')).toBeInTheDocument();
+    expect(screen.getByText('1 overlap')).toBeInTheDocument();
+  });
+
   it('shows a skeleton until the slice arrives, then the loading state', async () => {
     const { engine } = renderEditor(undefined);
     expect(screen.getByRole('status')).toHaveTextContent('Loading the time editor');

@@ -14,6 +14,7 @@ import { PrivacyIcon, SetupIcon } from '../../features/tracking/icons';
 import { openMainPage } from '../../features/tracking/platform';
 import { useTrackingAnnouncements } from '../../features/tracking/status';
 import { useSlice } from '../../state/hooks';
+import { formatShortDuration } from '../../utils/duration';
 import { TodayLogs } from './TodayLogs';
 import styles from './overview.module.css';
 
@@ -38,18 +39,39 @@ function SetupCard() {
 /** Where focus goes when a resolved prompt takes the focused button with it. */
 const FOCUS_FALLBACKS = ['[data-prompt-primary]:not([disabled])', '[data-current-primary]:not([disabled])'] as const;
 
-/** "Today Tuesday 6 October", updated once a minute so it turns over at midnight. */
+/** ISO 8601 week number (weeks start on Monday, week 1 holds the first Thursday). */
+export function isoWeek(date: Date): number {
+  const day = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const weekday = day.getUTCDay() || 7;
+  day.setUTCDate(day.getUTCDate() + 4 - weekday);
+  const yearStart = Date.UTC(day.getUTCFullYear(), 0, 1);
+  return Math.ceil(((day.getTime() - yearStart) / 86_400_000 + 1) / 7);
+}
+
+/**
+ * "TODAY / Tuesday 6 October" with today's target and the week number on the right, updated once
+ * a minute so it turns over at midnight.
+ */
 function TodayLine() {
+  const progress = useSlice('progress');
   const [now, setNow] = useState(() => Date.now());
   const date = useDateFormatter({ weekday: 'long', day: 'numeric', month: 'long' });
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 60_000);
     return () => clearInterval(timer);
   }, []);
+  const today = new Date(now);
+  const target = progress?.todayTarget ?? 0;
   return (
-    <p className={styles.today}>
-      <span className={styles.todayLabel}>Today</span> {date.format(new Date(now))}
-    </p>
+    <div className={styles.today}>
+      <p className={styles.todayText}>
+        <span className={styles.todayLabel}>Today</span> <span className={styles.todayDate}>{date.format(today)}</span>
+      </p>
+      <p className={styles.caption}>
+        {target > 0 ? `Daily target ${formatShortDuration(target)} · ` : ''}
+        {`week ${isoWeek(today)}`}
+      </p>
+    </div>
   );
 }
 
@@ -110,21 +132,24 @@ export default function OverviewPage() {
         </Section>
       ) : null}
 
-      <Section title="Current tracking" subtitle="Start, pause or finish your active work.">
-        {tracking?.showsRemoteTimer !== false ? <CurrentTracking surface="main" /> : null}
-        {tracking?.local ? (
-          <section aria-labelledby={localHeadingId} className={styles.local}>
-            <h3 id={localHeadingId} className={styles.localTitle}>
-              {localTitle}
-            </h3>
-            <LocalTimer surface="main" />
-          </section>
-        ) : null}
-      </Section>
+      <Card className={styles.current}>
+        <section aria-label="Current tracking" className={styles.currentBody}>
+          {tracking?.showsRemoteTimer !== false ? <CurrentTracking surface="main" /> : null}
+          {tracking?.local ? (
+            <section aria-labelledby={localHeadingId} className={styles.local}>
+              <h3 id={localHeadingId} className={styles.localTitle}>
+                {localTitle}
+              </h3>
+              <LocalTimer surface="main" />
+            </section>
+          ) : null}
+        </section>
+      </Card>
 
       <div className={styles.grid}>
         <Section
           title="Today’s time"
+          subtitle="Your worklogs and the running timer"
           actions={
             <Button size="small" onPress={() => openMainPage('history')}>
               View history

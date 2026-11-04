@@ -22,54 +22,246 @@
   font-size: var(--font-size-footnote);
 }
 
+/* ------------------------------------------------------------------ date bar */
 .dayBar {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: var(--space-3);
-}
-
-.metrics {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  justify-content: space-between;
   gap: var(--space-4);
 }
 
-.metric {
+.dayControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+/* ------------------------------------------------------------------ day at a glance */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+  gap: var(--space-4);
+}
+
+.stat {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 0.375rem;
 }
 
-.metricLabel {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+.statLabel {
   color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-medium);
 }
 
-.metricValue {
-  font-family: var(--font-family-rounded);
-  font-size: var(--font-size-title-1);
+.statValue {
+  font-size: 1.75rem;
   font-weight: var(--font-weight-bold);
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
   line-height: var(--line-height-tight);
 }
 
-.cardTitle {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-  font-size: var(--font-size-headline);
+.stat .caption {
+  font-size: var(--font-size-caption);
+}
+
+/* ------------------------------------------------------------------ two columns */
+.columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22.5rem), 1fr));
+  align-items: start;
+  gap: var(--space-5);
+}
+
+/* ------------------------------------------------------------------ flush cards (table, list) */
+.flushCard {
+  overflow: hidden;
+}
+
+.tableHead {
+  padding: var(--space-5) var(--space-5) var(--space-3);
+}
+
+.listHead {
+  padding: var(--space-5);
+}
+
+.scroll {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-footnote);
+  font-variant-numeric: tabular-nums;
+}
+
+.table thead th {
+  padding: 0.625rem var(--space-4);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-align: start;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.table tbody th,
+.table tbody td {
+  padding: var(--space-3) var(--space-4);
+  border-top: var(--size-border) solid var(--color-separator);
+  font-weight: var(--font-weight-regular, 400);
+  text-align: start;
+  vertical-align: middle;
+}
+
+.table .end {
+  text-align: end;
+  white-space: nowrap;
+}
+
+.table .strong {
   font-weight: var(--font-weight-semibold);
 }
 
-.attention {
+.ticketCell {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.ticketNumber {
+  font-weight: var(--font-weight-semibold);
+}
+
+/* ------------------------------------------------------------------ needs a look */
+.box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.875rem;
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.boxWarning {
+  border-color: color-mix(in srgb, var(--color-warning) 30%, var(--color-warning-bg));
+  background: color-mix(in srgb, var(--color-warning-bg) 45%, var(--color-surface));
+}
+
+.boxHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.boxTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+}
+
+.boxList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.gapChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* ------------------------------------------------------------------ time entries */
+.list {
+  border-top: var(--size-border) solid var(--color-separator);
+}
+
+.listEmpty {
+  padding: 0 var(--space-5) var(--space-5);
+}
+
+.item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.875rem var(--space-5);
+}
+
+.item + .item {
+  border-top: var(--size-border) solid var(--color-separator);
+}
+
+.itemText {
+  min-width: 0;
+}
+
+.itemTitle {
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+/* The ticket button sits flush with the text below it, like a link. */
+.ticket {
+  display: inline-flex;
+  max-width: 100%;
+  margin-inline-start: -0.625rem;
+  text-align: start;
+}
+
+.ticket button {
+  min-height: 1.5rem;
+  padding-block: 0.125rem;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+}
+
+.boxList .meta {
+  margin-top: 0;
+}
+
+.mono {
+  font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.duration {
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ finish */
+.finishHead {
+  align-items: center;
+}
+
+.finish {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  border-color: var(--color-warning);
 }
 
 .actions {
@@ -79,71 +271,6 @@
   gap: var(--space-2);
 }
 
-.sessions,
-.gaps {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  margin-top: var(--space-2);
-}
-
-.session {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: start;
-  gap: var(--space-1) var(--space-3);
-  padding-bottom: var(--space-3);
-  border-bottom: var(--size-border) solid var(--color-separator);
-}
-
-.session:last-child {
-  padding-bottom: 0;
-  border-bottom: none;
-}
-
-.sessionIcon {
-  margin-top: 0.3em;
-  color: var(--color-accent);
-}
-
-.sessionText {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-}
-
-.sessionTitle {
-  font-weight: var(--font-weight-medium);
-  overflow-wrap: anywhere;
-}
-
-.duration {
-  font-weight: var(--font-weight-semibold);
-  font-variant-numeric: tabular-nums;
-}
-
-.gap {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.inlineIcon {
-  display: inline-block;
-  margin-right: var(--space-2);
-  vertical-align: -0.125em;
-}
-
-.warningIcon {
-  color: var(--color-warning);
-}
-
-.successIcon {
-  flex: none;
-  color: var(--color-success);
-}
-
 .reviewed {
   display: flex;
   align-items: center;
@@ -151,10 +278,26 @@
   font-weight: var(--font-weight-medium);
 }
 
+.successIcon {
+  flex: none;
+  color: var(--color-success);
+}
+
+.warningIcon {
+  color: var(--color-warning);
+}
+
+/* ------------------------------------------------------------------ footnotes */
 .notes {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-1);
+}
+
+.inlineIcon {
+  display: inline-block;
+  margin-right: var(--space-2);
+  vertical-align: -0.125em;
 }
 
 .warningText {

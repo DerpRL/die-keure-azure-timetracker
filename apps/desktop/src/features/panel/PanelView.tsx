@@ -1,16 +1,17 @@
 import { useEffect, useRef } from 'react';
 import { Banner } from '../../components/Banner';
-import { Button } from '../../components/Button';
+import { Button, IconButton } from '../../components/Button';
 import { Skeleton } from '../../components/EmptyState';
-import { DayReviewIcon, OfflineDraftsIcon, OverviewIcon, PowerIcon, SettingsIcon } from '../../components/icons';
+import { DayReviewIcon, OfflineDraftsIcon, OverviewIcon, PlayIcon, PowerIcon, SettingsIcon } from '../../components/icons';
 import type { Unlisten } from '../../ipc';
 import { onPanelHidden, onPanelShown, onQuickSwitch } from '../../ipc/shell';
 import { PanelSection, PanelSectionGrid, PanelShell } from '../../layout/PanelShell';
 import { useCommand } from '../../shortcuts/hooks';
 import { useAction, useSlice } from '../../state/hooks';
+import { useIntents, useWriteGuards } from '../tracking/actions';
 import { TrackingStatusLabel } from '../../timer/status';
 import { ConnectionHealth } from '../connection/ConnectionHealth';
-import { TargetProgress, useProgressSummary } from '../progress/TargetProgress';
+import { TodayStrip, useActivityColors } from '../activity';
 import { PromptList, usePromptAnnouncements, usePromptItems } from '../prompts/PromptList';
 import { CurrentTracking, LocalTimer, useLocalTimerTitle } from '../tracking/CurrentTracking';
 import { SetupIcon } from '../tracking/icons';
@@ -55,6 +56,84 @@ function SetupCallToAction() {
   );
 }
 
+/** Today's worklogs and the running timer on a small time strip, with a link to Overview. */
+function TodaySection() {
+  const history = useSlice('history');
+  const colors = useActivityColors();
+  const logs = history?.todayLogs ?? [];
+  return (
+    <section aria-labelledby="panel-today-title" className={styles.today}>
+      <div className={styles.sectionHead}>
+        <h2 id="panel-today-title" className={styles.eyebrow}>
+          Today
+        </h2>
+        <Button variant="plain" size="small" className={styles.headLink} onPress={() => openMainPage('overview')}>
+          Open timeline
+        </Button>
+      </div>
+      <TodayStrip logs={logs} colors={colors} size="small" />
+    </section>
+  );
+}
+
+/** While no timer runs: favourite and recent tickets to start again (the engine's quick tickets). */
+function PickUpAgain() {
+  const flow = useSlice('flow');
+  const { busy, connected } = useWriteGuards();
+  const actions = useIntents();
+  const tickets = (flow?.quickTickets ?? []).slice(0, 3);
+  if (tickets.length === 0) return null;
+  return (
+    <section aria-labelledby="panel-pickup-title" className={styles.today}>
+      <h2 id="panel-pickup-title" className={styles.eyebrow}>
+        Pick up again
+      </h2>
+      <ul role="list" className={styles.pickList}>
+        {tickets.map((ticket) => (
+          <li key={ticket.ticketId} className={styles.pickRow}>
+            <div className={styles.pickText}>
+              <p className={styles.pickTitle}>{ticket.title ?? `Azure ticket #${ticket.ticketId}`}</p>
+              <p className={styles.pickMeta}>{`#${ticket.ticketId}${ticket.favorite ? ' · Favourite' : ''}`}</p>
+            </div>
+            <IconButton
+              variant="secondary"
+              size="small"
+              icon={PlayIcon}
+              label={`Track #${ticket.ticketId}…`}
+              tooltip={false}
+              isDisabled={busy || !connected}
+              isPending={actions.isPending(`pick-${ticket.ticketId}`)}
+              onPress={() =>
+                void actions.run(`pick-${ticket.ticketId}`, {
+                  type: 'tracking.chooseTicket',
+                  ticketId: ticket.ticketId,
+                  surface: 'panel',
+                })
+              }
+            />
+          </li>
+        ))}
+      </ul>
+      {actions.confirmation}
+    </section>
+  );
+}
+
+/** Offline drafts waiting for review, with a way to open them. */
+function DraftsNotice() {
+  const offline = useSlice('offline');
+  const count = offline?.readyCount ?? 0;
+  if (count === 0) return null;
+  return (
+    <div className={styles.notice}>
+      <p className={styles.noticeText}>{`${count} offline ${count === 1 ? 'draft' : 'drafts'} to review`}</p>
+      <Button size="small" onPress={() => openMainPage('offlineDrafts')}>
+        Review
+      </Button>
+    </div>
+  );
+}
+
 /**
  * The tray panel (1.14 `MenuPanel`, 420 × 640). One "next action" comes first: the tracking
  * choice while the quick switch is open, the setup call to action, or the most urgent prompt.
@@ -67,7 +146,6 @@ export function PanelView() {
   const connection = useSlice('connection');
   const app = useSlice('app');
   const items = usePromptItems('panel');
-  const progressSummary = useProgressSummary();
   const localTitle = useLocalTimerTitle();
   const cancel = useAction();
   const dismiss = useAction();
@@ -206,19 +284,22 @@ export function PanelView() {
         }
       >
         <TrackingCommands surface="panel" />
-        {nextAction}
+        {/* 2.0 order: the quick switch or setup first; otherwise the timer leads, then the most
+            urgent suggestion (still the "next action" for focus), then today or tickets to resume. */}
+        {loading || flowActive || connection.health === 'unconfigured' ? nextAction : null}
         {!loading && !flowActive ? (
           <>
             {tracking.showsRemoteTimer ? (
-              <PanelSection title="Current tracking">
+              <section aria-label="Current tracking">
                 <CurrentTracking surface="panel" />
-              </PanelSection>
+              </section>
             ) : null}
             {tracking.local ? (
               <PanelSection title={localTitle}>
                 <LocalTimer surface="panel" />
               </PanelSection>
             ) : null}
+            {connection.health !== 'unconfigured' ? nextAction : null}
             {rest.length > 0 ? (
               <PanelSection
                 title="More suggestions"
@@ -229,9 +310,7 @@ export function PanelView() {
                 <PromptList items={rest} surface="panel" headingLevel={3} label="More suggestions" />
               </PanelSection>
             ) : null}
-            <PanelSection title="Progress" collapsible defaultExpanded={false} summary={progressSummary}>
-              <TargetProgress compact />
-            </PanelSection>
+            {tracking.running || tracking.paused ? <TodaySection /> : <PickUpAgain />}
           </>
         ) : null}
         {error ? (
@@ -247,6 +326,7 @@ export function PanelView() {
         <section aria-label="Connection">
           <ConnectionHealth />
         </section>
+        {!loading && !flowActive ? <DraftsNotice /> : null}
         <UpdateNotice />
       </PanelShell>
     </div>

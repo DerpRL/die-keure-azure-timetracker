@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { Banner } from '../../components/Banner';
 import { Button } from '../../components/Button';
 import { Heading } from '../../components/Card';
@@ -13,6 +13,8 @@ import { useCommands } from '../../shortcuts/hooks';
 import { usePlatform } from '../../shortcuts/platform';
 import { useAction, useSlice } from '../../state/hooks';
 import { CorrectionsSheet } from './CorrectionsSheet';
+import { DayOverview } from './DayOverview';
+import { entryOverlaps, overlapSecondsById } from './dayModel';
 import { EditSheet } from './EditSheet';
 import { EntriesTable } from './EntriesTable';
 import { OverlapNotice } from './PlanPreview';
@@ -43,6 +45,8 @@ export default function TimeEditorPage() {
   const [day, setDayDraft] = useEngineDraft(editor?.day ?? '');
   const [filter, setFilterDraft] = useEchoDraft(editor?.filter ?? '');
   const headingId = useId();
+  const overlaps = useMemo(() => entryOverlaps(editor?.logs ?? []), [editor?.logs]);
+  const overlapById = useMemo(() => overlapSecondsById(overlaps), [overlaps]);
 
   const busy = app?.busy ?? false;
   const working = editor?.working ?? false;
@@ -164,33 +168,45 @@ export default function TimeEditorPage() {
       {actionError ? <Banner tone="error">{actionError.message}</Banner> : null}
 
       <section aria-labelledby={headingId} className={styles.entries}>
-        <div className={styles.sectionHeader}>
-          <Heading level={2} id={headingId} className={styles.sectionTitle}>
-            {day ? `Entries · ${formatDayLong(day)}` : 'Entries'}
-          </Heading>
-          <div className={styles.actions}>
-            <Button isDisabled={editor.selection.length < 2 || blocked} isPending={merge.pending} onPress={beginMerge}>
-              Merge selected…
-            </Button>
-            <Button isDisabled={blocked || loading} onPress={openCorrections}>
-              Gaps & overlaps…
-            </Button>
-            <Button onPress={() => setRecentOpen(true)}>Recent edits</Button>
+        <div className={styles.dayCard}>
+          <div className={styles.sectionHeader}>
+            <div className={styles.headingText}>
+              <Heading level={2} id={headingId} className={styles.sectionTitle}>
+                {day ? `Entries · ${formatDayLong(day)}` : 'Entries'}
+              </Heading>
+              <p className={styles.caption}>
+                {`Select adjacent entries using the checkboxes or ${platform === 'windows' ? 'Ctrl-click' : '⌘-click'}.`}
+              </p>
+            </div>
+            <div className={styles.actions}>
+              <Button isDisabled={editor.selection.length < 2 || blocked} isPending={merge.pending} onPress={beginMerge}>
+                Merge selected…
+              </Button>
+              <Button isDisabled={blocked || loading} onPress={openCorrections}>
+                Gaps & overlaps…
+              </Button>
+              <Button onPress={() => setRecentOpen(true)}>Recent edits</Button>
+            </div>
           </div>
+          {!loading && editor.day ? (
+            <DayOverview
+              day={editor.day}
+              today={localToday().toString()}
+              logs={editor.logs}
+              runningLogId={editor.runningLogId}
+              overlaps={overlaps}
+              issues={editor.corrections.issues}
+            />
+          ) : null}
         </div>
-        <p className={styles.caption}>
-          {`Select adjacent entries using the checkboxes or ${platform === 'windows' ? 'Ctrl-click' : '⌘-click'}.`}
-        </p>
-        <LoadingRegion
-          label="Loading tracked time…"
-          isLoading={loading}
-          placeholder={<Skeleton shape="rect" height="12rem" />}
-        >
+        <LoadingRegion label="Loading tracked time…" isLoading={loading} placeholder={<Skeleton shape="rect" height="12rem" />}>
           <EntriesTable
             logs={editor.logs}
             items={items}
             selection={editor.selection}
             runningLogId={editor.runningLogId}
+            overlaps={overlapById}
+            overlapCount={overlaps.length}
             disabled={blocked}
             labelledBy={headingId}
             emptyMessage={

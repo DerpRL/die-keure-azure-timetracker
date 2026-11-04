@@ -57,6 +57,20 @@ describe('AgendaPage', () => {
     await expectNoA11yViolations(container);
   });
 
+  it('puts today\'s tracked time next to the calendar, and only today', () => {
+    const { engine } = renderWithEngine(<AgendaPage />);
+    expect(screen.getByRole('heading', { level: 2, name: 'Events today' })).toBeInTheDocument();
+    const tracked = screen.getByRole('img', { name: /^Tracked time: / });
+    expect(tracked).toHaveAccessibleName(
+      `Tracked time: 2 worklogs, 0h 40m; timer running since ${formatTime('2026-10-06T06:36:40Z')}`,
+    );
+    expect(tracked).toHaveTextContent('#4790 Invoice PDF shows the wrong VAT number');
+    expect(tracked).toHaveTextContent('Running since');
+    act(() => engine.setSlice('agenda', agendaEmptyDay));
+    expect(screen.getByRole('heading', { level: 2, name: 'Events' })).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /^Tracked time: / })).not.toBeInTheDocument();
+  });
+
   it('moves between days through the engine', async () => {
     const { user, engine } = renderWithEngine(<AgendaPage />);
     await user.click(screen.getByRole('button', { name: 'Previous day' }));
@@ -158,13 +172,14 @@ describe('AgendaPage', () => {
 
   it('names the calendars shown and links to their selection in Settings', async () => {
     const { user, engine } = renderWithEngine(<AgendaPage />);
+    expect(screen.getByRole('heading', { level: 2, name: 'Calendars' })).toBeInTheDocument();
     const calendars = screen.getByRole('list', { name: 'Calendars shown' });
     expect(within(calendars).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
       'Work · Exchange',
       'Team events · Exchange',
     ]);
     act(() => engine.setSlice('agenda', agendaAllCalendars));
-    expect(screen.getByText('All calendars:')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'All calendars' })).toBeInTheDocument();
     expect(within(screen.getByRole('list', { name: 'Calendars shown' })).getAllByRole('listitem')).toHaveLength(3);
     await user.click(screen.getByRole('button', { name: 'Choose calendars in Settings' }));
     expect(showMain).toHaveBeenCalledWith('settings');

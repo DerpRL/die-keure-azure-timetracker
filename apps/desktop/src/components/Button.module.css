@@ -4,11 +4,12 @@
   justify-content: center;
   gap: var(--space-2);
   min-height: var(--size-control-md);
-  padding: var(--space-1) var(--space-4);
+  padding: var(--space-1) 0.875rem;
   border: var(--size-border) solid transparent;
   border-radius: var(--radius-sm);
   font-size: var(--font-size-body);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
   line-height: var(--line-height-tight);
   text-align: center;
   cursor: default;
@@ -22,6 +23,7 @@
 
 .label {
   min-width: 0;
+  white-space: normal;
   overflow-wrap: anywhere;
 }
 
@@ -65,9 +67,10 @@
   background: var(--color-primary-pressed);
 }
 
+/* Secondary buttons are identified by their label, so the soft border need not reach 3:1. */
 .secondary {
   background: var(--color-secondary-bg);
-  border-color: var(--color-control-border);
+  border-color: var(--color-button-border);
   color: var(--color-secondary-text);
 }
 .secondary[data-hovered] {
@@ -103,7 +106,7 @@
 
 .button[data-disabled] {
   background: var(--color-surface-sunken);
-  border-color: var(--color-separator);
+  border-color: var(--color-border);
   color: var(--color-text-disabled);
 }
 .plain[data-disabled] {
@@ -118,7 +121,7 @@
 /* Sizes */
 .small {
   min-height: var(--size-control-sm);
-  padding: 0.125rem var(--space-3);
+  padding: 0.125rem 0.625rem;
   font-size: var(--font-size-footnote);
 }
 .small .icon,

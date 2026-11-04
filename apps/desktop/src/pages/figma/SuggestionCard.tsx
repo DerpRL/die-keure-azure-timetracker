@@ -19,20 +19,22 @@ export function SuggestionCard({ prompt }: { prompt: FigmaPromptView }) {
   const offline = !(connection?.connected ?? false);
   const ticketId = suggestion.ticketId ?? null;
   return (
-    <Card as="article" aria-label={`Figma file active: ${suggestion.name}`}>
+    <Card as="article" aria-label={`Figma file active: ${suggestion.name}`} className={styles.suggestionCard}>
       <div className={styles.suggestion}>
         <h3 className={styles.suggestionTitle}>
           <FigmaIcon />
           Figma file active
         </h3>
-        <p className={styles.fileName}>{suggestion.name}</p>
-        {ticketId !== null ? (
-          <p className={styles.ticket}>
-            <TicketLink ticketId={ticketId} title={prompt.ticketTitle ?? 'Azure ticket'} />
-          </p>
-        ) : (
-          <p className={styles.text}>Track Design without a ticket. The file name becomes the comment.</p>
-        )}
+        <div>
+          <p className={styles.fileName}>{suggestion.name}</p>
+          {ticketId !== null ? (
+            <p className={styles.ticket}>
+              <TicketLink ticketId={ticketId} title={prompt.ticketTitle ?? 'Azure ticket'} />
+            </p>
+          ) : (
+            <p className={styles.text}>Track Design without a ticket. The file name becomes the comment.</p>
+          )}
+        </div>
         <p className={styles.text}>An active file suggests context; it does not prove the design was edited.</p>
         <div className={styles.buttons}>
           <Button
@@ -50,10 +52,7 @@ export function SuggestionCard({ prompt }: { prompt: FigmaPromptView }) {
               Other ticket
             </Button>
           ) : null}
-          <Button
-            isDisabled={busy || action.pending}
-            onPress={() => void action.run({ type: 'figma.keep', suggestionId: suggestion.id })}
-          >
+          <Button isDisabled={busy || action.pending} onPress={() => void action.run({ type: 'figma.keep', suggestionId: suggestion.id })}>
             Keep tracking
           </Button>
         </div>

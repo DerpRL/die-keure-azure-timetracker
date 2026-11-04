@@ -3,57 +3,90 @@ import { announce } from '../../components/Announcer';
 import { Badge } from '../../components/Badge';
 import { Banner } from '../../components/Banner';
 import { Button } from '../../components/Button';
-import { Card, Heading } from '../../components/Card';
+import { Card, Heading, Section } from '../../components/Card';
 import { Dialog } from '../../components/Dialog';
 import { EmptyState, Skeleton } from '../../components/EmptyState';
-import { OfflineDraftsIcon, RunningIcon, SuccessIcon, WarningIcon } from '../../components/icons';
+import { OfflineDraftsIcon, WarningIcon } from '../../components/icons';
 import { ProgressBar } from '../../components/Progress';
 import { Switch } from '../../components/Toggles';
 import type { OfflineDraft, OfflineDraftView, OfflineSlice, WorkItemsSlice } from '../../ipc/contract';
+import { activityColorIndex, ActivityPill, useActivityColors } from '../../features/activity';
+import { PageHeaderActions } from '../../features/app/PageHeaderActions';
 import { useEngineDraft } from '../../features/ticketContext/drafts';
 import { deviceName, formatInstant, secondsBetween } from '../../features/ticketContext/format';
 import { useCommands } from '../../shortcuts/hooks';
 import { useAction, useLiveSeconds, useSlice } from '../../state/hooks';
+import { cx } from '../../utils/cx';
 import { formatClock, formatSpokenDuration } from '../../utils/duration';
 import { DraftEditor, StartLocalSheet } from './DraftSheets';
-import { draftHeading, isRunning, STATUS_TONES } from './labels';
+import { draftHeading, draftTitleParts, isRunning, STATUS_TONES } from './labels';
 import { ReviewCard } from './ReviewCard';
 import styles from './OfflineDrafts.module.css';
 
 /** Drafts rendered at once; "Show more" adds this many. */
 export const DRAFT_PAGE_SIZE = 50;
 
-function LocalTimer({ active, offline, items, device }: { active: OfflineDraftView; offline: OfflineSlice; items: WorkItemsSlice | undefined; device: string }) {
+/** "#4821 Checkout: …": the ticket number in the accent colour, then the ticket's name or the draft's title. */
+function DraftTitle({ draft, items }: { draft: OfflineDraftView; items: WorkItemsSlice | undefined }) {
+  const { ticket, name } = draftTitleParts(draft, items);
+  return (
+    <>
+      {ticket ? <span className={styles.ticket}>{ticket}</span> : null}
+      {ticket && name ? ' ' : null}
+      {name}
+    </>
+  );
+}
+
+function LocalTimer({
+  active,
+  offline,
+  items,
+  colorIndex,
+}: {
+  active: OfflineDraftView;
+  offline: OfflineSlice;
+  items: WorkItemsSlice | undefined;
+  colorIndex: number;
+}) {
   const stop = useAction();
   const seconds = useLiveSeconds(0, active.start, true);
   const otherWorkspace = active.workspace !== offline.workspace;
+  const note = active.ticketId && active.comment ? `${active.comment} · ` : '';
   return (
-    <div className={styles.localTimer}>
-      <Heading level={2} className={styles.sectionTitle}>
-        {`Local tracking · saved on ${device}`}
-      </Heading>
-      <div className={styles.timerRow}>
-        <div className={styles.timerText}>
-          <p className={styles.timerTitle}>{`Local timer · ${draftHeading(active, otherWorkspace ? undefined : items)}`}</p>
-          {active.ticketId && active.comment ? <p className={styles.caption}>{active.comment}</p> : null}
-          <p className={styles.caption}>Not uploaded to 7pace</p>
+    <>
+      <div className={styles.timerBox}>
+        <div className={styles.timerMain}>
+          <ActivityPill colorIndex={colorIndex} className={styles.timerPill} />
+          <div className={styles.timerText}>
+            <p className={styles.timerStatus}>
+              <Badge tone="success">Running locally</Badge>
+              <span className={styles.caption}>Not uploaded to 7pace</span>
+            </p>
+            <p className={styles.timerTitle}>
+              <DraftTitle draft={active} items={otherWorkspace ? undefined : items} />
+            </p>
+            <p className={styles.caption}>{`${note}Time continues through sleep and restarts. Adjust it before uploading.`}</p>
+          </div>
         </div>
-        {/* A timer region: read on request, never announced every second. */}
-        <p role="timer" aria-label={`Elapsed ${formatSpokenDuration(seconds)}`} className={styles.clock}>
-          {formatClock(seconds)}
-        </p>
-        <Button
-          variant="primary"
-          isDisabled={offline.working}
-          isPending={stop.pending}
-          onPress={() =>
-            void stop.run({ type: 'offline.stopLocal' }).then((result) => {
-              if (result.ok) announce('Local timer stopped.');
-            })
-          }
-        >
-          Stop local timer
-        </Button>
+        <div className={styles.timerControls}>
+          {/* A timer region: read on request, never announced every second. */}
+          <p role="timer" aria-label={`Elapsed ${formatSpokenDuration(seconds)}`} className={styles.clock}>
+            {formatClock(seconds)}
+          </p>
+          <Button
+            variant="primary"
+            isDisabled={offline.working}
+            isPending={stop.pending}
+            onPress={() =>
+              void stop.run({ type: 'offline.stopLocal' }).then((result) => {
+                if (result.ok) announce('Local timer stopped.');
+              })
+            }
+          >
+            Stop local timer
+          </Button>
+        </div>
       </div>
       {otherWorkspace ? (
         <p className={styles.warningLine}>
@@ -61,15 +94,15 @@ function LocalTimer({ active, offline, items, device }: { active: OfflineDraftVi
           {`This timer belongs to ${active.workspace}. Stop it here, then switch workspace to upload it.`}
         </p>
       ) : null}
-      <p className={styles.caption}>Time continues through sleep and restarts. Adjust it before uploading.</p>
       {stop.error ? <Banner tone="error">{stop.error.message}</Banner> : null}
-    </div>
+    </>
   );
 }
 
 function DraftRow({
   draft,
   items,
+  colorIndex,
   disabled,
   canReview,
   onEdit,
@@ -77,6 +110,7 @@ function DraftRow({
 }: {
   draft: OfflineDraftView;
   items: WorkItemsSlice | undefined;
+  colorIndex: number;
   disabled: boolean;
   canReview: boolean;
   onEdit: (draft: OfflineDraft) => void;
@@ -88,28 +122,25 @@ function DraftRow({
   const synced = draft.status === 'Synced to 7pace';
   const title = draftHeading(draft, items);
   return (
-    <li className={styles.draft}>
+    <li className={cx(styles.draft, sending && styles.flagged)}>
+      <ActivityPill colorIndex={colorIndex} className={styles.draftPill} />
       <div className={styles.draftText}>
         <Heading level={3} className={styles.draftTitle}>
-          {title}
+          <DraftTitle draft={draft} items={items} />
         </Heading>
-        <p>{`${formatInstant(draft.start)} → ${draft.end ? formatInstant(draft.end) : 'Running locally'}`}</p>
-        <p className={styles.badges}>
+        <p className={styles.meta}>
+          <span>{`${formatInstant(draft.start)} → ${draft.end ? formatInstant(draft.end) : 'Running locally'}`}</span>
           {running ? (
-            <Badge tone="running" icon={RunningIcon}>
-              Running locally
-            </Badge>
+            <Badge tone="success">Running locally</Badge>
           ) : (
-            <Badge tone={STATUS_TONES[draft.status]} icon={sending ? WarningIcon : synced ? SuccessIcon : undefined}>
-              {draft.status}
-            </Badge>
+            <Badge tone={STATUS_TONES[draft.status]}>{draft.status}</Badge>
           )}
-          {draft.end ? <span className={styles.mono}>{formatClock(secondsBetween(draft.start, draft.end))}</span> : null}
+          {draft.end ? <span className={styles.duration}>{formatClock(secondsBetween(draft.start, draft.end))}</span> : null}
         </p>
         {draft.remoteId ? <p className={styles.selectable}>{`7pace entry: ${draft.remoteId}`}</p> : null}
         {review.error ? <Banner tone="error">{review.error.message}</Banner> : null}
       </div>
-      <div className={styles.actions}>
+      <div className={styles.rowActions}>
         {draft.status === 'Local draft' ? (
           <Button size="small" isDisabled={disabled} onPress={() => onEdit(draft)} aria-label={`Edit, ${title}`}>
             Edit
@@ -118,6 +149,7 @@ function DraftRow({
         {!running && !synced ? (
           <Button
             size="small"
+            variant={sending ? 'secondary' : 'primary'}
             isDisabled={disabled || !canReview}
             isPending={review.pending}
             onPress={() => void review.run({ type: 'offline.review', draftId: draft.id })}
@@ -127,7 +159,14 @@ function DraftRow({
           </Button>
         ) : null}
         {!sending ? (
-          <Button size="small" variant="plain" isDisabled={disabled} onPress={() => onRemove(draft)} aria-label={`Remove, ${title}`}>
+          <Button
+            size="small"
+            variant="plain"
+            className={styles.danger}
+            isDisabled={disabled}
+            onPress={() => onRemove(draft)}
+            aria-label={`Remove, ${title}`}
+          >
             Remove
           </Button>
         ) : null}
@@ -170,6 +209,7 @@ export default function OfflineDraftsPage() {
   const [visible, setVisible] = useState(DRAFT_PAGE_SIZE);
   const [synced, setSynced] = useEngineDraft(offline?.showSynced ?? false);
   const headingId = useId();
+  const colors = useActivityColors();
 
   const canStart = !!offline && offline.canCreate && !offline.active;
   const canAdd = !!offline && offline.canCreate;
@@ -221,32 +261,43 @@ export default function OfflineDraftsPage() {
 
   return (
     <div className={styles.page}>
+      <PageHeaderActions>
+        <Button isDisabled={busy || offline.working} isPending={reconnect.pending} onPress={() => void reconnect.run({ type: 'connection.retry' })}>
+          Reconnect
+        </Button>
+      </PageHeaderActions>
       <p className={styles.intro}>Track locally, then review and upload when you reconnect.</p>
 
-      <Card className={styles.card}>
-        <p className={styles.caption}>
-          {`Drafts stay on ${device} until you upload them. They are excluded from confirmed totals and statistics. A remote 7pace timer may still be running while you are offline.`}
-        </p>
-        <div className={styles.actions}>
-          <Button variant="primary" isDisabled={!canStart} onPress={() => setStarting(true)}>
-            Start local timer…
-          </Button>
-          <Button isDisabled={!canAdd} onPress={() => setEditing(newPastDraft(offline.workspace))}>
-            Add past time…
-          </Button>
-          <span className={styles.spacer} />
-          <Button isDisabled={busy || offline.working} isPending={reconnect.pending} onPress={() => void reconnect.run({ type: 'connection.retry' })}>
-            Reconnect
-          </Button>
-        </div>
+      <Section
+        title={`Local tracking · saved on ${device}`}
+        subtitle={`Drafts stay on ${device} until you upload them. They are excluded from confirmed totals and statistics. A remote 7pace timer may still be running while you are offline.`}
+        actions={
+          <>
+            <Button isDisabled={!canStart} onPress={() => setStarting(true)}>
+              Start local timer…
+            </Button>
+            <Button isDisabled={!canAdd} onPress={() => setEditing(newPastDraft(offline.workspace))}>
+              Add past time…
+            </Button>
+          </>
+        }
+        className={styles.localCard}
+      >
         {!offline.workspace ? (
           <p className={styles.warningLine}>
             <WarningIcon className={styles.warningIcon} />
             Save your 7pace workspace URL in Settings first. Credentials are only needed for uploading.
           </p>
         ) : null}
-        {offline.active ? <LocalTimer active={offline.active} offline={offline} items={items} device={device} /> : null}
-      </Card>
+        {offline.active ? (
+          <LocalTimer
+            active={offline.active}
+            offline={offline}
+            items={items}
+            colorIndex={activityColorIndex(colors, offline.active.activityId)}
+          />
+        ) : null}
+      </Section>
 
       {offline.issue ? <Banner tone="warning">{offline.issue}</Banner> : null}
       {offline.message ? <Banner tone="info">{offline.message}</Banner> : null}
@@ -265,7 +316,7 @@ export default function OfflineDraftsPage() {
 
       <section aria-labelledby={headingId} className={styles.list}>
         <div className={styles.listHeader}>
-          <Heading level={2} id={headingId} className={styles.sectionTitle}>
+          <Heading level={2} id={headingId} className={styles.listTitle}>
             {`This workspace · ${offline.readyCount} awaiting review`}
           </Heading>
           <Switch
@@ -287,19 +338,22 @@ export default function OfflineDraftsPage() {
             />
           </Card>
         ) : (
-          <ul role="list" className={styles.drafts}>
-            {shown.map((draft) => (
-              <DraftRow
-                key={draft.id}
-                draft={draft}
-                items={items}
-                disabled={rowsDisabled}
-                canReview={configured}
-                onEdit={setEditing}
-                onRemove={setRemoving}
-              />
-            ))}
-          </ul>
+          <Card padding="none" className={styles.draftCard}>
+            <ul role="list" className={styles.drafts}>
+              {shown.map((draft) => (
+                <DraftRow
+                  key={draft.id}
+                  draft={draft}
+                  items={items}
+                  colorIndex={activityColorIndex(colors, draft.activityId)}
+                  disabled={rowsDisabled}
+                  canReview={configured}
+                  onEdit={setEditing}
+                  onRemove={setRemoving}
+                />
+              ))}
+            </ul>
+          </Card>
         )}
         {offline.drafts.length > shown.length ? (
           <div className={styles.more}>

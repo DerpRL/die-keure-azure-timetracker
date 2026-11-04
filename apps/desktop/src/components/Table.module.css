@@ -3,7 +3,7 @@
   max-width: 100%;
   overflow: auto;
   border: var(--size-border) solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
 }
 
@@ -25,15 +25,18 @@
   position: sticky;
   top: 0;
   z-index: var(--z-sticky);
-  background: var(--color-surface);
+  background: var(--color-surface-sunken);
 }
 
 .column {
-  padding: var(--space-2) var(--space-3);
+  padding: 0.625rem var(--space-4);
   border-bottom: var(--size-border) solid var(--color-separator);
+  background: var(--color-surface-sunken);
   color: var(--color-text-secondary);
-  font-size: var(--font-size-footnote);
+  font-size: var(--font-size-caption);
   font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   text-align: start;
   white-space: nowrap;
   cursor: default;
@@ -108,7 +111,7 @@
 }
 
 .cell {
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
   border-bottom: var(--size-border) solid var(--color-separator);
   vertical-align: middle;
   overflow-wrap: break-word;
@@ -116,7 +119,7 @@
 }
 
 .compact .cell {
-  padding-block: var(--space-1);
+  padding-block: var(--space-2);
 }
 
 .cell[data-focus-visible] {

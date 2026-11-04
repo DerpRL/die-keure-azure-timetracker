@@ -23,7 +23,9 @@ export function PanelShell({ title = 'Azure timetracker', status, children, foot
   return (
     <div className={styles.panel} data-surface="panel">
       <header className={styles.header}>
-        <ClockIcon className={styles.brandIcon} />
+        <span className={styles.brandTile} aria-hidden="true">
+          <ClockIcon className={styles.brandIcon} />
+        </span>
         <h1 id={titleId} className={styles.title}>
           {title}
         </h1>
