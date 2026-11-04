@@ -303,7 +303,7 @@ newer.
   the file.
 - The updater archive unpacked as the Tauri plugin does (one top-level app folder, files and folders
   only); the DMG verified with `hdiutil verify` and mounted read-only (app, `Applications` link,
-  installation note). For each app: `Info.plist` identity, version and integer build, universal
+  window background and Finder's saved layout). For each app: `Info.plist` identity, version and integer build, universal
   executable and helper, `codesign --verify --deep --strict`, Hardened Runtime, the calendar
   entitlement and the helper's identifier, and a Developer ID signature of team 4M2RD85AL6 with a
   stapled ticket that Gatekeeper accepts (`stapler validate`, `spctl` reports "Notarized Developer
