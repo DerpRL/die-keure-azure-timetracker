@@ -72,15 +72,12 @@ fn write_artifacts(from: &Path, key: &updater_key::UpdaterKey, bridge: bool) {
     fs::create_dir_all(from).unwrap();
     let build = tempfile::tempdir().unwrap();
     let app = write_app(build.path(), &AppSpec::default());
-    write_with_checksum(
-        &from.join(format!("Azure-timetracker-{VERSION}-universal-unsigned.dmg")),
-        b"fake dmg",
-    );
+    write_with_checksum(&from.join(format!("azure-timetracker-{VERSION}.dmg")), b"fake dmg");
     let archive = from.join(format!("Azure-timetracker-{VERSION}-universal.app.tar.gz"));
     tarball::create(&app, &archive).unwrap();
     checksum::write_side_file(&archive).unwrap();
     updater_key::sign_file(key, &archive, VERSION).unwrap();
-    let installer = from.join(format!("Azure-timetracker-{VERSION}-x64-setup.exe"));
+    let installer = from.join(format!("azure-timetracker-{VERSION}-x64.exe"));
     write_with_checksum(&installer, b"MZ fake nsis installer");
     updater_key::sign_file(key, &installer, VERSION).unwrap();
     let built =
@@ -275,11 +272,8 @@ fn refuses_unexpected_or_newer_files_in_releases_latest() {
 #[test]
 fn checksum_or_signature_problems_stop_staging() {
     let fixture = fixture(true);
-    fs::write(
-        fixture.from.join("Azure-timetracker-2.0.0-x64-setup.exe"),
-        b"MZ swapped after signing",
-    )
-    .unwrap();
+    fs::write(fixture.from.join("azure-timetracker-2.0.0-x64.exe"), b"MZ swapped after signing")
+        .unwrap();
     let error = stage::stage(&options(&fixture, true)).unwrap_err().to_string();
     assert!(error.contains("checksum") && error.contains("signature"), "{error}");
     assert!(!fixture.repo.join("releases/updates/2.0.0").exists());

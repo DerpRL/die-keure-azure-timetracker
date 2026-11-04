@@ -109,7 +109,7 @@ fn package_bridge_feed_and_verify_end_to_end() {
         notary: None,
     };
     let packaged = package::package_macos(&app, &options).unwrap();
-    assert_eq!(packaged.dmg.file_name().unwrap(), "Azure-timetracker-2.0.0-universal-unsigned.dmg");
+    assert_eq!(packaged.dmg.file_name().unwrap(), "azure-timetracker-2.0.0.dmg");
     checksum::verify_side_file(&packaged.dmg).unwrap();
 
     // DMG layout, read-only and compressed.
@@ -123,7 +123,7 @@ fn package_bridge_feed_and_verify_end_to_end() {
     assert!(String::from_utf8_lossy(&info.stdout).contains("UDZO"));
 
     // Windows asset as build-windows + sign-update leave it.
-    let installer = out.join(format!("Azure-timetracker-{VERSION}-x64-setup.exe"));
+    let installer = out.join(format!("azure-timetracker-{VERSION}-x64.exe"));
     fs::write(&installer, b"MZ fake nsis installer").unwrap();
     checksum::write_side_file(&installer).unwrap();
     updater_key::sign_file(&key, &installer, VERSION).unwrap();
@@ -176,8 +176,7 @@ fn package_bridge_feed_and_verify_end_to_end() {
     let archive_sig =
         fs::read(out.join(format!("Azure-timetracker-{VERSION}-universal.app.tar.gz.sig")))
             .unwrap();
-    fs::write(out.join(format!("Azure-timetracker-{VERSION}-x64-setup.exe.sig")), archive_sig)
-        .unwrap();
+    fs::write(out.join(format!("azure-timetracker-{VERSION}-x64.exe.sig")), archive_sig).unwrap();
     assert!(verify::verify_dir(&out, &verify_options(&key.public_b64)).is_err());
 }
 

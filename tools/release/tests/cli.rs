@@ -68,7 +68,7 @@ fn feed_and_verify_a_windows_release() {
     let key = support::updater_key(temp.path());
     let artifacts = temp.path().join("artifacts");
     fs::create_dir_all(&artifacts).unwrap();
-    let installer = artifacts.join("Azure-timetracker-2.0.0-x64-setup.exe");
+    let installer = artifacts.join("azure-timetracker-2.0.0-x64.exe");
     fs::write(&installer, b"MZ fake installer").unwrap();
     checksum::write_side_file(&installer).unwrap();
     updater_key::sign_file(&key, &installer, "2.0.0").unwrap();
@@ -134,7 +134,7 @@ fn feed_and_verify_a_windows_release() {
         serde_json::from_slice(&fs::read(artifacts.join("latest.json")).unwrap()).unwrap();
     assert_eq!(
         feed["platforms"]["windows-x86_64"]["url"],
-        "https://github.com/DerpRL/die-keure-azure-timetracker/releases/download/v2.0.0/Azure-timetracker-2.0.0-x64-setup.exe"
+        "https://github.com/DerpRL/die-keure-azure-timetracker/releases/download/v2.0.0/azure-timetracker-2.0.0-x64.exe"
     );
 
     // A wrong public key fails verification with a non-zero exit code.

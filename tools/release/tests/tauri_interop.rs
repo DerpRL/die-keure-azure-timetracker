@@ -53,7 +53,7 @@ fn keys_and_signatures_interoperate_with_the_tauri_cli() {
     // A key from `keygen` signs with `tauri signer sign --app-version`, and the result verifies here.
     let ours = temp.path().join("ours.key");
     let (_, public) = updater_key::keygen(&ours, "", None).unwrap();
-    let file = temp.path().join("Azure-timetracker-2.0.0-x64-setup.exe");
+    let file = temp.path().join("azure-timetracker-2.0.0-x64.exe");
     fs::write(&file, data).unwrap();
     npx(
         &[
@@ -69,7 +69,7 @@ fn keys_and_signatures_interoperate_with_the_tauri_cli() {
         temp.path(),
     );
     let tauri_signature =
-        fs::read_to_string(temp.path().join("Azure-timetracker-2.0.0-x64-setup.exe.sig")).unwrap();
+        fs::read_to_string(temp.path().join("azure-timetracker-2.0.0-x64.exe.sig")).unwrap();
     let comment =
         updater_key::verify(data, tauri_signature.trim(), &public, Some("2.0.0")).unwrap();
     assert!(comment.ends_with("\tversion:2.0.0"), "{comment}");

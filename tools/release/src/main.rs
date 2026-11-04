@@ -130,7 +130,7 @@ enum Command {
         /// Azure-timetracker-<v>-universal.app.tar.gz (its .sig beside it).
         #[arg(long, value_name = "FILE")]
         mac_archive: Option<PathBuf>,
-        /// Azure-timetracker-<v>-x64-setup.exe (its .sig beside it).
+        /// azure-timetracker-<v>-x64.exe (its .sig beside it).
         #[arg(long, value_name = "FILE")]
         windows_installer: Option<PathBuf>,
         /// Output folder (default: the folder of the first asset).
@@ -155,7 +155,7 @@ enum Command {
     },
     /// Sign an update asset with the v2 key, e.g. the Windows installer copied to the release Mac.
     SignUpdate {
-        /// Azure-timetracker-<v>-x64-setup.exe or Azure-timetracker-<v>-universal.app.tar.gz.
+        /// azure-timetracker-<v>-x64.exe or Azure-timetracker-<v>-universal.app.tar.gz.
         file: PathBuf,
         /// The release version the signature is bound to.
         #[arg(long)]

@@ -144,7 +144,7 @@ fn signed_assets(
 ) -> (att_release::updater_key::UpdaterKey, std::path::PathBuf, std::path::PathBuf) {
     let key = support::updater_key(dir);
     let mac = dir.join(format!("Azure-timetracker-{VERSION}-universal.app.tar.gz"));
-    let windows = dir.join(format!("Azure-timetracker-{VERSION}-x64-setup.exe"));
+    let windows = dir.join(format!("azure-timetracker-{VERSION}-x64.exe"));
     fs::write(&mac, b"mac archive").unwrap();
     fs::write(&windows, b"MZ windows installer").unwrap();
     updater_key::sign_file(&key, &mac, VERSION).unwrap();
@@ -190,12 +190,12 @@ fn feed_has_the_tauri_static_shape() {
     }
     assert_eq!(
         platforms["windows-x86_64"]["url"],
-        format!("{base}Azure-timetracker-2.0.0-x64-setup.exe")
+        format!("{base}azure-timetracker-2.0.0-x64.exe")
     );
     assert_eq!(platforms["windows-x86_64"].as_object().unwrap().len(), 2);
     assert_eq!(
         feed::check(&built, temp.path(), &key.public_b64).unwrap(),
-        ["Azure-timetracker-2.0.0-universal.app.tar.gz", "Azure-timetracker-2.0.0-x64-setup.exe"]
+        ["Azure-timetracker-2.0.0-universal.app.tar.gz", "azure-timetracker-2.0.0-x64.exe"]
     );
 }
 

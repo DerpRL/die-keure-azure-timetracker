@@ -60,7 +60,7 @@ const NOTARIZED_STEP: &str =
 ";
 
 pub fn install_text(version: &str, label: &str, minimum_macos: &str) -> String {
-    let image = dmg_name(version, label);
+    let image = dmg_name(version);
     let note = signing_note(label);
     let macos = short_macos(minimum_macos);
     let first_open = if label == "developer-id" { NOTARIZED_STEP } else { GATEKEEPER_STEP };
@@ -87,7 +87,7 @@ Check the download: shasum -a 256 -c {image}.sha256
     )
 }
 
-/// Builds `<out_dir>/Azure-timetracker-<v>-universal-<label>.dmg` (replacing an unpublished one),
+/// Builds `<out_dir>/azure-timetracker-<v>.dmg` (replacing an unpublished one),
 /// signs the image with a certificate identity, and runs `hdiutil verify`.
 pub fn create(
     app: &Path,
@@ -97,7 +97,7 @@ pub fn create(
     minimum_macos: &str,
     identity: &Identity,
 ) -> Result<PathBuf> {
-    let image = out_dir.join(dmg_name(version, label));
+    let image = out_dir.join(dmg_name(version));
     let stage = tempfile::Builder::new().prefix("att-dmg-").tempdir()?;
     Cmd::new("ditto").arg(app).arg(stage.path().join(APP_DIR_NAME)).run()?;
     fsx::symlink(Path::new("/Applications"), &stage.path().join("Applications"))?;
@@ -166,11 +166,11 @@ mod tests {
     #[test]
     fn note_names_the_checksum_file_and_minimum() {
         let text = install_text("2.0.0", "local-signed", "14.0.0");
-        assert!(text.contains("Azure-timetracker-2.0.0-universal-local-signed.dmg.sha256"));
+        assert!(text.contains("shasum -a 256 -c azure-timetracker-2.0.0.dmg.sha256"));
         assert!(text.contains("requires macOS 14 or later"));
         assert!(text.contains("Open Anyway"));
         let release = install_text("2.0.0", "developer-id", "14.0.0");
-        assert!(release.contains("Azure-timetracker-2.0.0-universal-developer-id.dmg.sha256"));
+        assert!(release.contains("shasum -a 256 -c azure-timetracker-2.0.0.dmg.sha256"));
         assert!(release.contains("notarized by Apple") && !release.contains("Open Anyway"));
         assert!(release.contains("\n5. Click the clock"));
         assert_eq!(short_macos("14.2.0"), "14.2");

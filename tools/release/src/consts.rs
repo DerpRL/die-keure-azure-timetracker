@@ -81,12 +81,12 @@ pub fn mac_archive_name(version: &str) -> String {
 
 /// NSIS installer, used both for manual installs and as the Windows update asset.
 pub fn windows_installer_name(version: &str) -> String {
-    format!("Azure-timetracker-{version}-x64-setup.exe")
+    format!("azure-timetracker-{version}-x64.exe")
 }
 
-/// Disk image; the label states the signing status, as in 1.x (`local-signed`, `unsigned`, ...).
-pub fn dmg_name(version: &str, label: &str) -> String {
-    format!("Azure-timetracker-{version}-universal-{label}.dmg")
+/// Universal disk image. The signing status is stated in its installation note, not its name.
+pub fn dmg_name(version: &str) -> String {
+    format!("azure-timetracker-{version}.dmg")
 }
 
 /// `~/Library/Application Support/Azure timetracker Releases`, the folder outside Git that holds

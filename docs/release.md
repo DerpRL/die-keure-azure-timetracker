@@ -42,9 +42,9 @@ Artifact folder (outside the repository, for example `~/Releases/2.0.0`):
 
 | File | Made by | Published to |
 |---|---|---|
-| `Azure-timetracker-<v>-universal-developer-id.dmg` + `.sha256` | `package-macos` | GitHub Release `v<v>` |
+| `azure-timetracker-<v>.dmg` + `.sha256` | `package-macos` | GitHub Release `v<v>` |
 | `Azure-timetracker-<v>-universal.app.tar.gz` + `.sha256` + `.sig` | `package-macos` | GitHub Release `v<v>` |
-| `Azure-timetracker-<v>-x64-setup.exe` + `.sha256` + `.sig` | `build-windows` | GitHub Release `v<v>` |
+| `azure-timetracker-<v>-x64.exe` + `.sha256` + `.sig` | `build-windows` | GitHub Release `v<v>` |
 | `latest.json` | `feed` | GitHub Release `v<v>` |
 | `Azure-timetracker-<v>-universal-update.zip` + `.sha256` (bridge) | `bridge` | `releases/updates/<v>/` in the repository |
 | `legacy-latest.json` (bridge) | `AzureTimetrackerRelease`, run by the release owner | `updates/latest.json` in the repository |
@@ -192,7 +192,7 @@ cargo run -p att-release -- package-macos "$APP" "$OUT" --key "$KEY"
 cargo run -p att-release -- build-windows --out "$OUT" --key "$KEY"
 cargo run -p att-release -- feed --version $V --notes releases/notes/$V.md \
     --mac-archive "$OUT/Azure-timetracker-$V-universal.app.tar.gz" \
-    --windows-installer "$OUT/Azure-timetracker-$V-x64-setup.exe"
+    --windows-installer "$OUT/azure-timetracker-$V-x64.exe"
 cargo run -p att-release -- verify "$OUT"
 cargo run -p att-release -- publish $V --from "$OUT" --notes releases/notes/$V.md
 ```
@@ -318,7 +318,7 @@ newer.
 - **macOS, from 1.13–1.14.x**: accept the update in the app; no manual install is needed. Because
   the signature changes, macOS may ask once per saved credential to allow Keychain access (Always
   Allow), and Calendar and Accessibility (Figma) may need to be granted again.
-- **Windows, first install**: run `Azure-timetracker-<v>-x64-setup.exe`. SmartScreen shows
+- **Windows, first install**: run `azure-timetracker-<v>-x64.exe`. SmartScreen shows
   "Windows protected your PC" with an unknown publisher: choose More info, then Run anyway. It
   installs for the current user without admin rights. Later updates install from inside the app
   without this prompt.

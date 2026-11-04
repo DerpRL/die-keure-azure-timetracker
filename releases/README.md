@@ -4,7 +4,7 @@ Azure timetracker 2.x is published on [GitHub Releases](https://github.com/DerpR
 
 ## macOS
 
-`Azure-timetracker-<version>-universal-developer-id.dmg` runs on Apple Silicon and Intel, macOS 14 or later. Open it and drag Azure timetracker to Applications. A personal `~/Applications` folder also works, and lets updates install without an administrator password.
+`azure-timetracker-<version>.dmg` runs on Apple Silicon and Intel, macOS 14 or later. Open it and drag Azure timetracker to Applications. A personal `~/Applications` folder also works, and lets updates install without an administrator password.
 
 The app is signed with an Apple Developer ID and notarized by Apple. The first time you open it, macOS asks whether to open an app downloaded from the internet: choose Open.
 
@@ -12,7 +12,7 @@ The app is signed with an Apple Developer ID and notarized by Apple. The first t
 
 ## Windows
 
-`Azure-timetracker-<version>-x64-setup.exe` is for 64-bit Windows. SmartScreen shows "Windows protected your PC" with an unknown publisher, because the installer has no code-signing certificate: choose More info, then Run anyway. It installs for the current user without administrator rights. Later updates install from inside the app without this prompt.
+`azure-timetracker-<version>-x64.exe` is for 64-bit Windows. SmartScreen shows "Windows protected your PC" with an unknown publisher, because the installer has no code-signing certificate: choose More info, then Run anyway. It installs for the current user without administrator rights. Later updates install from inside the app without this prompt.
 
 ## Checksums
 

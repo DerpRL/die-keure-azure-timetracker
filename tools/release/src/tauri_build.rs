@@ -125,7 +125,7 @@ pub fn build_macos(repository: &Path) -> Result<PathBuf> {
     Ok(app)
 }
 
-/// Builds the NSIS installer into `out` as `Azure-timetracker-<v>-x64-setup.exe` with its
+/// Builds the NSIS installer into `out` as `azure-timetracker-<v>-x64.exe` with its
 /// checksum, and signs it for the updater when a key is given.
 pub fn build_windows(repository: &Path, out: &Path, key: Option<&UpdaterKey>) -> Result<PathBuf> {
     let cross = cfg!(target_os = "macos");
@@ -260,7 +260,7 @@ fn check_key_matches(key: &UpdaterKey, conf: &TauriConf) -> Result<()> {
     }
 }
 
-/// Signs an update asset (`.app.tar.gz` or `-x64-setup.exe`) for `version`.
+/// Signs an update asset (`.app.tar.gz` or `-x64.exe`) for `version`.
 pub fn sign_update(
     file: &Path,
     version: &str,

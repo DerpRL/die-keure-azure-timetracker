@@ -94,6 +94,27 @@ pub fn discover(dir: &Path, expected_version: Option<&str>) -> Result<Artifacts>
             found.legacy_feed = Some(path);
             continue;
         }
+        // Installers: azure-timetracker-<v>.dmg and azure-timetracker-<v>-x64.exe.
+        if let Some(rest) = name.strip_prefix("azure-timetracker-") {
+            let (version, is_dmg) = if let Some(version) = rest.strip_suffix("-x64.exe") {
+                (version, false)
+            } else if let Some(version) = rest.strip_suffix(".dmg") {
+                (version, true)
+            } else {
+                continue;
+            };
+            if AppVersion::parse(version).is_err() {
+                continue;
+            }
+            if is_dmg {
+                dmgs.push(path);
+            } else {
+                found.windows_installer = Some(path);
+            }
+            versions.insert(version.to_owned());
+            continue;
+        }
+        // Update assets: Azure-timetracker-<v>-universal.app.tar.gz and the 1.x bridge ZIP.
         let Some((version, suffix)) =
             name.strip_prefix("Azure-timetracker-").and_then(|rest| rest.split_once('-'))
         else {
@@ -104,9 +125,7 @@ pub fn discover(dir: &Path, expected_version: Option<&str>) -> Result<Artifacts>
         }
         match suffix {
             "universal.app.tar.gz" => found.mac_archive = Some(path),
-            "x64-setup.exe" => found.windows_installer = Some(path),
             "universal-update.zip" => found.legacy_zip = Some(path),
-            other if other.starts_with("universal-") && other.ends_with(".dmg") => dmgs.push(path),
             _ => continue,
         }
         versions.insert(version.to_owned());
