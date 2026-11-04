@@ -42,6 +42,8 @@ id_ed25519*
 # 2.0 rewrite (Rust workspace and Tauri app)
 /target/
 apps/desktop/node_modules/
+# Vite and Vitest caches when tools run from the repository root
+/node_modules/
 apps/desktop/dist/
 apps/desktop/src-tauri/target/
 
