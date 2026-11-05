@@ -13,7 +13,7 @@ use att_core::{AppError, Configuration, Result};
 use att_net::Endpoint;
 use att_platform::AppLookup;
 
-use crate::clients::accounts;
+use crate::clients::{accounts, read_secret};
 use crate::controllers::hooks as controllers;
 use crate::engine::Engine;
 use crate::intent::done;
@@ -79,6 +79,86 @@ pub(crate) async fn save(
     figma::configure(engine);
     connection::connect(engine).await;
     done()
+}
+
+/// `settings.testAzurePat`: reads work items with `azure_pat` in `organization`, then checks
+/// that `project` exists, without saving anything or touching the current connection. A blank
+/// token tests the one stored for the organization.
+pub(crate) async fn test_azure_pat(
+    engine: &Engine,
+    organization: &str,
+    project: &str,
+    azure_pat: &str,
+) -> std::result::Result<Value, IpcError> {
+    let organization = organization.trim();
+    let project = project.trim();
+    if organization.is_empty() {
+        return Err(IpcError::new("organization", "Enter your Azure DevOps organization first."));
+    }
+    if let Err(error) = Endpoint::azure(organization) {
+        return Err(IpcError::new("organization", error.to_string()));
+    }
+    if engine.preview() {
+        return Err(IpcError::new("preview", "Preview mode: testing tokens is turned off."));
+    }
+    let mut pat = azure_pat.trim().to_string();
+    if pat.is_empty() {
+        let credentials = engine.services().platform.credentials.clone();
+        let account = accounts::azure_pat(organization);
+        // Keychain reads can wait for a system prompt: blocking pool, no short deadline.
+        let stored =
+            tokio::task::spawn_blocking(move || read_secret(credentials.as_ref(), &account))
+                .await
+                .unwrap_or_else(|error| Err(AppError::Message(error.to_string())))
+                .map_err(IpcError::from)?;
+        pat = stored.unwrap_or_default();
+    }
+    if pat.is_empty() {
+        return Err(IpcError::new("missingToken", "Paste your personal access token first."));
+    }
+    let client = engine.services().clients.azure(organization, project, &pat)?;
+    if let Err(error) = client.verify_organization().await {
+        return Err(azure_test_error(error, organization, None));
+    }
+    if let Err(error) = client.verify_project().await {
+        return Err(azure_test_error(error, organization, Some(project)));
+    }
+    done()
+}
+
+/// What went wrong while testing a token, in words that say what to change.
+fn azure_test_error(error: AppError, organization: &str, project: Option<&str>) -> IpcError {
+    match (error, project) {
+        (AppError::Authentication(_), _) => IpcError::new(
+            "authentication",
+            format!(
+                "Azure DevOps did not accept this token for “{organization}”. Check that you copied all of it, that it has not expired, and that it was created for this organization with the Work Items (Read) scope."
+            ),
+        ),
+        (AppError::AccessDenied(_), _) => IpcError::new(
+            "accessDenied",
+            format!(
+                "This token cannot read work items in “{organization}”. Edit it in Azure DevOps and add the Work Items (Read) scope."
+            ),
+        ),
+        (AppError::NotFound, None) => IpcError::new(
+            "organizationNotFound",
+            format!(
+                "Azure DevOps has no organization called “{organization}”. Use the name from dev.azure.com/your-organization."
+            ),
+        ),
+        (AppError::NotFound, Some(project)) => IpcError::new(
+            "projectNotFound",
+            format!(
+                "“{organization}” has no project called “{project}”, or this token cannot see it. Check the spelling, or leave Project empty to search every project."
+            ),
+        ),
+        (AppError::Network(_) | AppError::Timeout, _) => IpcError::new(
+            "offline",
+            "Azure DevOps could not be reached. Check your internet connection and try again.",
+        ),
+        (other, _) => other.into(),
+    }
 }
 
 async fn validate_and_store(

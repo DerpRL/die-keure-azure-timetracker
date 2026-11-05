@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { resetMockIpc } from '../../ipc';
 import type { AppSlice } from '../../ipc/contract';
 import { sampleSlices } from '../../ipc/fixtures';
-import { onboardingApp } from '../../ipc/fixtures/slices/settings';
+import { onboardingApp, unconfiguredConnection, unconfiguredSettings } from '../../ipc/fixtures/slices/settings';
 import { MockEngineError } from '../../ipc/mockEngine';
 import { MainSurface } from '../../surfaces/MainSurface';
 import { expectNoA11yViolations } from '../../test/axe';
@@ -113,6 +113,23 @@ describe('OnboardingGate', () => {
     expect(screen.queryByRole('navigation', { name: 'Main' })).not.toBeInTheDocument();
     act(() => engine.setSlice('app', { ...sampleSlices().app!, onboarding: false }));
     expect(await screen.findByRole('navigation', { name: 'Main' })).toBeInTheDocument();
+  });
+
+  it('continues to the accounts step with die Keure’s accounts prefilled and the 7pace steps', async () => {
+    // In the app the shell opens Settings (`show_main(Some("settings"))`); here the window
+    // starts on the page the engine names.
+    const app = { ...onboardingApp, visiblePage: 'settings' };
+    const { engine, user } = renderWithEngine(<MainSurface />, {
+      with: { app, settings: unconfiguredSettings, connection: unconfiguredConnection },
+    });
+    engine.handle('app.finishOnboarding', (_intent, mock) => mock.patchSlice('app', { onboarding: false, visiblePage: 'settings' }));
+    await user.click(await screen.findByRole('button', { name: 'Continue to setup' }));
+    expect(await screen.findByRole('heading', { level: 3, name: 'Connect your accounts to start tracking' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Organization')).toHaveValue('diekeure-webdev');
+    expect(screen.getByLabelText('Project (optional)')).toHaveValue('LK2020');
+    expect(screen.getByLabelText('Workspace URL')).toHaveValue('https://diekeure-webdev.timehub.7pace.com');
+    expect(screen.getByRole('button', { name: 'Test and save' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'How to get a 7pace API token' })).toBeInTheDocument();
   });
 
   it('has no axe violations', async () => {

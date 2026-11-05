@@ -235,6 +235,50 @@ impl AzureApi {
         self.transport.data(wire::request(Method::GET, url, Some(authorization), None)).await
     }
 
+    /// Whether the token can read work items in the organization (Settings → Test and save).
+    /// `GET <organization>/_apis/wit/workitems?ids=1&errorPolicy=omit` needs only the
+    /// "Work Items (Read)" scope and answers even when ticket 1 does not exist or is hidden.
+    ///
+    /// Errors are the transport's: 401 [`AppError::Authentication`], 403
+    /// [`AppError::AccessDenied`], 404 [`AppError::NotFound`] (no such organization). A 2xx answer
+    /// that is not a JSON object (Azure's sign-in page) counts as rejected credentials.
+    pub async fn verify_organization(&self) -> Result<()> {
+        let url = wire::url(
+            &self.organization_url,
+            ["_apis", "wit", "workitems"],
+            &[
+                ("ids", "1"),
+                ("fields", "System.Id"),
+                ("errorPolicy", "omit"),
+                ("api-version", API_VERSION),
+            ],
+        )
+        .ok_or_else(|| AppError::message("Enter the Azure DevOps organization name only."))?;
+        self.verify(url).await
+    }
+
+    /// Whether the project exists and the token can read its work item metadata:
+    /// `GET <organization>/<project>/_apis/wit/workitemtypecategories` (404 when there is no
+    /// such project). Nothing to check without a project.
+    pub async fn verify_project(&self) -> Result<()> {
+        if self.project.is_empty() {
+            return Ok(());
+        }
+        let url = self.project_url(
+            &["_apis", "wit", "workitemtypecategories"],
+            &[("api-version", API_VERSION)],
+        )?;
+        self.verify(url).await
+    }
+
+    async fn verify(&self, url: Url) -> Result<()> {
+        let host = url.host_str().unwrap_or_default().to_string();
+        let body = self.get(url).await?;
+        serde_json::from_slice::<serde_json::Map<String, Value>>(&body)
+            .map(|_| ())
+            .map_err(|_| AppError::Authentication(host))
+    }
+
     /// `<organization>[/<project>]` followed by `segments`.
     fn project_url(&self, segments: &[&str], query: &[(&str, &str)]) -> Result<Url> {
         let project = (!self.project.is_empty()).then_some(self.project.as_str());

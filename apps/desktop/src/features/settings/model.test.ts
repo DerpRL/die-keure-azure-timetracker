@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Configuration } from '../../ipc/contract';
 import { defaultConfiguration } from '../../ipc/fixtures/defaults';
 import { configuredSettings, invalidConfiguration } from '../../ipc/fixtures/slices/settings';
+import { ACCOUNT_DEFAULTS, accountSetupUnfinished, withAccountDefaults } from './accountDefaults';
 import { configurationToSave, deepEqual, hasDraftChanges, mergeUnderneath, rebaseDraft } from './configDraft';
 import { FEATURES, pageShown, setPageShown } from './features';
 import { parseSettingsHash } from './sections';
@@ -28,7 +29,57 @@ import {
 
 const stored = configuredSettings.configuration;
 
+describe('account defaults', () => {
+  it('are die Keure’s accounts, in one place', () => {
+    expect(ACCOUNT_DEFAULTS).toEqual({
+      organization: 'diekeure-webdev',
+      project: 'LK2020',
+      sevenPaceUrl: 'https://diekeure-webdev.timehub.7pace.com',
+    });
+  });
+
+  it('fill every empty account field while nothing is saved', () => {
+    const empty = defaultConfiguration();
+    expect(accountSetupUnfinished(empty)).toBe(true);
+    expect(withAccountDefaults(empty)).toEqual({ ...empty, ...ACCOUNT_DEFAULTS });
+    expect(withAccountDefaults({ ...empty, project: 'Other' })).toEqual({ ...empty, ...ACCOUNT_DEFAULTS, project: 'Other' });
+  });
+
+  it('keep saved values: after Test and save only the 7pace workspace is suggested', () => {
+    const azureSaved = { ...defaultConfiguration(), organization: 'fabrikam', project: '' };
+    expect(withAccountDefaults(azureSaved)).toEqual({ ...azureSaved, sevenPaceUrl: ACCOUNT_DEFAULTS.sevenPaceUrl });
+  });
+
+  it('suggest nothing once 7pace is set up, so an empty organization or project stays empty', () => {
+    expect(withAccountDefaults(stored)).toBe(stored);
+    const noProject = { ...stored, project: '' };
+    expect(accountSetupUnfinished(noProject)).toBe(false);
+    expect(withAccountDefaults(noProject)).toBe(noProject);
+    const sevenPaceOnly = { ...stored, organization: '', project: '' };
+    expect(withAccountDefaults(sevenPaceOnly)).toBe(sevenPaceOnly);
+  });
+});
+
 describe('draft model', () => {
+  it('sees no change when a set-like list only changed order, or a blank shortcut became null', () => {
+    const reordered: Configuration = {
+      ...stored,
+      selectedCalendarIds: [...stored.selectedCalendarIds, 'a', 'b'],
+      hiddenPages: ['weeklyReport', 'offlineDrafts'],
+      dayReview: { ...stored.dayReview, weekdays: [5, 1, 2, 3, 4] },
+    };
+    const original: Configuration = {
+      ...stored,
+      selectedCalendarIds: ['b', ...stored.selectedCalendarIds, 'a'],
+      hiddenPages: ['offlineDrafts', 'weeklyReport'],
+      dayReview: { ...stored.dayReview, weekdays: [1, 2, 3, 4, 5] },
+    };
+    expect(hasDraftChanges(reordered, original)).toBe(false);
+    expect(hasDraftChanges({ ...original, hiddenPages: ['offlineDrafts'] }, original)).toBe(true);
+    expect(hasDraftChanges({ ...stored, quickSwitchShortcut: '' }, { ...stored, quickSwitchShortcut: null })).toBe(false);
+    expect(hasDraftChanges({ ...stored, quickSwitchShortcut: 'Ctrl+K' }, { ...stored, quickSwitchShortcut: null })).toBe(true);
+  });
+
   it('treats undefined and missing keys as equal, and compares lists in order', () => {
     expect(deepEqual({ a: 1, b: undefined }, { a: 1 })).toBe(true);
     expect(deepEqual([1, 2], [2, 1])).toBe(false);

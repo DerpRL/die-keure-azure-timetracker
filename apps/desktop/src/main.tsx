@@ -44,19 +44,54 @@ document.documentElement.dataset.surface = surface;
 
 /**
  * Outside Tauri (browser preview, gallery) a mock engine serves the sample slices, loaded as a
- * separate chunk that the desktop app never requests.
+ * separate chunk that the desktop app never requests. `?setup=first-run` starts like a fresh
+ * install: the onboarding, then Settings with nothing saved.
  */
 async function installPreviewEngine(): Promise<void> {
   if (isTauri()) return;
-  const [{ installMockEngine }, { sampleSlices, SAMPLE_NOW }, { pinClockTo }, { dayReviewToday }, { handlePickerPreview }] = await Promise.all([
+  const [
+    { installMockEngine, MockEngineError },
+    { sampleSlices, SAMPLE_NOW },
+    { pinClockTo },
+    { dayReviewToday },
+    { handlePickerPreview },
+    { onboardingApp, unconfiguredConnection, unconfiguredSettings },
+  ] = await Promise.all([
     import('./ipc/mockEngine'),
     import('./ipc/fixtures'),
     import('./ipc/sampleClock'),
     import('./ipc/fixtures/slices/dayReview'),
     import('./ipc/fixtures/pickerPreview'),
+    import('./ipc/fixtures/slices/settings'),
   ]);
-  if (new URLSearchParams(location.search).get('clock') !== 'real') pinClockTo(SAMPLE_NOW);
-  handlePickerPreview(installMockEngine({ slices: sampleSlices(), latencyMs: 120 }))
+  const query = new URLSearchParams(location.search);
+  if (query.get('clock') !== 'real') pinClockTo(SAMPLE_NOW);
+  const firstRun = query.get('setup') === 'first-run';
+  const slices = firstRun
+    ? { ...sampleSlices(), app: onboardingApp, settings: unconfiguredSettings, connection: unconfiguredConnection }
+    : sampleSlices();
+  handlePickerPreview(installMockEngine({ slices, latencyMs: 120 }))
+    // Settings → Save stores the configuration and the typed secrets, like the engine.
+    .handle('settings.save', (intent, mock) => {
+      const settings = mock.slices.settings;
+      if (!settings) return;
+      mock.setSlice('settings', {
+        ...settings,
+        configuration: intent.configuration,
+        hasAzurePat: settings.hasAzurePat || intent.azurePat !== '',
+        hasSevenPaceToken: settings.hasSevenPaceToken || intent.sevenPaceToken !== '',
+        savedAt: new Date().toISOString(),
+      });
+    })
+    // Test and save: every token works, except one containing "wrong" (to preview the error).
+    .handle('settings.testAzurePat', (intent) => {
+      if (intent.azurePat.includes('wrong')) {
+        throw new MockEngineError(
+          'authentication',
+          `Azure DevOps did not accept this token for “${intent.organization}”. Check that you copied all of it, that it has not expired, and that it was created for this organization with the Work Items (Read) scope.`,
+        );
+      }
+    })
     // Settings → App → "Show onboarding again", and finishing it, like the engine.
     .handle('app.restartOnboarding', (_intent, mock) => mock.patchSlice('app', { onboarding: true }))
     .handle('app.finishOnboarding', (_intent, mock) => mock.patchSlice('app', { onboarding: false, visiblePage: 'settings' }))

@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { IpcError } from '../../ipc';
 import type { Configuration } from '../../ipc/contract';
-import { useAction } from '../../state/hooks';
+import { useAction, type ActionResult } from '../../state/hooks';
 import { configurationToSave, deepEqual, draftFields, hasDraftChanges, rebaseDraft, type DraftState } from './configDraft';
 import { validateConfiguration, type SettingsIssue } from './validation';
 
@@ -27,6 +27,11 @@ export interface SettingsDraft {
   saveError: IpcError | null;
   /** The last save succeeded and nothing changed since. */
   saved: boolean;
+  /**
+   * Saves the Azure organization and project with the typed token on top of the saved settings
+   * (Settings → Test and save, after a successful test). Other edits stay in the draft.
+   */
+  saveAzure: (account: { organization: string; project: string }) => Promise<ActionResult<'settings.save'>>;
 }
 
 interface State extends DraftState {
@@ -36,16 +41,21 @@ interface State extends DraftState {
 
 /**
  * The Settings draft (1.14 `SettingsPage` `@ViewState draft`). The draft starts as the slice's
- * configuration; a new slice value replaces an unchanged draft and merges under an edited one.
+ * configuration (passed through `start`); a new slice value replaces an unchanged draft and merges under an edited one.
  * Save sends the whole configuration plus the two secrets (blank keeps the stored ones).
  */
-export function useSettingsDraft(configuration: Configuration): SettingsDraft {
-  const [state, setState] = useState<State>(() => ({ seen: configuration, base: configuration, draft: configuration }));
+export function useSettingsDraft(
+  configuration: Configuration,
+  start: (saved: Configuration) => Configuration = (saved) => saved,
+): SettingsDraft {
+  // `start` suggests values (the first-run account defaults): they count as unsaved edits.
+  const [state, setState] = useState<State>(() => ({ seen: configuration, base: configuration, draft: start(configuration) }));
   const [azurePat, setPat] = useState('');
   const [sevenPaceToken, setToken] = useState('');
   const [saved, setSaved] = useState(false);
   const [showIssues, setShowIssues] = useState(false);
   const action = useAction();
+  const azureAction = useAction();
 
   // A new slice value (another window saved, the engine normalised a field, calendar access
   // changed `calendarEnabled`): reconcile during render, before anything shows stale values.
@@ -103,6 +113,22 @@ export function useSettingsDraft(configuration: Configuration): SettingsDraft {
     return true;
   }, [draft, configuration, azurePat, sevenPaceToken, run]);
 
+  const runAzure = azureAction.run;
+  const saveAzure = useCallback(
+    async ({ organization, project }: { organization: string; project: string }) => {
+      const payload = configurationToSave({ ...configuration, organization, project }, configuration);
+      const result = await runAzure({ type: 'settings.save', configuration: payload, azurePat: azurePat.trim(), sevenPaceToken: '' });
+      if (!result.ok) return result;
+      setState((previous) => {
+        const base = { ...previous.base, organization, project };
+        return { ...previous, base, draft: hasDraftChanges(previous.draft, base) ? previous.draft : base };
+      });
+      setPat('');
+      return result;
+    },
+    [configuration, azurePat, runAzure],
+  );
+
   const revert = useCallback(() => {
     setState((previous) => ({ ...previous, draft: previous.base }));
     setPat('');
@@ -127,5 +153,6 @@ export function useSettingsDraft(configuration: Configuration): SettingsDraft {
     saving: action.pending,
     saveError: action.error,
     saved: saved && !dirty,
+    saveAzure,
   };
 }

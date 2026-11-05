@@ -162,6 +162,13 @@ pub enum SessionIntent {
     /// `settings.savedAt`; a failure is shown in `app.error`.
     #[serde(rename = "settings.save")]
     SaveSettings { configuration: Box<Configuration>, azure_pat: String, seven_pace_token: String },
+    /// Settings → Test and save: checks an Azure personal access token against the organization
+    /// and project as typed, before anything is saved (a blank token tests the one stored for
+    /// that organization). Stores nothing; a failure is the result's error, with the kind
+    /// `authentication`, `accessDenied`, `organizationNotFound`, `projectNotFound`, `offline`,
+    /// `organization` or `missingToken`. Saving is `settings.save`.
+    #[serde(rename = "settings.testAzurePat")]
+    TestAzurePat { organization: String, project: String, azure_pat: String },
     #[serde(rename = "settings.enableCalendar")]
     EnableCalendar,
     #[serde(rename = "settings.setPromptInterruption")]
@@ -406,6 +413,9 @@ async fn route(engine: &Engine, intent: SessionIntent) -> Result<Value, IpcError
 
         I::SaveSettings { configuration, azure_pat, seven_pace_token } => {
             return settings::save(engine, *configuration, &azure_pat, &seven_pace_token).await;
+        }
+        I::TestAzurePat { organization, project, azure_pat } => {
+            return settings::test_azure_pat(engine, &organization, &project, &azure_pat).await;
         }
         I::EnableCalendar => meetings::enable_calendar(engine).await,
         I::SetPromptInterruption { kind, level } => settings::set_interruption(engine, kind, level),

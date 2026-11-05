@@ -87,9 +87,6 @@ export const VIEW_INTROS: Readonly<Record<SettingsView, { title: string; lead: s
   },
 };
 
-/** Views whose cards edit the saved settings: they always show the save bar. */
-export const DRAFT_VIEWS: readonly SettingsView[] = ['accounts', 'tracking', 'git', 'calendars', 'appearance'];
-
 export const DEFAULT_SECTION: SettingsSectionId = 'azure';
 
 function definition(section: SettingsSectionId): SettingsSectionDefinition {

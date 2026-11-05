@@ -3,14 +3,19 @@
 
 mod support;
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use async_trait::async_trait;
 use serde_json::{Value, json};
 
-use att_core::Configuration;
 use att_core::config::SevenPaceAuthMode;
 use att_core::model::Repository;
+use att_core::model::WorkItem;
+use att_core::ticket::TicketWorkflowStatus;
+use att_core::ticket_context::TicketContext;
+use att_core::{AppError, Configuration, Result};
+use att_engine::clients::AzureClient;
 use att_net::SevenPacePinStatus;
 use support::*;
 
@@ -75,6 +80,136 @@ async fn non_blank_secrets_are_stored_under_the_1_14_accounts_then_it_reconnects
     save(&h, &draft, "  ", "other-token").await;
     assert_eq!(credential(&h, "azure:contoso").as_deref(), Some("pat-123"));
     assert_eq!(credential(&h, &format!("7pace:{HOST}")).as_deref(), Some("token-123"));
+}
+
+/// An Azure account as seen by Settings → Test and save: answers the two checks only.
+#[derive(Default)]
+struct AzureAccess {
+    organization: Mutex<Option<AppError>>,
+    project: Mutex<Option<AppError>>,
+}
+
+impl AzureAccess {
+    fn failing(organization: Option<AppError>, project: Option<AppError>) -> Arc<Self> {
+        Arc::new(Self { organization: Mutex::new(organization), project: Mutex::new(project) })
+    }
+}
+
+#[async_trait]
+impl AzureClient for AzureAccess {
+    async fn ticket_workflow(&self, _id: i64) -> Result<TicketWorkflowStatus> {
+        Err(AppError::NotFound)
+    }
+    async fn ticket_context(&self, _id: i64) -> Result<TicketContext> {
+        Err(AppError::NotFound)
+    }
+    async fn work_item(&self, _id: i64) -> Result<WorkItem> {
+        Err(AppError::NotFound)
+    }
+    async fn work_items(&self, _ids: &[i64]) -> Result<Vec<WorkItem>> {
+        Ok(Vec::new())
+    }
+    async fn verify_organization(&self) -> Result<()> {
+        self.organization.lock().unwrap().clone().map_or(Ok(()), Err)
+    }
+    async fn verify_project(&self) -> Result<()> {
+        self.project.lock().unwrap().clone().map_or(Ok(()), Err)
+    }
+}
+
+async fn test_pat(
+    h: &Harness,
+    organization: &str,
+    project: &str,
+    pat: &str,
+) -> std::result::Result<Value, att_engine::IpcError> {
+    h.dispatch(json!({"type": "settings.testAzurePat", "organization": organization, "project": project, "azurePat": pat})).await
+}
+
+#[tokio::test]
+async fn testing_an_azure_token_checks_the_typed_account_and_stores_nothing() {
+    let h = Harness::new(configuration(vec![]));
+    h.start().await;
+    let saved_before = h.slice("settings")["savedAt"].clone();
+    *h.t.clients.azure.lock().unwrap() = Some(AzureAccess::failing(None, None));
+    let result = test_pat(&h, "  diekeure-webdev ", " LK2020 ", "  fake-pat-for-tests  ").await;
+    assert_eq!(result.unwrap(), Value::Null);
+    assert_eq!(
+        h.t.clients.azure_requests.lock().unwrap().clone(),
+        vec![(
+            "diekeure-webdev".to_string(),
+            "LK2020".to_string(),
+            "fake-pat-for-tests".to_string()
+        )],
+        "trimmed, as typed"
+    );
+    assert!(h.t.credentials.0.lock().unwrap().is_empty(), "nothing stored");
+    assert_eq!(h.slice("settings")["savedAt"], saved_before);
+    assert_eq!(h.slice("app")["error"], Value::Null);
+}
+
+#[tokio::test]
+async fn a_blank_token_tests_the_stored_one_and_none_asks_for_a_token() {
+    let h = Harness::new(configuration(vec![]));
+    h.start().await;
+    *h.t.clients.azure.lock().unwrap() = Some(AzureAccess::failing(None, None));
+    let missing = test_pat(&h, "contoso", "", " ").await.unwrap_err();
+    assert_eq!(
+        (missing.kind.as_str(), missing.message.as_str()),
+        ("missingToken", "Paste your personal access token first.")
+    );
+    h.t.credentials.0.lock().unwrap().insert("azure:contoso".into(), "stored-fake-pat".into());
+    test_pat(&h, "Contoso", "", "").await.unwrap();
+    assert_eq!(h.t.clients.azure_requests.lock().unwrap()[0].2, "stored-fake-pat");
+}
+
+#[tokio::test]
+async fn token_test_failures_say_what_to_change() {
+    let h = Harness::new(configuration(vec![]));
+    h.start().await;
+    let host = || "dev.azure.com".to_string();
+    let cases = [
+        (
+            Some(AppError::Authentication(host())),
+            None,
+            "authentication",
+            "Azure DevOps did not accept this token for “diekeure-webdev”.",
+        ),
+        (
+            Some(AppError::AccessDenied(host())),
+            None,
+            "accessDenied",
+            "This token cannot read work items in “diekeure-webdev”.",
+        ),
+        (
+            Some(AppError::NotFound),
+            None,
+            "organizationNotFound",
+            "Azure DevOps has no organization called “diekeure-webdev”.",
+        ),
+        (
+            None,
+            Some(AppError::NotFound),
+            "projectNotFound",
+            "“diekeure-webdev” has no project called “LK2020”, or this token cannot see it.",
+        ),
+        (
+            Some(AppError::Network("Could not connect".into())),
+            None,
+            "offline",
+            "Azure DevOps could not be reached.",
+        ),
+        (Some(AppError::Timeout), None, "offline", "Azure DevOps could not be reached."),
+    ];
+    for (organization, project, kind, start) in cases {
+        *h.t.clients.azure.lock().unwrap() = Some(AzureAccess::failing(organization, project));
+        let error = test_pat(&h, "diekeure-webdev", "LK2020", "fake-pat").await.unwrap_err();
+        assert_eq!(error.kind, kind);
+        assert!(error.message.starts_with(start), "{kind}: {}", error.message);
+    }
+    let blank = test_pat(&h, "  ", "", "fake-pat").await.unwrap_err();
+    assert_eq!(blank.kind, "organization");
+    assert!(h.t.credentials.0.lock().unwrap().is_empty());
 }
 
 #[tokio::test]

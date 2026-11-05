@@ -249,6 +249,62 @@ async fn azure_uses_pat_and_encodes_project() {
     assert_eq!(header(request, "authorization").as_deref(), Some(PAT_AUTHORIZATION));
 }
 
+#[tokio::test]
+async fn token_test_reads_work_items_then_the_project_with_the_pat() {
+    let capture = Capture::start(vec![
+        ok_json(json!({"count": 1, "value": [null]})),
+        ok_json(json!({"defaultWorkItemType": null, "value": []})),
+    ])
+    .await;
+    let api =
+        AzureApi::new(capture.url("/example"), "LK 2020", "fixture-pat", capture.transport.clone());
+    api.verify_organization().await.unwrap();
+    api.verify_project().await.unwrap();
+    let requests = capture.requests().await;
+    assert_eq!(methods(&requests), ["GET", "GET"]);
+    assert_eq!(requests[0].url.path(), "/example/_apis/wit/workitems");
+    assert_eq!(query_value(&requests[0], "ids").as_deref(), Some("1"));
+    assert_eq!(query_value(&requests[0], "errorPolicy").as_deref(), Some("omit"));
+    assert_eq!(requests[1].url.path(), "/example/LK%202020/_apis/wit/workitemtypecategories");
+    for request in &requests {
+        assert_eq!(header(request, "authorization").as_deref(), Some(PAT_AUTHORIZATION));
+    }
+}
+
+#[tokio::test]
+async fn token_test_without_a_project_checks_the_organization_only() {
+    let capture = Capture::start(vec![ok_json(json!({"count": 0, "value": []}))]).await;
+    let api = AzureApi::new(capture.url("/example"), "", "fixture-pat", capture.transport.clone());
+    api.verify_organization().await.unwrap();
+    api.verify_project().await.unwrap();
+    assert_eq!(capture.requests().await.len(), 1);
+}
+
+#[tokio::test]
+async fn token_test_reports_rejected_tokens_scopes_and_missing_accounts() {
+    let sign_in_page = ResponseTemplate::new(203).set_body_string("<html>Sign in</html>");
+    let cases = [
+        (status(401), AppError::Authentication("127.0.0.1".into())),
+        (sign_in_page, AppError::Authentication("127.0.0.1".into())),
+        (status(403), AppError::AccessDenied("127.0.0.1".into())),
+        (status(404), AppError::NotFound),
+    ];
+    for (response, expected) in cases {
+        let capture = Capture::start(vec![response]).await;
+        let api = AzureApi::new(
+            capture.url("/example"),
+            "LK2020",
+            "fixture-pat",
+            capture.transport.clone(),
+        );
+        assert_eq!(api.verify_organization().await.unwrap_err(), expected);
+    }
+    let capture = Capture::start(vec![status(404)]).await;
+    let api =
+        AzureApi::new(capture.url("/example"), "Nope", "fixture-pat", capture.transport.clone());
+    assert_eq!(api.verify_project().await.unwrap_err(), AppError::NotFound);
+}
+
 #[derive(Clone, Default)]
 struct TokenPersistenceFixture {
     writes: Arc<AtomicUsize>,

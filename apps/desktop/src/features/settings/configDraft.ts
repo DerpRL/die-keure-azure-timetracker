@@ -77,9 +77,33 @@ export function draftFields(configuration: Configuration): Omit<Configuration, I
   return result as Omit<Configuration, ImmediateField>;
 }
 
-/** The draft differs from the stored configuration in a field Save would write. */
+const sorted = <T extends string | number>(values: readonly T[]): T[] =>
+  [...values].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+
+/**
+ * The draft's own fields in a form where equal settings compare equal: lists that are really
+ * sets (switching a calendar, page, weekday or work app off and on again appends it at the end)
+ * are sorted, and a blank quick-switch shortcut is the default, like `null`.
+ */
+function comparable(configuration: Configuration): Omit<Configuration, ImmediateField> {
+  const fields = draftFields(configuration);
+  return {
+    ...fields,
+    selectedCalendarIds: sorted(fields.selectedCalendarIds),
+    hiddenPages: sorted(fields.hiddenPages),
+    dayReview: { ...fields.dayReview, weekdays: sorted(fields.dayReview.weekdays) },
+    awareness: { ...fields.awareness, workAppIds: sorted(fields.awareness.workAppIds) },
+    microphone: { ...fields.microphone, apps: sorted(fields.microphone.apps) },
+    quickSwitchShortcut: fields.quickSwitchShortcut?.trim() ? fields.quickSwitchShortcut : null,
+  };
+}
+
+/**
+ * The draft differs from the stored configuration in a field Save would write: what decides
+ * whether Settings asks to save. Undoing an edit makes them equal again.
+ */
 export function hasDraftChanges(draft: Configuration, stored: Configuration): boolean {
-  return !deepEqual(draftFields(draft), draftFields(stored));
+  return !deepEqual(comparable(draft), comparable(stored));
 }
 
 export interface DraftState {

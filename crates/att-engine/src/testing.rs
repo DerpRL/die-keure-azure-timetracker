@@ -17,7 +17,7 @@ use att_platform::{
 use att_store::Store;
 
 use crate::Engine;
-use crate::clients::{ClientFactory, Clients, PairingClient};
+use crate::clients::{AzureClient, ClientFactory, Clients, PairingClient};
 use crate::clock::ManualClock;
 use crate::services::Services;
 use crate::shell::RecordingShell;
@@ -187,6 +187,10 @@ pub struct FakeClientFactory {
     pub pairing: Mutex<Option<Arc<dyn PairingClient>>>,
     /// Returned by `connect` instead of clients, when set.
     pub error: Mutex<Option<AppError>>,
+    /// Handed out by `azure` (Settings → Test and save); none fails like an unusable URL.
+    pub azure: Mutex<Option<Arc<dyn AzureClient>>>,
+    /// Every `azure` request: organization, project and token.
+    pub azure_requests: Mutex<Vec<(String, String, String)>>,
 }
 
 impl ClientFactory for FakeClientFactory {
@@ -212,6 +216,15 @@ impl ClientFactory for FakeClientFactory {
             .unwrap()
             .clone()
             .ok_or_else(|| AppError::message("No pairing client in this test."))
+    }
+
+    fn azure(&self, organization: &str, project: &str, pat: &str) -> Result<Arc<dyn AzureClient>> {
+        self.azure_requests.lock().unwrap().push((organization.into(), project.into(), pat.into()));
+        self.azure
+            .lock()
+            .unwrap()
+            .clone()
+            .ok_or_else(|| AppError::message("No Azure client in this test."))
     }
 }
 

@@ -6,7 +6,8 @@ import { TextField } from '../../components/Fields';
 import { CheckIcon, RefreshIcon } from '../../components/icons';
 import { SegmentedControl } from '../../components/Segmented';
 import { useToast } from '../../components/Toast';
-import type { Configuration, SevenPaceAuthMode } from '../../ipc/contract';
+import type { SevenPaceAuthMode } from '../../ipc/contract';
+import { accountSetupUnfinished } from './accountDefaults';
 import { dispatch } from '../../ipc/engine';
 import { useAction, useNow, useSlice } from '../../state/hooks';
 import { connectionTone } from '../app/ConnectionStatus';
@@ -15,6 +16,8 @@ import { copyText } from './platform';
 import { Hint, InlineIssue, SettingsSection } from './SettingsSection';
 import { useSettingsForm } from './SettingsForm';
 import { issueFor } from './validation';
+import { AzureTokenTest, useAzureTokenTest } from './AzureTokenTest';
+import { SevenPaceInstructions } from './SevenPaceInstructions';
 import styles from './settings.module.css';
 
 interface SecretFieldProps {
@@ -27,10 +30,12 @@ interface SecretFieldProps {
   emptyText: ReactNode;
   emptyPlaceholder: string;
   isDisabled?: boolean;
+  /** Enter in the field (Test and save for the Azure token). */
+  onEnter?: () => void;
 }
 
 /** A credential: never shown, blank keeps the stored one. */
-function SecretField({ label, value, onChange, stored, store, emptyText, emptyPlaceholder, isDisabled }: SecretFieldProps) {
+function SecretField({ label, value, onChange, stored, store, emptyText, emptyPlaceholder, isDisabled, onEnter }: SecretFieldProps) {
   const description: ReactNode = stored ? (
     <span className={styles.chipLine}>
       <Badge tone="success" icon={CheckIcon}>
@@ -52,6 +57,17 @@ function SecretField({ label, value, onChange, stored, store, emptyText, emptyPl
       description={description}
       isDisabled={isDisabled}
       width="full"
+      onKeyDown={
+        onEnter
+          ? (event) => {
+              if (event.key !== 'Enter' || event.nativeEvent.isComposing) {
+                event.continuePropagation();
+                return;
+              }
+              onEnter();
+            }
+          : undefined
+      }
     />
   );
 }
@@ -197,16 +213,13 @@ const AUTH_MODES: ReadonlyArray<{ id: SevenPaceAuthMode; label: string }> = [
   { id: 'apiToken', label: 'API token' },
 ];
 
-function unconfigured(configuration: Configuration): boolean {
-  return configuration.sevenPaceUrl.trim() === '' && configuration.organization.trim() === '';
-}
-
 /** Settings → Azure DevOps & 7pace → Azure DevOps: organization, project and the PAT. */
 export function AzureSection() {
   const form = useSettingsForm();
   const { draft, update, settings, issues, preview, os } = form;
   const connection = useSlice('connection');
   const organizationIssue = issueFor(issues, 'organization');
+  const tester = useAzureTokenTest();
   const chip: { tone: Tone; label: string } = !settings.hasAzurePat
     ? { tone: 'neutral', label: 'Not connected yet' }
     : connection?.azureIssue
@@ -247,7 +260,9 @@ export function AzureSection() {
         emptyText="Needs “Work Items (Read)”. That is enough for ticket lookup."
         emptyPlaceholder="Paste your Azure PAT"
         isDisabled={preview}
+        onEnter={() => void tester.run()}
       />
+      <AzureTokenTest tester={tester} />
       {connection?.azureIssue ? <InlineIssue tone="warning">{`Azure tickets: ${connection.azureIssue}`}</InlineIssue> : null}
     </SettingsSection>
   );
@@ -260,6 +275,8 @@ export function SevenPaceSection() {
   const connection = useSlice('connection');
   const mode = draft.sevenPaceAuthMode;
   const urlIssue = issueFor(issues, 'sevenPaceUrl');
+  const workspace = draft.sevenPaceUrl.trim();
+  const credentialMissing = mode === 'mobilePIN' ? !connection?.hasSevenPaceToken : !settings.hasSevenPaceToken;
   const chip: { tone: Tone; label: string } =
     !connection || connection.health === 'unconfigured'
       ? { tone: 'neutral', label: 'Not connected yet' }
@@ -285,6 +302,13 @@ export function SevenPaceSection() {
         options={AUTH_MODES}
         selectedKey={mode}
         onSelectionChange={(sevenPaceAuthMode) => update((current) => ({ ...current, sevenPaceAuthMode }))}
+      />
+      <SevenPaceInstructions
+        key={mode}
+        mode={mode}
+        workspace={workspace !== '' && urlIssue === undefined ? workspace : null}
+        credentials={osWords(os).credentials}
+        open={credentialMissing}
       />
       {mode === 'mobilePIN' ? (
         <PinPairing />
@@ -347,7 +371,7 @@ export function ConnectionCardSection() {
   );
 }
 
-/** Is the draft's saved configuration still empty (the first run)? */
+/** Is the account setup unfinished (the first run: no 7pace workspace saved yet)? */
 export function useAccountsUnconfigured(): boolean {
-  return unconfigured(useSettingsForm().settings.configuration);
+  return accountSetupUnfinished(useSettingsForm().settings.configuration);
 }

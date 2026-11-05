@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from 'react';
 import { Banner } from '../../components/Banner';
 import { Button } from '../../components/Button';
 import { CircleIcon, SuccessIcon } from '../../components/icons';
@@ -9,12 +10,25 @@ import styles from './settings.module.css';
 
 export const SAVE_SHORTCUT: KeyCombo = { key: 's', mod: true };
 
+/** The id of the Settings view's title, where focus goes when the save bar goes away. */
+export const VIEW_TITLE_ID = 'settings-view-title';
+
 /**
- * Save and Revert for the whole draft, shared by every Settings view (2.2 layout: "No unsaved
- * changes · ⌘S saves"), with the outcome and the problems that block saving.
+ * Save and Revert for the whole draft, shared by every Settings view (2.2 layout: "Unsaved
+ * changes · ⌘S saves"), with the problems that block saving. Shown only while something is
+ * unsaved (see `SettingsContent`).
  */
 export function SaveBar() {
   const form = useSettingsForm();
+  const bar = useRef<HTMLDivElement>(null);
+  // Saving or reverting removes the bar: focus inside it moves to the view's title instead of
+  // falling back to the page.
+  useLayoutEffect(() => {
+    const element = bar.current;
+    return () => {
+      if (element?.contains(document.activeElement)) document.getElementById(VIEW_TITLE_ID)?.focus({ preventScroll: true });
+    };
+  }, []);
   const connection = useSlice('connection');
   const { dirty, saving, saved, busy, preview, os } = form;
   const mod = os === 'windows' ? 'Ctrl+S' : '⌘S';
@@ -24,7 +38,7 @@ export function SaveBar() {
   else if (saved) state = connection?.connected ? 'Settings saved · connection verified' : 'Settings saved';
   else state = 'No unsaved changes';
   return (
-    <div className={styles.saveBar}>
+    <div ref={bar} className={styles.saveBar}>
       {form.showIssues ? (
         <Banner tone="error" title="Fix these settings before saving">
           <ul className={styles.issueList}>

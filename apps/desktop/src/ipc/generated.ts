@@ -1104,6 +1104,7 @@ export type SessionIntent =
       azurePat: string;
       sevenPaceToken: string;
     }
+  | { type: "settings.testAzurePat"; organization: string; project: string; azurePat: string }
   | { type: "settings.enableCalendar" }
   | { type: "settings.setPromptInterruption"; kind: PromptKind; level: Interruption }
   | { type: "settings.setQuietHours"; quietHours: QuietHours }

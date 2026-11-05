@@ -46,6 +46,16 @@ pub trait AzureClient: Send + Sync {
     async fn work_item(&self, id: i64) -> Result<WorkItem>;
     /// Batch title lookup; unknown or inaccessible ids are left out.
     async fn work_items(&self, ids: &[i64]) -> Result<Vec<WorkItem>>;
+    /// Settings → Test and save: can the token read work items in the organization? Fakes
+    /// that do not override it accept every token.
+    async fn verify_organization(&self) -> Result<()> {
+        Ok(())
+    }
+    /// Settings → Test and save: does the project exist for this token (always when no
+    /// project is set)? Fakes that do not override it accept every project.
+    async fn verify_project(&self) -> Result<()> {
+        Ok(())
+    }
 }
 
 /// 7pace mobile PIN pairing (unauthenticated endpoints).
@@ -90,6 +100,12 @@ impl AzureClient for AzureApi {
     }
     async fn work_items(&self, ids: &[i64]) -> Result<Vec<WorkItem>> {
         AzureApi::work_items(self, ids).await
+    }
+    async fn verify_organization(&self) -> Result<()> {
+        AzureApi::verify_organization(self).await
+    }
+    async fn verify_project(&self) -> Result<()> {
+        AzureApi::verify_project(self).await
     }
 }
 
@@ -141,6 +157,9 @@ pub trait ClientFactory: Send + Sync {
     ) -> Result<Option<Clients>>;
 
     fn pairing(&self, workspace_url: &str) -> Result<Arc<dyn PairingClient>>;
+
+    /// An Azure client for a token that is not saved yet (Settings → Test and save).
+    fn azure(&self, organization: &str, project: &str, pat: &str) -> Result<Arc<dyn AzureClient>>;
 }
 
 /// Keychain / Credential Manager account names, unchanged from 1.14.x (`kind:scope`, scope
@@ -177,7 +196,7 @@ impl NetClientFactory {
     }
 }
 
-fn read_secret(credentials: &dyn Credentials, account: &str) -> Result<Option<String>> {
+pub(crate) fn read_secret(credentials: &dyn Credentials, account: &str) -> Result<Option<String>> {
     credentials.get(account).map_err(|error| {
         AppError::Message(format!("Keychain could not read the saved credential ({error})."))
     })
@@ -293,5 +312,10 @@ impl ClientFactory for NetClientFactory {
 
     fn pairing(&self, workspace_url: &str) -> Result<Arc<dyn PairingClient>> {
         Ok(Arc::new(SevenPaceOAuth::for_workspace(workspace_url, self.transport.clone())?))
+    }
+
+    fn azure(&self, organization: &str, project: &str, pat: &str) -> Result<Arc<dyn AzureClient>> {
+        let url = Endpoint::azure(organization)?;
+        Ok(Arc::new(AzureApi::new(url, project, pat, self.transport.clone())))
     }
 }

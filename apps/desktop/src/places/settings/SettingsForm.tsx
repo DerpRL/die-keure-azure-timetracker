@@ -7,6 +7,7 @@ import {
   viewOf,
   type SettingsSectionId,
 } from '../../features/settings/sections';
+import { withAccountDefaults } from '../../features/settings/accountDefaults';
 import { useSettingsDraft } from '../../features/settings/useSettingsDraft';
 import type { SettingsSlice } from '../../ipc/contract';
 import { type Navigation } from '../../layout/NavigationContext';
@@ -53,7 +54,7 @@ export interface SettingsFormProviderProps {
  */
 export function SettingsFormProvider({ settings, view, navigation, children }: SettingsFormProviderProps) {
   const app = useSlice('app');
-  const draft = useSettingsDraft(settings.configuration);
+  const draft = useSettingsDraft(settings.configuration, withAccountDefaults);
   const reducedMotion = useReducedMotion();
   const sectionVisible = useSectionVisible();
   const os = app?.os === 'windows' ? 'windows' : 'macos';

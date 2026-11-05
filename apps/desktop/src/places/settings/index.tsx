@@ -1,8 +1,9 @@
-import { useMemo, type ComponentType, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, type ComponentType, type ReactNode } from 'react';
 import { EmptyState, LoadingRegion, Skeleton } from '../../components/EmptyState';
 import { ErrorIcon } from '../../components/icons';
-import { SaveBar } from '../../features/settings/SaveBar';
-import { DRAFT_VIEWS, SETTINGS_SECTIONS, VIEW_INTROS } from '../../features/settings/sections';
+import { useToast } from '../../components/Toast';
+import { SaveBar, VIEW_TITLE_ID } from '../../features/settings/SaveBar';
+import { SETTINGS_SECTIONS, VIEW_INTROS } from '../../features/settings/sections';
 import { useSettingsForm } from '../../features/settings/SettingsForm';
 import { usePlaceView, type Navigation } from '../../layout/NavigationContext';
 import type { SettingsView } from '../../layout/navigation';
@@ -41,7 +42,9 @@ function ViewIntro({ view }: { view: SettingsView }) {
   return (
     <div className={styles.sectionHead}>
       <div className={styles.sectionHeadText}>
-        <h2 className={styles.sectionTitle}>{intro.title}</h2>
+        <h2 id={VIEW_TITLE_ID} tabIndex={-1} className={styles.sectionTitle}>
+          {intro.title}
+        </h2>
         <p className={styles.sectionLead}>{intro.lead}</p>
       </div>
       {actions ? <div className={styles.sectionHeadActions}>{actions}</div> : null}
@@ -71,8 +74,11 @@ function SettingsContent({ view, navigation }: { view: SettingsView; navigation:
     return counts;
   }, [form.issues]);
   const View = VIEWS[view];
-  // Views that edit the draft always show Save; the others when edits made elsewhere are unsaved.
-  const showSave = DRAFT_VIEWS.includes(view) || form.dirty || form.showIssues;
+  // The save bar asks to save only what is unsaved: an edit that differs from the saved settings
+  // or a typed token. It stays while saving and when saving failed, and goes away once the
+  // edits are saved or undone.
+  const showSave = form.dirty || form.showIssues || form.saving || form.saveError !== null;
+  useSavedToast(form.saved);
   return (
     <SettingsLayout view={view} navigation={navigation} issueCounts={issueCounts}>
       <ViewIntro view={view} />
@@ -80,6 +86,20 @@ function SettingsContent({ view, navigation }: { view: SettingsView; navigation:
       {showSave ? <SaveBar /> : null}
     </SettingsLayout>
   );
+}
+
+/** "Settings saved" once a save succeeds: the save bar it came from goes away. */
+function useSavedToast(saved: boolean) {
+  const toast = useToast();
+  const connection = useSlice('connection');
+  const connected = connection?.connected ?? false;
+  const previous = useRef(saved);
+  useEffect(() => {
+    if (saved && !previous.current) {
+      toast.show({ title: connected ? 'Settings saved · connection verified' : 'Settings saved', tone: 'success' });
+    }
+    previous.current = saved;
+  }, [saved, connected, toast]);
 }
 
 function SettingsLayout({

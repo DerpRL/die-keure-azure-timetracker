@@ -174,7 +174,8 @@ describe('states', () => {
     expect(screen.getByLabelText('Personal access token')).toHaveValue('');
     expect(screen.getByLabelText('Personal access token')).toHaveAttribute('placeholder', 'Paste a new token to replace the stored one');
     expect(screen.getAllByText('Connected')).toHaveLength(2);
-    expect(screen.getByText('No unsaved changes')).toBeInTheDocument();
+    // Nothing is unsaved, so nothing asks to be saved.
+    expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument();
     expect(screen.getByText('Tokens stay in Keychain. Your Git repositories stay untouched.')).toBeInTheDocument();
     expect(screen.queryByRole('list', { name: 'Setup steps' })).not.toBeInTheDocument();
   });
@@ -246,8 +247,9 @@ describe('Save and Revert', () => {
     await user.click(screen.getByRole('button', { name: 'Revert' }));
     expect(organization).toHaveValue('contoso');
     expect(screen.getByLabelText('Personal access token')).toHaveValue('');
-    expect(screen.getByText('No unsaved changes')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Revert' })).toBeDisabled();
+    // The save bar goes away with the edits; focus moves to the view's title, not the page.
+    expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Azure DevOps & 7pace' })).toHaveFocus();
     expect(engine.dispatched('settings.save')).toEqual([]);
   });
 
@@ -271,12 +273,13 @@ describe('Save and Revert', () => {
     expect(saved?.targets.hoursByWeekday).toEqual([0, 8, 8, 8, 8, 6, 4]);
   });
 
-  it('shows no save bar on the Sources overview without unsaved edits', async () => {
+  it('shows no save bar on any view without unsaved edits', async () => {
     const { user } = renderSettings();
-    await open(user, 'Overview');
-    expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument();
-    await open(user, 'Git repositories');
-    expect(saveButton()).toBeInTheDocument();
+    for (const name of ['Azure DevOps & 7pace', 'Targets & reminders', 'Overview', 'Git repositories', 'Figma', 'Calendars', 'Appearance & app']) {
+      await open(user, name);
+      expect(screen.queryByRole('button', { name: 'Save changes' }), name).not.toBeInTheDocument();
+      expect(screen.queryByText('Unsaved changes'), name).not.toBeInTheDocument();
+    }
   });
 
   it('takes new slice values under an unchanged draft and keeps the user’s edits otherwise', async () => {
@@ -285,7 +288,7 @@ describe('Save and Revert', () => {
     const project = screen.getByLabelText('Project (optional)');
     act(() => engine.setSlice('settings', settingsWith({ organization: 'fabrikam' })));
     expect(organization).toHaveValue('fabrikam');
-    expect(screen.getByText('No unsaved changes')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument();
 
     await user.type(project, 'X');
     act(() => engine.setSlice('settings', settingsWith({ organization: 'northwind' })));
@@ -309,9 +312,11 @@ describe('Save and Revert', () => {
     expect(engine.dispatched('settings.save')[0]?.configuration).toEqual({ ...latest.configuration, project: 'Webshop EU' });
   });
 
-  it('disables writes while the engine is busy', () => {
-    renderSettings({}, { with: { app: appWith({ busy: true }) } });
+  it('disables writes while the engine is busy', async () => {
+    const { user } = renderSettings({}, { with: { app: appWith({ busy: true }) } });
+    await user.type(screen.getByLabelText('Project (optional)'), ' EU');
     expect(saveButton()).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Test and save' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Test connection' })).toBeDisabled();
   });
 
@@ -319,6 +324,208 @@ describe('Save and Revert', () => {
     const { engine, user } = renderSettings();
     await user.click(screen.getByRole('button', { name: 'Test connection' }));
     expect(engine.dispatched('connection.retry')).toHaveLength(1);
+  });
+});
+
+describe('the save prompt', () => {
+  it('appears after an edit and goes away when the edit is undone', async () => {
+    const { user } = renderSettings();
+    expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument();
+    const project = screen.getByLabelText('Project (optional)');
+    await user.type(project, 'X');
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument();
+    expect(saveButton()).toBeInTheDocument();
+    await user.type(project, '{Backspace}');
+    expect(project).toHaveValue('Webshop');
+    expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument();
+
+    // A typed token is unsaved too, until it is cleared again.
+    const pat = screen.getByLabelText('Personal access token');
+    await user.type(pat, 'x');
+    expect(saveButton()).toBeInTheDocument();
+    await user.clear(pat);
+    expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument();
+  });
+
+  it('goes away when a day is switched off and on again, although the list changed order', async () => {
+    const { user } = renderSettings({ view: 'tracking' });
+    const wednesday = screen.getByRole('checkbox', { name: /^Wed/ });
+    await user.click(wednesday);
+    expect(saveButton()).toBeInTheDocument();
+    await user.click(wednesday);
+    expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument();
+  });
+
+  it('goes away after saving and confirms the save', async () => {
+    const { user } = renderSettings();
+    await user.type(screen.getByLabelText('Project (optional)'), ' EU');
+    await user.click(saveButton());
+    expect(await screen.findByText('Settings saved · connection verified')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Azure DevOps & 7pace' })).toHaveFocus();
+  });
+});
+
+describe('the first run', () => {
+  const firstRun = { with: { settings: unconfiguredSettings, connection: unconfiguredConnection } };
+
+  it('prefills die Keure’s accounts as unsaved suggestions', async () => {
+    const { engine, user } = renderSettings({}, firstRun);
+    expect(screen.getByLabelText('Organization')).toHaveValue('diekeure-webdev');
+    expect(screen.getByLabelText('Project (optional)')).toHaveValue('LK2020');
+    expect(screen.getByLabelText('Workspace URL')).toHaveValue('https://diekeure-webdev.timehub.7pace.com');
+    // Suggested values are not saved yet, so Settings asks to save them.
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument();
+    const organization = screen.getByLabelText('Organization');
+    await user.clear(organization);
+    await user.type(organization, 'fabrikam');
+    await user.keyboard('{Meta>}s{/Meta}');
+    expect(engine.dispatched('settings.save')[0]?.configuration).toMatchObject({
+      organization: 'fabrikam',
+      project: 'LK2020',
+      sevenPaceUrl: 'https://diekeure-webdev.timehub.7pace.com',
+    });
+  });
+
+  it('keeps saved account values and never fills a project left empty on purpose', () => {
+    renderSettings({}, { with: { settings: settingsWith({ project: '' }) } });
+    expect(screen.getByLabelText('Organization')).toHaveValue('contoso');
+    expect(screen.getByLabelText('Project (optional)')).toHaveValue('');
+    expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument();
+  });
+
+  it('explains where to get the API token or the PIN approved, expanded until 7pace is connected', async () => {
+    const { user } = renderSettings({}, firstRun);
+    const token = screen.getByText('How to get a 7pace API token').closest('details')!;
+    expect(token).toHaveAttribute('open');
+    const tokenSteps = within(screen.getByRole('list', { name: 'How to get a 7pace API token' })).getAllByRole('listitem');
+    expect(tokenSteps.map((step) => step.textContent)).toEqual([
+      'Open 7pace Timetracker (diekeure-webdev.timehub.7pace.com (opens in your browser)) and go to Settings → Reporting & API.',
+      'Create a token there and copy it.',
+      'Paste it in API token below and choose Save changes. It is kept in Keychain.',
+    ]);
+    await user.click(screen.getByRole('link', { name: /^diekeure-webdev\.timehub\.7pace\.com\s*\(opens in your browser\)$/ }));
+    expect(platform.openExternalLink).toHaveBeenCalledWith('https://diekeure-webdev.timehub.7pace.com');
+
+    await user.click(screen.getByRole('radio', { name: 'Mobile PIN pairing' }));
+    expect(screen.getByText('How to get a pairing PIN approved').closest('details')).toHaveAttribute('open');
+    const pinSteps = within(screen.getByRole('list', { name: 'How to get a pairing PIN approved' })).getAllByRole('listitem');
+    expect(pinSteps.map((step) => step.textContent)).toEqual([
+      'Check the workspace URL above, then choose Generate pairing PIN.',
+      'In Azure DevOps, open 7pace Timetracker and go to Apps → Pair Mobile App.',
+      'Enter the PIN there within one minute. It expires after that; generate a new one if it does.',
+      'When this card says “Paired with …”, choose Save changes to use the connection.',
+    ]);
+    expect(screen.getByRole('link', { name: /^diekeure-webdev\.timehub\.7pace\.com\s*\(opens in your browser\)$/ })).toHaveAttribute(
+      'href',
+      'https://diekeure-webdev.timehub.7pace.com',
+    );
+    await expectNoA11yViolations();
+  });
+
+  it('folds the instructions away once a token is stored', () => {
+    renderSettings();
+    expect(screen.getByText('How to get a 7pace API token').closest('details')).not.toHaveAttribute('open');
+  });
+});
+
+describe('Test and save', () => {
+  const firstRun = { with: { settings: unconfiguredSettings, connection: unconfiguredConnection } };
+  const testButton = () => screen.getByRole('button', { name: 'Test and save' });
+
+  it('needs an organization and a token', async () => {
+    const { user } = renderSettings({}, firstRun);
+    expect(testButton()).toBeDisabled();
+    expect(screen.getByText('Paste a token to test it.')).toBeInTheDocument();
+    await user.type(screen.getByLabelText('Personal access token'), 'fake-pat');
+    expect(testButton()).toBeEnabled();
+    await user.clear(screen.getByLabelText('Organization'));
+    expect(testButton()).toBeDisabled();
+    expect(screen.getByText('Enter your organization to test the token.')).toBeInTheDocument();
+  });
+
+  it('tests the token against the organization and project, then saves only those', async () => {
+    const { engine, user } = renderSettings({}, firstRun);
+    engine.handle('settings.save', (intent, mock) =>
+      mock.setSlice('settings', { ...unconfiguredSettings, configuration: intent.configuration, hasAzurePat: true }),
+    );
+    await user.type(screen.getByLabelText('Personal access token'), '  fake-pat-for-tests ');
+    await user.click(testButton());
+    expect(engine.dispatched('settings.testAzurePat')).toEqual([
+      { type: 'settings.testAzurePat', organization: 'diekeure-webdev', project: 'LK2020', azurePat: 'fake-pat-for-tests' },
+    ]);
+    expect(engine.dispatched('settings.save')).toEqual([
+      {
+        type: 'settings.save',
+        configuration: { ...unconfiguredSettings.configuration, organization: 'diekeure-webdev', project: 'LK2020' },
+        azurePat: 'fake-pat-for-tests',
+        sevenPaceToken: '',
+      },
+    ]);
+    expect(await screen.findByText('The token works for “diekeure-webdev”, project “LK2020” and is saved in Keychain.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Personal access token')).toHaveValue('');
+    expect(screen.getByText('Stored in Keychain')).toBeInTheDocument();
+    // The suggested 7pace workspace is still unsaved and still asks to be saved; setup goes on.
+    expect(screen.getByLabelText('Workspace URL')).toHaveValue('https://diekeure-webdev.timehub.7pace.com');
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Connect your accounts to start tracking' })).toBeInTheDocument();
+  });
+
+  it('shows why a token failed and saves nothing', async () => {
+    const { engine, user } = renderSettings({}, firstRun);
+    const message =
+      'Azure DevOps did not accept this token for “diekeure-webdev”. Check that you copied all of it, that it has not expired, and that it was created for this organization with the Work Items (Read) scope.';
+    engine.handle('settings.testAzurePat', () => {
+      throw new MockEngineError('authentication', message);
+    });
+    await user.type(screen.getByLabelText('Personal access token'), 'wrong-fake-pat');
+    await user.click(testButton());
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(engine.dispatched('settings.save')).toEqual([]);
+    expect(screen.getByLabelText('Personal access token')).toHaveValue('wrong-fake-pat');
+    // The message is about what was tested; editing the token clears it.
+    await user.type(screen.getByLabelText('Personal access token'), '2');
+    expect(screen.queryByText(message)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['projectNotFound', '“diekeure-webdev” has no project called “LK2020”, or this token cannot see it. Check the spelling, or leave Project empty to search every project.'],
+    ['offline', 'Azure DevOps could not be reached. Check your internet connection and try again.'],
+  ])('shows the %s failure verbatim', async (kind, message) => {
+    const { engine, user } = renderSettings({}, firstRun);
+    engine.handle('settings.testAzurePat', () => {
+      throw new MockEngineError(kind, message);
+    });
+    await user.type(screen.getByLabelText('Personal access token'), 'fake-pat');
+    await user.click(testButton());
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(engine.dispatched('settings.save')).toEqual([]);
+  });
+
+  it('runs with Return in the token field and shows that it is checking', async () => {
+    const { engine, user } = renderSettings({}, firstRun);
+    let answer: () => void = () => {};
+    engine.handle('settings.testAzurePat', () => new Promise<null>((resolve) => (answer = () => resolve(null))));
+    await user.type(screen.getByLabelText('Personal access token'), 'fake-pat{Enter}');
+    expect(await screen.findByText('Checking the token with Azure DevOps…')).toBeInTheDocument();
+    expect(engine.dispatched('settings.testAzurePat')).toHaveLength(1);
+    // Pressing again while it runs does not start a second test.
+    await user.keyboard('{Enter}');
+    expect(engine.dispatched('settings.testAzurePat')).toHaveLength(1);
+    await act(() => {
+      answer();
+      return Promise.resolve();
+    });
+    expect(await screen.findByText(/^The token works for/)).toBeInTheDocument();
+    expect(screen.queryByText('Checking the token with Azure DevOps…')).not.toBeInTheDocument();
+  });
+
+  it('tests the stored token when the field is empty', async () => {
+    const { engine, user } = renderSettings();
+    await user.click(testButton());
+    expect(engine.dispatched('settings.testAzurePat')).toEqual([
+      { type: 'settings.testAzurePat', organization: 'contoso', project: 'Webshop', azurePat: '' },
+    ]);
   });
 });
 
@@ -330,7 +537,9 @@ describe('validation', () => {
     expect(menuItem('Azure DevOps & 7pace')).toHaveAccessibleName('Azure DevOps & 7pace, 1 problem');
     expect(menuItem('Targets & reminders')).toHaveAccessibleName('Targets & reminders, 3 problems');
 
-    await user.click(saveButton());
+    // Nothing was edited, so there is no save bar; ⌘S still checks and lists the problems.
+    expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument();
+    await user.keyboard('{Meta>}s{/Meta}');
     expect(engine.dispatched('settings.save')).toEqual([]);
     const summary = screen.getByRole('alert');
     expect(summary).toHaveTextContent('Fix these settings before saving');
@@ -359,6 +568,7 @@ describe('validation', () => {
     engine.handle('settings.save', () => {
       throw new MockEngineError(saveValidationError.kind, saveValidationError.message);
     });
+    await user.type(screen.getByLabelText('Project (optional)'), ' EU');
     await user.click(saveButton());
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Settings were not saved');
@@ -905,7 +1115,7 @@ describe('accessibility', () => {
     };
     const { user } = renderSettings({}, { with: { settings } });
     expect(screen.getByText('482913')).toBeInTheDocument();
-    await user.click(saveButton());
+    await user.keyboard('{Meta>}s{/Meta}');
     expect(screen.getByText('Fix these settings before saving')).toBeInTheDocument();
     await expectNoA11yViolations();
   });
