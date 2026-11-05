@@ -46,9 +46,12 @@ export interface DialogProps {
    * picker, ticket details), with a tinted footer.
    */
   presentation?: 'dialog' | 'drawer';
-  size?: 'small' | 'medium' | 'large';
+  /** `wide` is for two-column dialogs (the ticket picker). */
+  size?: 'small' | 'medium' | 'large' | 'wide';
   role?: 'dialog' | 'alertdialog';
   className?: string;
+  /** Replaces the body's padding and layout, for bodies that lay out their own columns. */
+  bodyClassName?: string;
 }
 
 type KeyboardEvent = Parameters<NonNullable<KeyboardEvents['onKeyDown']>>[0];
@@ -87,6 +90,7 @@ export function Dialog({
   size = 'medium',
   role = 'dialog',
   className,
+  bodyClassName,
 }: DialogProps) {
   const titleId = useId();
   const descriptionId = useId();
@@ -118,6 +122,22 @@ export function Dialog({
 
   const hasFooter = Boolean(primaryAction || secondaryActions || footerExtra || cancelLabel);
 
+  const closeButton = showCloseButton ? (
+    <IconButton label="Close" icon={CloseIcon} size="small" variant="secondary" tooltip={false} onPress={cancel} />
+  ) : null;
+  const titleBlock = (
+    <>
+      <h2 id={titleId} className={cx(styles.title, titleSize === 'large' && styles.titleLarge)}>
+        {title}
+      </h2>
+      {description ? (
+        <div id={descriptionId} className={styles.description}>
+          {description}
+        </div>
+      ) : null}
+    </>
+  );
+
   return (
     <ModalOverlay
       isOpen={isOpen}
@@ -134,23 +154,24 @@ export function Dialog({
         >
           <div {...keyboardProps} className={styles.content}>
           <header className={cx(styles.header, headerContent ? styles.headerRich : undefined)}>
-            {eyebrow || showCloseButton ? (
+            {eyebrow ? (
               <div className={styles.headerTop}>
-                {eyebrow ? <div className={styles.eyebrow}>{eyebrow}</div> : <span />}
-                {showCloseButton ? <IconButton label="Close" icon={CloseIcon} size="small" variant="secondary" tooltip={false} onPress={cancel} /> : null}
+                <div className={styles.eyebrow}>{eyebrow}</div>
+                {closeButton}
               </div>
             ) : null}
-            <h2 id={titleId} className={cx(styles.title, titleSize === 'large' && styles.titleLarge)}>
-              {title}
-            </h2>
-            {description ? (
-              <div id={descriptionId} className={styles.description}>
-                {description}
+            {/* Without an eyebrow the × sits next to the title instead of above it. */}
+            {closeButton && !eyebrow ? (
+              <div className={styles.headerTitleRow}>
+                <div className={styles.headerTitles}>{titleBlock}</div>
+                {closeButton}
               </div>
-            ) : null}
+            ) : (
+              titleBlock
+            )}
             {headerContent}
           </header>
-          {children ? <div className={styles.body}>{children}</div> : null}
+          {children ? <div className={cx(styles.body, bodyClassName)}>{children}</div> : null}
           {hasFooter ? (
             <footer className={styles.footer}>
               {secondaryActions ? <div className={styles.secondary}>{secondaryActions}</div> : null}

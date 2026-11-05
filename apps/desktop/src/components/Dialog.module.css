@@ -48,6 +48,9 @@
 .large {
   max-width: 48rem;
 }
+.wide {
+  max-width: 51rem;
+}
 
 .dialog {
   display: flex;
@@ -91,6 +94,20 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
+}
+
+.headerTitleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.headerTitles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
 }
 
 .eyebrow {

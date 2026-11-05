@@ -48,14 +48,15 @@ document.documentElement.dataset.surface = surface;
  */
 async function installPreviewEngine(): Promise<void> {
   if (isTauri()) return;
-  const [{ installMockEngine }, { sampleSlices, SAMPLE_NOW }, { pinClockTo }, { dayReviewToday }] = await Promise.all([
+  const [{ installMockEngine }, { sampleSlices, SAMPLE_NOW }, { pinClockTo }, { dayReviewToday }, { handlePickerPreview }] = await Promise.all([
     import('./ipc/mockEngine'),
     import('./ipc/fixtures'),
     import('./ipc/sampleClock'),
     import('./ipc/fixtures/slices/dayReview'),
+    import('./ipc/fixtures/pickerPreview'),
   ]);
   if (new URLSearchParams(location.search).get('clock') !== 'real') pinClockTo(SAMPLE_NOW);
-  installMockEngine({ slices: sampleSlices(), latencyMs: 120 })
+  handlePickerPreview(installMockEngine({ slices: sampleSlices(), latencyMs: 120 }))
     // Settings → App → "Show onboarding again", and finishing it, like the engine.
     .handle('app.restartOnboarding', (_intent, mock) => mock.patchSlice('app', { onboarding: true }))
     .handle('app.finishOnboarding', (_intent, mock) => mock.patchSlice('app', { onboarding: false, visiblePage: 'settings' }))

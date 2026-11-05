@@ -1,12 +1,18 @@
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
+import { Radio, RadioGroup } from 'react-aria-components';
 import { Button } from '../../components/Button';
 import { TextField } from '../../components/Fields';
 import { CalendarIcon } from '../../components/icons';
 import { Select } from '../../components/Pickers';
 import { Switch } from '../../components/Toggles';
 import type { ActivityType, DraftView, FlowSlice, ManualTrackingKind } from '../../ipc/contract';
+import { useSlice } from '../../state/hooks';
+import { formatShortDuration } from '../../utils/duration';
+import { ActivitySwatch, activityColorIndex, useActivityColors } from '../activity';
 import { ActionError, useIntents, useWriteGuards, type IntentRunner } from './actions';
 import { ReturnIcon } from './icons';
+import { useTrackingSeconds } from './status';
+import picker from './ticketPicker.module.css';
 import styles from './tracking.module.css';
 
 interface FormState {
@@ -110,8 +116,57 @@ const COMMENT_HINT: Record<ManualTrackingKind, string> = {
 export interface ActivityChooserProps {
   flow: FlowSlice;
   form: ActivityForm;
-  /** `sheet` uses the main window's longer 1.14 labels ("Start tracking"). */
-  variant: 'panel' | 'sheet';
+  /**
+   * `picker` is the main window's ticket picker column: the longer 1.14 labels ("Start
+   * tracking"), the activities as a list of rows, and no summary (the ticket list shows the
+   * choice).
+   */
+  variant: 'panel' | 'picker';
+}
+
+/** The picker's activities as rows with their colour (2.2 "15 · Ticket picker"). */
+function ActivityRows({ form, isDisabled }: { form: ActivityForm; isDisabled: boolean }) {
+  const colors = useActivityColors();
+  const labelId = useId();
+  return (
+    <div className={picker.section}>
+      <span id={labelId} className={picker.sectionLabel}>
+        Activity
+      </span>
+      <RadioGroup
+        aria-labelledby={labelId}
+        value={form.activityId || null}
+        onChange={form.setActivityId}
+        isDisabled={isDisabled}
+        className={picker.activities}
+      >
+        {form.activities.map((activity) => (
+          <Radio key={activity.id} value={activity.id} className={picker.activity}>
+            <ActivitySwatch colorIndex={activityColorIndex(colors, activity.id)} className={picker.activityDot} />
+            <span className={picker.activityName}>{activity.name ?? activity.id}</span>
+          </Radio>
+        ))}
+      </RadioGroup>
+    </div>
+  );
+}
+
+/**
+ * What pressing the picker's primary button does to the running timer: "Your timer on #4821
+ * stops when you press Track #4790 and is saved as 1h 23m." Its own component, so only the
+ * picker re-renders with the clock.
+ */
+function StartNote({ draft, label }: { draft: DraftView; label: string }) {
+  const tracking = useSlice('tracking');
+  const seconds = useTrackingSeconds(tracking);
+  let note: string;
+  if (draft.resume || draft.source === 'meetingReturn') note = 'Resume starts a new session. Paused time is not logged.';
+  else if (!tracking?.running) note = `The timer starts when you press ${label}.`;
+  else {
+    const current = tracking.ticketId !== null ? `Your timer on #${tracking.ticketId}` : 'Your current timer';
+    note = `${current} stops when you press ${label} and is saved as ${formatShortDuration(seconds)}.`;
+  }
+  return <p className={picker.note}>{note}</p>;
 }
 
 /**
@@ -122,18 +177,18 @@ export function ActivityChooser({ flow, form, variant }: ActivityChooserProps) {
   const { busy, running } = useWriteGuards();
   const switching = useIntents();
   const { draft, includeTicket } = form;
-  const sheet = variant === 'sheet';
+  const inPicker = variant === 'picker';
   const item = includeTicket ? draft.item : null;
   const title = includeTicket ? draft.title : (draft.remark ?? draft.title);
   const trackingComment = includeTicket ? draft.commentWithTicket : draft.commentWithoutTicket;
-  const startLabel = sheet ? 'Start tracking' : 'Start';
+  const buttonLabel = startLabel(draft, variant, includeTicket);
   const resuming = draft.resume || draft.source === 'meetingReturn';
 
   let activityField: ReactNode;
   if (flow.loadingActivities) {
     activityField = (
       <p role="status" className={styles.caption}>
-        {sheet ? 'Loading 7pace activities…' : 'Loading activities…'}
+        {inPicker ? 'Loading 7pace activities…' : 'Loading activities…'}
       </p>
     );
   } else if (flow.activityError) {
@@ -149,7 +204,7 @@ export function ActivityChooser({ flow, form, variant }: ActivityChooserProps) {
             isPending={switching.isPending('reload')}
             onPress={() => void switching.run('reload', { type: 'tracking.reloadActivities' })}
           >
-            {sheet ? 'Reload activity types' : 'Reload activities'}
+            {inPicker ? 'Reload activity types' : 'Reload activities'}
           </Button>
         </div>
       </div>
@@ -157,43 +212,59 @@ export function ActivityChooser({ flow, form, variant }: ActivityChooserProps) {
   } else if (flow.activityTypes.length === 0 && flow.activitiesLoaded) {
     activityField = (
       <p className={styles.caption}>
-        {sheet
+        {inPicker
           ? 'No activity types are configured in 7pace. Its workspace default will be used.'
           : '7pace’s workspace default activity will be used.'}
       </p>
     );
+  } else if (form.activities.length > 0 && inPicker) {
+    activityField = <ActivityRows form={form} isDisabled={busy} />;
   } else if (form.activities.length > 0) {
     activityField = (
       <Select
-        label={sheet ? 'Activity type' : 'Activity'}
+        label="Activity"
         placeholder="Choose an activity"
         items={form.activities.map((activity) => ({ id: activity.id, label: activity.name ?? activity.id }))}
         selectedKey={form.activityId || null}
         onSelectionChange={(key) => form.setActivityId(key === null ? '' : String(key))}
         isDisabled={busy}
-        description={sheet ? 'This applies to this session. Your saved default stays the same.' : undefined}
       />
     );
   }
 
+  const context = (
+    <>
+      {draft.source === 'meetingReturn' ? (
+        <p className={styles.caption}>
+          <ReturnIcon className={styles.inlineIcon} /> Return to your previous work
+        </p>
+      ) : null}
+      {draft.meetingTitle ? (
+        <p className={styles.caption}>
+          <CalendarIcon className={styles.inlineIcon} /> {draft.meetingTitle}
+        </p>
+      ) : null}
+    </>
+  );
+
   return (
-    <div className={styles.flow}>
-      <div className={styles.draftSummary}>
-        {draft.source === 'meetingReturn' ? (
-          <p className={styles.caption}>
-            <ReturnIcon className={styles.inlineIcon} /> Return to your previous work
-          </p>
-        ) : null}
-        {draft.meetingTitle ? (
-          <p className={styles.caption}>
-            <CalendarIcon className={styles.inlineIcon} /> {draft.meetingTitle}
-          </p>
-        ) : null}
-        <p className={styles.ticketNumber}>{item ? `#${item.id} · ${item.type ?? 'Work item'}` : 'No Azure ticket'}</p>
-        <p className={styles.draftTitle}>{title}</p>
-        {!draft.manual && trackingComment ? <p className={styles.caption}>Comment: {trackingComment}</p> : null}
-        {item?.teamProject ? <p className={styles.caption}>{item.teamProject}</p> : null}
-      </div>
+    <div className={inPicker ? picker.chooser : styles.flow}>
+      {inPicker ? (
+        // The ticket list shows what was chosen; only what it cannot show is repeated here.
+        <>
+          {context}
+          {!includeTicket && draft.item ? <p className={styles.caption}>No Azure ticket</p> : null}
+          {!draft.manual && trackingComment ? <p className={styles.caption}>Comment: {trackingComment}</p> : null}
+        </>
+      ) : (
+        <div className={styles.draftSummary}>
+          {context}
+          <p className={styles.ticketNumber}>{item ? `#${item.id} · ${item.type ?? 'Work item'}` : 'No Azure ticket'}</p>
+          <p className={styles.draftTitle}>{title}</p>
+          {!draft.manual && trackingComment ? <p className={styles.caption}>Comment: {trackingComment}</p> : null}
+          {item?.teamProject ? <p className={styles.caption}>{item.teamProject}</p> : null}
+        </div>
+      )}
 
       {draft.allowsNoTicket ? (
         <div className={styles.stack}>
@@ -255,19 +326,25 @@ export function ActivityChooser({ flow, form, variant }: ActivityChooserProps) {
           placeholder={COMMENT_PLACEHOLDER[draft.manual]}
           description={COMMENT_HINT[draft.manual]}
           isDisabled={busy}
+          multiline={inPicker}
+          rows={2}
         />
       ) : null}
 
-      <p className={styles.caption}>
-        {resuming
-          ? 'Resume starts a new session. Paused time is not logged.'
-          : running
-            ? `Your current timer continues until you press ${startLabel}.`
-            : `The timer starts when you press ${startLabel}.`}
-      </p>
+      {inPicker ? (
+        <StartNote draft={draft} label={buttonLabel} />
+      ) : (
+        <p className={styles.caption}>
+          {resuming
+            ? 'Resume starts a new session. Paused time is not logged.'
+            : running
+              ? `Your current timer continues until you press ${buttonLabel}.`
+              : `The timer starts when you press ${buttonLabel}.`}
+        </p>
+      )}
       {busy || form.actions.isPending('start') ? (
         <p role="status" className={styles.caption}>
-          {sheet ? 'Starting tracking…' : 'Starting…'}
+          {inPicker ? 'Starting tracking…' : 'Starting…'}
         </p>
       ) : null}
       <ActionError error={form.actions.error ?? switching.error} />
@@ -277,9 +354,15 @@ export function ActivityChooser({ flow, form, variant }: ActivityChooserProps) {
   );
 }
 
-/** The label of the chooser's primary button. */
-export function startLabel(draft: DraftView, variant: 'panel' | 'sheet'): string {
+/**
+ * The label of the chooser's primary button. The picker names the ticket it will track
+ * ("Track #4790"), as in the 2.2 design.
+ */
+export function startLabel(draft: DraftView, variant: 'panel' | 'picker', includeTicket = true): string {
   const resume = draft.resume || draft.source === 'meetingReturn';
-  if (variant === 'sheet') return resume ? 'Resume tracking' : 'Start tracking';
+  if (variant === 'picker') {
+    if (resume) return 'Resume tracking';
+    return includeTicket && draft.item ? `Track #${draft.item.id}` : 'Start tracking';
+  }
   return resume ? 'Resume' : 'Start';
 }

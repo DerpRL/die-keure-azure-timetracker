@@ -29,13 +29,14 @@ function itemDescription(item: WorkItem): string {
  * engine looks up `#123` directly and publishes the results in `flow.search`. Choosing a result
  * sends `tracking.chooseTicket`, which only prepares a draft: nothing starts yet.
  */
-export function TicketSearchField({ flow, autoFocus = false }: { flow: FlowSlice; autoFocus?: boolean }) {
+/**
+ * The search text as typed, sent as `tracking.search` after a short pause. The engine publishes
+ * the query it answered in `flow.search`.
+ */
+export function useTicketSearch(flow: FlowSlice) {
   const search = useAction();
-  const choose = useIntents();
   const [query, setQuery] = useState(flow.search.query);
   const sent = useRef(flow.search.query);
-  // The combobox writes the chosen option's text into the field; that is not a new search.
-  const chosenText = useRef<string | null>(null);
   const { run } = search;
 
   useEffect(() => {
@@ -47,11 +48,21 @@ export function TicketSearchField({ flow, autoFocus = false }: { flow: FlowSlice
     return () => clearTimeout(timer);
   }, [query, run]);
 
+  // Until the engine answers the latest text, the results are not "empty" yet.
+  const waiting = flow.search.searching || flow.search.query.trim() !== query.trim();
+  return { query, setQuery, waiting, error: search.error };
+}
+
+export function TicketSearchField({ flow, autoFocus = false }: { flow: FlowSlice; autoFocus?: boolean }) {
+  const search = useTicketSearch(flow);
+  const choose = useIntents();
+  const { query, setQuery, waiting } = search;
+  // The combobox writes the chosen option's text into the field; that is not a new search.
+  const chosenText = useRef<string | null>(null);
+
   const { results, searching, error } = flow.search;
   const typed = query.trim().length > 0;
   const items = typed ? results : [];
-  // Until the engine answers the latest text, the list is not "empty" yet.
-  const waiting = searching || flow.search.query.trim() !== query.trim();
   const emptyMessage = waiting
     ? 'Searching…'
     : (error ?? 'No matching tickets. Enter a ticket number or a few words from its title.');

@@ -1,0 +1,287 @@
+/* Ticket picker (2.2 "15 · Ticket picker"): tickets on the left, the draft's activity on a
+   sunken panel on the right. Below 44rem the columns stack, so every control stays reachable
+   at 150 % scale. */
+
+.body {
+  padding: 0;
+  gap: 0;
+  border-top: var(--size-border) solid var(--color-separator);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(15rem, 17rem);
+  min-height: 0;
+}
+
+@media (max-width: 44rem) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Left column */
+
+.tickets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4) 1.375rem;
+}
+
+.filter {
+  align-self: flex-start;
+}
+
+.status {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+}
+
+.warning,
+.rowError {
+  color: var(--color-warning-text);
+  font-size: var(--font-size-footnote);
+  overflow-wrap: anywhere;
+}
+
+.rowError {
+  grid-column: 1 / -1;
+  color: var(--color-danger-text);
+}
+
+/* A steady height, so the dialog does not jump while the results change. */
+.listScroll {
+  height: min(27rem, 52vh);
+  margin-inline: -0.25rem;
+  padding: 0.25rem;
+  overflow-y: auto;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  outline: none;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 3.75rem minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 3.5rem;
+  padding: 0.625rem var(--space-3) 0.625rem 0.875rem;
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  cursor: default;
+  transition:
+    border-color var(--motion-duration-fast, 120ms) var(--motion-ease-standard),
+    background-color var(--motion-duration-fast, 120ms) var(--motion-ease-standard);
+}
+
+.row[data-hovered]:not([data-selected], [data-disabled]) {
+  background: var(--color-hover);
+}
+
+.row[data-selected] {
+  border-color: var(--color-selected-indicator);
+  background: var(--color-selected-bg);
+  box-shadow: 0 0 0 1px var(--color-selected-indicator);
+}
+
+.row[data-disabled] {
+  color: var(--color-text-secondary);
+}
+
+/* "Work without a ticket" and the other ticket-free choices. */
+.rowNoTicket {
+  border-style: dashed;
+}
+
+.rowNoTicket[data-selected] {
+  border-style: solid;
+}
+
+.tag {
+  justify-content: center;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rowText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.rowTitle {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight, 1.3);
+  overflow-wrap: anywhere;
+}
+
+.rowMeta {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  overflow-wrap: anywhere;
+}
+
+.favorite {
+  color: var(--color-text-secondary);
+}
+
+/* A filled star: the shape changes, not only the colour. */
+.favoriteOn {
+  color: var(--color-accent);
+}
+
+.favoriteOn svg {
+  fill: currentColor;
+}
+
+/* The row's radio: decorative, the row itself is the selectable element. */
+.radio {
+  width: 1rem;
+  height: 1rem;
+  border: 1.5px solid var(--color-control-border);
+  border-radius: var(--radius-full);
+  background: var(--color-field-bg);
+}
+
+.row[data-selected] .radio {
+  border-color: var(--color-check-bg);
+  background: var(--color-check-bg);
+  box-shadow: inset 0 0 0 0.1875rem var(--color-field-bg);
+}
+
+.row[data-pending] .radio {
+  border-color: var(--color-check-bg);
+  border-style: dashed;
+}
+
+/* Right column */
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4) var(--space-5);
+  border-inline-start: var(--size-border) solid var(--color-separator);
+  background: var(--color-surface-sunken);
+}
+
+@media (max-width: 44rem) {
+  .side {
+    border-inline-start: 0;
+    border-top: var(--size-border) solid var(--color-separator);
+  }
+}
+
+.placeholder {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+}
+
+.chooser {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sectionLabel {
+  color: var(--color-text);
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-semibold);
+}
+
+.activities {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.activity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.5rem;
+  padding: var(--space-2) var(--space-3);
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+  cursor: default;
+}
+
+.activity[data-hovered]:not([data-selected], [data-disabled]) {
+  background: var(--color-hover);
+}
+
+.activity[data-selected] {
+  border-color: var(--color-selected-indicator);
+  background: var(--color-selected-bg);
+  box-shadow: 0 0 0 1px var(--color-selected-indicator);
+  color: var(--color-selected-text);
+}
+
+.activity[data-disabled] {
+  color: var(--color-text-secondary);
+}
+
+.activityDot {
+  width: 0.5625rem;
+  height: 0.5625rem;
+}
+
+.activityName {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.note {
+  padding: 0.625rem var(--space-3);
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  line-height: 1.45;
+}
+
+/* Footer */
+
+.hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+}
+
+@media (forced-colors: active) {
+  .row[data-selected],
+  .activity[data-selected] {
+    border: 2px solid Highlight;
+  }
+
+  .row[data-selected] .radio {
+    background: Highlight;
+  }
+}

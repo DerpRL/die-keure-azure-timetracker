@@ -12,17 +12,17 @@ import styles from './tracking.module.css';
 
 export interface TicketStepProps {
   flow: FlowSlice;
-  variant: 'panel' | 'sheet';
   /** Level of the step's own subsection headings. */
   headingLevel: HeadingLevel;
   autoFocus?: boolean;
 }
 
 /**
- * Step 1 (1.14 `TicketPicker` / `MenuTicketPicker`): a ticket-free choice, the ticket search and
- * the favourites and recent tickets. Choosing anything only prepares a draft.
+ * The panel's step 1 (1.14 `MenuTicketPicker`): a ticket-free choice, the ticket search and the
+ * favourites and recent tickets. Choosing anything only prepares a draft. The main window's
+ * picker lays the same choices out as one list (`PickerTickets`).
  */
-export function TicketStep({ flow, variant, headingLevel, autoFocus = false }: TicketStepProps) {
+export function TicketStep({ flow, headingLevel, autoFocus = false }: TicketStepProps) {
   const { connected } = useWriteGuards();
   const suggestion = flow.selectedSuggestion;
   const showQuick = flow.search.query.trim() === '';
@@ -42,11 +42,7 @@ export function TicketStep({ flow, variant, headingLevel, autoFocus = false }: T
           }
         />
       ) : null}
-      <p className={styles.caption}>
-        {variant === 'sheet'
-          ? 'Next, choose an activity type and confirm when to start.'
-          : 'Next, choose the activity before starting.'}
-      </p>
+      <p className={styles.caption}>Next, choose the activity before starting.</p>
     </div>
   );
 }
@@ -131,7 +127,7 @@ export function PanelTrackingFlow({ flow }: { flow: FlowSlice }) {
         ) : null}
       </div>
       {flow.selectedSuggestion ? <p className={styles.caption}>For {flow.selectedSuggestion.title}</p> : null}
-      <TicketStep flow={flow} variant="panel" headingLevel={3} autoFocus />
+      <TicketStep flow={flow} headingLevel={3} autoFocus />
       <div className={styles.actions}>{cancelButton}</div>
       <ActionError error={cancel.error} />
     </section>
