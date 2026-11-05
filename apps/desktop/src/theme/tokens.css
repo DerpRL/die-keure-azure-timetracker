@@ -200,9 +200,9 @@
   --heat-border: #d0d5dd;
   --heat-future-border: #667085;
 
-  --elevation-1: 0 1px 2px rgb(16_24_40_/_0.04);
-  --elevation-2: 0 4px 16px rgb(16_24_40_/_0.1), 0 1px 3px rgb(16_24_40_/_0.08);
-  --elevation-3: 0 16px 48px rgb(16_24_40_/_0.2), 0 2px 6px rgb(16_24_40_/_0.1);
+  --elevation-1: 0 1px 2px rgb(16 24 40 / 0.04);
+  --elevation-2: 0 4px 16px rgb(16 24 40 / 0.1), 0 1px 3px rgb(16 24 40 / 0.08);
+  --elevation-3: 0 16px 48px rgb(16 24 40 / 0.2), 0 2px 6px rgb(16 24 40 / 0.1);
 }
 
 /* ------------------------------------------------------------------------------------------ */
@@ -311,9 +311,9 @@
   --heat-border: #353b48;
   --heat-future-border: #8f97a6;
 
-  --elevation-1: 0 1px 2px rgb(0_0_0_/_0.3);
-  --elevation-2: 0 6px 20px rgb(0_0_0_/_0.45), 0 1px 3px rgb(0_0_0_/_0.35);
-  --elevation-3: 0 18px 56px rgb(0_0_0_/_0.6), 0 2px 8px rgb(0_0_0_/_0.4);
+  --elevation-1: 0 1px 2px rgb(0 0 0 / 0.3);
+  --elevation-2: 0 6px 20px rgb(0 0 0 / 0.45), 0 1px 3px rgb(0 0 0 / 0.35);
+  --elevation-3: 0 18px 56px rgb(0 0 0 / 0.6), 0 2px 8px rgb(0 0 0 / 0.4);
 }
 
 /* ------------------------------------------------------------------------------------------ */
@@ -422,9 +422,9 @@
   --heat-border: #667085;
   --heat-future-border: #344054;
 
-  --elevation-1: 0 1px 2px rgb(0_0_0_/_0.1);
-  --elevation-2: 0 4px 16px rgb(0_0_0_/_0.2), 0 1px 3px rgb(0_0_0_/_0.16);
-  --elevation-3: 0 16px 48px rgb(0_0_0_/_0.32), 0 2px 6px rgb(0_0_0_/_0.18);
+  --elevation-1: 0 1px 2px rgb(0 0 0 / 0.1);
+  --elevation-2: 0 4px 16px rgb(0 0 0 / 0.2), 0 1px 3px rgb(0 0 0 / 0.16);
+  --elevation-3: 0 16px 48px rgb(0 0 0 / 0.32), 0 2px 6px rgb(0 0 0 / 0.18);
 }
 
 /* ------------------------------------------------------------------------------------------ */
@@ -533,9 +533,9 @@
   --heat-border: #8f97a6;
   --heat-future-border: #c4cad4;
 
-  --elevation-1: 0 1px 2px rgb(0_0_0_/_0.5);
-  --elevation-2: 0 6px 20px rgb(0_0_0_/_0.6), 0 1px 3px rgb(0_0_0_/_0.5);
-  --elevation-3: 0 18px 56px rgb(0_0_0_/_0.75), 0 2px 8px rgb(0_0_0_/_0.55);
+  --elevation-1: 0 1px 2px rgb(0 0 0 / 0.5);
+  --elevation-2: 0 6px 20px rgb(0 0 0 / 0.6), 0 1px 3px rgb(0 0 0 / 0.5);
+  --elevation-3: 0 18px 56px rgb(0 0 0 / 0.75), 0 2px 8px rgb(0 0 0 / 0.55);
 }
 
 /* ------------------------------------------------------------------------------------------ */
