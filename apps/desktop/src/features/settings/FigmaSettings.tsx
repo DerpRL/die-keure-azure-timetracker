@@ -83,7 +83,8 @@ export function FigmaSettings({ onboarding = false }: { onboarding?: boolean }) 
           </div>
           <Hint>
             Enable Azure timetracker in System Settings → Privacy & Security → Accessibility, then return here. The status updates
-            automatically.
+            automatically. Already on? macOS ties the permission to the app’s signature, so after an update or with a local build, remove
+            Azure timetracker with − and add it again.
           </Hint>
         </>
       ) : null}

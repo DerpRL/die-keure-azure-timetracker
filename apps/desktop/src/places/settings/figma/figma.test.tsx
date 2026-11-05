@@ -10,6 +10,7 @@ import {
   searchedFigma,
   titleOnlyFigma,
 } from '../../../ipc/fixtures/slices/figma';
+import { FigmaSettings } from '../../../features/settings/FigmaSettings';
 import { MockEngineError } from '../../../ipc/mockEngine';
 import { expectNoA11yViolations } from '../../../test/axe';
 import { renderWithEngine } from '../../../test/engine';
@@ -74,10 +75,27 @@ describe('Settings → Figma', () => {
     const { user, engine } = renderWithEngine(<FigmaPage />, { with: { figma: figmaWithoutAccess } });
     expect(screen.getByText('Accessibility permission needed')).toBeInTheDocument();
     expect(screen.getByText(/Privacy & Security → Accessibility/)).toBeInTheDocument();
+    // A grant made for another signature (1.14, a local build) still shows as on in System Settings.
+    expect(screen.getByText(/remove Azure timetracker with − and add it again/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Allow Accessibility…' }));
     expect(engine.dispatched('figma.requestAccess')).toHaveLength(1);
     await user.click(screen.getByRole('button', { name: 'Check permission again' }));
     expect(engine.dispatched('figma.refreshAccess')).toHaveLength(1);
+  });
+
+  it('explains a grant made for another signature in the onboarding card too', async () => {
+    const settings = sampleSlices().settings!;
+    const { user, engine } = renderWithEngine(<FigmaSettings onboarding />, {
+      // The card reads its preferences from the settings slice first.
+      with: {
+        figma: figmaWithoutAccess,
+        settings: { ...settings, configuration: { ...settings.configuration, figma: figmaWithoutAccess.preferences } },
+      },
+    });
+    expect(screen.getByText('Accessibility permission needed')).toBeInTheDocument();
+    expect(screen.getByText(/remove Azure timetracker with − and add it again/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Allow Accessibility…' }));
+    expect(engine.dispatched('figma.requestAccess')).toHaveLength(1);
   });
 
   it('shows the engine’s observation line, with the time Figma was last in front', () => {

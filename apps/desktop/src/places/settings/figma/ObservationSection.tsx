@@ -85,7 +85,7 @@ export function ObservationSection({ figma, titleOnly }: ObservationSectionProps
           </Button>
           <p className={styles.text}>
             {macos
-              ? 'Enable Azure timetracker in System Settings → Privacy & Security → Accessibility, then return here.'
+              ? 'Enable Azure timetracker in System Settings → Privacy & Security → Accessibility, then return here. Already on? macOS ties the permission to the app’s signature, so after an update or with a local build, remove Azure timetracker with − and add it again.'
               : 'Allow Azure timetracker to read window titles, then return here.'}
           </p>
           <Button onPress={() => void recheck.run({ type: 'figma.refreshAccess' })} isPending={recheck.pending}>
