@@ -92,16 +92,18 @@ export function WorkAppsSection() {
                 <span className={notInstalled(id) ? styles.appNameMuted : styles.appName}>{nameOf(id)}</span>
                 {nameOf(id) !== id ? <span className={styles.listMeta}>{id}</span> : null}
               </span>
-              {notInstalled(id) ? <Badge tone="neutral">Not installed</Badge> : null}
-              <Button
-                size="small"
-                variant="plain"
-                icon={MinusIcon}
-                aria-label={`Remove ${nameOf(id)} from work apps`}
-                onPress={() => setApps(apps.filter((app) => app !== id))}
-              >
-                Remove
-              </Button>
+              <span className={styles.appActions}>
+                {notInstalled(id) ? <Badge tone="neutral">Not installed</Badge> : null}
+                <Button
+                  size="small"
+                  variant="plain"
+                  icon={MinusIcon}
+                  aria-label={`Remove ${nameOf(id)} from work apps`}
+                  onPress={() => setApps(apps.filter((app) => app !== id))}
+                >
+                  Remove
+                </Button>
+              </span>
             </li>
           ))}
         </ul>

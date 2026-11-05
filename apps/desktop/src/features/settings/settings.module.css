@@ -1013,8 +1013,9 @@
 
 .appRow {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2) var(--space-3);
   min-height: 2.875rem;
   padding: var(--space-2) var(--space-5);
   border-top: var(--size-border) solid var(--color-separator);
@@ -1024,8 +1025,22 @@
   border-top: 0;
 }
 
+/*
+ * The name takes what is left; a long bundle id breaks anywhere, so without `flex: none` the badge
+ * and Remove were squeezed to one letter per line. When they don't fit beside the name they move
+ * together to a second line, at the end.
+ */
 .appRow > .listText {
-  flex: 1 1 auto;
+  flex: 1 1 7rem;
+}
+
+.appActions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-3);
+  margin-inline-start: auto;
+  white-space: nowrap;
 }
 
 .appName {
@@ -1339,13 +1354,52 @@
   color: var(--color-text-secondary);
 }
 
-/* The save bar's buttons on its inverted background. */
-.saveRevert {
+/*
+ * The save bar's buttons on its inverted background. Button's own hover, pressed and disabled
+ * colours are made for the normal surface (dark mode's hover is near black, which hid Revert's
+ * dark label on the light bar), so every state is mixed from the bar's two colours instead. The
+ * doubled class outranks Button's `.plain[data-hovered]` and `.primary[data-hovered]`.
+ */
+.saveRevert.saveRevert {
   color: inherit;
 }
 
-.saveSubmit {
+.saveRevert.saveRevert[data-hovered] {
+  background: color-mix(in srgb, var(--color-tooltip-text) 12%, transparent);
+}
+
+.saveRevert.saveRevert[data-pressed] {
+  background: color-mix(in srgb, var(--color-tooltip-text) 20%, transparent);
+}
+
+.saveRevert.saveRevert[data-disabled] {
+  background: transparent;
+  color: color-mix(in srgb, var(--color-tooltip-text) 50%, var(--color-tooltip-bg));
+}
+
+.saveSubmit.saveSubmit {
   border-color: var(--color-tooltip-text);
   background: var(--color-tooltip-text);
   color: var(--color-tooltip-bg);
+}
+
+.saveSubmit.saveSubmit[data-hovered] {
+  border-color: color-mix(in srgb, var(--color-tooltip-text) 85%, var(--color-tooltip-bg));
+  background: color-mix(in srgb, var(--color-tooltip-text) 85%, var(--color-tooltip-bg));
+}
+
+.saveSubmit.saveSubmit[data-pressed] {
+  border-color: color-mix(in srgb, var(--color-tooltip-text) 75%, var(--color-tooltip-bg));
+  background: color-mix(in srgb, var(--color-tooltip-text) 75%, var(--color-tooltip-bg));
+}
+
+.saveSubmit.saveSubmit[data-disabled] {
+  border-color: color-mix(in srgb, var(--color-tooltip-text) 30%, var(--color-tooltip-bg));
+  background: color-mix(in srgb, var(--color-tooltip-text) 30%, var(--color-tooltip-bg));
+  color: color-mix(in srgb, var(--color-tooltip-text) 70%, var(--color-tooltip-bg));
+}
+
+/* The "⌘S" hint: Button colours it --color-on-primary, which is white on the light-mode bar's white button. */
+.saveSubmit.saveSubmit > [aria-hidden] {
+  color: inherit;
 }
