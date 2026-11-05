@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { seriesColor } from '../../charts/palette';
 import { cx } from '../../utils/cx';
+import { displayedMinute } from '../../utils/minutes';
 import styles from './activity.module.css';
 
 export interface DayStripBlock {
@@ -64,7 +65,8 @@ export function stripTicks(from: number, to: number): number[] {
 }
 
 /**
- * Lanes for overlapping blocks. A block that overlaps no other keeps the full height (lane 0).
+ * Lanes for overlapping blocks, compared at the displayed minute (back-to-back blocks that share a
+ * few seconds do not overlap). A block that overlaps no other keeps the full height (lane 0).
  * Blocks in a run of overlaps share two half-height lanes (1 = top, 2 = bottom): each takes the
  * lane that is free at its start, or else the one that frees up first, so overlaps stay visible
  * instead of hiding each other.
@@ -80,7 +82,7 @@ export function stripLanes(blocks: readonly DayStripBlock[]): Map<string, 0 | 1 
     } else {
       const laneEnds: [number, number] = [-Infinity, -Infinity];
       for (const block of cluster) {
-        const free = laneEnds.findIndex((end) => end <= block.start);
+        const free = laneEnds.findIndex((end) => displayedMinute(end) <= displayedMinute(block.start));
         const lane = free >= 0 ? free : laneEnds[0] <= laneEnds[1] ? 0 : 1;
         laneEnds[lane] = Math.max(laneEnds[lane]!, block.end);
         result.set(block.id, lane === 0 ? 1 : 2);
@@ -89,7 +91,7 @@ export function stripLanes(blocks: readonly DayStripBlock[]): Map<string, 0 | 1 
     cluster = [];
   };
   for (const block of sorted) {
-    if (cluster.length > 0 && block.start >= clusterEnd) flush();
+    if (cluster.length > 0 && displayedMinute(block.start) >= displayedMinute(clusterEnd)) flush();
     cluster.push(block);
     clusterEnd = cluster.length === 1 ? block.end : Math.max(clusterEnd, block.end);
   }

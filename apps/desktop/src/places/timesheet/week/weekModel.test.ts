@@ -1,6 +1,7 @@
 import { CalendarDate } from '@internationalized/date';
 import { describe, expect, it } from 'vitest';
 import { sampleSlices } from '../../../ipc/fixtures';
+import type { WorkLog } from '../../../ipc/contract';
 import { historyLogs, mondayLogs } from '../../../ipc/fixtures/slices/history';
 import { readyDraft, runningDraft, syncedDraft } from '../../../ipc/fixtures/slices/offline';
 import { stoppedTracking } from '../../../ipc/fixtures/slices/tracking';
@@ -96,14 +97,34 @@ describe('week model', () => {
   });
 
   it('puts overlapping blocks side by side', () => {
+    const min = 60_000;
     const lanes = blockLanes([
-      { id: 'a', start: 0, end: 10 },
-      { id: 'b', start: 5, end: 15 },
-      { id: 'c', start: 20, end: 30 },
+      { id: 'a', start: 0, end: 10 * min },
+      { id: 'b', start: 5 * min, end: 15 * min },
+      { id: 'c', start: 20 * min, end: 30 * min + 20_000 },
+      // Shares ten seconds with c, within 00:30: back to back, so full width.
+      { id: 'd', start: 30 * min + 10_000, end: 40 * min },
     ]);
     expect(lanes.get('a')).toEqual({ lane: 0, lanes: 2 });
     expect(lanes.get('b')).toEqual({ lane: 1, lanes: 2 });
     expect(lanes.get('c')).toEqual({ lane: 0, lanes: 1 });
+    expect(lanes.get('d')).toEqual({ lane: 0, lanes: 1 });
+  });
+
+  it('does not flag entries that share seconds of one displayed minute', () => {
+    // 09:30:40–10:38:20 and 10:38:10–13:03: both read 10:38, as in the reported week.
+    const entry = (id: string, timestamp: string, length: number): WorkLog => ({ ...mondayLogs[0]!, id, timestamp, length, isCanEdit: true });
+    const day = (logs: WorkLog[]) => buildWeek(input({ logs, drafts: [], tracking: stoppedTracking }))[0]!;
+    const touching = day([entry('dev', '2026-10-05T09:30:40Z', 4_060), entry('feature', '2026-10-05T10:38:10Z', 8_690)]);
+    expect(touching.overlaps).toEqual([]);
+    expect(touching.blocks.map((block) => block.overlap)).toEqual([false, false]);
+    const sameSecond = day([entry('dev', '2026-10-05T09:30:00Z', 4_080), entry('feature', '2026-10-05T10:38:00Z', 8_700)]);
+    expect(sameSecond.overlaps).toEqual([]);
+    const minute = day([entry('dev', '2026-10-05T09:30:40Z', 4_110), entry('feature', '2026-10-05T10:38:10Z', 8_690)]);
+    expect(minute.overlaps).toEqual([
+      { start: Date.parse('2026-10-05T10:38:10Z'), end: Date.parse('2026-10-05T10:39:10Z'), earlierId: 'dev', laterId: 'feature' },
+    ]);
+    expect(minute.blocks.map((block) => block.overlap)).toEqual([true, true]);
   });
 
   it('widens 08:00–18:00 to the hours with blocks', () => {

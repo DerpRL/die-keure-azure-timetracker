@@ -1,5 +1,6 @@
 import type { TimeCorrectionIssue, WorkLog } from '../../../ipc/contract';
 import { logEnd, logStart } from '../../../features/ticketContext/format';
+import { displayedMinute, spansMinute } from '../../../utils/minutes';
 
 /** Where two of the listed entries cover the same time. */
 export interface EntryOverlap {
@@ -28,7 +29,9 @@ function spans(logs: readonly WorkLog[]): Span[] {
 
 /**
  * Overlaps between the listed entries, earliest first. Derived from the loaded (filtered) logs
- * for display only; the engine still checks overlaps itself before every write.
+ * for display only; the engine still checks overlaps itself before every write. Like the engine,
+ * entries compare at the displayed minute: back-to-back entries that share a few seconds of one
+ * minute do not overlap.
  */
 export function entryOverlaps(logs: readonly WorkLog[]): EntryOverlap[] {
   const sorted = spans(logs);
@@ -37,13 +40,10 @@ export function entryOverlaps(logs: readonly WorkLog[]): EntryOverlap[] {
     const earlier = sorted[i]!;
     for (let j = i + 1; j < sorted.length; j++) {
       const later = sorted[j]!;
-      if (later.start >= earlier.end) break;
-      result.push({
-        start: later.start,
-        end: Math.min(earlier.end, later.end),
-        earlierId: earlier.id,
-        laterId: later.id,
-      });
+      if (displayedMinute(later.start) >= displayedMinute(earlier.end)) break;
+      const end = Math.min(earlier.end, later.end);
+      if (!spansMinute(later.start, end)) continue;
+      result.push({ start: later.start, end, earlierId: earlier.id, laterId: later.id });
     }
   }
   return result.sort((a, b) => a.start - b.start);

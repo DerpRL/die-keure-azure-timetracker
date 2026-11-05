@@ -4,6 +4,7 @@ import { activityColorIndex, useActivityColors } from '../../features/activity';
 import { secondsBetween } from '../../features/ticketContext/format';
 import type { ReviewSession, WorkItemsSlice } from '../../ipc/contract';
 import { useSlice } from '../../state/hooks';
+import { displayedMinute, spansMinute } from '../../utils/minutes';
 
 export const HOUR_MS = 3_600_000;
 
@@ -62,8 +63,8 @@ export interface TimeSpan {
 }
 
 /**
- * Side-by-side lanes for overlapping spans, as a day calendar draws them: spans that overlap
- * (directly or through a chain) form a cluster, each gets the first free lane, and every span in
+ * Side-by-side lanes for overlapping spans, as a day calendar draws them: spans that overlap at
+ * the displayed minute (directly or through a chain) form a cluster, each gets the first free lane, and every span in
  * the cluster shares the cluster's lane count.
  */
 export function overlapLanes(spans: readonly TimeSpan[]): Map<string, { lane: number; lanes: number }> {
@@ -78,8 +79,8 @@ export function overlapLanes(spans: readonly TimeSpan[]): Map<string, { lane: nu
     laneEnds = [];
   };
   for (const span of sorted) {
-    if (span.start >= clusterEnd) close();
-    let lane = laneEnds.findIndex((end) => end <= span.start);
+    if (displayedMinute(span.start) >= displayedMinute(clusterEnd)) close();
+    let lane = laneEnds.findIndex((end) => displayedMinute(end) <= displayedMinute(span.start));
     if (lane === -1) {
       lane = laneEnds.length;
       laneEnds.push(span.end);
@@ -103,7 +104,8 @@ export interface Overlap {
 }
 
 /**
- * Every pair of spans that cover the same time, in start order. The day review's engine summary
+ * Every pair of spans that cover the same displayed minute, in start order (back-to-back spans
+ * that share a few seconds of one minute do not overlap). The day review's engine summary
  * has no overlaps, so the view finds them in the sessions it already has (the Time editor's
  * corrections resolve them).
  */
@@ -114,9 +116,9 @@ export function findOverlaps(spans: readonly TimeSpan[]): Overlap[] {
     for (let j = i + 1; j < sorted.length; j++) {
       const a = sorted[i]!;
       const b = sorted[j]!;
-      if (b.start >= a.end) break;
+      if (displayedMinute(b.start) >= displayedMinute(a.end)) break;
       const end = Math.min(a.end, b.end);
-      if (end > b.start) result.push({ first: a.id, second: b.id, start: b.start, end });
+      if (spansMinute(b.start, end)) result.push({ first: a.id, second: b.id, start: b.start, end });
     }
   }
   return result;

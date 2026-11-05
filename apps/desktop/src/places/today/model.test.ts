@@ -2,16 +2,32 @@ import { describe, expect, it } from 'vitest';
 import { mondaySessions } from '../../ipc/fixtures/slices/dayReview';
 import { dayBounds, findOverlaps, formatDayTitle, formatWeekday, overlapLanes, shiftDay, ticketRows, visibleRange } from './model';
 
-const span = (id: string, start: number, end: number) => ({ id, start, end });
+const MIN = 60_000;
+const SEC = 1_000;
+/** A span from `start` to `end` minutes (fractions are seconds). */
+const span = (id: string, start: number, end: number) => ({ id, start: start * MIN, end: end * MIN });
 
 describe('Today model', () => {
   it('finds every pair of entries that cover the same time', () => {
     expect(findOverlaps([span('a', 0, 10), span('b', 5, 15), span('c', 15, 20), span('d', 6, 7)])).toEqual([
-      { first: 'a', second: 'b', start: 5, end: 10 },
-      { first: 'a', second: 'd', start: 6, end: 7 },
-      { first: 'b', second: 'd', start: 6, end: 7 },
+      { first: 'a', second: 'b', start: 5 * MIN, end: 10 * MIN },
+      { first: 'a', second: 'd', start: 6 * MIN, end: 7 * MIN },
+      { first: 'b', second: 'd', start: 6 * MIN, end: 7 * MIN },
     ]);
     expect(findOverlaps([span('a', 0, 10), span('b', 10, 20)])).toEqual([]);
+  });
+
+  it('compares overlaps at the displayed minute', () => {
+    const at = (minutes: number, seconds = 0) => minutes * MIN + seconds * SEC;
+    const pair = (aEnd: number, bStart: number) => findOverlaps([{ id: 'a', start: 0, end: aEnd }, { id: 'b', start: bStart, end: at(60) }]);
+    // Same second, and ten seconds shared within 00:38 (both shown as 00:38): back to back.
+    expect(pair(at(38, 10), at(38, 10))).toEqual([]);
+    expect(pair(at(38, 20), at(38, 10))).toEqual([]);
+    // A full minute of overlap, and thirty seconds across a minute boundary (00:39 > 00:38).
+    expect(pair(at(39, 10), at(38, 10))).toEqual([{ first: 'a', second: 'b', start: at(38, 10), end: at(39, 10) }]);
+    expect(pair(at(39, 20), at(38, 50))).toEqual([{ first: 'a', second: 'b', start: at(38, 50), end: at(39, 20) }]);
+    // Back-to-back spans stay full width.
+    expect(overlapLanes([{ id: 'a', start: 0, end: at(38, 20) }, { id: 'b', start: at(38, 10), end: at(60) }]).get('b')).toEqual({ lane: 0, lanes: 1 });
   });
 
   it('puts overlapping spans side by side', () => {

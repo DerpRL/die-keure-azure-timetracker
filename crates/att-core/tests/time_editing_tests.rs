@@ -37,6 +37,25 @@ fn overlaps_include_containing_and_cross_midnight_entries_but_not_touching_edges
 }
 
 #[test]
+fn seconds_shared_within_the_edges_displayed_minute_are_not_an_overlap() {
+    let ids = |logs: &[att_core::model::WorkLog]| -> Vec<(String, f64)> {
+        WorkLogOverlap::conflicts(&edit(), EDITABLE_ID, logs, &idle(), now(), &cal())
+            .unwrap()
+            .into_iter()
+            .map(|c| (c.id, c.overlap))
+            .collect()
+    };
+    // Ends at 09:00:00 (same second) and at 09:00:40 (shown as 09:00): back to back with 09:00.
+    assert!(ids(&[editable_log("same", "2026-09-28T08:00:00", 3600.0)]).is_empty());
+    assert!(ids(&[editable_log("seconds", "2026-09-28T08:00:40", 3600.0)]).is_empty());
+    // Starts at 10:59:00, a full minute before the edit ends at 11:00.
+    assert_eq!(
+        ids(&[editable_log("minute", "2026-09-28T10:59:00", 3600.0)]),
+        [("minute".into(), 60.0)]
+    );
+}
+
+#[test]
 fn live_timer_is_counted_once_and_cannot_be_edited() {
     let mut tracking = state(Some(456), "session");
     tracking.track.as_mut().unwrap().current_track_started_date_time =

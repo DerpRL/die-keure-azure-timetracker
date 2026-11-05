@@ -103,6 +103,23 @@ pub fn floor_to_second(ts: Timestamp) -> Timestamp {
     Timestamp::from_nanosecond(nanos - nanos.rem_euclid(NANOS_PER_SECOND)).unwrap_or(ts)
 }
 
+/// Rounds down to a whole minute, the precision clock times are shown at.
+pub fn floor_to_minute(ts: Timestamp) -> Timestamp {
+    const NANOS_PER_MINUTE: i128 = 60 * NANOS_PER_SECOND;
+    let nanos = ts.as_nanosecond();
+    Timestamp::from_nanosecond(nanos - nanos.rem_euclid(NANOS_PER_MINUTE)).unwrap_or(ts)
+}
+
+/// Whether `[start, end)` still has length once both ends are rounded down to the minute.
+///
+/// 7pace stores seconds but the app shows minutes, so an entry that ends at 10:38:20 and the next
+/// one that starts at 10:38:10 read as back to back (both 10:38). Overlap checks use this so they
+/// agree with the times shown: time shared within one displayed minute is not an overlap, while a
+/// full minute or more always is.
+pub fn spans_minute(start: Timestamp, end: Timestamp) -> bool {
+    floor_to_minute(end) > floor_to_minute(start)
+}
+
 /// A half-open interval `[start, end)`.
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -431,6 +448,16 @@ pub mod flex_date {
 mod tests {
     use super::*;
     use jiff::civil::date;
+
+    #[test]
+    fn spans_minute_compares_at_the_displayed_minute() {
+        let ts = |text: &str| -> Timestamp { text.parse().unwrap() };
+        assert_eq!(floor_to_minute(ts("2026-09-28T10:38:59.9Z")), ts("2026-09-28T10:38:00Z"));
+        assert!(!spans_minute(ts("2026-09-28T10:38:10Z"), ts("2026-09-28T10:38:10Z")));
+        assert!(!spans_minute(ts("2026-09-28T10:38:10Z"), ts("2026-09-28T10:38:59Z")));
+        assert!(spans_minute(ts("2026-09-28T10:38:10Z"), ts("2026-09-28T10:39:10Z")));
+        assert!(spans_minute(ts("2026-09-28T10:38:50Z"), ts("2026-09-28T10:39:20Z")));
+    }
 
     #[test]
     fn seconds_round_trip_and_rounding() {

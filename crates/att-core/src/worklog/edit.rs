@@ -19,7 +19,7 @@ use crate::error::{AppError, Result};
 use crate::model::{TrackingState, WorkLog};
 use crate::service::WorkLogEditingService;
 use crate::text::NonEmpty;
-use crate::time::{Cal, add_secs, diff_secs, wire_date};
+use crate::time::{Cal, add_secs, diff_secs, spans_minute, wire_date};
 
 /// Prefix of every advisory overlap notice in the review/save flow.
 const OVERLAP_INCOMPLETE: &str = "The overlap check could not be completed. ";
@@ -94,7 +94,8 @@ impl WorkLogOverlap {
 
     /// Entries that share time with `edit`, sorted by start. `excluding` is the entry being
     /// edited. The running timer is reported once, as `[start, now]`, even when the history also
-    /// lists its worklog. Entries that only touch the edit's edges do not overlap.
+    /// lists its worklog. Entries that only touch the edit's edges, or share less than the
+    /// displayed minute there (see [`spans_minute`]), do not overlap.
     pub fn conflicts(
         edit: &WorkLogTimeEdit,
         excluding: &str,
@@ -120,8 +121,9 @@ impl WorkLogOverlap {
                 }
             };
             let end = add_secs(start, log.length);
-            let overlap = diff_secs(end.min(edit.end), start.max(edit.start));
-            if overlap > 0.0 {
+            let (shared_start, shared_end) = (start.max(edit.start), end.min(edit.end));
+            if spans_minute(shared_start, shared_end) {
+                let overlap = diff_secs(shared_end, shared_start);
                 result.push(WorkLogConflict {
                     id: log.id.clone(),
                     ticket_id: log.work_item_id,
@@ -143,8 +145,9 @@ impl WorkLogOverlap {
                     "7pace did not provide the running timer’s start, so its overlaps could not be checked.",
                 ));
             };
-            let overlap = diff_secs(now.min(edit.end), start.max(edit.start));
-            if overlap > 0.0 {
+            let (shared_start, shared_end) = (start.max(edit.start), now.min(edit.end));
+            if spans_minute(shared_start, shared_end) {
+                let overlap = diff_secs(shared_end, shared_start);
                 result.push(WorkLogConflict {
                     id: active_id.to_string(),
                     ticket_id: track.ticket_id(),

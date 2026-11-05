@@ -2,6 +2,7 @@ import { startOfWeek, type CalendarDate } from '@internationalized/date';
 import type { OfflineDraftView, TrackingSlice, WorkItemsSlice, WorkLog } from '../../../ipc/contract';
 import { dayToDate, localDayKey, logEnd, logStart, logTicket } from '../../../features/ticketContext/format';
 import { entryOverlaps, type EntryOverlap } from '../day/dayModel';
+import { displayedMinute } from '../../../utils/minutes';
 
 /*
  * The Timesheet's week calendar, derived from the 7pace worklogs of the week (history slice), the
@@ -122,8 +123,8 @@ export function dayGaps(spans: ReadonlyArray<{ start: number; end: number }>, mi
 }
 
 /**
- * Side-by-side lanes for blocks that share time: each block gets a lane and the number of lanes
- * of its cluster.
+ * Side-by-side lanes for blocks that share a displayed minute: each block gets a lane and the
+ * number of lanes of its cluster. Back-to-back blocks that share a few seconds stay full width.
  */
 export function blockLanes(blocks: ReadonlyArray<{ id: string; start: number; end: number }>): Map<string, { lane: number; lanes: number }> {
   const sorted = [...blocks].sort((a, b) => a.start - b.start || a.end - b.end);
@@ -137,8 +138,8 @@ export function blockLanes(blocks: ReadonlyArray<{ id: string; start: number; en
     laneEnds = [];
   };
   for (const block of sorted) {
-    if (block.start >= clusterEnd) close();
-    let lane = laneEnds.findIndex((end) => end <= block.start);
+    if (displayedMinute(block.start) >= displayedMinute(clusterEnd)) close();
+    let lane = laneEnds.findIndex((end) => displayedMinute(end) <= displayedMinute(block.start));
     if (lane < 0) {
       lane = laneEnds.length;
       laneEnds.push(block.end);

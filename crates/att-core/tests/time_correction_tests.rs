@@ -57,6 +57,37 @@ fn touching_entries_do_not_overlap_and_overnight_is_clipped() {
 }
 
 #[test]
+fn overlaps_are_compared_at_the_displayed_minute() {
+    let overlap_ids = |logs: &[WorkLog]| -> Vec<(String, f64)> {
+        TimeCorrections::issues(logs, window(14400.0), 300.0, &cal())
+            .unwrap()
+            .into_iter()
+            .filter(|i| i.kind == TimeCorrectionKind::Overlap)
+            .map(|i| {
+                (
+                    format!("{}>{}", i.earlier.as_ref().unwrap().id, i.later.as_ref().unwrap().id),
+                    i.seconds(),
+                )
+            })
+            .collect()
+    };
+    // Same second: back to back.
+    assert!(overlap_ids(&[entry("a", 1800.0, 4080.0), entry("b", 5880.0, 3600.0)]).is_empty());
+    // 09:30:40–10:38:20 and 10:38:10–…: both read 10:38, so ten shared seconds are not an overlap.
+    assert!(overlap_ids(&[entry("a", 1840.0, 4060.0), entry("b", 5890.0, 3600.0)]).is_empty());
+    // A full minute (10:38:10–10:39:10) is.
+    assert_eq!(
+        overlap_ids(&[entry("a", 1840.0, 4110.0), entry("b", 5890.0, 3600.0)]),
+        [("a>b".to_string(), 60.0)]
+    );
+    // Thirty seconds across a minute boundary (10:38:50–10:39:20) read as 10:39 > 10:38.
+    assert_eq!(
+        overlap_ids(&[entry("a", 1840.0, 4120.0), entry("b", 5930.0, 3600.0)]),
+        [("a>b".to_string(), 30.0)]
+    );
+}
+
+#[test]
 fn leading_trailing_and_threshold_gaps() {
     let logs = [entry("a", 600.0, 600.0)];
     let issues = TimeCorrections::issues(&logs, window(1800.0), 600.0, &cal()).unwrap();

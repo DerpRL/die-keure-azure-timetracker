@@ -14,7 +14,7 @@ use super::ops::WorkLogPlan;
 use super::{WorkLogDraft, WorkLogTimeEdit};
 use crate::error::{AppError, Result};
 use crate::model::WorkLog;
-use crate::time::{Cal, Interval, add_secs, diff_secs, secs};
+use crate::time::{Cal, Interval, add_secs, diff_secs, floor_to_minute, secs, spans_minute};
 
 /// Swift `TimeCorrectionIssue.Kind`.
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
@@ -81,7 +81,7 @@ pub enum TimeCorrections {}
 
 impl TimeCorrections {
     /// Gaps of at least `minimum_gap` seconds (never under one second) and pairwise overlaps
-    /// inside `window`, sorted by start. Gaps are measured against the union of recorded time, so
+    /// inside `window` that cover at least one displayed minute, sorted by start. Gaps are measured against the union of recorded time, so
     /// nested or overlapping sessions never produce false gaps. Duplicate IDs count once and
     /// zero-length entries are ignored. A leading gap has no earlier entry; a trailing gap is
     /// only reported after at least one entry. An unreadable entry fails the whole review rather
@@ -133,12 +133,14 @@ impl TimeCorrections {
                 previous = Some(log);
             }
             for &(next, next_start, next_end) in &entries[index + 1..] {
-                if next_start >= end {
+                // Compared at the displayed minute: back-to-back entries that share a few
+                // seconds of one minute are not an overlap (see `spans_minute`).
+                if floor_to_minute(next_start) >= floor_to_minute(end) {
                     break;
                 }
                 let left = window.start.max(start.max(next_start));
                 let right = window.end.min(end.min(next_end));
-                if right > left {
+                if spans_minute(left, right) {
                     result.push(TimeCorrectionIssue::new(
                         TimeCorrectionKind::Overlap,
                         left,
