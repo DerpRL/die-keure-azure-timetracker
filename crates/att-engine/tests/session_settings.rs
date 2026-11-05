@@ -409,7 +409,8 @@ async fn onboarding_holds_the_start_until_it_finishes() {
     *t.figma.access.lock().unwrap() = true;
     t.engine.dispatch(json!({"type": "app.finishOnboarding"})).await.unwrap();
     assert_eq!(slice(&t.engine, "app")["onboarding"], false);
-    assert_eq!(t.shell.take(), vec!["show_main(settings)".to_string()]);
+    assert_eq!(t.shell.take(), vec!["show_main(overview)".to_string()]);
+    assert_eq!(slice(&t.engine, "app")["visiblePage"], "overview");
     let stored: Configuration = t.store.get(att_store::keys::CONFIGURATION).unwrap().unwrap();
     assert_eq!(stored.interface_setup_completed, Some(true));
 }
@@ -430,7 +431,7 @@ async fn onboarding_can_be_shown_again_from_settings() {
 
     t.engine.dispatch(json!({"type": "app.finishOnboarding"})).await.unwrap();
     assert_eq!(slice(&t.engine, "app")["onboarding"], false);
-    assert_eq!(t.shell.take(), vec!["show_main(settings)".to_string()], "back to Settings");
+    assert_eq!(t.shell.take(), vec!["show_main(overview)".to_string()], "on to Today");
 }
 
 #[tokio::test(start_paused = true)]

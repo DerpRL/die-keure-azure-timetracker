@@ -4,23 +4,38 @@ import { CheckIcon } from '../../components/icons';
 import { cx } from '../../utils/cx';
 import styles from './onboarding.module.css';
 
-export type SetupStep = 'appearance' | 'accounts';
+export type SetupStep = 'appearance' | 'accounts' | 'sources' | 'calendars';
 
-/** The first-run steps that exist: the appearance screen, then the accounts in Settings. */
-const STEPS: ReadonlyArray<{ id: SetupStep; label: string }> = [
+export interface SetupStepDefinition {
+  id: SetupStep;
+  /** The short name in the step pills. */
+  label: string;
+}
+
+/**
+ * The onboarding's steps in order. Calendars exist on macOS only, so Windows has three
+ * (`setupSteps`).
+ */
+export const SETUP_STEPS: readonly SetupStepDefinition[] = [
   { id: 'appearance', label: 'Appearance' },
-  { id: 'accounts', label: 'Accounts' },
+  { id: 'accounts', label: 'Azure & 7pace' },
+  { id: 'sources', label: 'Git & Figma' },
+  { id: 'calendars', label: 'Calendars' },
 ];
+
+export function setupSteps(calendar: boolean): readonly SetupStepDefinition[] {
+  return calendar ? SETUP_STEPS : SETUP_STEPS.filter((step) => step.id !== 'calendars');
+}
 
 /**
  * The setup steps as pills (design "S8 · Onboarding"): finished steps with a check, the current
  * one highlighted and marked `aria-current="step"`.
  */
-export function SetupSteps({ current }: { current: SetupStep }) {
-  const index = STEPS.findIndex((step) => step.id === current);
+export function SetupSteps({ steps, current }: { steps: readonly SetupStepDefinition[]; current: SetupStep }) {
+  const index = steps.findIndex((step) => step.id === current);
   return (
     <ol aria-label="Setup steps" className={styles.steps}>
-      {STEPS.map((step, position) => {
+      {steps.map((step, position) => {
         const done = position < index;
         const active = position === index;
         return (
@@ -38,14 +53,13 @@ export function SetupSteps({ current }: { current: SetupStep }) {
 }
 
 /**
- * Settings → Azure DevOps & 7pace on the first run (design "S8 · Onboarding — connect
- * accounts"): where the setup is and what the two accounts are for, above the account cards.
+ * Settings → Azure DevOps & 7pace while no 7pace workspace is saved (the onboarding was finished
+ * before 2.2, or the workspace was removed): what the two accounts are for, above their cards.
  */
 export function FirstRunSteps({ os }: { os: 'macos' | 'windows' }) {
   const titleId = useId();
   return (
     <Card as="section" aria-labelledby={titleId} padding="large" className={styles.firstRun}>
-      <SetupSteps current="accounts" />
       <h3 id={titleId} className={styles.firstRunTitle}>
         Connect your accounts to start tracking
       </h3>

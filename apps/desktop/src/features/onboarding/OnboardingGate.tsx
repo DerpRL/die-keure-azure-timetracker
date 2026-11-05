@@ -2,13 +2,11 @@ import { lazy, Suspense, type ReactNode } from 'react';
 import { useSlice } from '../../state/hooks';
 
 // Only the first run needs it, so it stays out of the main window's initial bundle.
-const AppearanceOnboarding = lazy(() =>
-  import('./AppearanceOnboarding').then((module) => ({ default: module.AppearanceOnboarding })),
-);
+const OnboardingFlow = lazy(() => import('./OnboardingFlow').then((module) => ({ default: module.OnboardingFlow })));
 
 /**
- * Shows the first-run appearance onboarding instead of `children` while `app.onboarding` is
- * true (1.14 `InterfaceOnboardingView`). Until the app slice arrives the app renders as usual
+ * Shows the first-run onboarding (`OnboardingFlow`) instead of `children` while `app.onboarding`
+ * is true (1.14 `InterfaceOnboardingView`). Until the app slice arrives the app renders as usual
  * (its pages show their own loading states).
  */
 export function OnboardingGate({ children }: { children: ReactNode }) {
@@ -16,7 +14,7 @@ export function OnboardingGate({ children }: { children: ReactNode }) {
   if (!app?.onboarding) return <>{children}</>;
   return (
     <Suspense fallback={<main aria-busy="true" aria-label="Loading setup" />}>
-      <AppearanceOnboarding />
+      <OnboardingFlow />
     </Suspense>
   );
 }

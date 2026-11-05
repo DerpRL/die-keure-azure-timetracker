@@ -228,7 +228,8 @@ pub(crate) fn set_quiet_hours(engine: &Engine, quiet_hours: QuietHours) {
     engine.update(|state| state.config.quiet_hours = quiet_hours);
 }
 
-/// Swift `finishAppearanceOnboarding()`.
+/// Swift `finishAppearanceOnboarding()`, which opened Settings; 2.2 onboarding sets up the
+/// accounts itself, so finishing opens Today.
 pub(crate) async fn finish_onboarding(engine: &Engine) {
     let observer = engine.services().platform.figma.clone();
     let access = blocking(PROBE_DEADLINE, move || observer.has_access()).await.unwrap_or(false);
@@ -247,8 +248,9 @@ pub(crate) async fn finish_onboarding(engine: &Engine) {
         engine.update(|state| state.config.interface_setup_completed = previous);
         return;
     }
-    engine.services().shell.show_main(Some("settings"));
-    engine.update(|state| state.show_page("settings"));
+    // The onboarding saved the accounts on its own steps: the app opens on Today.
+    engine.services().shell.show_main(Some("overview"));
+    engine.update(|state| state.show_page("overview"));
     // The main loop starts the app on its next tick.
     engine.inner.wake.notify_one();
 }

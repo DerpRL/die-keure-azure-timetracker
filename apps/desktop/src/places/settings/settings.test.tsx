@@ -198,12 +198,11 @@ describe('states', () => {
     expect(error).toHaveBeenCalled();
   });
 
-  it('guides the first run with the setup steps and an empty connection', async () => {
+  it('explains the accounts while no 7pace workspace is saved, without onboarding steps', async () => {
     renderSettings({}, { with: { settings: unconfiguredSettings, connection: unconfiguredConnection } });
     expect(screen.getByRole('heading', { level: 3, name: 'Connect your accounts to start tracking' })).toBeInTheDocument();
-    const steps = within(screen.getByRole('list', { name: 'Setup steps' })).getAllByRole('listitem');
-    expect(steps.map((step) => step.textContent)).toEqual(['Appearance (done)', '2Accounts']);
-    expect(steps[1]).toHaveAttribute('aria-current', 'step');
+    // The setup steps belong to the onboarding itself now.
+    expect(screen.queryByRole('list', { name: 'Setup steps' })).not.toBeInTheDocument();
     expect(screen.queryByText(/^Stored in/)).not.toBeInTheDocument();
     expect(screen.getAllByText('Not connected yet')).toHaveLength(2);
     expect(screen.getByText('Needs “Work Items (Read)”. That is enough for ticket lookup.')).toBeInTheDocument();
@@ -402,7 +401,7 @@ describe('the first run', () => {
     expect(tokenSteps.map((step) => step.textContent)).toEqual([
       'Open 7pace Timetracker (diekeure-webdev.timehub.7pace.com (opens in your browser)) and go to Settings → Reporting & API.',
       'Create a token there and copy it.',
-      'Paste it in API token below and choose Save changes. It is kept in Keychain.',
+      'Paste it in API token below. It is kept in Keychain once your settings are saved.',
     ]);
     await user.click(screen.getByRole('link', { name: /^diekeure-webdev\.timehub\.7pace\.com\s*\(opens in your browser\)$/ }));
     expect(platform.openExternalLink).toHaveBeenCalledWith('https://diekeure-webdev.timehub.7pace.com');
@@ -414,7 +413,7 @@ describe('the first run', () => {
       'Check the workspace URL above, then choose Generate pairing PIN.',
       'In Azure DevOps, open 7pace Timetracker and go to Apps → Pair Mobile App.',
       'Enter the PIN there within one minute. It expires after that; generate a new one if it does.',
-      'When this card says “Paired with …”, choose Save changes to use the connection.',
+      'When this card says “Paired with …”, save your settings to use the connection.',
     ]);
     expect(screen.getByRole('link', { name: /^diekeure-webdev\.timehub\.7pace\.com\s*\(opens in your browser\)$/ })).toHaveAttribute(
       'href',

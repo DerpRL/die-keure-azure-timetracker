@@ -37,7 +37,7 @@ export function SevenPaceInstructions({
               In Azure DevOps, open 7pace Timetracker and go to <strong>Apps → Pair Mobile App</strong>.
             </li>
             <li>Enter the PIN there within one minute. It expires after that; generate a new one if it does.</li>
-            <li>When this card says “Paired with …”, choose Save changes to use the connection.</li>
+            <li>When this card says “Paired with …”, save your settings to use the connection.</li>
           </>
         ) : (
           <>
@@ -53,7 +53,7 @@ export function SevenPaceInstructions({
               and go to <strong>Settings → Reporting & API</strong>.
             </li>
             <li>Create a token there and copy it.</li>
-            <li>{`Paste it in API token below and choose Save changes. It is kept in ${credentials}.`}</li>
+            <li>{`Paste it in API token below. It is kept in ${credentials} once your settings are saved.`}</li>
           </>
         )}
       </ol>

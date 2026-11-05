@@ -156,3 +156,55 @@
   align-items: start;
   gap: var(--space-5);
 }
+
+/* The multi-step flow (2.2): step count, stacked cards, Back on the left and Continue on the right. */
+.stepCount {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-semibold);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 53.75rem;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.footerStart,
+.footerEnd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+}
+
+.footerEnd {
+  margin-left: auto;
+  justify-content: flex-end;
+}
+
+.issueList {
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+@media (max-width: 40rem) {
+  .page {
+    padding: var(--space-5) var(--space-4);
+  }
+
+  .title {
+    font-size: 1.75rem;
+  }
+
+  .footerEnd {
+    width: 100%;
+  }
+}

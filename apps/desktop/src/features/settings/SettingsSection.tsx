@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { Card, Section } from '../../components/Card';
+import { createContext, useContext, type ReactNode } from 'react';
+import { Card, Section, type HeadingLevel } from '../../components/Card';
 import { ErrorIcon, WarningIcon } from '../../components/icons';
 import { Switch, type SwitchProps } from '../../components/Toggles';
 import { cx } from '../../utils/cx';
@@ -16,17 +16,21 @@ export interface SettingsSectionProps {
 }
 
 /**
- * One deep-linkable settings card (`#settings/<id>`). Its heading is an h3: the Settings menu's
- * title is the h1 and the view's title the h2 (2.2 layout).
+ * The level of a settings card's heading: h3 in Settings (the menu's title is the h1, the view's
+ * title the h2); the onboarding, which has only its step title above the cards, provides 2.
  */
+export const SectionHeadingLevel = createContext<HeadingLevel>(3);
+
+/** One deep-linkable settings card (`#settings/<id>`), headed at {@link SectionHeadingLevel}. */
 export function SettingsSection({ id, subtitle, actions, title, children }: SettingsSectionProps) {
+  const headingLevel = useContext(SectionHeadingLevel);
   return (
     <div id={sectionAnchorId(id)} className={styles.sectionAnchor} tabIndex={-1}>
       <Section
         title={title ?? sectionTitle(id)}
         subtitle={subtitle}
         actions={actions}
-        headingLevel={3}
+        headingLevel={headingLevel}
         padding="large"
         className={styles.sectionCard}
       >
