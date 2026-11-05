@@ -1,105 +1,107 @@
 /**
- * Settings categories (1.14 `SettingsCategory`) and the sections inside them. Every section is
- * deep-linkable as `#settings/<section>` (or `#settings/<category>`), e.g. `#settings/calendar`.
+ * Settings sections (2.2 layout): the cards of the Settings views, each deep-linkable as
+ * `#settings/<section>` (or `#settings/<view>`), e.g. `#settings/microphone`. Validation issues,
+ * palette entries and links name a section; the Settings place shows its view and moves focus to
+ * it.
  */
 import { isTauri } from '../../ipc';
 import { showMain } from '../../ipc/shell';
-
-export type SettingsCategoryId =
-  | 'accounts'
-  | 'tracking'
-  | 'meetings'
-  | 'dayReview'
-  | 'notifications'
-  | 'features'
-  | 'appearance'
-  | 'app'
-  | 'advanced';
+import type { PageId, SettingsView } from '../../layout/navigation';
 
 export type SettingsSectionId =
+  // Azure DevOps & 7pace
+  | 'azure'
+  | 'sevenPace'
   | 'connection'
-  | 'tracking'
-  | 'awareness'
+  // Targets & reminders
   | 'targets'
-  | 'figma'
-  | 'calendar'
+  | 'holidays'
   | 'meetings'
   | 'microphone'
   | 'dayReview'
   | 'notifications'
-  | 'features'
+  | 'tracking'
+  | 'awareness'
+  // Git repositories
+  | 'repositories'
+  | 'branchRules'
+  // Figma
+  | 'figma'
+  // Calendars
+  | 'calendar'
+  // Appearance & app
   | 'appearance'
-  | 'window'
+  | 'app'
   | 'updates'
-  | 'about'
+  | 'features'
   | 'advanced';
 
 export interface SettingsSectionDefinition {
   id: SettingsSectionId;
   title: string;
+  view: SettingsView;
   /** Hidden when the calendar module does not exist on this OS (Windows at launch). */
   needsCalendar?: boolean;
 }
 
-export interface SettingsCategoryDefinition {
-  id: SettingsCategoryId;
-  title: string;
-  sections: readonly SettingsSectionDefinition[];
-}
-
-export const SETTINGS_CATEGORIES: readonly SettingsCategoryDefinition[] = [
-  { id: 'accounts', title: 'Accounts', sections: [{ id: 'connection', title: 'Accounts & connection' }] },
-  {
-    id: 'tracking',
-    title: 'Tracking',
-    sections: [
-      { id: 'tracking', title: 'Tracking' },
-      { id: 'awareness', title: 'Time awareness' },
-      { id: 'targets', title: 'Targets and holidays' },
-      { id: 'figma', title: 'Figma Desktop' },
-    ],
-  },
-  {
-    id: 'meetings',
-    title: 'Meetings',
-    sections: [
-      { id: 'calendar', title: 'Apple Calendar', needsCalendar: true },
-      { id: 'meetings', title: 'Meeting suggestions', needsCalendar: true },
-      { id: 'microphone', title: 'Microphone meetings' },
-    ],
-  },
-  { id: 'dayReview', title: 'Day review', sections: [{ id: 'dayReview', title: 'End-of-day review' }] },
-  {
-    id: 'notifications',
-    title: 'Notifications',
-    sections: [{ id: 'notifications', title: 'Notifications and interruptions' }],
-  },
-  { id: 'features', title: 'Features', sections: [{ id: 'features', title: 'Features' }] },
-  { id: 'appearance', title: 'Appearance', sections: [{ id: 'appearance', title: 'Appearance & readability' }] },
-  {
-    id: 'app',
-    title: 'App',
-    sections: [
-      { id: 'window', title: 'Window and startup' },
-      { id: 'updates', title: 'App updates' },
-      { id: 'about', title: 'About' },
-    ],
-  },
-  { id: 'advanced', title: 'Advanced', sections: [{ id: 'advanced', title: 'Polling intervals' }] },
+export const SETTINGS_SECTIONS: readonly SettingsSectionDefinition[] = [
+  { id: 'azure', title: 'Azure DevOps', view: 'accounts' },
+  { id: 'sevenPace', title: '7pace Timetracker', view: 'accounts' },
+  { id: 'connection', title: 'Connection', view: 'accounts' },
+  { id: 'targets', title: 'Daily targets', view: 'tracking' },
+  { id: 'holidays', title: 'Holidays & leave', view: 'tracking' },
+  { id: 'meetings', title: 'Meetings', view: 'tracking', needsCalendar: true },
+  { id: 'microphone', title: 'Microphone meetings', view: 'tracking' },
+  { id: 'dayReview', title: 'Day check', view: 'tracking' },
+  { id: 'notifications', title: 'Notifications & quiet hours', view: 'tracking' },
+  { id: 'tracking', title: 'Timer & reminders', view: 'tracking' },
+  { id: 'awareness', title: 'Time awareness', view: 'tracking' },
+  { id: 'repositories', title: 'Watched repositories', view: 'git' },
+  { id: 'branchRules', title: 'Branch rules', view: 'git' },
+  { id: 'figma', title: 'Figma Desktop', view: 'figma' },
+  { id: 'calendar', title: 'Calendars', view: 'calendars', needsCalendar: true },
+  { id: 'appearance', title: 'Appearance', view: 'appearance' },
+  { id: 'app', title: 'App', view: 'appearance' },
+  { id: 'updates', title: 'App updates', view: 'appearance' },
+  { id: 'features', title: 'Features', view: 'appearance' },
+  { id: 'advanced', title: 'Advanced', view: 'appearance' },
 ];
 
-export const DEFAULT_CATEGORY: SettingsCategoryId = 'accounts';
+/** The heading and lead line of each Settings view (the menu names some of them shorter). */
+export const VIEW_INTROS: Readonly<Record<SettingsView, { title: string; lead: string }>> = {
+  accounts: { title: 'Azure DevOps & 7pace', lead: 'Azure DevOps provides ticket details. 7pace Timetracker stores your time.' },
+  tracking: {
+    title: 'Targets & reminders',
+    lead: 'Used for progress bars, the day check and Insights. Nothing here changes your 7pace data.',
+  },
+  sources: { title: 'Sources', lead: 'Sources suggest what to track. Nothing changes in 7pace until you confirm.' },
+  git: {
+    title: 'Git repositories',
+    lead: 'Switching branch suggests that branch’s ticket. Nothing changes in 7pace until you confirm.',
+  },
+  figma: { title: 'Figma', lead: 'Your files, ticket links and recent design context. Changes here apply right away.' },
+  calendars: { title: 'Calendars', lead: 'Shown on Today and used for meeting suggestions. Events never leave this device.' },
+  appearance: {
+    title: 'Appearance & app',
+    lead: 'Appearance and Open at login apply right away. Everything else applies when you save.',
+  },
+};
 
-export function categoryOf(section: SettingsSectionId): SettingsCategoryId {
-  return SETTINGS_CATEGORIES.find((category) => category.sections.some((entry) => entry.id === section))?.id ?? DEFAULT_CATEGORY;
+/** Views whose cards edit the saved settings: they always show the save bar. */
+export const DRAFT_VIEWS: readonly SettingsView[] = ['accounts', 'tracking', 'git', 'calendars', 'appearance'];
+
+export const DEFAULT_SECTION: SettingsSectionId = 'azure';
+
+function definition(section: SettingsSectionId): SettingsSectionDefinition {
+  return SETTINGS_SECTIONS.find((entry) => entry.id === section) ?? SETTINGS_SECTIONS[0]!;
+}
+
+export function viewOf(section: SettingsSectionId): SettingsView {
+  return definition(section).view;
 }
 
 export function sectionTitle(section: SettingsSectionId): string {
-  for (const category of SETTINGS_CATEGORIES) {
-    const match = category.sections.find((entry) => entry.id === section);
-    if (match) return match.title;
-  }
-  return section;
+  return definition(section).title;
 }
 
 /** The DOM id of a section's anchor. */
@@ -108,35 +110,39 @@ export function sectionAnchorId(section: SettingsSectionId): string {
 }
 
 export interface SettingsLocation {
-  category: SettingsCategoryId;
+  view: SettingsView;
   /** The section to scroll to, when the link named one. */
   section?: SettingsSectionId;
 }
 
 const HASH_PREFIX = '#settings/';
 
-/** `#settings/<section|category>` → where to go; `null` for any other hash. */
+/** `#settings/<section|view>` → where to go; `null` for any other hash. */
 export function parseSettingsHash(hash: string): SettingsLocation | null {
   if (!hash.startsWith(HASH_PREFIX)) return null;
   const target = decodeURIComponent(hash.slice(HASH_PREFIX.length));
-  for (const category of SETTINGS_CATEGORIES) {
-    const section = category.sections.find((entry) => entry.id === target);
-    if (section) return { category: category.id, section: section.id };
-  }
-  const category = SETTINGS_CATEGORIES.find((entry) => entry.id === target);
-  return category ? { category: category.id } : null;
+  // A view's own name wins over a card with the same id (`tracking`, `figma`).
+  if (Object.hasOwn(VIEW_INTROS, target)) return { view: target as SettingsView };
+  const section = SETTINGS_SECTIONS.find((entry) => entry.id === target);
+  return section ? { view: section.view, section: section.id } : null;
 }
 
-export function settingsHash(target: SettingsSectionId | SettingsCategoryId): string {
+export function settingsHash(target: SettingsSectionId | SettingsView): string {
   return `${HASH_PREFIX}${target}`;
 }
 
+function isSection(target: string): target is SettingsSectionId {
+  return SETTINGS_SECTIONS.some((entry) => entry.id === target);
+}
+
 /**
- * Opens Settings on a section from anywhere in the main window, e.g. the Agenda page's "Choose
- * calendars" or a prompt's "Change in Settings". Inside Tauri the shell also brings the main
- * window to Settings; an open Settings page follows the hash.
+ * Opens Settings on a section or view from anywhere in the main window, e.g. a prompt's "Change
+ * in Settings". Inside Tauri the shell also brings the main window to that Settings view; the
+ * Settings place reads the hash, shows the section and clears the hash.
  */
-export function openSettingsSection(target: SettingsSectionId | SettingsCategoryId): void {
+export function openSettingsSection(target: SettingsSectionId | SettingsView): void {
   if (typeof window !== 'undefined') window.location.hash = settingsHash(target);
-  if (isTauri()) void showMain('settings').catch(() => undefined);
+  const view = isSection(target) ? viewOf(target) : target;
+  // The shell passes any page id through; the main window also accepts `place/view` (parseNavTarget).
+  if (isTauri()) void showMain(`settings/${view}` as PageId).catch(() => undefined);
 }

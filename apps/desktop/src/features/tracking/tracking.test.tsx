@@ -19,6 +19,7 @@ import {
   standupDraftFlow,
   ticketDraft,
 } from '../../ipc/fixtures/slices/flow';
+import { stoppedTracking } from '../../ipc/fixtures/slices/tracking';
 import { MockEngineError } from '../../ipc/mockEngine';
 import { expectAccessible } from './testHelpers';
 import { renderWithEngine } from '../../test/engine';
@@ -48,8 +49,9 @@ describe('TicketPickerSheet', () => {
         },
       },
     });
-    const dialog = await screen.findByRole('dialog', { name: 'Choose a ticket' });
-    expect(within(dialog).getByText('Search Azure tickets by number or title.')).toBeInTheDocument();
+    // A timer runs in the sample data: the picker says what starting will stop.
+    const dialog = await screen.findByRole('dialog', { name: 'Switch ticket' });
+    expect(within(dialog).getByText(/^Stops #4821 at \d+h \d+m and starts the new one$/)).toBeInTheDocument();
     expect(within(dialog).getByRole('heading', { level: 3, name: 'Track without a ticket' })).toBeInTheDocument();
     expect(within(dialog).getByRole('combobox', { name: 'Ticket number or title' })).toHaveFocus();
     const list = within(dialog).getByRole('list');
@@ -61,6 +63,14 @@ describe('TicketPickerSheet', () => {
     await expectAccessible();
   });
 
+
+  it('asks to choose a ticket while no timer runs, and closes with the × button', async () => {
+    const { engine, user } = renderWithEngine(<TicketPickerSheet />, { with: { flow: pickerSearchFlow, tracking: stoppedTracking } });
+    const dialog = await screen.findByRole('dialog', { name: 'Choose a ticket' });
+    expect(within(dialog).getByText('Search Azure tickets by number or title.')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Close' }));
+    expect(engine.dispatched('tracking.closePicker')).toHaveLength(1);
+  });
   it('debounces typing into one tracking.search and chooses a result', async () => {
     const { engine, user } = renderWithEngine(<TicketPickerSheet />, { with: { flow: pickerSearchFlow } });
     engine.handle('tracking.search', (intent, mock) => {

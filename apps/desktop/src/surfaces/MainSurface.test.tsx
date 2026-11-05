@@ -1,38 +1,53 @@
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { sampleSlices } from '../ipc/fixtures';
 import { renderWithEngine } from '../test/engine';
 import { MainSurface } from './MainSurface';
 
-function appWith(hidden: string[]) {
+function appWith(hidden: string[], visiblePage: string | null = null) {
   const app = sampleSlices().app!;
-  return { ...app, pages: app.pages.map((page) => ({ ...page, hidden: hidden.includes(page.id) })) };
+  return { ...app, visiblePage, pages: app.pages.map((page) => ({ ...page, hidden: hidden.includes(page.id) })) };
+}
+
+function topBar() {
+  return screen.getByRole('banner');
 }
 
 describe('MainSurface', () => {
-  it('builds the sidebar from the engine pages, with badges and hidden pages', async () => {
-    renderWithEngine(<MainSurface />, { with: { app: appWith(['statistics']) } });
-    const nav = screen.getByRole('navigation', { name: 'Sections' });
-    expect(nav).toHaveTextContent('Weekly report');
-    expect(nav).not.toHaveTextContent('Statistics');
-    expect(screen.getByRole('button', { name: 'Overview, 1 pending suggestion' })).toBeInTheDocument();
-    expect(await screen.findByRole('heading', { level: 1, name: 'Overview' })).toBeInTheDocument();
+  it('opens on Today with the timer in the top bar', async () => {
+    renderWithEngine(<MainSurface />);
+    const nav = screen.getByRole('navigation', { name: 'Main' });
+    expect(within(nav).getByRole('button', { name: 'Today' })).toHaveAttribute('aria-current', 'page');
+    expect(within(topBar()).getByRole('group', { name: 'Running timer' })).toHaveTextContent('#4821');
+    expect(await screen.findByRole('main')).toBeInTheDocument();
   });
 
-  it('reports the visible page to the engine and follows navigation', async () => {
+  it('reports what the view shows to the engine and follows navigation', async () => {
     const { engine, user } = renderWithEngine(<MainSurface />);
-    await waitFor(() => expect(engine.dispatched('app.setVisiblePage')).toEqual([{ type: 'app.setVisiblePage', page: 'overview' }]));
-    await user.click(screen.getByRole('button', { name: /^History/ }));
-    expect(await screen.findByRole('heading', { level: 1, name: 'History' })).toBeInTheDocument();
-    expect(engine.dispatched('app.setVisiblePage').at(-1)).toEqual({ type: 'app.setVisiblePage', page: 'history' });
+    await waitFor(() =>
+      expect(engine.dispatched('app.setVisiblePage')).toEqual([{ type: 'app.setVisiblePage', page: 'overview', also: ['dayReview'] }]),
+    );
+    await user.click(screen.getByRole('button', { name: 'Insights' }));
+    await waitFor(() =>
+      expect(engine.dispatched('app.setVisiblePage').at(-1)).toEqual({ type: 'app.setVisiblePage', page: 'statistics', also: ['weeklyReport'] }),
+    );
+    await user.click(within(topBar()).getByRole('button', { name: 'Settings' }));
+    await waitFor(() => expect(engine.dispatched('app.setVisiblePage').at(-1)).toEqual({ type: 'app.setVisiblePage', page: 'settings', also: [] }));
   });
 
-  it('falls back to Overview when the open page gets hidden', async () => {
+  it('reopens on the view of the page the engine last saw', async () => {
+    const { engine } = renderWithEngine(<MainSurface />, { with: { app: appWith([], 'timeEditor') } });
+    expect(screen.getByRole('button', { name: 'Timesheet' })).toHaveAttribute('aria-current', 'page');
+    await waitFor(() => expect(engine.dispatched('app.setVisiblePage').at(-1)).toMatchObject({ page: 'timeEditor' }));
+  });
+
+  it('falls back when the open view gets hidden', async () => {
     const { engine, user } = renderWithEngine(<MainSurface />);
-    await user.click(screen.getByRole('button', { name: /^Figma/ }));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Figma' })).toBeInTheDocument();
-    act(() => engine.setSlice('app', appWith(['figma'])));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Overview' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Insights' }));
+    await waitFor(() => expect(engine.dispatched('app.setVisiblePage').at(-1)).toMatchObject({ page: 'statistics' }));
+    act(() => engine.setSlice('app', appWith(['statistics', 'weeklyReport'])));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Today' })).toHaveAttribute('aria-current', 'page'));
+    expect(screen.queryByRole('button', { name: 'Insights' })).toBeNull();
   });
 
   it('shows and dismisses the latest error', async () => {
@@ -44,9 +59,12 @@ describe('MainSurface', () => {
     expect(engine.dispatched('app.dismissError')).toHaveLength(1);
   });
 
-  it('pauses and resumes branch watching from the sidebar', async () => {
+  it('pauses and stops the timer from the top bar', async () => {
     const { engine, user } = renderWithEngine(<MainSurface />);
-    await user.click(screen.getByRole('button', { name: 'Pause watching' }));
-    expect(engine.dispatched('repositories.toggleWatching')).toHaveLength(1);
+    const timer = within(topBar()).getByRole('group', { name: 'Running timer' });
+    await user.click(within(timer).getByRole('button', { name: 'Pause timer' }));
+    expect(engine.dispatched('tracking.pause')).toHaveLength(1);
+    await user.click(within(timer).getByRole('button', { name: 'Stop timer' }));
+    expect(engine.dispatched('tracking.stop')).toHaveLength(1);
   });
 });

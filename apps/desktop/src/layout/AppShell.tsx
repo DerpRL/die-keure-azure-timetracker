@@ -1,136 +1,201 @@
 import { useId, useMemo, type ReactNode } from 'react';
-import { Badge, StatusDot, type Tone } from '../components/Badge';
-import { ClockIcon } from '../components/icons';
-import { pageShortcutDigit, usePageCommands } from '../shortcuts/hooks';
-import { formatKeyCombo } from '../shortcuts/keys';
+import { AppLogo } from '../components/AppLogo';
+import { IconButton } from '../components/Button';
+import { KeyboardShortcut } from '../components/KeyboardShortcut';
+import { SearchIcon, SettingsIcon } from '../components/icons';
+import { pageShortcutDigit, useCommands, useShortcutUi } from '../shortcuts/hooks';
+import { PALETTE_SHORTCUT } from '../shortcuts/ShortcutProvider';
+import { formatKeyCombo, type KeyCombo } from '../shortcuts/keys';
 import { usePlatform, type Platform } from '../shortcuts/platform';
+import type { Command } from '../shortcuts/store';
 import { cx } from '../utils/cx';
-import { visibleNavGroups, type FeatureFlags, type PageId } from './navigation';
+import {
+  LEGACY_ROUTES,
+  PAGE_IDS,
+  PLACES,
+  placeRoute,
+  resolveRoute,
+  routesEqual,
+  visiblePlaces,
+  type NavTarget,
+  type PageVisibility,
+  type PlaceId,
+  type Route,
+} from './navigation';
 import { PageTitleContext } from './pageTitle';
 import styles from './AppShell.module.css';
 
-export interface NavIndicator {
-  /** Count badge, e.g. pending branch changes on Overview. */
-  count?: number;
-  /** Small dot, e.g. a pending day review. */
-  dot?: boolean;
-  /** What the indicator means, for screen readers: "3 pending branch changes", "Review pending". */
-  label: string;
-  tone?: Tone;
-}
+export const SETTINGS_SHORTCUT: KeyCombo = { key: ',', mod: true };
+
+/** The places' colours in the palette (2.2 structure map: blue, green, purple, orange). */
+const PLACE_SWATCHES: Readonly<Record<PlaceId, string>> = {
+  today: 'var(--chart-2)',
+  timesheet: 'var(--chart-1)',
+  insights: 'var(--chart-3)',
+  settings: 'var(--chart-4)',
+};
+
+/** Views that get their own "Go to" entry in the palette besides the places. */
+const PALETTE_VIEWS: ReadonlyArray<{ route: Route; label: string; keywords: readonly string[] }> = [
+  { route: { place: 'insights', view: 'report' }, label: 'Weekly report', keywords: ['status', 'markdown'] },
+  { route: { place: 'insights', view: 'patterns' }, label: 'Patterns', keywords: ['heatmap', 'statistics'] },
+  { route: { place: 'timesheet', view: 'day' }, label: 'Day in Timesheet', keywords: ['time editor', 'edit', 'split'] },
+  { route: { place: 'timesheet', view: 'list' }, label: 'Worklog list', keywords: ['history', 'csv', 'export'] },
+  { route: { place: 'timesheet', view: 'drafts' }, label: 'Offline drafts', keywords: ['offline', 'upload'] },
+  { route: { place: 'settings', view: 'git' }, label: 'Git repositories', keywords: ['branches', 'repositories'] },
+  { route: { place: 'settings', view: 'figma' }, label: 'Figma', keywords: ['design', 'sources'] },
+  { route: { place: 'settings', view: 'appearance' }, label: 'Appearance', keywords: ['theme', 'dark', 'size'] },
+];
 
 export interface AppShellProps {
-  currentPage: PageId;
-  onNavigate: (page: PageId) => void;
+  route: Route;
+  onNavigate: (target: NavTarget) => void;
+  /** Which 1.14 pages are reachable (hidden by the user, unavailable on this OS). */
+  isPageVisible: PageVisibility;
   /** Defaults to the detected platform. */
   platform?: Platform;
-  features?: FeatureFlags;
-  /** Pages hidden by the user or unavailable on this OS (engine `app.pages`). */
-  hiddenPages?: readonly string[];
-  indicators?: Partial<Record<PageId, NavIndicator>>;
-  /** Bottom of the sidebar: watching status and the pause button in 1.14. */
-  sidebarFooter?: ReactNode;
-  /** Usually a `PageHeader`; rendered at the top of the main landmark. */
-  header?: ReactNode;
-  /** Update, preview and error banners between the header and the page. */
+  /** The running timer in the top bar. */
+  timer?: ReactNode;
+  /** Update, preview and error banners between the top bar and the view. */
   banners?: ReactNode;
   children: ReactNode;
 }
 
 /**
- * Main window frame: sidebar navigation (Today / Insights / Setup), page header, banners and the
- * scrolling page. Registers ⌘1…⌘0 (Ctrl on Windows) in the visible sidebar order.
+ * Main window frame (2.2 layout): a top bar with the app name, Today / Timesheet / Insights, the
+ * command palette, the running timer and Settings behind the gear; then banners and the view.
+ * Registers ⌘1… for the top-bar places in their order, ⌘, for Settings and a palette entry per
+ * place and per main view. The 1.14 page ids stay reachable as hidden `page.<id>` commands, which
+ * pages use to open each other.
  */
 export function AppShell({
-  currentPage,
+  route,
   onNavigate,
+  isPageVisible,
   platform: platformOverride,
-  features,
-  hiddenPages,
-  indicators = {},
-  sidebarFooter,
-  header,
+  timer,
   banners,
   children,
 }: AppShellProps) {
   const detected = usePlatform();
   const platform = platformOverride ?? detected;
-  const groups = useMemo(
-    () => visibleNavGroups({ platform, features, hiddenPages }),
-    [platform, features, hiddenPages],
-  );
-  const pages = useMemo(() => groups.flatMap((entry) => entry.pages), [groups]);
-  usePageCommands(pages, onNavigate);
-  const idPrefix = useId();
+  const { openPalette } = useShortcutUi();
+  const titleId = `${useId()}-title`;
+
+  const places = useMemo(() => visiblePlaces(isPageVisible), [isPageVisible]);
+  const tabs = places.filter((place) => place.inTopBar);
+
+  const commands = useMemo((): Command[] => {
+    const placeCommands = places.map((place): Command => {
+      const digit = place.inTopBar ? pageShortcutDigit(tabs.indexOf(place)) : null;
+      return {
+        id: `place.${place.id}`,
+        label: place.title,
+        group: 'Pages',
+        swatch: PLACE_SWATCHES[place.id],
+        keywords: ['go to', 'open'],
+        shortcut: place.id === 'settings' ? SETTINGS_SHORTCUT : digit ? { key: digit, mod: true } : undefined,
+        allowInInputs: true,
+        onAction: () => onNavigate(placeRoute(place.id)),
+      };
+    });
+    const viewCommands = PALETTE_VIEWS.filter((entry) => routesEqual(resolveRoute(entry.route, isPageVisible), entry.route)).map(
+      (entry): Command => ({
+        id: `view.${entry.route.place}.${'view' in entry.route ? entry.route.view : ''}`,
+        label: entry.label,
+        group: 'Pages',
+        swatch: PLACE_SWATCHES[entry.route.place],
+        keywords: ['go to', 'open', ...entry.keywords],
+        onAction: () => onNavigate(entry.route),
+      }),
+    );
+    // 1.14 page ids, for pages that open each other ("Open this day in History").
+    const legacyCommands = PAGE_IDS.filter(isPageVisible).map(
+      (page): Command => ({
+        id: `page.${page}`,
+        label: page,
+        group: 'Pages',
+        showInPalette: false,
+        onAction: () => onNavigate(LEGACY_ROUTES[page]),
+      }),
+    );
+    return [...placeCommands, ...viewCommands, ...legacyCommands];
+    // `tabs` derives from `places`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [places, isPageVisible, onNavigate]);
+  useCommands(commands);
+
+  const current = PLACES[route.place];
+  const settingsOpen = route.place === 'settings';
+  const shortcutAria = (place: PlaceId) => {
+    if (place === 'settings') return formatKeyCombo(SETTINGS_SHORTCUT, platform).aria;
+    const digit = pageShortcutDigit(tabs.findIndex((tab) => tab.id === place));
+    return digit ? formatKeyCombo({ key: digit, mod: true }, platform).aria : undefined;
+  };
 
   return (
     <div className={styles.shell} data-surface="main">
       <a href="#main-content" className={styles.skipLink}>
         Skip to content
       </a>
-      <nav aria-label="Sections" className={styles.sidebar}>
-        <div className={styles.brand}>
-          <span className={styles.brandTile} aria-hidden="true">
-            <ClockIcon />
-          </span>
-          <span className={styles.brandText}>
-            <span className={styles.brandName}>Azure</span>
-            <span className={styles.brandSub}>timetracker</span>
-          </span>
+      <header className={styles.topBar}>
+        <div className={styles.topLeft}>
+          <div className={styles.brand}>
+            <AppLogo />
+            <span className={styles.brandName}>Azure timetracker</span>
+          </div>
+          <nav aria-label="Main" className={styles.tabs}>
+            {tabs.map((place) => {
+              const selected = place.id === route.place;
+              return (
+                <button
+                  key={place.id}
+                  type="button"
+                  className={cx(styles.tab, selected && styles.tabSelected)}
+                  aria-current={selected ? 'page' : undefined}
+                  aria-keyshortcuts={shortcutAria(place.id)}
+                  onClick={() => onNavigate(placeRoute(place.id))}
+                >
+                  {place.title}
+                </button>
+              );
+            })}
+          </nav>
         </div>
-        <div className={styles.groups}>
-          {groups.map(({ group, pages: groupPages }) => {
-            const headingId = `${idPrefix}-${group.id}`;
-            return (
-              <div key={group.id} className={styles.group}>
-                <h2 id={headingId} className={styles.groupTitle}>
-                  {group.title}
-                </h2>
-                <ul role="list" aria-labelledby={headingId} className={styles.list}>
-                  {groupPages.map((page) => {
-                    const selected = page.id === currentPage;
-                    const indicator = indicators[page.id];
-                    const digit = pageShortcutDigit(pages.indexOf(page));
-                    const Icon = page.icon;
-                    return (
-                      <li key={page.id}>
-                        <button
-                          type="button"
-                          className={cx(styles.item, selected && styles.selected)}
-                          aria-current={selected ? 'page' : undefined}
-                          // "Overview, 3 pending branch changes": the visible label stays first (WCAG 2.5.3).
-                          aria-label={indicator ? `${page.title}, ${indicator.label}` : undefined}
-                          aria-keyshortcuts={digit ? formatKeyCombo({ key: digit, mod: true }, platform).aria : undefined}
-                          onClick={() => onNavigate(page.id)}
-                        >
-                          <Icon className={styles.itemIcon} />
-                          <span className={styles.itemLabel}>{page.title}</span>
-                          {indicator?.count ? (
-                            <Badge tone={indicator.tone ?? 'warning'} accessibleLabel={indicator.label}>
-                              {indicator.count}
-                            </Badge>
-                          ) : null}
-                          {indicator?.dot ? <StatusDot tone={indicator.tone ?? 'running'} label={indicator.label} /> : null}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            );
-          })}
+        <div className={styles.topRight}>
+          <button
+            type="button"
+            className={styles.search}
+            aria-keyshortcuts={formatKeyCombo(PALETTE_SHORTCUT, platform).aria}
+            onClick={openPalette}
+          >
+            <span className={styles.searchLabel}>
+              <SearchIcon className={styles.searchIcon} />
+              Search or jump to…
+            </span>
+            <KeyboardShortcut shortcut={PALETTE_SHORTCUT} decorative />
+          </button>
+          {timer}
+          <IconButton
+            label="Settings"
+            icon={SettingsIcon}
+            variant="secondary"
+            shortcut={SETTINGS_SHORTCUT}
+            className={cx(styles.gear, settingsOpen && styles.gearSelected)}
+            aria-current={settingsOpen ? 'page' : undefined}
+            onPress={() => onNavigate(placeRoute('settings'))}
+          />
         </div>
-        {sidebarFooter ? <div className={styles.sidebarFooter}>{sidebarFooter}</div> : null}
-      </nav>
+      </header>
+      {banners ? <div className={styles.banners}>{banners}</div> : null}
       <main
         id="main-content"
         tabIndex={-1}
         className={styles.main}
-        aria-labelledby={header ? `${idPrefix}-title` : undefined}
+        aria-labelledby={titleId}
+        data-place={current.id}
       >
-        <PageTitleContext.Provider value={`${idPrefix}-title`}>{header}</PageTitleContext.Provider>
-        {banners ? <div className={styles.banners}>{banners}</div> : null}
-        <div className={styles.page}>{children}</div>
+        <PageTitleContext.Provider value={titleId}>{children}</PageTitleContext.Provider>
       </main>
     </div>
   );

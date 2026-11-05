@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Button } from '../../components/Button';
 import { LoadingRegion, Skeleton } from '../../components/EmptyState';
 import { TextField } from '../../components/Fields';
@@ -7,92 +8,120 @@ import { Checkbox, Switch } from '../../components/Toggles';
 import type { CalendarChoice, MicrophoneApp } from '../../ipc/contract';
 import { useAction, useSlice } from '../../state/hooks';
 import { calendarAccessText, formatTime, MICROPHONE_APPS, microphoneAppLabel } from './labels';
-import { Divider, Hint, InlineIssue, SettingsGroup, SettingsSection } from './SettingsSection';
+import { Divider, Hint, InlineIssue, SettingsGroup, SettingsSection, ToggleRow } from './SettingsSection';
 import { useSettingsForm } from './SettingsForm';
 import { activityOptions, DEFAULT_ACTIVITY_KEY } from './TrackingSection';
 import { issueFor } from './validation';
 import styles from './settings.module.css';
 
-/** 1.14 `CalendarChoices`: none checked shows every calendar. */
-function CalendarChoices({ calendars }: { calendars: readonly CalendarChoice[] }) {
+/**
+ * Whether Today shows a calendar. `selectedCalendarIds` lists the chosen calendars; none chosen
+ * means every calendar (1.14 `CalendarChoices`).
+ */
+export function calendarShown(selectedIds: readonly string[], id: string): boolean {
+  return selectedIds.length === 0 || selectedIds.includes(id);
+}
+
+/**
+ * Shows or hides one calendar. Turning one off while all are shown chooses all the others;
+ * choosing every calendar again stores "none chosen" (all), so new calendars keep appearing.
+ */
+export function setCalendarShown(selectedIds: readonly string[], allIds: readonly string[], id: string, shown: boolean): string[] {
+  const current = selectedIds.length === 0 ? [...allIds] : [...selectedIds];
+  const next = shown ? (current.includes(id) ? current : [...current, id]) : current.filter((entry) => entry !== id);
+  return allIds.length > 0 && allIds.every((entry) => next.includes(entry)) ? [] : next;
+}
+
+function calendarName(calendar: CalendarChoice): string {
+  return calendar.source ? `${calendar.title} · ${calendar.source}` : calendar.title;
+}
+
+/** One switch per calendar (Sources overview and Calendars): which calendars Today shows. */
+export function CalendarSwitches({ calendars }: { calendars: readonly CalendarChoice[] }) {
   const { draft, update } = useSettingsForm();
-  const selected = new Set(draft.selectedCalendarIds);
-  const toggle = (id: string, on: boolean) =>
-    update((current) => ({
-      ...current,
-      selectedCalendarIds: on
-        ? current.selectedCalendarIds.includes(id)
-          ? current.selectedCalendarIds
-          : [...current.selectedCalendarIds, id]
-        : current.selectedCalendarIds.filter((entry) => entry !== id),
-    }));
+  const allIds = calendars.map((calendar) => calendar.id);
   if (calendars.length === 0) return <Hint>No calendars were found on this Mac.</Hint>;
   return (
-    <fieldset className={styles.fieldset}>
-      <legend className={styles.legend}>Calendars</legend>
-      <Hint>Leave all unchecked to show every calendar.</Hint>
-      <div className={styles.checkGrid}>
-        {calendars.map((calendar) => (
-          <Checkbox key={calendar.id} isSelected={selected.has(calendar.id)} onChange={(on) => toggle(calendar.id, on)}>
-            <span className={styles.calendarLabel}>
-              {calendar.color ? <span aria-hidden="true" className={styles.swatch} style={{ background: calendar.color }} /> : null}
-              {calendar.source ? `${calendar.title} · ${calendar.source}` : calendar.title}
-            </span>
-          </Checkbox>
-        ))}
-      </div>
-    </fieldset>
+    <ul role="list" aria-label="Calendars" className={styles.calendarList}>
+      {calendars.map((calendar) => {
+        const shown = calendarShown(draft.selectedCalendarIds, calendar.id);
+        return (
+          <li key={calendar.id} className={styles.calendarRow}>
+            <span aria-hidden="true" className={styles.swatch} style={calendar.color ? { background: calendar.color } : undefined} />
+            <span className={shown ? styles.calendarName : `${styles.calendarName} ${styles.muted}`}>{calendarName(calendar)}</span>
+            <Switch
+              aria-label={calendarName(calendar)}
+              isSelected={shown}
+              onChange={(on) =>
+                update((current) => ({ ...current, selectedCalendarIds: setCalendarShown(current.selectedCalendarIds, allIds, calendar.id, on) }))
+              }
+            >
+              {null}
+            </Switch>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
-/** Settings → Meetings → Apple Calendar (1.14 `calendarSection`). macOS only. */
-export function CalendarSection() {
-  const { draft, update, preview } = useSettingsForm();
+/** Calendar access: the status line and "Allow calendar access…" until it is granted. */
+export function CalendarAccess({ children }: { children?: ReactNode }) {
+  const { preview } = useSettingsForm();
   const agenda = useSlice('agenda');
   const enable = useAction();
   return (
+    <LoadingRegion label="Loading calendars" isLoading={agenda === undefined} placeholder={<Skeleton lines={3} />}>
+      {agenda ? (
+        agenda.access === 'authorized' ? (
+          children
+        ) : (
+          <>
+            <p className={styles.status}>
+              <InfoIcon className={styles.statusIcon} />
+              <span>{calendarAccessText(agenda.access)}</span>
+            </p>
+            {agenda.access !== 'unsupported' ? (
+              <div className={styles.row}>
+                <Button onPress={() => void enable.run({ type: 'settings.enableCalendar' })} isDisabled={preview} isPending={enable.pending}>
+                  Allow calendar access…
+                </Button>
+              </div>
+            ) : null}
+          </>
+        )
+      ) : null}
+      {agenda?.issue ? <InlineIssue tone="warning">{agenda.issue}</InlineIssue> : null}
+      {enable.error ? <InlineIssue>{enable.error.message}</InlineIssue> : null}
+    </LoadingRegion>
+  );
+}
+
+/** Settings → Calendars: the calendar on Today, access and which calendars it shows. macOS only. */
+export function CalendarSection() {
+  const { draft, update } = useSettingsForm();
+  const agenda = useSlice('agenda');
+  return (
     <SettingsSection id="calendar" subtitle="Calendar events stay on your Mac and are never sent to Azure or 7pace.">
-      <Switch isSelected={draft.calendarEnabled} onChange={(calendarEnabled) => update((current) => ({ ...current, calendarEnabled }))}>
-        Show my Apple Calendar agenda
-      </Switch>
-      <LoadingRegion label="Loading calendars" isLoading={agenda === undefined} placeholder={<Skeleton lines={3} />}>
-        {agenda ? (
-          agenda.access === 'authorized' ? (
-            <>
-              <p className={styles.status}>
-                <CheckIcon className={styles.statusIcon} />
-                <span>{calendarAccessText(agenda.access)}</span>
-              </p>
-              <CalendarChoices calendars={agenda.calendars} />
-            </>
-          ) : (
-            <>
-              <p className={styles.status}>
-                <InfoIcon className={styles.statusIcon} />
-                <span>{calendarAccessText(agenda.access)}</span>
-              </p>
-              {agenda.access !== 'unsupported' ? (
-                <div className={styles.row}>
-                  <Button
-                    onPress={() => void enable.run({ type: 'settings.enableCalendar' })}
-                    isDisabled={preview}
-                    isPending={enable.pending}
-                  >
-                    Allow calendar access…
-                  </Button>
-                </div>
-              ) : null}
-            </>
-          )
-        ) : null}
-        {agenda?.issue ? <InlineIssue tone="warning">{agenda.issue}</InlineIssue> : null}
-        {enable.error ? <InlineIssue>{enable.error.message}</InlineIssue> : null}
-      </LoadingRegion>
+      <ToggleRow
+        title="Show my calendar on Today"
+        help="Meetings appear next to your tracked time and can suggest Meeting tracking."
+        isSelected={draft.calendarEnabled}
+        onChange={(calendarEnabled) => update((current) => ({ ...current, calendarEnabled }))}
+      />
+      <CalendarAccess>
+        <p className={styles.status}>
+          <CheckIcon className={styles.statusIcon} />
+          <span>{calendarAccessText(agenda?.access ?? 'authorized')}</span>
+        </p>
+        <CalendarSwitches calendars={agenda?.calendars ?? []} />
+        <Hint>Every calendar is shown until you turn one off.</Hint>
+      </CalendarAccess>
     </SettingsSection>
   );
 }
 
-/** Settings → Meetings → Meeting suggestions (1.14 `meetingSection`). macOS only. */
+/** Settings → Targets & reminders → Meetings (1.14 `meetingSection`). macOS only. */
 export function MeetingSuggestionsSection() {
   const { draft, update, issues } = useSettingsForm();
   const agenda = useSlice('agenda');
@@ -102,47 +131,40 @@ export function MeetingSuggestionsSection() {
   const calendarReady = draft.calendarEnabled && agenda?.access === 'authorized';
   return (
     <SettingsSection id="meetings">
-      <Switch
+      <ToggleRow
+        title="Suggest tracking when a calendar meeting starts"
+        help="Asks first. Your timer never switches on its own. All-day, declined, canceled and free events are skipped."
         isSelected={meetings.enabled}
         onChange={(enabled) => update((current) => ({ ...current, meetings: { ...current.meetings, enabled } }))}
-      >
-        Suggest tracking when a meeting starts
-      </Switch>
-      <Hint>
-        Uses your selected Apple calendars. Timed events open a suggestion once; all-day, declined, canceled, and free events are
-        skipped. Your timer changes only after you confirm Start.
-      </Hint>
+      />
       {!calendarReady ? (
-        <InlineIssue tone="warning">Enable Apple Calendar access in the section above to receive meeting suggestions.</InlineIssue>
+        <InlineIssue tone="warning">Turn on the calendar and allow access under Sources → Calendars to receive meeting suggestions.</InlineIssue>
       ) : null}
-      <TextField
-        label="Default meeting ticket"
-        description="Optional fallback when the meeting has no ticket. Put #33984 in its title or an Azure work-item link in its title, URL, or notes to link a specific ticket."
-        placeholder="Choose a ticket for each meeting"
-        value={meetings.defaultTicket}
-        onChange={(defaultTicket) => update((current) => ({ ...current, meetings: { ...current.meetings, defaultTicket } }))}
-        isInvalid={ticketIssue !== undefined}
-        errorMessage={ticketIssue}
-        inputMode="numeric"
-        width="narrow"
-        autoComplete="off"
-      />
-      <Select
-        label="Meeting activity"
-        items={activityOptions(flow?.activityTypes ?? [], 'Suggest Stand-up or Overleg / Meeting', meetings.activityTypeId)}
-        selectedKey={meetings.activityTypeId === '' ? DEFAULT_ACTIVITY_KEY : meetings.activityTypeId}
-        onSelectionChange={(key) =>
-          update((current) => ({
-            ...current,
-            meetings: { ...current.meetings, activityTypeId: key === DEFAULT_ACTIVITY_KEY || key === null ? '' : String(key) },
-          }))
-        }
-        width="narrow"
-      />
-      <Hint>
-        The suggested ticket and activity can both be changed before starting. When a meeting timer ends, the app offers to resume
-        your previous ticket and activity.
-      </Hint>
+      <div className={styles.fieldPair}>
+        <Select
+          label="Default activity"
+          items={activityOptions(flow?.activityTypes ?? [], 'Suggest Stand-up or Overleg / Meeting', meetings.activityTypeId)}
+          selectedKey={meetings.activityTypeId === '' ? DEFAULT_ACTIVITY_KEY : meetings.activityTypeId}
+          onSelectionChange={(key) =>
+            update((current) => ({
+              ...current,
+              meetings: { ...current.meetings, activityTypeId: key === DEFAULT_ACTIVITY_KEY || key === null ? '' : String(key) },
+            }))
+          }
+        />
+        <TextField
+          label="Default meeting ticket"
+          description="For meetings without a ticket. Put #33984 or an Azure work-item link in a meeting to use that ticket instead."
+          placeholder="Choose a ticket for each meeting"
+          value={meetings.defaultTicket}
+          onChange={(defaultTicket) => update((current) => ({ ...current, meetings: { ...current.meetings, defaultTicket } }))}
+          isInvalid={ticketIssue !== undefined}
+          errorMessage={ticketIssue}
+          inputMode="numeric"
+          autoComplete="off"
+        />
+      </div>
+      <Hint>Both can be changed before starting. When a meeting timer ends, the app offers to resume your previous ticket.</Hint>
     </SettingsSection>
   );
 }
@@ -193,7 +215,7 @@ function MicrophoneDiagnostics({ apps }: { apps: readonly MicrophoneApp[] }) {
   );
 }
 
-/** Settings → Meetings → Microphone meetings (1.14 `MicrophoneSettings`). */
+/** Settings → Targets & reminders → Microphone meetings (1.14 `MicrophoneSettings`). */
 export function MicrophoneSection() {
   const { draft, update, os, app } = useSettingsForm();
   const preferences = draft.microphone;
@@ -207,17 +229,13 @@ export function MicrophoneSection() {
     });
   return (
     <SettingsSection id="microphone" subtitle="Meeting detection from apps that use your microphone.">
-      <Switch
+      <ToggleRow
+        title="Suggest tracking when an app uses my microphone"
+        help="Select the apps to watch. Suggestions appear after 4 seconds of input use. Choose an activity and confirm before your timer changes."
         isSelected={preferences.enabled}
         isDisabled={unavailable}
         onChange={(enabled) => update((current) => ({ ...current, microphone: { ...current.microphone, enabled } }))}
-      >
-        Suggest tracking when an app uses my microphone
-      </Switch>
-      <Hint>
-        Select the apps to watch. Suggestions appear after 4 seconds of input use. Choose an activity and confirm before your timer
-        changes.
-      </Hint>
+      />
       <fieldset className={styles.fieldset} disabled={!preferences.enabled || unavailable}>
         <legend className={styles.legend}>Apps to watch</legend>
         <div className={styles.checkGrid}>

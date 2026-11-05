@@ -1,0 +1,424 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.intro,
+.caption {
+  color: var(--color-text-secondary);
+}
+
+.caption {
+  font-size: var(--font-size-footnote);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.filter {
+  flex: 1 1 16rem;
+  max-width: 28.75rem;
+}
+
+.entries {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+/* The day card: heading, actions and the Calendar Blocks strip. */
+.dayCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-width: 0;
+  padding: var(--space-5);
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--elevation-1);
+}
+
+.sectionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+}
+
+.headingText {
+  display: flex;
+  flex: 1 1 16rem;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.sectionTitle {
+  font-size: var(--font-size-title-2);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.015em;
+  line-height: var(--line-height-tight);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.dayOverview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.legendRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
+.flags {
+  display: contents;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  font-variant-numeric: tabular-nums;
+}
+
+.overlapSwatch,
+.gapSwatch {
+  flex: none;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 0.1875rem;
+}
+
+.overlapSwatch {
+  background: var(--color-danger);
+}
+
+.gapSwatch {
+  border: var(--size-border) dashed var(--color-control-border);
+  background: var(--color-border);
+}
+
+/* The entries table as a flush card with a summary footer. */
+.tableCard {
+  min-width: 0;
+  overflow: hidden;
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--elevation-1);
+}
+
+.tableCard .table {
+  border: 0;
+  border-radius: 0;
+}
+
+.task button {
+  min-height: 0;
+  padding-inline: 0;
+  font-weight: var(--font-weight-semibold);
+  text-align: start;
+}
+
+.noTicket {
+  font-weight: var(--font-weight-semibold);
+}
+
+.mono {
+  font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.duration {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Rows that overlap another entry carry a soft danger tint, plus the "overlaps 10m" text. */
+.overlapRow:not([data-selected], [data-hovered]) {
+  background: color-mix(in srgb, var(--color-danger-bg) 60%, var(--color-surface));
+}
+
+.overlapNote {
+  color: var(--color-danger-text);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.tableSummary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-top: var(--size-border) solid var(--color-separator);
+  background: var(--color-surface-sunken);
+  font-size: var(--font-size-body);
+}
+
+.summaryCount,
+.summaryTotal {
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.summaryNote {
+  color: var(--color-text-secondary);
+}
+
+@media (forced-colors: active) {
+  .overlapSwatch {
+    background: CanvasText;
+  }
+}
+
+.warningIcon {
+  flex: none;
+  color: var(--color-warning);
+}
+
+.successIcon {
+  flex: none;
+  color: var(--color-success);
+}
+
+.success,
+.noticeTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--font-weight-medium);
+}
+
+.savedNotice {
+  padding: var(--space-3) var(--space-4);
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-bg);
+}
+
+.savedNotice summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  font-weight: var(--font-weight-medium);
+}
+
+.savedNotice[open] summary {
+  margin-bottom: var(--space-3);
+}
+
+/* Sheets */
+
+.sheetBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.groupTitle {
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-semibold);
+}
+
+.subTitle {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+}
+
+.fieldRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-6);
+}
+
+.reviewArea:empty {
+  display: none;
+}
+
+.notice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.previewList,
+.resultList,
+.disclosureList,
+.changeList,
+.issueList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.previewRow,
+.resultRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.previewLabel,
+.resultTitle {
+  font-weight: var(--font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.barTrack {
+  position: relative;
+  height: 0.625rem;
+  border-radius: var(--radius-xs);
+  background: var(--color-surface-sunken);
+}
+
+.bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 3px;
+  border-radius: var(--radius-xs);
+}
+
+.barBefore {
+  background: var(--color-warning);
+}
+
+/* After bars are striped, so before and after differ by more than colour. */
+.barAfter {
+  background: repeating-linear-gradient(135deg, var(--color-accent) 0 6px, var(--color-primary-hover) 6px 9px);
+}
+
+@media (forced-colors: active) {
+  .barBefore {
+    background: CanvasText;
+  }
+  .barAfter {
+    background: Highlight;
+  }
+}
+
+.changeCard,
+.issueCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.changeNeedsReview {
+  border-color: var(--color-warning);
+  border-width: 2px;
+}
+
+.changeHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.issueTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-semibold);
+}
+
+.selectable {
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.disclosure summary {
+  cursor: pointer;
+  font-weight: var(--font-weight-medium);
+}
+
+.disclosure[open] summary {
+  margin-bottom: var(--space-2);
+}
+
+.boundaryRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+/* 2.2 Timesheet · Day: "On the clock" card, then the entries with their toolbar. */
+.clockCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.clockCard .sectionTitle,
+.entries .sectionTitle {
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0;
+}
+
+.entries {
+  gap: var(--space-3);
+}
+
+.toolbar {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.task {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.timeRange {
+  white-space: nowrap;
+}

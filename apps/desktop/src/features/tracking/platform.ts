@@ -4,8 +4,7 @@
  */
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { isTauri } from '../../ipc';
-import { hidePanel, quit, showMain, togglePanel } from '../../ipc/shell';
-import type { PageId } from '../../layout/navigation';
+import { hidePanel, quit, showMain, togglePanel, type MainTarget } from '../../ipc/shell';
 
 function settle(promise: Promise<unknown>, what: string): void {
   promise.catch((error: unknown) => {
@@ -30,7 +29,7 @@ export function openExternal(url: string): void {
 }
 
 /** Shows the main window on `page` (hides the panel). */
-export function openMainPage(page?: PageId): void {
+export function openMainPage(page?: MainTarget): void {
   settle(showMain(page), 'show the main window');
 }
 

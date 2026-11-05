@@ -9,7 +9,10 @@ import styles from './settings.module.css';
 
 export const SAVE_SHORTCUT: KeyCombo = { key: 's', mod: true };
 
-/** Save and Revert for the whole draft (1.14's bottom bar), with the outcome. */
+/**
+ * Save and Revert for the whole draft, shared by every Settings view (2.2 layout: "No unsaved
+ * changes · ⌘S saves"), with the outcome and the problems that block saving.
+ */
 export function SaveBar() {
   const form = useSettingsForm();
   const connection = useSlice('connection');
@@ -47,12 +50,9 @@ export function SaveBar() {
             {saved && !dirty && !saving ? <SuccessIcon className={styles.statusIcon} /> : null}
             {dirty && !saving ? <CircleIcon className={styles.statusIcon} /> : null}
             <span>{state}</span>
+            <span className={styles.saveHint} aria-hidden="true">{` · ${mod} saves`}</span>
           </p>
-          <p className={styles.hint}>
-            {preview
-              ? 'Preview mode: saving settings and credentials is turned off.'
-              : `${mod} saves all sections. Appearance, interruptions, quiet hours, Figma and launch-at-login changes apply immediately.`}
-          </p>
+          {preview ? <p className={styles.hint}>Preview mode: saving settings and credentials is turned off.</p> : null}
         </div>
         <div className={styles.saveButtons}>
           <Button onPress={form.revert} isDisabled={!dirty || saving}>
@@ -64,7 +64,6 @@ export function SaveBar() {
             isPending={saving}
             isDisabled={busy || preview}
             shortcut={SAVE_SHORTCUT}
-            showShortcut
           >
             Save changes
           </Button>

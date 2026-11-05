@@ -4,7 +4,7 @@ import { useSlice } from '../../state/hooks';
 
 /**
  * Activity colours outside the statistics charts. Statistics assigns its palette by activity ID
- * order (`activityColors` in pages/statistics/model.ts, as 1.14 did); everything else uses the
+ * order (`activityColors` in places/insights/explore/model.ts, as 1.14 did); everything else uses the
  * same rule over the workspace's activity types, so an activity keeps one colour on every page.
  */
 export type ActivityColors = ReadonlyMap<string, number>;

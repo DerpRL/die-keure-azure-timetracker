@@ -1,0 +1,100 @@
+/* A place's content (2.2 layout): `main` padding 24 / 32 / 40 px, rows 20 px apart. */
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  padding: var(--space-6) var(--space-8) var(--space-10);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.lead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.titleBlock {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.large {
+  font-size: var(--font-size-title-1);
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+  font-variant-numeric: tabular-nums;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* Underlined view tabs (the design's `.tabs`): 28 px apart, the current one in the accent. */
+.viewTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1.75rem;
+  border-bottom: var(--size-border) solid var(--color-border);
+}
+
+.viewTab {
+  margin-bottom: -1px;
+  padding: 0.625rem 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+  cursor: default;
+}
+
+.viewTab:hover {
+  color: var(--color-text);
+}
+
+.viewTab[aria-current='page'] {
+  border-bottom-color: var(--color-selected-indicator);
+  color: var(--color-selected-text);
+}
+
+@media (max-width: 40rem) {
+  .body {
+    padding-inline: var(--space-4);
+  }
+}
+
+@media (forced-colors: active) {
+  .viewTab[aria-current='page'] {
+    border-bottom-color: Highlight;
+  }
+}

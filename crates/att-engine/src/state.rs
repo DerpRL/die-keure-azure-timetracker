@@ -37,8 +37,25 @@ pub struct AppState {
     /// The page the main window shows, or `None` when it is closed. Pages load data only
     /// while visible, as in 1.14.x.
     pub visible_page: Option<String>,
+    /// Other pages the visible view shows part of (never `visible_page` itself, empty while the
+    /// window is closed). They load and refresh like `visible_page`.
+    pub visible_also: Vec<String>,
     /// App activity, newest first, capped at `att_core::git::AUDIT_LIMIT`.
     pub audit: Vec<AuditEntry>,
     pub session: SessionState,
     pub controllers: ControllerState,
+}
+
+impl AppState {
+    /// Every page whose content is on screen: `visible_page` first, then `visible_also`.
+    pub fn visible_pages(&self) -> Vec<String> {
+        self.visible_page.iter().chain(self.visible_also.iter()).cloned().collect()
+    }
+
+    /// The engine opens `page` in the main window itself (a prompt's "Review…", onboarding):
+    /// it is the only visible page until the UI reports its view.
+    pub(crate) fn show_page(&mut self, page: &str) {
+        self.visible_page = Some(page.to_string());
+        self.visible_also.clear();
+    }
 }

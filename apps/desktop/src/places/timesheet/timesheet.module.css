@@ -1,0 +1,18 @@
+/* Shared by the Timesheet views. */
+
+/* Row and card buttons keep their label on one line ("Track again", "Stop local timer"). */
+.noWrap button,
+.noWrap button span {
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+
+/* Header filters: the design's widths, shrinking when the header wraps. */
+.weekFilter.weekFilter,
+.dayFilter.dayFilter {
+  width: min(15rem, 100%);
+}
+
+.listFilter.listFilter {
+  width: min(13.75rem, 100%);
+}

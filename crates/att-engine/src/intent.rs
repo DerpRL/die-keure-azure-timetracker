@@ -20,9 +20,15 @@ pub enum GenericIntent {
     /// Every slice, as `[{ name, value }]`.
     #[serde(rename = "app.snapshot")]
     Snapshot,
-    /// The page the main window shows, or `null` when it is closed.
+    /// The page the main window shows, or `null` when it is closed. `also` lists the other
+    /// pages whose content the same view shows (Today shows the day review, Insights the weekly
+    /// report): they load and refresh as if they were visible too.
     #[serde(rename = "app.setVisiblePage")]
-    SetVisiblePage { page: Option<String> },
+    SetVisiblePage {
+        page: Option<String>,
+        #[cfg_attr(feature = "ts", ts(optional))]
+        also: Option<Vec<String>>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -63,9 +69,21 @@ pub async fn route(engine: &Engine, intent: Intent) -> Result<Value, IpcError> {
     match intent {
         Intent::Generic(GenericIntent::Snapshot) => serde_json::to_value(engine.snapshot())
             .map_err(|e| IpcError::new("internal", e.to_string())),
-        Intent::Generic(GenericIntent::SetVisiblePage { page }) => {
+        Intent::Generic(GenericIntent::SetVisiblePage { page, also }) => {
             let page = page.filter(|page| crate::state::PAGES.contains(&page.as_str()));
-            engine.update(|state| state.visible_page = page);
+            let mut extra: Vec<String> = Vec::new();
+            if page.is_some() {
+                for other in also.unwrap_or_default() {
+                    let known = crate::state::PAGES.contains(&other.as_str());
+                    if known && page.as_deref() != Some(other.as_str()) && !extra.contains(&other) {
+                        extra.push(other);
+                    }
+                }
+            }
+            engine.update(|state| {
+                state.visible_page = page;
+                state.visible_also = extra;
+            });
             engine.inner.wake.notify_one();
             Ok(Value::Null)
         }

@@ -1,0 +1,819 @@
+/* Insights (2.2 layout "S3 · Insights", "S3b · Patterns", "S3c · Weekly report"). Sizes follow the
+   design (cards 20 px padding, 16 px titles 15 px, 20 px between columns); colours are tokens. */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.headerStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.stepper {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.headerPicker {
+  width: 10.625rem;
+}
+
+.jumpTo {
+  flex: none;
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+}
+
+.inlineError {
+  margin: 0;
+  color: var(--color-danger-text);
+  font-size: var(--font-size-footnote);
+}
+
+.inlineIcon {
+  flex: none;
+  width: var(--size-icon-sm);
+  height: var(--size-icon-sm);
+}
+
+.alignStart {
+  align-self: flex-start;
+}
+
+.buttonRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.analyzing {
+  opacity: 0.6;
+  transition: opacity var(--motion-duration-base) var(--motion-ease-standard);
+}
+
+/* -- totals ---------------------------------------------------------------------------------- */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12.5rem, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: var(--space-5);
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--elevation-1);
+}
+
+.statTitle {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-medium);
+}
+
+.statValue {
+  font-size: 1.75rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.statNote {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+}
+
+.scope {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.scopeRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.scopeTitle {
+  margin: 0;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+}
+
+.scopeNote {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+}
+
+/* -- columns --------------------------------------------------------------------------------- */
+
+.columns {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-5);
+}
+
+.mainColumn {
+  display: flex;
+  flex: 999 1 37.5rem;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.fullRow {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+/* -- cards ----------------------------------------------------------------------------------- */
+
+.chartCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.cardTools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.005em;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--font-size-title-3);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.01em;
+}
+
+/* -- per day bars ---------------------------------------------------------------------------- */
+
+.barsPlot {
+  --total-row: 1.5rem;
+  --bar-area: 13.75rem;
+  position: relative;
+}
+
+/* Gridlines every fifth of the scale and the axis, behind the bars. */
+.barsArea {
+  position: absolute;
+  top: var(--total-row);
+  right: 0;
+  left: 0;
+  height: var(--bar-area);
+  border-bottom: var(--size-border) solid var(--color-button-border);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--color-separator) 0,
+    var(--color-separator) 1px,
+    transparent 1px,
+    transparent 20%
+  );
+  pointer-events: none;
+}
+
+.targetLine {
+  position: absolute;
+  right: 0;
+  left: 0;
+  z-index: 2;
+  border-top: 2px dashed var(--color-text-secondary);
+}
+
+.targetLabel {
+  position: absolute;
+  right: 0;
+  bottom: 0.25rem;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-xs);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.barColumns {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
+  gap: 0.875rem;
+  margin: 0;
+  padding: 0 var(--space-2);
+  list-style: none;
+}
+
+.barColumns:has(> :nth-child(15)) {
+  gap: 0.25rem;
+}
+
+.barColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.barTotal {
+  height: calc(var(--total-row) - 0.375rem);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.barTotalNone {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-regular);
+}
+
+.barButton {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  height: var(--bar-area);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  cursor: default;
+}
+
+.barButton:hover .barTrack,
+.barButton:focus-visible .barTrack {
+  filter: brightness(1.08);
+}
+
+.barButton[aria-disabled='true'] {
+  cursor: default;
+}
+
+.barTrack {
+  position: relative;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+  width: 64%;
+  height: 100%;
+}
+
+.barSegment {
+  display: block;
+  flex: none;
+  min-height: 1px;
+}
+
+.barBottom {
+  border-radius: 0 0 var(--radius-xs) var(--radius-xs);
+}
+
+.barTop {
+  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
+}
+
+.barBottom.barTop {
+  border-radius: var(--radius-xs);
+}
+
+/* A day's own target when targets differ between days. */
+.barTarget {
+  position: absolute;
+  right: -15%;
+  left: -15%;
+  border-top: 2px dashed var(--color-text-secondary);
+}
+
+.barLabel {
+  min-height: 1.2em;
+  font-size: var(--font-size-footnote);
+  white-space: nowrap;
+}
+
+.barLabelNone {
+  color: var(--color-text-secondary);
+}
+
+/* -- by ticket ------------------------------------------------------------------------------- */
+
+.ticketRows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ticketRow {
+  display: grid;
+  grid-template-columns: minmax(0, 21.25rem) minmax(0, 1fr) 4.5rem;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--font-size-footnote);
+}
+
+.ticketName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ticketTrack {
+  display: flex;
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--color-separator);
+}
+
+.ticketFill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--chart-2);
+}
+
+.ticketFillFree {
+  background: var(--chart-8);
+}
+
+.ticketTime {
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+/* -- weekly report aside --------------------------------------------------------------------- */
+
+.aside {
+  display: flex;
+  flex: 1 1 21.25rem;
+  flex-direction: column;
+  max-width: 26.25rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.asideHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) 1.125rem;
+  border-bottom: var(--size-border) solid var(--color-border);
+}
+
+.asideTitleBlock {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.asideRange {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+}
+
+.asideBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 1.125rem;
+}
+
+.asideEditor textarea {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-footnote);
+  line-height: 1.6;
+}
+
+.asideFoot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding: 0.875rem 1.125rem;
+  border-top: var(--size-border) solid var(--color-border);
+  background: var(--color-surface-sunken);
+}
+
+.basis {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.basisGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.basisTitle {
+  margin: 0;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+}
+
+.basisTickets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-size-footnote);
+}
+
+.basisTicket {
+  display: grid;
+  grid-template-columns: 0.625rem minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0.625rem;
+}
+
+.basisTime {
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* "Add outcomes before sharing" (the design's warn-soft note). */
+.hint {
+  margin: 0;
+  padding: 0.625rem var(--space-3);
+  border: var(--size-border) solid color-mix(in srgb, var(--color-warning) 35%, var(--color-surface));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-warning-bg) 45%, var(--color-surface));
+  color: var(--color-text);
+  font-size: var(--font-size-footnote);
+}
+
+/* -- explore --------------------------------------------------------------------------------- */
+
+.explore {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.exploreHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.exploreSearch {
+  flex: 0 1 26rem;
+  min-width: 0;
+}
+
+/* -- patterns -------------------------------------------------------------------------------- */
+
+.dayTiles {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dayTile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+  width: 100%;
+  height: 4.5rem;
+  border: var(--size-border) solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--tile);
+  color: var(--heat-on-low);
+  font: inherit;
+  cursor: default;
+}
+
+.dayTileStrong {
+  color: var(--heat-on-high);
+}
+
+.dayTileEmpty {
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.dayTileDay {
+  font-size: var(--font-size-caption);
+}
+
+.dayTileTime {
+  font-variant-numeric: tabular-nums;
+}
+
+.glance {
+  display: flex;
+  flex: 1 1 18.75rem;
+  flex-direction: column;
+  gap: 0.875rem;
+  max-width: 23.75rem;
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  margin: 0;
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.fact dt {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+}
+
+.fact dd {
+  margin: 0;
+}
+
+/* -- weekly report view ---------------------------------------------------------------------- */
+
+.reportGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(30rem, 100%), 1fr));
+  align-items: stretch;
+  gap: var(--space-5);
+}
+
+.reportCard {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.reportHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0.875rem 1.125rem;
+  border-bottom: var(--size-border) solid var(--color-border);
+}
+
+.reportEditor {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: var(--space-2);
+}
+
+.reportEditor textarea {
+  flex: 1;
+  min-height: 35rem;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-footnote);
+  line-height: 1.7;
+  resize: vertical;
+}
+
+.reportPreview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: var(--space-5) 1.375rem;
+}
+
+.reportFootnote {
+  margin: 0;
+  padding-top: 0.625rem;
+  border-top: var(--size-border) solid var(--color-separator);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+}
+
+/* -- markdown preview ------------------------------------------------------------------------ */
+
+.markdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.mdTitle {
+  margin: 0;
+  font-size: var(--font-size-title-2);
+  font-weight: var(--font-weight-bold);
+}
+
+.mdHeading {
+  margin: 0 0 -0.5rem;
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-semibold);
+}
+
+.mdParagraph {
+  margin: 0;
+}
+
+.mdList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding-inline-start: 1.25rem;
+}
+
+.mdNested {
+  margin: var(--space-1) 0 0;
+  padding-inline-start: 1.125rem;
+  color: var(--color-text-secondary);
+}
+
+.placeholder {
+  padding: 0.0625rem 0.375rem;
+  border-radius: 0.375rem;
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* -- notes ----------------------------------------------------------------------------------- */
+
+.sourceNotes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-width: 56rem;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+}
+
+.sourceNotes p {
+  margin: 0;
+}
+
+.strongNote {
+  font-weight: var(--font-weight-medium);
+}
+
+.warningNote {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-warning-text);
+}
+
+@media (max-width: 40rem) {
+  .ticketRow {
+    grid-template-columns: minmax(0, 1fr) 4.5rem;
+  }
+  .ticketTrack {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .dayTiles {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .headerPicker {
+    width: auto;
+  }
+}
+
+@media (forced-colors: active) {
+  .barSegment,
+  .ticketFill {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+  .dayTile {
+    border-color: CanvasText;
+  }
+  .placeholder {
+    border: 1px solid CanvasText;
+  }
+}
+
+/* -- retained 1.14 blocks, closed by default ---------------------------------------------------- */
+
+.extras {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-top: var(--space-2);
+  border-top: var(--size-border) solid var(--color-border);
+}
+
+.extrasHeading {
+  margin: 0;
+}
+
+.extrasButton {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  width: 100%;
+  min-height: var(--size-control-lg);
+  padding: var(--space-2) var(--space-2) var(--space-2) 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  text-align: start;
+  cursor: default;
+}
+
+.extrasButton:hover .extrasTitle {
+  color: var(--color-selected-text);
+}
+
+.extrasChevron {
+  flex: none;
+  font-size: var(--size-icon-md);
+  color: var(--color-text-secondary);
+  transition: transform var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.extrasChevronOpen {
+  transform: rotate(90deg);
+}
+
+.extrasTitle {
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-semibold);
+}
+
+.extrasSummary {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-regular);
+}
+
+.extrasPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .extrasChevron {
+    transition: none;
+  }
+}

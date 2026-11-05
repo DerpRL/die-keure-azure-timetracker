@@ -286,3 +286,104 @@
   padding: 0 0.375rem;
   font-size: var(--font-size-body);
 }
+
+/* Tray panel timer (2.2 "S9 · Menu-bar popup"): title and number, clock beside today's total, a
+   4 px bar in the activity's colour, three small buttons. */
+.panelTitleRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.625rem;
+  align-items: center;
+}
+
+.panelTitle {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summary .panelTitle {
+  white-space: normal;
+}
+
+.panelTicket {
+  min-height: 1.5rem;
+  padding: 0 0.25rem;
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-caption);
+}
+
+.panelClockRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.panelClock {
+  font-size: 1.875rem;
+}
+
+.panelClockIdle {
+  color: var(--color-text-secondary);
+}
+
+.panelToday {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: end;
+}
+
+.panelTodayLabel {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+}
+
+.panelTodayValue {
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.panelTodayTarget {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-regular);
+}
+
+.panelBar {
+  height: 0.25rem;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--color-separator);
+}
+
+.panelBarFill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--activity-color);
+}
+
+.panelBarStale .panelBarFill {
+  opacity: 0.5;
+}
+
+.panelActionsWide > * {
+  flex: 1 1 auto;
+}
+
+@media (forced-colors: active) {
+  .panelBar {
+    border: 1px solid CanvasText;
+  }
+  .panelBarFill {
+    background: CanvasText;
+  }
+}

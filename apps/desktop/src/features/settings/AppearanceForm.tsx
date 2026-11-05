@@ -1,7 +1,6 @@
 import { useId } from 'react';
 import { Button } from '../../components/Button';
 import { StatusDot } from '../../components/Badge';
-import { InfoIcon } from '../../components/icons';
 import { SegmentedControl } from '../../components/Segmented';
 import type { InterfacePreferences } from '../../ipc/contract';
 import { useAction, useSlice } from '../../state/hooks';
@@ -15,6 +14,7 @@ import {
   scaleLabel,
   THEME_LABELS,
   THEME_PREFERENCES,
+  type ThemePreference,
 } from '../../theme/preferences';
 import { useSystemAppearance, useTheme } from '../../theme/ThemeProvider';
 import { useImmediateValue } from './FigmaSettings';
@@ -69,66 +69,92 @@ export interface AppearanceFormProps {
   preferences: InterfacePreferences;
   onChange: (next: InterfacePreferences) => void;
   os: 'macos' | 'windows';
+  /** Shows a sample card in the chosen theme under the controls (onboarding). */
+  showPreview?: boolean;
 }
 
-/** 1.14 `AppearancePreferencesView`: appearance, UI scale and contrast with their explanations. */
-export function AppearanceForm({ preferences, onChange, os }: AppearanceFormProps) {
+/**
+ * The theme as three cards with a swatch (2.2 layout "Appearance & app"): native radios, so
+ * arrow keys move between them and screen readers hear "Dark, radio button, 3 of 3".
+ */
+function ThemeChoice({ value, onChange }: { value: ThemePreference; onChange: (theme: ThemePreference) => void }) {
+  const name = useId();
+  return (
+    <fieldset className={styles.themeChoices}>
+      <legend className={styles.themeLegend}>Theme</legend>
+      {THEME_PREFERENCES.map((theme) => (
+        <label key={theme} className={styles.themeCard}>
+          <input
+            type="radio"
+            name={name}
+            value={theme}
+            checked={value === theme}
+            onChange={() => onChange(theme)}
+            className={styles.themeInput}
+          />
+          <span aria-hidden="true" className={styles.themeSwatch}>
+            {theme !== 'dark' ? <span className={styles.swatchLight} /> : null}
+            {theme !== 'light' ? <span className={styles.swatchDark} /> : null}
+          </span>
+          <span>{THEME_LABELS[theme]}</span>
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+
+/** Theme, text and control size, and contrast, with their explanations. */
+export function AppearanceForm({ preferences, onChange, os, showPreview = false }: AppearanceFormProps) {
   const words = osWords(os);
   return (
     <>
       <div className={styles.appearanceGroup}>
-        <SegmentedControl
-          label="Appearance"
-          options={THEME_PREFERENCES.map((id) => ({ id, label: THEME_LABELS[id] }))}
-          selectedKey={preferences.theme}
-          onSelectionChange={(theme) => onChange({ ...preferences, theme })}
-        />
+        <ThemeChoice value={preferences.theme} onChange={(theme) => onChange({ ...preferences, theme })} />
         <Hint>{`System follows your ${words.device}’s Light, Dark or automatic appearance.`}</Hint>
       </div>
-      <div className={styles.appearanceGroup}>
-        <SegmentedControl
-          label="UI scale"
-          options={SCALE_PREFERENCES.map((scale) => ({ id: String(scale), label: scaleLabel(scale) }))}
-          selectedKey={String(preferences.scale)}
-          onSelectionChange={(value) => onChange({ ...preferences, scale: Number(value) as InterfacePreferences['scale'] })}
-        />
-        <Hint>
-          Resize text, buttons and charts together. Pages reflow to keep every control within reach.
-          {os === 'macos' ? ' The menu-bar clock stays its normal size.' : ''}
-        </Hint>
+      <div className={styles.segmentPair}>
+        <div className={styles.appearanceGroup}>
+          <SegmentedControl
+            label="Text and control size"
+            options={SCALE_PREFERENCES.map((scale) => ({ id: String(scale), label: scaleLabel(scale) }))}
+            selectedKey={String(preferences.scale)}
+            onSelectionChange={(value) => onChange({ ...preferences, scale: Number(value) as InterfacePreferences['scale'] })}
+          />
+          <Hint>
+            Text, buttons and charts resize together; views reflow to keep every control within reach.
+            {os === 'macos' ? ' The menu-bar clock stays its normal size.' : ''}
+          </Hint>
+        </div>
+        <div className={styles.appearanceGroup}>
+          <SegmentedControl
+            label="Contrast"
+            options={CONTRAST_PREFERENCES.map((id) => ({ id, label: CONTRAST_LABELS[id] }))}
+            selectedKey={preferences.contrast}
+            onSelectionChange={(contrast) => onChange({ ...preferences, contrast })}
+          />
+          <Hint>
+            {os === 'windows'
+              ? 'Increased strengthens text, accents and borders. System follows the contrast setting in Windows Accessibility settings.'
+              : 'Increased strengthens text, accents and borders. System follows Increase contrast in macOS Accessibility settings.'}
+          </Hint>
+        </div>
       </div>
-      <div className={styles.appearanceGroup}>
-        <SegmentedControl
-          label="UI contrast"
-          options={CONTRAST_PREFERENCES.map((id) => ({ id, label: CONTRAST_LABELS[id] }))}
-          selectedKey={preferences.contrast}
-          onSelectionChange={(contrast) => onChange({ ...preferences, contrast })}
-        />
-        <Hint>
-          {os === 'windows'
-            ? 'Increased strengthens text, accents and section borders. System follows the contrast setting in Windows Accessibility settings.'
-            : 'Increased strengthens text, accents and section borders. System follows Increase contrast in macOS Accessibility settings.'}
-        </Hint>
-      </div>
-      <AppearancePreview preferences={preferences} />
+      {showPreview ? <AppearancePreview preferences={preferences} /> : null}
     </>
   );
 }
 
-/** Settings → Appearance: applies immediately, never through Save. */
+/** Settings → Appearance & app → Appearance: applies immediately, never through Save. */
 export function AppearanceSettings({ os }: { os: 'macos' | 'windows' }) {
   const { preferences, apply, error } = useInterfacePreferences();
-  const words = osWords(os);
   return (
     <>
-      <p className={styles.status}>
-        <InfoIcon className={styles.statusIcon} />
-        <span>{`Changes apply immediately and are saved on this ${words.device}.`}</span>
-      </p>
       <AppearanceForm preferences={preferences} onChange={apply} os={os} />
       {error ? <InlineIssue>{error.message}</InlineIssue> : null}
       <div className={styles.row}>
         <Button
+          size="small"
+          variant="plain"
           onPress={() => apply({ ...DEFAULT_INTERFACE_PREFERENCES })}
           isDisabled={preferencesEqual(preferences, DEFAULT_INTERFACE_PREFERENCES)}
         >

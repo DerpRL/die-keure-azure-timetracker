@@ -5,11 +5,12 @@ import { DatePicker } from '../../components/DateFields';
 import { NumberField, TextField } from '../../components/Fields';
 import { ExternalLinkIcon } from '../../components/icons';
 import { Select } from '../../components/Pickers';
-import { Checkbox, Switch } from '../../components/Toggles';
+import { Checkbox } from '../../components/Toggles';
 import type { TargetExceptionKind } from '../../ipc/contract';
 import { formatShortDuration } from '../../utils/duration';
 import { openExternalLink } from './platform';
-import { Divider, Hint, InlineIssue, SettingsGroup, SettingsSection } from './SettingsSection';
+import { WorkdayTimes } from './DayReviewSection';
+import { Divider, Hint, InlineIssue, SettingsSection, ToggleRow } from './SettingsSection';
 import { useSettingsForm } from './SettingsForm';
 import {
   addExceptions,
@@ -38,22 +39,33 @@ const HOLIDAY_RULES_URL =
 /** Exceptions shown per page: a long leave range can add hundreds of dates. */
 export const EXCEPTIONS_PAGE_SIZE = 20;
 
-function WeeklySchedule() {
+/** Monday-first short day names for the target grid ("Mon"). */
+const SHORT_DAY = (weekday: number) => (WEEKDAY_NAMES[weekday] ?? '').slice(0, 3);
+
+/** Settings → Targets & reminders → Daily targets: hours per weekday and the workday. */
+export function DailyTargetsSection() {
   const { draft, update, issues } = useSettingsForm();
   const targets = draft.targets;
   const valid = targetsValid(targets);
   const issue = issueFor(issues, 'targets');
   return (
-    <SettingsGroup title="Weekly schedule">
-      <div className={styles.weekGrid}>
+    <SettingsSection
+      id="targets"
+      actions={
+        <p className={styles.cardTotal}>
+          <span className="visually-hidden">Weekly total: </span>
+          <b>{valid ? formatShortDuration(weeklyTargetHours(targets) * 3600) : 'Check daily hours'}</b> a week
+        </p>
+      }
+    >
+      <div className={styles.dayGrid}>
         {WEEKDAYS_MONDAY_FIRST.map((weekday) => {
           const hours = targetHours(targets, weekday);
           const invalid = !Number.isFinite(hours) || hours < TARGET_HOURS.min || hours > TARGET_HOURS.max;
           return (
             <NumberField
               key={weekday}
-              label={WEEKDAY_NAMES[weekday] ?? ''}
-              unit="hours"
+              label={SHORT_DAY(weekday)}
               minValue={TARGET_HOURS.min}
               maxValue={TARGET_HOURS.max}
               value={hours}
@@ -63,25 +75,21 @@ function WeeklySchedule() {
               isInvalid={invalid}
               formatOptions={{ maximumFractionDigits: 2 }}
               width="full"
+              className={hours === 0 ? styles.weekend : undefined}
             />
           );
         })}
       </div>
-      <p className={styles.total}>
-        <span>Base weekly total</span>
-        <output>{valid ? formatShortDuration(weeklyTargetHours(targets) * 3600) : 'Check daily hours'}</output>
-      </p>
       {issue ? <InlineIssue>{issue}</InlineIssue> : null}
+      <Hint>Hours per day, as decimals: 7.5 is 7h 30m and 0 is a day off.</Hint>
+      <WorkdayTimes />
+      <Hint>Gaps are only looked for inside your workday. Holidays and leave lower the target for that day.</Hint>
       <div className={styles.row}>
-        <Button onPress={() => update((current) => ({ ...current, targets: applyPreset(current.targets) }))}>
+        <Button size="small" onPress={() => update((current) => ({ ...current, targets: applyPreset(current.targets) }))}>
           Use Mon–Thu 8h, Friday 6h
         </Button>
       </div>
-      <Hint>
-        Enter decimal hours, such as 7.5 for 7h 30m. Use 0 for a day off. Weekly totals, progress rings, day reviews and statistics
-        follow this schedule.
-      </Hint>
-    </SettingsGroup>
+    </SettingsSection>
   );
 }
 
@@ -216,20 +224,19 @@ function ExceptionList() {
   );
 }
 
-/** 1.14 `HolidaySettingsView`. */
-function Holidays() {
+/** Settings → Targets & reminders → Holidays & leave (1.14 `HolidaySettingsView`). */
+export function HolidaysSection() {
   const { draft, update } = useSettingsForm();
   const [year, setYear] = useState(() => today(getLocalTimeZone()).year);
   const targets = draft.targets;
   const holidays = belgianHolidays(year);
   return (
-    <SettingsGroup title="Holidays & leave" description="Adjust targets without creating or changing 7pace entries.">
-      <Switch
+    <SettingsSection id="holidays" subtitle="Adjust targets without creating or changing 7pace entries.">
+      <ToggleRow
+        title="Use Belgian public holidays"
         isSelected={usesBelgianHolidays(targets)}
         onChange={(belgianHolidaysEnabled) => update((current) => ({ ...current, targets: { ...current.targets, belgianHolidaysEnabled } }))}
-      >
-        Use Belgian public holidays
-      </Switch>
+      />
       <NumberField
         label="Holiday year"
         minValue={1900}
@@ -277,17 +284,6 @@ function Holidays() {
       <Divider />
       <AddException />
       <ExceptionList />
-    </SettingsGroup>
-  );
-}
-
-/** Settings → Tracking → Targets and holidays (1.14 `targetSection` + `HolidaySettingsView`). */
-export function TargetsSection() {
-  return (
-    <SettingsSection id="targets" subtitle="Daily hours per weekday, holidays and leave.">
-      <WeeklySchedule />
-      <Divider />
-      <Holidays />
     </SettingsSection>
   );
 }

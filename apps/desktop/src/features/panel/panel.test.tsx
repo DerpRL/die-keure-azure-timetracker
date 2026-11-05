@@ -42,13 +42,13 @@ describe('PanelView', () => {
     expect(within(next).getByRole('heading', { level: 2, name: 'Branch changed' })).toBeInTheDocument();
     const current = within(main).getByRole('region', { name: 'Current tracking' });
     expect(within(current).getByText('Checkout: retry failed card payments')).toBeInTheDocument();
-    expect(within(current).getByText('Development')).toBeInTheDocument();
+    expect(within(current).getByRole('img', { name: /^Development\. Today \d+h \d+m of 7h 36m$/ })).toBeInTheDocument();
     expect(screen.getByText('Tracking')).toBeInTheDocument();
-    // 2.0: today's time strip replaces the collapsed Progress section; the target bar is in the timer.
-    expect(within(main).getByRole('heading', { level: 2, name: 'Today' })).toBeInTheDocument();
-    expect(within(current).getByRole('img', { name: /of daily target/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Quit app' })).toBeInTheDocument();
-    expect(screen.getByText('Quitting leaves the 7pace timer running')).toBeInTheDocument();
+    // 2.2: today's progress is the bar in the timer; tickets to pick up again follow.
+    expect(within(current).getByText('Today')).toBeInTheDocument();
+    expect(within(main).getByRole('region', { name: 'Pick up again' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Quit' })).toHaveAttribute('title', 'Quit app. The 7pace timer keeps running.');
+    expect(screen.getByText('Quitting keeps the 7pace timer running.')).toBeInTheDocument();
     await expectAccessible();
   });
 
@@ -103,8 +103,11 @@ describe('PanelView', () => {
 
   it('says so when no timer runs', () => {
     renderWithEngine(<PanelView />, { with: { tracking: stoppedTracking, prompts: noPrompts } });
-    expect(screen.getByText('No timer running')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Start tracking…' })).toBeEnabled();
+    // 2.2: no title row; a still 00:00:00 clock beside today's total, then Start tracking….
+    const current = screen.getByRole('region', { name: 'Current tracking' });
+    expect(within(current).getByRole('timer')).toHaveTextContent('00:00:00');
+    expect(within(current).getByText('Today')).toBeInTheDocument();
+    expect(within(current).getByRole('button', { name: 'Start tracking…' })).toBeEnabled();
   });
 
   it('disables the writes while the engine is busy', () => {
@@ -175,18 +178,28 @@ describe('PanelView', () => {
     expect(within(section).getByText('Workspace: https://fabrikam.timehub.7pace.com')).toBeInTheDocument();
   });
 
-  it('opens a section of the main window or quits', async () => {
+  it('opens a place of the main window or quits', async () => {
     const { engine, user } = renderWithEngine(<PanelView />);
-    await user.click(screen.getByRole('button', { name: 'Overview' }));
-    await user.click(screen.getByRole('button', { name: 'Day review' }));
-    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    const nav = screen.getByRole('navigation', { name: 'Open a section' });
+    expect(within(nav).getAllByRole('button').map((button) => button.textContent)).toEqual(['Today', 'Timesheet', 'Insights', 'Settings', 'Quit']);
+    expect(nav).toHaveTextContent('Quitting keeps the 7pace timer running.');
+    for (const name of ['Today', 'Timesheet', 'Insights', 'Settings']) await user.click(within(nav).getByRole('button', { name }));
     expect(shellCalls(engine, 'shell_show_main').map((call) => call.args)).toEqual([
-      { page: 'overview' },
-      { page: 'dayReview' },
+      { page: 'today' },
+      { page: 'timesheet' },
+      { page: 'insights' },
       { page: 'settings' },
     ]);
-    await user.click(screen.getByRole('button', { name: 'Quit app' }));
+    await user.click(within(nav).getByRole('button', { name: 'Quit' }));
     expect(shellCalls(engine, 'shell_quit')).toHaveLength(1);
+  });
+
+  it('offers tickets to pick up again while tracking, leaving out the running one', async () => {
+    const { engine, user } = renderWithEngine(<PanelView />, { with: { prompts: noPrompts } });
+    const section = screen.getByRole('region', { name: 'Pick up again' });
+    expect(within(section).queryByText('#4821')).toBeNull();
+    await user.click(within(section).getByRole('button', { name: 'Start timer on #4790' }));
+    expect(engine.dispatched('tracking.chooseTicket')).toEqual([{ type: 'tracking.chooseTicket', ticketId: 4790, surface: 'panel' }]);
   });
 
   it('collapses the other suggestions behind a count', async () => {

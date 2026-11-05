@@ -27,4 +27,4 @@ export {
   ShortcutProvider,
   type ShortcutProviderProps,
 } from './ShortcutProvider';
-export { COMMAND_GROUP_ORDER, CommandStore, type Command, type CommandGroup } from './store';
+export { COMMAND_GROUP_ORDER, CommandStore, PALETTE_GROUP_ORDER, PALETTE_GROUP_TITLES, type Command, type CommandGroup } from './store';

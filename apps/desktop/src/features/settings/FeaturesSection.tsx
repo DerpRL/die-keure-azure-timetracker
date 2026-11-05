@@ -9,12 +9,12 @@ import { useSettingsForm } from './SettingsForm';
 import { useLaunchAtLogin, type LaunchAtLogin } from './useLaunchAtLogin';
 import styles from './settings.module.css';
 
-const GROUPS: readonly FeatureGroup[] = ['Tracking', 'Meetings', 'Pages', 'App'];
+const GROUPS: readonly FeatureGroup[] = ['Tracking', 'Meetings', 'Views', 'App'];
 
 const GROUP_DESCRIPTIONS: Record<FeatureGroup, string> = {
   Tracking: 'Suggestions and reminders while you work.',
   Meetings: 'Meeting suggestions from your calendar and microphone.',
-  Pages: 'Hide pages you do not use. Overview and Settings are always available.',
+  Views: 'Hide views you do not use. Today and Settings are always available.',
   App: 'How the app runs on this device.',
 };
 
@@ -88,7 +88,7 @@ function FeatureRow({ feature, launch }: { feature: FeatureDefinition; launch: L
         <Switch
           isSelected={pageShown(draft, binding.page)}
           onChange={(on) => update((current) => setPageShown(current, binding.page, on))}
-          description={facts(feature, os, 'Shows the page in the sidebar.')}
+          description={facts(feature, os, binding.where)}
         >
           {feature.title}
         </Switch>
@@ -116,7 +116,7 @@ function FeatureRow({ feature, launch }: { feature: FeatureDefinition; launch: L
   return <li className={styles.feature}>{control}</li>;
 }
 
-/** Settings → Features (rewrite plan §9): every module with its switch, privacy and permission. */
+/** Settings → Appearance & app → Features (rewrite plan §9): every module with its switch, privacy and permission. */
 export function FeaturesSection() {
   const { app } = useSettingsForm();
   const launch = useLaunchAtLogin();

@@ -6,14 +6,14 @@
 import type { Configuration, HostOs } from '../../ipc/contract';
 import type { PageId } from '../../layout/navigation';
 
-export type FeatureGroup = 'Tracking' | 'Meetings' | 'Pages' | 'App';
+export type FeatureGroup = 'Tracking' | 'Meetings' | 'Views' | 'App';
 
 /** How a row's toggle reads and writes. */
 export type FeatureBinding =
   /** A draft field, saved with Save changes. */
   | { kind: 'field'; get: (configuration: Configuration) => boolean; set: (configuration: Configuration, on: boolean) => Configuration }
-  /** A page in `hiddenPages` (draft, saved with Save changes). */
-  | { kind: 'page'; page: PageId }
+  /** A view backed by a 1.14 page in `hiddenPages` (draft, saved with Save changes). `where` names its place. */
+  | { kind: 'page'; page: PageId; where: string }
   /** `figma.setPreferences`, applied immediately. */
   | { kind: 'figma' }
   /** `@tauri-apps/plugin-autostart`, applied immediately. */
@@ -34,7 +34,7 @@ export interface FeatureDefinition {
   needsMicrophone?: boolean;
 }
 
-/** Pages that can be hidden from the sidebar (never Overview or Settings). */
+/** Pages whose views can be hidden (never Overview or Settings, which back Today and Settings). */
 export const HIDEABLE_PAGES: readonly PageId[] = ['agenda', 'offlineDrafts', 'statistics', 'weeklyReport', 'timeEditor'];
 
 const none = () => 'None';
@@ -171,44 +171,44 @@ export const FEATURES: readonly FeatureDefinition[] = [
   },
   {
     id: 'agenda',
-    title: 'Agenda page',
-    group: 'Pages',
+    title: 'Calendar on Today',
+    group: 'Views',
     privacy: () => 'Shows events from the calendars you choose. Events stay on your Mac.',
     permission: () => 'Calendar access',
-    binding: { kind: 'page', page: 'agenda' },
+    binding: { kind: 'page', page: 'agenda', where: 'Shows your calendar next to tracked time on Today. Settings → Calendars stays available for meeting suggestions.' },
     needsCalendar: true,
   },
   {
     id: 'offlineDrafts',
     title: 'Offline drafts and local timer',
-    group: 'Pages',
+    group: 'Views',
     privacy: (os) => `Drafts stay on ${local(os)} until you upload them.`,
     permission: none,
-    binding: { kind: 'page', page: 'offlineDrafts' },
+    binding: { kind: 'page', page: 'offlineDrafts', where: 'Shows Drafts in Timesheet.' },
   },
   {
     id: 'weeklyReport',
     title: 'Weekly report',
-    group: 'Pages',
+    group: 'Views',
     privacy: (os) => `Report drafts are stored on ${local(os)}.`,
     permission: none,
-    binding: { kind: 'page', page: 'weeklyReport' },
+    binding: { kind: 'page', page: 'weeklyReport', where: 'Shows the weekly report in Insights.' },
   },
   {
     id: 'statistics',
     title: 'Statistics',
-    group: 'Pages',
+    group: 'Views',
     privacy: (os) => `Calculated on ${local(os)} from your 7pace worklogs.`,
     permission: none,
-    binding: { kind: 'page', page: 'statistics' },
+    binding: { kind: 'page', page: 'statistics', where: 'Shows Where time went and Patterns in Insights.' },
   },
   {
     id: 'timeEditor',
     title: 'Time editor',
-    group: 'Pages',
+    group: 'Views',
     privacy: (os) => `Changes reach 7pace only when you save them. The recovery journal stays on ${local(os)}.`,
     permission: none,
-    binding: { kind: 'page', page: 'timeEditor' },
+    binding: { kind: 'page', page: 'timeEditor', where: 'Shows Day in Timesheet, where you split, merge and correct entries.' },
   },
   {
     id: 'updates',

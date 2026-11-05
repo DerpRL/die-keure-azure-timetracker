@@ -60,15 +60,15 @@ describe('SurfaceRoot', () => {
   it('renders the main window shell for main', () => {
     const { container } = renderSurface('main');
     expect(container.querySelector('[data-surface="main"]')).not.toBeNull();
-    expect(screen.getByRole('navigation', { name: 'Sections' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 1, name: 'Overview' })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Main' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Today' })).toHaveAttribute('aria-current', 'page');
   });
 
   it('renders the tray panel for panel', () => {
     const { container } = renderSurface('panel');
     expect(container.querySelector('[data-surface="panel"]')).not.toBeNull();
     expect(screen.getByRole('heading', { level: 1, name: 'Azure timetracker' })).toBeInTheDocument();
-    expect(screen.queryByRole('navigation', { name: 'Sections' })).toBeNull();
+    expect(screen.queryByRole('navigation', { name: 'Main' })).toBeNull();
   });
 
   it('renders the mini timer for mini', () => {

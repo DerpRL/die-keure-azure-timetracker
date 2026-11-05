@@ -20,7 +20,7 @@ export function osWords(os: HostOs | undefined): OsWords {
 }
 
 export const INTERRUPTION_LEVELS: ReadonlyArray<{ id: Interruption; label: string; description: string }> = [
-  { id: 'off', label: 'Off', description: 'Listed in the panel and on Overview only.' },
+  { id: 'off', label: 'Off', description: 'Listed in the panel and on Today only.' },
   { id: 'notifyOnly', label: 'Notify only', description: 'Shows a notification without opening the panel.' },
   { id: 'openPanel', label: 'Open panel', description: 'Opens the panel without taking keyboard focus. The default.' },
   {

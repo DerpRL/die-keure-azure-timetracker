@@ -48,10 +48,14 @@ export function useCommands(commands: readonly Command[]): void {
   const store = useContext(ShortcutContext)?.store;
   const baseToken = useId();
   const handlers = useRef(new Map<string, () => void>());
+  const alternates = useRef(new Map<string, () => void>());
   const key = commands.map(signature).join('\n');
 
   useLayoutEffect(() => {
     handlers.current = new Map(commands.map((command) => [command.id, command.onAction]));
+    alternates.current = new Map(
+      commands.flatMap((command) => (command.alternate ? [[command.id, command.alternate.onAction] as const] : [])),
+    );
   });
 
   useLayoutEffect(() => {
@@ -61,6 +65,9 @@ export function useCommands(commands: readonly Command[]): void {
       store.register(token, {
         ...command,
         onAction: () => handlers.current.get(command.id)?.(),
+        alternate: command.alternate
+          ? { hint: command.alternate.hint, onAction: () => alternates.current.get(command.id)?.() }
+          : undefined,
       }),
     );
     return () => {

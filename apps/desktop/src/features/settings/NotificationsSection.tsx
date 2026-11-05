@@ -1,12 +1,11 @@
 import { TimeField } from '../../components/DateFields';
 import { Select } from '../../components/Pickers';
-import { Switch } from '../../components/Toggles';
 import type { Interruption, InterruptionChoice, PromptKind, QuietHours } from '../../ipc/contract';
 import { useAction } from '../../state/hooks';
 import { minutesToTime, timeToMinutes } from './DayReviewSection';
 import { useImmediateValue } from './FigmaSettings';
 import { INTERRUPTION_LEVELS, osWords } from './labels';
-import { Divider, Hint, InlineIssue, SettingsGroup, SettingsSection } from './SettingsSection';
+import { Divider, Hint, InlineIssue, SettingsGroup, SettingsSection, ToggleRow } from './SettingsSection';
 import { useSettingsForm } from './SettingsForm';
 import styles from './settings.module.css';
 
@@ -67,10 +66,13 @@ function QuietHoursSettings() {
     });
   };
   return (
-    <SettingsGroup title="Quiet hours">
-      <Switch isSelected={quiet.enabled} onChange={(enabled) => apply({ ...quiet, enabled })}>
-        Use quiet hours
-      </Switch>
+    <div className={styles.group}>
+      <ToggleRow
+        title="Quiet hours"
+        help={`No panel or banners between ${formatClockMinutes(quiet.startMinute)} and ${formatClockMinutes(quiet.endMinute)}. Applies right away.`}
+        isSelected={quiet.enabled}
+        onChange={(enabled) => apply({ ...quiet, enabled })}
+      />
       <div className={styles.fieldRow}>
         <TimeField
           label="Quiet from"
@@ -90,33 +92,36 @@ function QuietHoursSettings() {
         />
       </div>
       <Hint>
-        While active, prompts do not open the panel or send notifications. They stay listed in the panel and on Overview. 7pace activity
-        checks still interrupt, because 7pace stops the timer when they go unanswered. The period can run past midnight.
+        Prompts stay listed in the panel and on Today. 7pace activity checks still interrupt, because 7pace stops the timer when they
+        go unanswered. The period can run past midnight.
       </Hint>
       {action.error ? <InlineIssue>{action.error.message}</InlineIssue> : null}
-    </SettingsGroup>
+    </div>
   );
 }
 
-/** Settings → Notifications: notifications, per-prompt interruption levels and quiet hours. */
+/** "18:00" for minutes after midnight. */
+function formatClockMinutes(minutes: number): string {
+  const time = minutesToTime(minutes);
+  return `${String(time.hour).padStart(2, '0')}:${String(time.minute).padStart(2, '0')}`;
+}
+
+/** Settings → Targets & reminders → Notifications: notifications, quiet hours and interruption levels. */
 export function NotificationsSection() {
   const { draft, update, os } = useSettingsForm();
   const words = osWords(os);
   return (
     <SettingsSection id="notifications" subtitle="Prompts never change your timer by themselves; these settings decide how they get your attention.">
-      <SettingsGroup title="Notifications">
-        <Switch
-          isSelected={draft.notificationsEnabled}
-          onChange={(notificationsEnabled) => update((current) => ({ ...current, notificationsEnabled }))}
-          description={`Saved with Save changes. ${words.name} asks for permission the first time.`}
-        >
-          {`Show ${words.name} notifications for branches, prompts and day reviews`}
-        </Switch>
-      </SettingsGroup>
-      <Divider />
-      <Interruptions />
+      <ToggleRow
+        title={`${words.name} notifications`}
+        help={`For branch changes, prompts and day reviews. Saved with Save changes; ${words.name} asks for permission the first time.`}
+        isSelected={draft.notificationsEnabled}
+        onChange={(notificationsEnabled) => update((current) => ({ ...current, notificationsEnabled }))}
+      />
       <Divider />
       <QuietHoursSettings />
+      <Divider />
+      <Interruptions />
     </SettingsSection>
   );
 }

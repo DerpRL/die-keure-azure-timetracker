@@ -1,3 +1,4 @@
+import type { IconComponent } from '../components/icons';
 import type { KeyCombo } from './keys';
 
 /** Something the user can trigger from the command palette and, optionally, a shortcut. */
@@ -17,10 +18,32 @@ export interface Command {
   showInPalette?: boolean;
   isDisabled?: boolean;
   onAction: () => void;
+  /** Palette only: an icon before the label. */
+  icon?: IconComponent;
+  /** Palette only: a coloured square before the label (a CSS colour, e.g. a place's colour). */
+  swatch?: string;
+  /** Palette only: a second line under the label ("User Story · tracking now"). */
+  description?: string;
+  /** Palette only: what Return does, shown on the row ("details"). */
+  actionHint?: string;
+  /** Palette only: ⌘Return / Ctrl+Return runs this instead of `onAction` ("track"). */
+  alternate?: { hint: string; onAction: () => void };
+  /** Palette only: listed only while the user types (tickets would crowd the empty palette). */
+  searchOnly?: boolean;
 }
 
-export type CommandGroup = 'Pages' | 'Tracking' | 'Actions' | 'General';
-export const COMMAND_GROUP_ORDER: readonly CommandGroup[] = ['Pages', 'Tracking', 'Actions', 'General'];
+export type CommandGroup = 'Tickets' | 'Pages' | 'Tracking' | 'Actions' | 'General';
+/** Cheat sheet order. */
+export const COMMAND_GROUP_ORDER: readonly CommandGroup[] = ['Pages', 'Tracking', 'Actions', 'General', 'Tickets'];
+/** Command palette order and headings (2.2 layout: Tickets, actions, then "Go to"). */
+export const PALETTE_GROUP_ORDER: readonly CommandGroup[] = ['Tickets', 'Tracking', 'Actions', 'Pages', 'General'];
+export const PALETTE_GROUP_TITLES: Readonly<Record<CommandGroup, string>> = {
+  Tickets: 'Tickets',
+  Tracking: 'Tracking',
+  Actions: 'Actions',
+  Pages: 'Go to',
+  General: 'General',
+};
 
 interface Entry {
   token: string;

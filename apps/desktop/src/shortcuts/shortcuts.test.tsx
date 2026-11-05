@@ -1,14 +1,14 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { TextField } from '../components/Fields';
 import { AppShell } from '../layout/AppShell';
-import type { PageId } from '../layout/navigation';
+import { pageVisibility, toRoute, type Route } from '../layout/navigation';
 import { expectNoA11yViolations } from '../test/axe';
 import { renderWithProviders } from '../test/render';
-import { useCommand, useSaveShortcut } from './hooks';
+import { useCommand, useRegisteredCommands, useSaveShortcut } from './hooks';
 import { formatKeyCombo, isTextEntryTarget, matchesKeyCombo, type KeyCombo } from './keys';
-import { detectPlatform, getPlatform, setPlatformOverride } from './platform';
+import { detectPlatform, getPlatform, setPlatformOverride, usePlatform } from './platform';
 
 function keydown(init: KeyboardEventInit): KeyboardEvent {
   return new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init });
@@ -73,45 +73,70 @@ describe('key combos', () => {
   });
 });
 
-function Shell({ onNavigate }: { onNavigate: (page: PageId) => void }) {
-  const [page, setPage] = useState<PageId>('overview');
+function Shell({ onNavigate }: { onNavigate: (route: Route) => void }) {
+  const [route, setRoute] = useState<Route>({ place: 'today' });
+  const platform = usePlatform();
+  const visible = useMemo(() => pageVisibility({ platform }), [platform]);
   return (
     <AppShell
-      currentPage={page}
-      onNavigate={(next) => {
-        setPage(next);
+      route={route}
+      isPageVisible={visible}
+      onNavigate={(target) => {
+        const next = toRoute(target);
+        setRoute(next);
         onNavigate(next);
       }}
-      header={<h1>Page</h1>}
     >
+      <h1>Page</h1>
       <TextField label="Comment" />
     </AppShell>
   );
 }
 
-describe('page shortcuts', () => {
-  it('follow the visible sidebar order on macOS (⌘1…⌘9, ⌘0)', async () => {
+describe('place shortcuts', () => {
+  it('number the top-bar places on macOS (⌘1 Today, ⌘2 Timesheet, ⌘3 Insights) and ⌘, opens Settings', async () => {
     const onNavigate = vi.fn();
     const { user } = renderWithProviders(<Shell onNavigate={onNavigate} />, { platform: 'macos' });
-    await user.keyboard('{Meta>}4{/Meta}');
-    expect(onNavigate).toHaveBeenLastCalledWith('offlineDrafts');
-    await user.keyboard('{Meta>}5{/Meta}');
-    expect(onNavigate).toHaveBeenLastCalledWith('statistics');
-    await user.keyboard('{Meta>}0{/Meta}');
-    expect(onNavigate).toHaveBeenLastCalledWith('figma');
-    // Eleven pages: Settings has no digit (it keeps ⌘, from the app menu).
-    expect(screen.getByRole('button', { name: 'Settings' })).not.toHaveAttribute('aria-keyshortcuts');
-    expect(screen.getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-keyshortcuts', 'Meta+1');
+    await user.keyboard('{Meta>}2{/Meta}');
+    expect(onNavigate).toHaveBeenLastCalledWith({ place: 'timesheet', view: 'week' });
+    await user.keyboard('{Meta>}3{/Meta}');
+    expect(onNavigate).toHaveBeenLastCalledWith({ place: 'insights', view: 'time' });
+    await user.keyboard('{Meta>},{/Meta}');
+    expect(onNavigate).toHaveBeenLastCalledWith({ place: 'settings', view: 'accounts' });
+    // Shortcuts work while typing, like 1.14's page shortcuts.
+    await user.click(screen.getByRole('textbox', { name: 'Comment' }));
+    await user.keyboard('{Meta>}1{/Meta}');
+    expect(onNavigate).toHaveBeenLastCalledWith({ place: 'today' });
+    expect(screen.getByRole('button', { name: 'Today' })).toHaveAttribute('aria-keyshortcuts', 'Meta+1');
+    expect(screen.getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-keyshortcuts', 'Meta+,');
   });
 
-  it('skip hidden pages on Windows, where Agenda does not exist', async () => {
+  it('use Ctrl on Windows', async () => {
     const onNavigate = vi.fn();
     const { user } = renderWithProviders(<Shell onNavigate={onNavigate} />, { platform: 'windows' });
-    expect(screen.queryByRole('button', { name: 'Agenda' })).toBeNull();
     await user.keyboard('{Control>}3{/Control}');
-    expect(onNavigate).toHaveBeenLastCalledWith('offlineDrafts');
-    await user.keyboard('{Control>}0{/Control}');
-    expect(onNavigate).toHaveBeenLastCalledWith('settings');
+    expect(onNavigate).toHaveBeenLastCalledWith({ place: 'insights', view: 'time' });
+    expect(screen.getByRole('button', { name: 'Timesheet' })).toHaveAttribute('aria-keyshortcuts', 'Control+2');
+  });
+
+  it('keep the 1.14 page ids as hidden commands for pages that open each other', async () => {
+    const onNavigate = vi.fn();
+    function OpenTimeEditor() {
+      const commands = useRegisteredCommands();
+      return (
+        <button type="button" onClick={() => commands.find((command) => command.id === 'page.timeEditor')?.onAction()}>
+          Open time editor
+        </button>
+      );
+    }
+    const { user } = renderWithProviders(
+      <>
+        <Shell onNavigate={onNavigate} />
+        <OpenTimeEditor />
+      </>,
+    );
+    await user.click(screen.getByRole('button', { name: 'Open time editor' }));
+    expect(onNavigate).toHaveBeenLastCalledWith({ place: 'timesheet', view: 'day' });
   });
 });
 
@@ -150,24 +175,35 @@ describe('command palette', () => {
   it('opens with ⌘K, filters pages and actions, and runs the highlighted one with Return', async () => {
     const onNavigate = vi.fn();
     const { user } = renderWithProviders(<Shell onNavigate={onNavigate} />);
-    const trigger = screen.getByRole('button', { name: 'History' });
+    const trigger = screen.getByRole('button', { name: 'Timesheet' });
     trigger.focus();
     await user.keyboard('{Meta>}k{/Meta}');
     const dialog = await screen.findByRole('dialog', { name: 'Command palette' });
     const search = within(dialog).getByRole('searchbox', { name: 'Search pages and actions' });
     expect(search).toHaveFocus();
     await expectNoA11yViolations(dialog);
-    await user.keyboard('stat');
+    await user.keyboard('insi');
     const options = within(dialog).getAllByRole('menuitem');
-    expect(options.map((option) => option.textContent)).toEqual(['Go to Statistics⌘5']);
+    expect(options.map((option) => option.textContent)).toEqual(['Go to Insights⌘3']);
     await user.keyboard('{Enter}');
-    await waitFor(() => expect(onNavigate).toHaveBeenCalledWith('statistics'));
+    await waitFor(() => expect(onNavigate).toHaveBeenCalledWith({ place: 'insights', view: 'time' }));
     expect(screen.queryByRole('dialog', { name: 'Command palette' })).toBeNull();
+  });
+
+  it('finds views by keyword', async () => {
+    const onNavigate = vi.fn();
+    const { user } = renderWithProviders(<Shell onNavigate={onNavigate} />);
+    await user.keyboard('{Meta>}k{/Meta}');
+    const dialog = await screen.findByRole('dialog', { name: 'Command palette' });
+    await user.keyboard('history');
+    expect(within(dialog).getAllByRole('menuitem').map((option) => option.textContent)).toEqual(['Go to Worklog list']);
+    await user.keyboard('{Enter}');
+    await waitFor(() => expect(onNavigate).toHaveBeenCalledWith({ place: 'timesheet', view: 'list' }));
   });
 
   it('finds commands by keyword and closes with Escape, returning focus', async () => {
     const { user } = renderWithProviders(<Shell onNavigate={() => {}} />);
-    const trigger = screen.getByRole('button', { name: 'History' });
+    const trigger = screen.getByRole('button', { name: 'Timesheet' });
     act(() => trigger.focus());
     await user.keyboard('{Meta>}k{/Meta}');
     const dialog = await screen.findByRole('dialog', { name: 'Command palette' });
@@ -191,8 +227,8 @@ describe('cheat sheet', () => {
     fireEvent.keyDown(window, { key: '?', shiftKey: true });
     const dialog = await screen.findByRole('dialog', { name: 'Keyboard shortcuts' });
     const navigation = within(dialog).getByRole('table', { name: 'Navigation' });
-    expect(within(navigation).getByRole('rowheader', { name: 'Go to Overview' })).toBeInTheDocument();
-    expect(within(navigation).getAllByRole('row')).toHaveLength(11); // header + 10 visible pages
+    expect(within(navigation).getByRole('rowheader', { name: 'Go to Today' })).toBeInTheDocument();
+    expect(within(navigation).getAllByRole('row')).toHaveLength(5); // header, three places, Settings
     expect(within(dialog).getByRole('rowheader', { name: 'Save changes' })).toBeInTheDocument();
     expect(within(dialog).getByRole('rowheader', { name: 'Show command palette' })).toBeInTheDocument();
     expect(dialog).toHaveTextContent('Ctrl+K'.replace('+', ''));

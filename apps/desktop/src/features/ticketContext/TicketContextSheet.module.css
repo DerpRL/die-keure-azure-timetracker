@@ -1,43 +1,45 @@
+/* Ticket details drawer (2.2 layout "S7 · Ticket context"). */
+
 .body,
 .details {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
   min-width: 0;
+  padding-top: var(--space-2);
 }
 
-.ticketTitle {
-  font-size: var(--font-size-title-2);
+.details {
+  padding-top: 0;
+}
+
+.number {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-footnote);
   font-weight: var(--font-weight-semibold);
-  line-height: var(--line-height-tight);
-  overflow-wrap: anywhere;
-  user-select: text;
 }
 
-.fields {
+/* Assigned to · Iteration · Tags in three columns under the title. */
+.facts {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
-  gap: var(--space-3) var(--space-6);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.625rem var(--space-4);
   margin: 0;
-  padding: var(--space-4);
-  border: var(--size-border) solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface-sunken);
+  font-size: var(--font-size-footnote);
 }
 
-.field {
-  display: grid;
-  grid-template-columns: minmax(6rem, auto) 1fr;
-  gap: var(--space-3);
+.fact {
   min-width: 0;
 }
 
-.field dt {
+.fact dt {
   color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
 }
 
-.field dd {
-  margin: 0;
+.fact dd {
+  margin: 0.125rem 0 0;
   overflow-wrap: anywhere;
   user-select: text;
 }
@@ -45,15 +47,17 @@
 .section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 0.375rem;
 }
 
 .sectionTitle {
-  font-size: var(--font-size-headline);
+  margin: 0;
+  font-size: var(--font-size-body);
   font-weight: var(--font-weight-semibold);
 }
 
 .prose {
+  margin: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   user-select: text;
@@ -63,13 +67,157 @@
   color: var(--color-text-secondary);
 }
 
+/* "Your time on this ticket": a sunken box with a bar per day. */
+.yourTime {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.875rem;
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.yourTimeHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.total {
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.days {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin: 0;
+  font-size: var(--font-size-footnote);
+}
+
+.dayRow {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.dayLabel {
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.dayValue {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 3.75rem;
+  gap: var(--space-3);
+  align-items: center;
+  margin: 0;
+}
+
+.bar {
+  display: flex;
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--color-separator);
+}
+
+.barFill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--activity-color);
+}
+
+.dayDuration {
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+/* Links: one bordered row each; https links open in the browser. */
 .links {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-1);
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.link {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 1rem;
+  gap: 0.625rem;
+  align-items: center;
+  width: 100%;
+  padding: 0.625rem var(--space-3);
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-accent);
+  font: inherit;
+  text-align: start;
+  cursor: default;
+}
+
+.link:hover {
+  background: var(--color-hover);
+}
+
+.linkTitle,
+.linkName {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: var(--font-weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.linkName {
+  color: var(--color-text);
+}
+
+.linkIcon {
+  font-size: 1rem;
 }
 
 .unopenable {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.625rem;
+  align-items: center;
+  padding: 0.625rem var(--space-3);
+  border: var(--size-border) solid var(--color-warning-bg);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-warning-bg) 45%, var(--color-surface));
+}
+
+.unopenableText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.unopenableNote {
+  color: var(--color-warning-text);
+  font-size: var(--font-size-caption);
   overflow-wrap: anywhere;
+}
+
+@media (max-width: 30rem) {
+  .facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (forced-colors: active) {
+  .barFill {
+    background: CanvasText;
+  }
 }

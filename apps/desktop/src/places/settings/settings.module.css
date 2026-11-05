@@ -1,0 +1,313 @@
+/* Settings (2.2 layout "S4 · Settings"): the menu on the left, the section up to 860 px wide. */
+.layout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1.75rem;
+  padding: var(--space-6) var(--space-8) var(--space-10);
+}
+
+.navColumn {
+  flex: 1 1 13.75rem;
+  max-width: 16.25rem;
+}
+
+.content {
+  display: flex;
+  flex: 999 1 37.5rem;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  max-width: 53.75rem;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+}
+
+.navTitle {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.02em;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.groupTitle {
+  margin: 0;
+  padding: 0 var(--space-3) 0.375rem;
+  color: var(--color-text-secondary);
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: 0.5625rem;
+  background: transparent;
+  color: var(--color-secondary-text);
+  font: inherit;
+  font-weight: var(--font-weight-medium);
+  text-align: start;
+  cursor: default;
+}
+
+.item:hover {
+  background: var(--color-hover);
+}
+
+/* Selected: tint, accent text and weight (not colour alone). */
+.selected,
+.selected:hover {
+  background: var(--color-selected-bg);
+  color: var(--color-selected-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.sectionHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+}
+
+.sectionHeadText {
+  display: flex;
+  flex: 1 1 20rem;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.sectionHeadActions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--font-size-title-2);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.015em;
+}
+
+.sectionLead {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-body);
+}
+
+/* A menu item: its name, then a problem badge. */
+.item {
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.itemLabel {
+  min-width: 0;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.anchor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  scroll-margin-top: calc(4.5rem + var(--space-4));
+  outline: none;
+}
+
+.anchor:focus-visible {
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: var(--space-1);
+  border-radius: var(--radius-lg);
+}
+
+/* "Tokens stay in Keychain…" under the Accounts cards. */
+.footnote {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+}
+
+/* Sources (design "S4 · Settings & sources"). */
+.cols2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(22.5rem, 100%), 1fr));
+  align-items: start;
+  gap: var(--space-5);
+}
+
+.sourceCard {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sourceHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 1.125rem var(--space-5);
+}
+
+.sourceTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.sourceText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sourceName {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: var(--font-weight-semibold);
+}
+
+.sourceDescription {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+}
+
+.sourceActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: 22rem;
+}
+
+.sourceBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 0 var(--space-5) var(--space-5);
+}
+
+.sourceBodyFlush {
+  border-top: var(--size-border) solid var(--color-separator);
+}
+
+/* The source's tinted tile: the activity colours the design gives Git, Figma and calendars. */
+.iconTile {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.625rem;
+  color: var(--color-text);
+  font-size: 1.125rem;
+}
+
+.tile-git {
+  background: var(--color-selected-bg);
+  color: var(--color-selected-text);
+}
+
+.tile-figma {
+  background: color-mix(in srgb, var(--chart-1) 16%, var(--color-surface));
+}
+
+.tile-calendar {
+  background: color-mix(in srgb, var(--chart-3) 16%, var(--color-surface));
+}
+
+.activeRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0.625rem var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  font-size: var(--font-size-footnote);
+}
+
+.activeName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--color-text-secondary);
+}
+
+.sourceMeta {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+}
+
+.linkButton {
+  min-height: 0;
+  padding: 0;
+  font-size: inherit;
+  vertical-align: baseline;
+}
+
+@media (forced-colors: active) {
+  .iconTile {
+    border: 1px solid CanvasText;
+  }
+}
+
+@media (max-width: 40rem) {
+  .layout {
+    padding-inline: var(--space-4);
+  }
+  .navColumn {
+    max-width: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .selected {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+}

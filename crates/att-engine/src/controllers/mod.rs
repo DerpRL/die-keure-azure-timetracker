@@ -59,8 +59,8 @@ pub struct ControllerState {
     pub(crate) weekly: weekly::WeeklyState,
     pub(crate) offline: offline::OfflineState,
     pub(crate) ticket_context: ticket_context::TicketContextState,
-    /// The page the previous tick saw, to run "page appeared" loads (Swift `.task` on appear).
-    pub(crate) last_page: Option<String>,
+    /// The pages the previous tick saw, to run "page appeared" loads (Swift `.task` on appear).
+    pub(crate) last_pages: Vec<String>,
     /// Test seam for ticket titles until the session's `workItems` cache exists (see
     /// [`testing::use_title_seam`]). `None` in production.
     pub(crate) title_seam: Option<TitleSeam>,
@@ -294,30 +294,35 @@ pub async fn handle(engine: &Engine, intent: ControllerIntent) -> Result<Value, 
 /// drove with `.task`): loads when a page appears, the statistics and day-review refresh while
 /// their page is visible, title batches and the weekly draft flush.
 pub async fn tick(engine: &Engine) {
-    let (page, previous) =
-        engine.read(|state| (state.visible_page.clone(), state.controllers.last_page.clone()));
-    let appeared = page != previous;
-    if appeared {
-        engine.update(|state| state.controllers.last_page = page.clone());
-        if previous.as_deref() == Some(pages::WEEKLY_REPORT) {
+    let (pages, previous) =
+        engine.read(|state| (state.visible_pages(), state.controllers.last_pages.clone()));
+    let appeared: Vec<&String> = pages.iter().filter(|page| !previous.contains(page)).collect();
+    if pages != previous {
+        engine.update(|state| state.controllers.last_pages = pages.clone());
+        let weekly = pages::WEEKLY_REPORT.to_string();
+        if previous.contains(&weekly) && !pages.contains(&weekly) {
             weekly::flush_now(engine);
         }
-        page_appeared(engine, page.as_deref());
+        for page in &appeared {
+            page_appeared(engine, Some(page.as_str()));
+        }
     }
     // Swift: `if page == .statistics, !preview, connected, !busy { await statistics.load() }`,
     // throttled inside `load` (5 minutes, or 60 s after a failure).
     let preview = engine.preview();
     let connected = engine.read(|state| crate::session::hooks::tracking_state(state).is_some());
     let busy = engine.inner.busy.is_busy();
-    if !appeared && !preview && connected && !busy {
-        match page.as_deref() {
-            Some(pages::STATISTICS) => spawn(engine, |engine| async move {
-                statistics::load(&engine, false).await;
-            }),
-            Some(pages::DAY_REVIEW) => spawn(engine, |engine| async move {
-                day_review::load(&engine, false).await;
-            }),
-            _ => {}
+    if !preview && connected && !busy {
+        for page in pages.iter().filter(|page| !appeared.contains(page)) {
+            match page.as_str() {
+                pages::STATISTICS => spawn(engine, |engine| async move {
+                    statistics::load(&engine, false).await;
+                }),
+                pages::DAY_REVIEW => spawn(engine, |engine| async move {
+                    day_review::load(&engine, false).await;
+                }),
+                _ => {}
+            }
         }
     }
     statistics::check_title_batch(engine);
@@ -345,9 +350,10 @@ fn page_appeared(engine: &Engine, page: Option<&str>) {
 
 // -- Shared helpers -------------------------------------------------------------------------------
 
-/// Whether `page` is the page the main window shows.
+/// Whether the main window shows `page`, on its own or as part of a combined view.
 pub(crate) fn visible(state: &AppState, page: &str) -> bool {
     state.visible_page.as_deref() == Some(page)
+        || state.visible_also.iter().any(|other| other == page)
 }
 
 /// Whether results computed with `clients` may still be applied.

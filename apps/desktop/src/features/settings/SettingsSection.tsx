@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Card, Section } from '../../components/Card';
 import { ErrorIcon, WarningIcon } from '../../components/icons';
+import { Switch, type SwitchProps } from '../../components/Toggles';
 import { cx } from '../../utils/cx';
 import { sectionAnchorId, sectionTitle, type SettingsSectionId } from './sections';
 import styles from './settings.module.css';
@@ -9,17 +10,26 @@ export interface SettingsSectionProps {
   id: SettingsSectionId;
   subtitle?: ReactNode;
   actions?: ReactNode;
+  /** Overrides the section's title from `SETTINGS_SECTIONS`. */
+  title?: ReactNode;
   children: ReactNode;
 }
 
 /**
- * One deep-linkable settings card (`#settings/<id>`). Its heading is an h2: the page title in the
- * header is the h1, and the category tab labels the panel around it.
+ * One deep-linkable settings card (`#settings/<id>`). Its heading is an h3: the Settings menu's
+ * title is the h1 and the view's title the h2 (2.2 layout).
  */
-export function SettingsSection({ id, subtitle, actions, children }: SettingsSectionProps) {
+export function SettingsSection({ id, subtitle, actions, title, children }: SettingsSectionProps) {
   return (
     <div id={sectionAnchorId(id)} className={styles.sectionAnchor} tabIndex={-1}>
-      <Section title={sectionTitle(id)} subtitle={subtitle} actions={actions} headingLevel={2} padding="large" className={styles.sectionCard}>
+      <Section
+        title={title ?? sectionTitle(id)}
+        subtitle={subtitle}
+        actions={actions}
+        headingLevel={3}
+        padding="large"
+        className={styles.sectionCard}
+      >
         {children}
       </Section>
     </div>
@@ -27,8 +37,8 @@ export function SettingsSection({ id, subtitle, actions, children }: SettingsSec
 }
 
 /**
- * A deep-linkable card for content that brings its own h2 (the updater's `UpdateSettings`), so
- * the page outline has no empty or duplicated heading.
+ * A deep-linkable card for content that brings its own h3 (the updater's `UpdateSettings`), so
+ * the outline has no empty or duplicated heading.
  */
 export function SettingsCard({ id, children }: { id: SettingsSectionId; children: ReactNode }) {
   return (
@@ -40,7 +50,7 @@ export function SettingsCard({ id, children }: { id: SettingsSectionId; children
   );
 }
 
-/** A group inside a section, with an h3. */
+/** A group inside a card, with an h4. */
 export function SettingsGroup({
   title,
   description,
@@ -54,14 +64,47 @@ export function SettingsGroup({
 }) {
   return (
     <div className={cx(styles.group, className)}>
-      <h3 className={styles.groupTitle}>{title}</h3>
+      <h4 className={styles.groupTitle}>{title}</h4>
       {description ? <p className={styles.hint}>{description}</p> : null}
       {children}
     </div>
   );
 }
 
-/** Secondary explanation text (1.14 `.font(.callout).foregroundStyle(palette.secondary)`). */
+export interface ToggleRowProps extends Omit<SwitchProps, 'children' | 'description'> {
+  /** The setting, in bold. */
+  title: ReactNode;
+  /** What it does: the switch's description. */
+  help?: ReactNode;
+  className?: string;
+}
+
+/**
+ * A setting with its switch on the right (the design's settings rows): the bold title and the
+ * help text are the switch's label and description, so the whole row stays one control.
+ */
+export function ToggleRow({ title, help, className, ...props }: ToggleRowProps) {
+  return (
+    <Switch {...props} description={help} className={cx(styles.toggleRow, className)}>
+      {title}
+    </Switch>
+  );
+}
+
+/** A row with a text block on the left and a control (button, shortcut) on the right. */
+export function SettingRow({ title, help, children }: { title: ReactNode; help?: ReactNode; children: ReactNode }) {
+  return (
+    <div className={styles.settingRow}>
+      <div className={styles.settingText}>
+        <p className={styles.settingTitle}>{title}</p>
+        {help ? <p className={styles.hint}>{help}</p> : null}
+      </div>
+      <div className={styles.settingControl}>{children}</div>
+    </div>
+  );
+}
+
+/** Secondary explanation text. */
 export function Hint({ children, id, className }: { children: ReactNode; id?: string; className?: string }) {
   return (
     <p id={id} className={cx(styles.hint, className)}>

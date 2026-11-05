@@ -1,10 +1,11 @@
+import { DayReviewIcon, PauseIcon, PlayIcon, StopIcon } from '../../components/icons';
 import { useSlice } from '../../state/hooks';
 import { useCommands } from '../../shortcuts/hooks';
 import { useIntents, useWriteGuards } from './actions';
 import { flowSurface, openFlow, type TrackingSurface } from './CurrentTracking';
 
 /**
- * The 1.14 Tracking menu as palette commands and shortcuts: Choose ticket… (⌘N / Ctrl+N), Stop,
+ * The 1.14 Tracking menu as palette commands and shortcuts: Track a ticket… (⌘N / Ctrl+N), Stop,
  * Pause, Resume tracking… and Review today (⌘⇧D / Ctrl+Shift+D). Disabled exactly when 1.14
  * disabled the menu items.
  */
@@ -17,9 +18,10 @@ export function TrackingCommands({ surface }: { surface: TrackingSurface }) {
   useCommands([
     {
       id: 'tracking.chooseTicket',
-      label: 'Choose ticket…',
+      label: 'Track a ticket…',
       group: 'Tracking',
-      keywords: ['track', 'switch', 'start', 'ticket'],
+      icon: PlayIcon,
+      keywords: ['choose', 'track', 'switch', 'start', 'ticket'],
       shortcut: { key: 'n', mod: true },
       isDisabled: busy,
       onAction: () => void actions.run('choose', openFlow(surface)),
@@ -28,6 +30,7 @@ export function TrackingCommands({ surface }: { surface: TrackingSurface }) {
       id: 'tracking.stop',
       label: 'Stop tracking',
       group: 'Tracking',
+      icon: StopIcon,
       isDisabled: !connected || !running || busy,
       onAction: () => void actions.run('stop', { type: 'tracking.stop' }),
     },
@@ -35,6 +38,7 @@ export function TrackingCommands({ surface }: { surface: TrackingSurface }) {
       id: 'tracking.pause',
       label: 'Pause tracking',
       group: 'Tracking',
+      icon: PauseIcon,
       isDisabled: !connected || !running || busy,
       onAction: () => void actions.run('pause', { type: 'tracking.pause' }),
     },
@@ -42,6 +46,7 @@ export function TrackingCommands({ surface }: { surface: TrackingSurface }) {
       id: 'tracking.resume',
       label: 'Resume tracking…',
       group: 'Tracking',
+      icon: PlayIcon,
       isDisabled: !connected || !paused || busy,
       onAction: () =>
         void actions.run('resume', { type: 'tracking.resume', surface: flowSurface(surface) }),
@@ -50,6 +55,7 @@ export function TrackingCommands({ surface }: { surface: TrackingSurface }) {
       id: 'tracking.reviewToday',
       label: 'Review today',
       group: 'Tracking',
+      icon: DayReviewIcon,
       keywords: ['day review'],
       shortcut: { key: 'd', mod: true, shift: true },
       onAction: () => void actions.run('review', { type: 'dayReview.open' }),

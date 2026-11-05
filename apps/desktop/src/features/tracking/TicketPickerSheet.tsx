@@ -1,7 +1,10 @@
-import { Sheet } from '../../components/Dialog';
+import { Dialog } from '../../components/Dialog';
 import { useSlice } from '../../state/hooks';
+import { formatShortDuration } from '../../utils/duration';
+import { useTrackingSeconds } from './status';
 import { ActionError, useIntents, useWriteGuards } from './actions';
 import { ActivityChooser, startLabel, useActivityForm } from './ActivityChooser';
+import { TicketCommands } from './TicketCommands';
 import { TrackingCommands } from './TrackingCommands';
 import { TicketStep } from './TrackingFlow';
 
@@ -22,24 +25,35 @@ export function TicketPickerSheet() {
   const form = useActivityForm(flow, draft);
   const suggestion = flow?.selectedSuggestion ?? null;
 
+  const tracking = useSlice('tracking');
+  const seconds = useTrackingSeconds(tracking);
+  const running = tracking?.running ? tracking : null;
+  const switching = running && running.ticketId !== null;
+
+  // 2.2 "S6 · Ticket picker": while a timer runs, the picker says what starting will stop.
+  const title = draft ? 'Choose an activity' : switching ? 'Switch ticket' : 'Choose a ticket';
   const description = draft
     ? 'Review the activity before starting this session.'
     : suggestion
       ? `For ${suggestion.title}`
-      : 'Search Azure tickets by number or title.';
+      : switching
+        ? `Stops #${running.ticketId} at ${formatShortDuration(seconds)} and starts the new one`
+        : 'Search Azure tickets by number or title.';
 
   return (
     <>
       <TrackingCommands surface="main" />
-      <Sheet
+      <TicketCommands />
+      <Dialog
         isOpen={open}
         onOpenChange={(next) => {
           // While a write runs the sheet stays (1.14 `interactiveDismissDisabled(busy)`).
           if (!next && !busy) void close.run('close', { type: 'tracking.closePicker' });
         }}
-        title={draft ? 'Choose an activity' : 'Choose a ticket'}
+        title={title}
         description={description}
-        size="medium"
+        presentation="drawer"
+        showCloseButton
         primaryAction={
           draft && form
             ? {
@@ -61,7 +75,7 @@ export function TicketPickerSheet() {
             <ActionError error={close.error} />
           </>
         ) : null}
-      </Sheet>
+      </Dialog>
     </>
   );
 }

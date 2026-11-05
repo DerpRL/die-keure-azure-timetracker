@@ -1,7 +1,8 @@
 import { useId, type ReactNode } from 'react';
 import { Disclosure, DisclosurePanel, Button as AriaButton, Heading as AriaHeading } from 'react-aria-components';
 import { Button } from '../components/Button';
-import { ChevronRightIcon, ClockIcon, type IconComponent } from '../components/icons';
+import { AppLogo } from '../components/AppLogo';
+import { ChevronRightIcon, type IconComponent } from '../components/icons';
 import { cx } from '../utils/cx';
 import styles from './PanelShell.module.css';
 
@@ -23,9 +24,7 @@ export function PanelShell({ title = 'Azure timetracker', status, children, foot
   return (
     <div className={styles.panel} data-surface="panel">
       <header className={styles.header}>
-        <span className={styles.brandTile} aria-hidden="true">
-          <ClockIcon className={styles.brandIcon} />
-        </span>
+        <AppLogo size={26} />
         <h1 id={titleId} className={styles.title}>
           {title}
         </h1>
@@ -107,6 +106,40 @@ export function PanelSectionGrid({ title = 'Open a section', links }: { title?: 
         ))}
       </ul>
     </section>
+  );
+}
+
+export interface PanelNavItem {
+  id: string;
+  label: string;
+  icon: IconComponent;
+  onPress: () => void;
+  /** A consequence worth a tooltip ("Quit app. The 7pace timer keeps running."). */
+  title?: string;
+}
+
+/**
+ * The panel's footer (2.2 layout "S9 · Menu-bar popup"): one row of icon-over-label buttons for the
+ * main window's places and Quit, with a note under it.
+ */
+export function PanelNav({ label = 'Open a section', items, note }: { label?: string; items: readonly PanelNavItem[]; note?: ReactNode }) {
+  return (
+    <nav aria-label={label} className={styles.nav}>
+      <ul role="list" className={styles.navList}>
+        {items.map((item) => {
+          const Icon = item.icon;
+          return (
+            <li key={item.id}>
+              <button type="button" className={styles.navButton} title={item.title} onClick={item.onPress}>
+                <Icon className={styles.navIcon} />
+                <span>{item.label}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      {note ? <p className={styles.navNote}>{note}</p> : null}
+    </nav>
   );
 }
 

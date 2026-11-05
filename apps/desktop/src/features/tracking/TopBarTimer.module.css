@@ -1,0 +1,88 @@
+/* The top bar's timer group (2.2 layout "Top bar"): tinted with the activity colour, 44px tall,
+   title, clock and two small controls. The tint mixes the activity into the surface; text stays
+   the body text colour, as on activity chips. */
+
+.slot {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+
+.timer {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+  height: var(--size-control-lg);
+  padding: 0 0.375rem 0 0.75rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--activity-color) 16%, var(--color-surface));
+  color: var(--color-text);
+}
+
+.paused {
+  background: var(--color-hover);
+}
+
+.dot {
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--activity-color);
+}
+
+.paused .dot {
+  background: var(--color-paused);
+}
+
+.title {
+  min-width: 0;
+  max-width: 12.5rem;
+  overflow: hidden;
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clock {
+  flex: none;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.paused .clock {
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-footnote);
+}
+
+.control {
+  flex: none;
+}
+
+/* A refused Pause / Stop: shown under the group without moving the top bar. */
+.error {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  z-index: var(--z-popover);
+  width: max-content;
+  max-width: 20rem;
+  padding: var(--space-2) var(--space-3);
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  box-shadow: var(--elevation-2);
+  color: var(--color-danger-text);
+  font-size: var(--font-size-footnote);
+}
+
+@media (forced-colors: active) {
+  .timer {
+    border: 1px solid CanvasText;
+  }
+}

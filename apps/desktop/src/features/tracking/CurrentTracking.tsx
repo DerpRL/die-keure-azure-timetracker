@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { Button } from '../../components/Button';
 import { Skeleton } from '../../components/EmptyState';
 import { PauseIcon, PlayIcon, StopIcon } from '../../components/icons';
@@ -5,7 +6,7 @@ import type { FlowSurface, Intent, TrackingSlice } from '../../ipc/contract';
 import { useDateFormatter } from 'react-aria';
 import { useSlice, useWorkItem } from '../../state/hooks';
 import { cx } from '../../utils/cx';
-import { ActivityChip, activityColorIndex, useActivityColors } from '../activity';
+import { ActivityChip, activityColor, activityColorIndex, useActivityColors } from '../activity';
 import { TimerDisplay } from '../../timer/TimerDisplay';
 import { formatShortDuration } from '../../utils/duration';
 import { TicketLink } from '../ticketContext/TicketLink';
@@ -172,48 +173,105 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
   ) : null;
 
   if (panel) {
+    const today = totals?.today ?? null;
+    const target = progress?.todayTarget ?? 0;
+    const fraction = today !== null && target > 0 ? Math.min(1, today / target) : 0;
+    const stale = !totalsConfirmed(connection, progress);
+    const todayText = today !== null ? formatShortDuration(today) : '–';
+    const barLabel =
+      `${activityName ? `${activityName}. ` : ''}Today ${todayText}` +
+      (target > 0 ? ` of ${formatShortDuration(target)}` : '') +
+      (stale ? ', last known' : '');
+    const small = { size: 'small' as const };
     return (
       <div className={cx(styles.stack, styles.panelBox)}>
-        <div className={styles.boxHeader}>
-          <p className={styles.eyebrow}>{paused ? 'Paused' : 'Current tracking'}</p>
-          {running || paused ? activityChip : <p className={styles.caption}>No timer running</p>}
-        </div>
         {running ? (
-          <div className={styles.summary}>
-            <p className={styles.trackingTitle}>{tracking.title}</p>
-            <div className={styles.metaLine}>
-              {ticketId !== null && tracking.ticketUrl ? (
-                <Button
-                  variant="plain"
-                  size="small"
-                  trailingIcon={OpenExternalIcon}
-                  className={styles.ticketLink}
-                  aria-label={`#${ticketId}, open in Azure DevOps`}
-                  onPress={() => openExternal(tracking.ticketUrl!)}
-                >
-                  {`#${ticketId}`}
-                </Button>
-              ) : ticketId !== null ? (
-                <span className={styles.ticketNumber}>{`#${ticketId}`}</span>
-              ) : null}
-              {since ? <span>{since}</span> : null}
-            </div>
-            {tracking.remark && tracking.remark !== tracking.title ? (
-              <p className={styles.caption}>{tracking.remark}</p>
+          <div className={styles.panelTitleRow}>
+            <p className={styles.panelTitle}>{tracking.title}</p>
+            {ticketId !== null && tracking.ticketUrl ? (
+              <Button
+                variant="plain"
+                size="small"
+                trailingIcon={OpenExternalIcon}
+                className={styles.panelTicket}
+                aria-label={`#${ticketId}, open in Azure DevOps`}
+                onPress={() => openExternal(tracking.ticketUrl!)}
+              >
+                {`#${ticketId}`}
+              </Button>
+            ) : ticketId !== null ? (
+              <span className={styles.panelTicket}>{`#${ticketId}`}</span>
             ) : null}
           </div>
         ) : paused ? (
           <div className={styles.summary}>
-            <p className={styles.trackingTitle}>
+            <p className={styles.panelTitle}>
               {(paused.ticketId !== null ? `#${paused.ticketId} · ` : '') + (pausedItem?.title ?? pausedTitle(tracking))}
             </p>
             <p className={styles.caption}>Paused · no new time is logged</p>
           </div>
         ) : null}
-        {timer}
+        <div className={styles.panelClockRow}>
+          <TimerDisplay
+            seconds={seconds}
+            status={status}
+            sessionId={sessionKey(tracking)}
+            size="medium"
+            showRing={false}
+            className={cx(styles.panelClock, !running && styles.panelClockIdle)}
+          />
+          <span className={styles.panelToday}>
+            <span className={styles.panelTodayLabel}>Today</span>
+            <span className={styles.panelTodayValue}>
+              {todayText}
+              {target > 0 ? <span className={styles.panelTodayTarget}>{` / ${formatShortDuration(target)}`}</span> : null}
+            </span>
+          </span>
+        </div>
+        <div
+          role="img"
+          aria-label={barLabel}
+          className={cx(styles.panelBar, stale && styles.panelBarStale)}
+          style={{ '--activity-color': activityId ? activityColor(colors, activityId) : 'var(--color-primary)' } as CSSProperties}
+        >
+          <span className={styles.panelBarFill} style={{ width: `${Math.round(fraction * 100)}%` }} />
+        </div>
         <div className={cx(styles.actions, running ? styles.panelActions : styles.panelActionsWide)}>
-          {pauseStop}
-          {resume ?? switchTicket}
+          {running ? (
+            <>
+              <Button
+                {...small}
+                isDisabled={writeDisabled}
+                isPending={actions.isPending('pause')}
+                onPress={() => void actions.run('pause', { type: 'tracking.pause' })}
+              >
+                Pause
+              </Button>
+              <Button
+                {...small}
+                isDisabled={writeDisabled}
+                isPending={actions.isPending('stop')}
+                onPress={() => void actions.run('stop', { type: 'tracking.stop' })}
+              >
+                Stop
+              </Button>
+            </>
+          ) : null}
+          {resume ?? (
+            <Button
+              {...small}
+              variant="primary"
+              icon={running ? undefined : PlayIcon}
+              data-current-primary=""
+              isDisabled={writeDisabled}
+              isPending={actions.isPending('switch')}
+              // "Switch…" fits three buttons on one row; the name stays complete.
+              aria-label={running ? 'Switch ticket…' : undefined}
+              onPress={() => void actions.run('switch', openFlow(surface))}
+            >
+              {running ? 'Switch…' : 'Start tracking…'}
+            </Button>
+          )}
         </div>
         <ActionError error={actions.error} />
         {actions.confirmation}

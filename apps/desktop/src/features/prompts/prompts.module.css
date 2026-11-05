@@ -10,6 +10,7 @@
 
 .card {
   position: relative;
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -147,6 +148,27 @@
 
 .compact .actions > .another {
   flex-basis: 100%;
+}
+
+/* Compact prompts (the panel, Today's inbox) use small buttons, as the 2.2 designs do. */
+.compact .actions > button {
+  min-height: var(--size-control-sm);
+  padding-inline: 0.625rem;
+  font-size: var(--font-size-footnote);
+}
+
+/* A narrow column in the main window (Today's Suggestions inbox) lays the buttons out like the
+   panel: equal widths, the secondary link on a row of its own. */
+@container (max-width: 26rem) {
+  .actions > * {
+    flex: 1 1 0;
+  }
+  .actions > .spacer {
+    display: none;
+  }
+  .actions > .another {
+    flex-basis: 100%;
+  }
 }
 
 .branchLines {

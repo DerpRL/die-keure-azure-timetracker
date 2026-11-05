@@ -2,16 +2,15 @@ import { useEffect, useRef } from 'react';
 import { Banner } from '../../components/Banner';
 import { Button, IconButton } from '../../components/Button';
 import { Skeleton } from '../../components/EmptyState';
-import { DayReviewIcon, OfflineDraftsIcon, OverviewIcon, PlayIcon, PowerIcon, SettingsIcon } from '../../components/icons';
+import { CalendarIcon, OfflineDraftsIcon, PlayIcon, PowerIcon, SettingsIcon, StatisticsIcon, TableIcon } from '../../components/icons';
 import type { Unlisten } from '../../ipc';
 import { onPanelHidden, onPanelShown, onQuickSwitch } from '../../ipc/shell';
-import { PanelSection, PanelSectionGrid, PanelShell } from '../../layout/PanelShell';
+import { PanelNav, PanelSection, PanelShell } from '../../layout/PanelShell';
 import { useCommand } from '../../shortcuts/hooks';
 import { useAction, useSlice } from '../../state/hooks';
 import { useIntents, useWriteGuards } from '../tracking/actions';
 import { TrackingStatusLabel } from '../../timer/status';
 import { ConnectionHealth } from '../connection/ConnectionHealth';
-import { TodayStrip, useActivityColors } from '../activity';
 import { PromptList, usePromptAnnouncements, usePromptItems } from '../prompts/PromptList';
 import { CurrentTracking, LocalTimer, useLocalTimerTitle } from '../tracking/CurrentTracking';
 import { SetupIcon } from '../tracking/icons';
@@ -56,32 +55,14 @@ function SetupCallToAction() {
   );
 }
 
-/** Today's worklogs and the running timer on a small time strip, with a link to Overview. */
-function TodaySection() {
-  const history = useSlice('history');
-  const colors = useActivityColors();
-  const logs = history?.todayLogs ?? [];
-  return (
-    <section aria-labelledby="panel-today-title" className={styles.today}>
-      <div className={styles.sectionHead}>
-        <h2 id="panel-today-title" className={styles.eyebrow}>
-          Today
-        </h2>
-        <Button variant="plain" size="small" className={styles.headLink} onPress={() => openMainPage('overview')}>
-          Open timeline
-        </Button>
-      </div>
-      <TodayStrip logs={logs} colors={colors} size="small" />
-    </section>
-  );
-}
-
-/** While no timer runs: favourite and recent tickets to start again (the engine's quick tickets). */
+/** Favourite and recent tickets to start again (the engine's quick tickets), the running one left out. */
 function PickUpAgain() {
   const flow = useSlice('flow');
+  const tracking = useSlice('tracking');
   const { busy, connected } = useWriteGuards();
   const actions = useIntents();
-  const tickets = (flow?.quickTickets ?? []).slice(0, 3);
+  const running = tracking?.running ? tracking.ticketId : null;
+  const tickets = (flow?.quickTickets ?? []).filter((ticket) => ticket.ticketId !== running).slice(0, 3);
   if (tickets.length === 0) return null;
   return (
     <section aria-labelledby="panel-pickup-title" className={styles.today}>
@@ -99,7 +80,7 @@ function PickUpAgain() {
               variant="secondary"
               size="small"
               icon={PlayIcon}
-              label={`Track #${ticket.ticketId}…`}
+              label={`Start timer on #${ticket.ticketId}`}
               tooltip={false}
               isDisabled={busy || !connected}
               isPending={actions.isPending(`pick-${ticket.ticketId}`)}
@@ -119,18 +100,23 @@ function PickUpAgain() {
   );
 }
 
-/** Offline drafts waiting for review, with a way to open them. */
-function DraftsNotice() {
+/** Offline drafts waiting for review: a button with the count that opens them in Timesheet. */
+function DraftsButton() {
   const offline = useSlice('offline');
   const count = offline?.readyCount ?? 0;
   if (count === 0) return null;
   return (
-    <div className={styles.notice}>
-      <p className={styles.noticeText}>{`${count} offline ${count === 1 ? 'draft' : 'drafts'} to review`}</p>
-      <Button size="small" onPress={() => openMainPage('offlineDrafts')}>
-        Review
-      </Button>
-    </div>
+    <Button
+      size="small"
+      className={styles.draftsButton}
+      aria-label={`${count} offline ${count === 1 ? 'draft' : 'drafts'}, open in Timesheet`}
+      onPress={() => openMainPage('timesheet/drafts')}
+    >
+      <span className={styles.draftsCount} aria-hidden="true">
+        {count}
+      </span>
+      {count === 1 ? 'Offline draft' : 'Offline drafts'}
+    </Button>
   );
 }
 
@@ -267,19 +253,15 @@ export function PanelView() {
           />
         }
         footer={
-          <PanelSectionGrid
-            links={[
-              { id: 'overview', label: 'Overview', icon: OverviewIcon, onPress: () => openMainPage('overview') },
-              { id: 'dayReview', label: 'Day review', icon: DayReviewIcon, onPress: () => openMainPage('dayReview') },
+          <PanelNav
+            items={[
+              { id: 'today', label: 'Today', icon: CalendarIcon, onPress: () => openMainPage('today') },
+              { id: 'timesheet', label: 'Timesheet', icon: TableIcon, onPress: () => openMainPage('timesheet') },
+              { id: 'insights', label: 'Insights', icon: StatisticsIcon, onPress: () => openMainPage('insights') },
               { id: 'settings', label: 'Settings', icon: SettingsIcon, onPress: () => openMainPage('settings') },
-              {
-                id: 'quit',
-                label: 'Quit app',
-                icon: PowerIcon,
-                onPress: quitApp,
-                description: 'Quitting leaves the 7pace timer running',
-              },
+              { id: 'quit', label: 'Quit', icon: PowerIcon, onPress: quitApp, title: 'Quit app. The 7pace timer keeps running.' },
             ]}
+            note="Quitting keeps the 7pace timer running."
           />
         }
       >
@@ -310,7 +292,7 @@ export function PanelView() {
                 <PromptList items={rest} surface="panel" headingLevel={3} label="More suggestions" />
               </PanelSection>
             ) : null}
-            {tracking.running || tracking.paused ? <TodaySection /> : <PickUpAgain />}
+            <PickUpAgain />
           </>
         ) : null}
         {error ? (
@@ -323,10 +305,10 @@ export function PanelView() {
             {error}
           </Banner>
         ) : null}
-        <section aria-label="Connection">
+        <section aria-label="Connection" className={styles.statusRow}>
           <ConnectionHealth />
+          {!loading && !flowActive ? <DraftsButton /> : null}
         </section>
-        {!loading && !flowActive ? <DraftsNotice /> : null}
         <UpdateNotice />
       </PanelShell>
     </div>

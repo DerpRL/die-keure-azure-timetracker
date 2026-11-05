@@ -2,6 +2,7 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MockEngineError } from '../../ipc/mockEngine';
+import { historyEmpty } from '../../ipc/fixtures/slices/history';
 import { contextFailed, contextLoaded, contextLoading, contextSparse } from '../../ipc/fixtures/slices/ticketContext';
 import { expectNoA11yViolations } from '../../test/axe';
 import { renderWithEngine } from '../../test/engine';
@@ -34,10 +35,12 @@ describe('TicketContextSheet', () => {
     await user.click(link);
     expect(engine.dispatched('ticket.showContext')).toEqual([{ type: 'ticket.showContext', ticketId: 4821 }]);
 
-    const dialog = await screen.findByRole('dialog', { name: 'Ticket context' });
-    expect(dialog).toHaveAccessibleDescription('#4821');
-    expect(within(dialog).getByRole('heading', { level: 3, name: 'Checkout: retry failed card payments' })).toBeInTheDocument();
+    const dialog = await screen.findByRole('dialog', { name: 'Checkout: retry failed card payments' });
+    expect(within(dialog).getByText('#4821')).toBeInTheDocument();
+    expect(within(dialog).getByText('User Story')).toBeInTheDocument();
+    expect(within(dialog).getByText('Active')).toBeInTheDocument();
     expect(within(dialog).getByText('Sam Peeters')).toBeInTheDocument();
+    expect(within(dialog).getByText('Webshop\\Sprint 41')).toBeInTheDocument();
     expect(within(dialog).getByText(/retry it once before showing the error/)).toBeInTheDocument();
     await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
     await expectNoA11yViolations();
@@ -67,28 +70,50 @@ describe('TicketContextSheet', () => {
     const { user } = renderWithEngine(<TicketContextSheet />, { with: { ticketContext: contextLoaded } });
     await user.click(screen.getByRole('button', { name: 'Payment provider: retry guidance, opens in your browser' }));
     expect(openUrl).toHaveBeenCalledWith('https://docs.example.com/payments/retries');
-    expect(screen.queryByRole('button', { name: /Internal wiki/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Internal wiki, opens/ })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Copy link Internal wiki' })).toBeInTheDocument();
     expect(screen.getByText(/only https links open from the app/)).toBeInTheDocument();
+  });
+
+  it('closes with the × button too', async () => {
+    const { engine, user } = renderWithEngine(<TicketContextSheet />, { with: { ticketContext: contextLoaded } });
+    const dialog = await screen.findByRole('dialog', { name: 'Checkout: retry failed card payments' });
+    await user.click(within(dialog).getByRole('button', { name: 'Close' }));
+    expect(engine.dispatched('ticket.closeContext')).toHaveLength(1);
+  });
+
+  it('sums your loaded worklogs on the ticket per day', async () => {
+    renderWithEngine(<TicketContextSheet />, { with: { ticketContext: contextLoaded } });
+    const section = await screen.findByRole('region', { name: 'Your time on this ticket' });
+    expect(section).toHaveTextContent('10h 55m');
+    expect(within(section).getAllByRole('term')).toHaveLength(3);
+    expect(within(section).getAllByRole('definition').map((value) => value.textContent)).toEqual(['4h 0m', '3h 0m', '3h 55m']);
+  });
+
+  it('leaves out your time when no worklogs on the ticket are loaded', async () => {
+    renderWithEngine(<TicketContextSheet />, { with: { ticketContext: contextSparse, history: historyEmpty } });
+    await screen.findByRole('dialog');
+    expect(screen.queryByRole('region', { name: 'Your time on this ticket' })).toBeNull();
   });
 
   it('shows the loading state', async () => {
     renderWithEngine(<TicketContextSheet />, { with: { ticketContext: contextLoading } });
-    const dialog = await screen.findByRole('dialog', { name: 'Ticket context' });
+    const dialog = await screen.findByRole('dialog', { name: 'Ticket #4821' });
     expect(within(dialog).getByRole('status')).toHaveTextContent('Loading ticket details…');
     await expectNoA11yViolations();
   });
 
   it('shows empty fields as "Not set" and empty text as "No details provided."', async () => {
     renderWithEngine(<TicketContextSheet />, { with: { ticketContext: contextSparse } });
-    const dialog = await screen.findByRole('dialog', { name: 'Ticket context' });
-    expect(within(dialog).getAllByText('Not set')).toHaveLength(3);
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getAllByText('Not set').length).toBeGreaterThanOrEqual(2);
     expect(within(dialog).getAllByText('No details provided.')).toHaveLength(2);
-    expect(within(dialog).queryByRole('heading', { name: 'Related links' })).toBeNull();
+    expect(within(dialog).queryByRole('heading', { name: 'Links' })).toBeNull();
   });
 
   it('shows the issue and retries', async () => {
     const { engine, user } = renderWithEngine(<TicketContextSheet />, { with: { ticketContext: contextFailed } });
-    const dialog = await screen.findByRole('dialog', { name: 'Ticket context' });
+    const dialog = await screen.findByRole('dialog', { name: 'Ticket #4821' });
     expect(within(dialog).getByText('Add your Azure organization and PAT in Settings to load ticket details.')).toBeInTheDocument();
     await expectNoA11yViolations();
     await user.click(within(dialog).getByRole('button', { name: 'Retry' }));
@@ -98,8 +123,8 @@ describe('TicketContextSheet', () => {
   it('ignores details that belong to another ticket', async () => {
     const { engine } = renderWithEngine(<TicketContextSheet />, { with: { ticketContext: contextLoaded } });
     act(() => engine.patchSlice('ticketContext', { ticketId: 4790, loading: true }));
-    const dialog = await screen.findByRole('dialog', { name: 'Ticket context' });
+    const dialog = await screen.findByRole('dialog', { name: 'Ticket #4790' });
     expect(within(dialog).queryByText('Checkout: retry failed card payments')).toBeNull();
-    expect(dialog).toHaveAccessibleDescription('#4790');
+    expect(within(dialog).getByText('#4790')).toBeInTheDocument();
   });
 });

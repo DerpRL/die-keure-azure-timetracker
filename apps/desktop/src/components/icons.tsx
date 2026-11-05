@@ -27,6 +27,7 @@ import {
   CircleStop,
   Clock,
   Command,
+  Copy,
   Ellipsis,
   ExternalLink,
   FileText,
@@ -108,6 +109,7 @@ export const CircleIcon = decorative(Circle, 'CircleIcon');
 export const ClockIcon = decorative(Clock, 'ClockIcon');
 export const CloseIcon = decorative(X, 'CloseIcon');
 export const CommandIcon = decorative(Command, 'CommandIcon');
+export const CopyIcon = decorative(Copy, 'CopyIcon');
 export const ErrorIcon = decorative(OctagonAlert, 'ErrorIcon');
 export const ExternalLinkIcon = decorative(ExternalLink, 'ExternalLinkIcon');
 export const FilterIcon = decorative(ListFilter, 'FilterIcon');

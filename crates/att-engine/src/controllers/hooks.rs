@@ -24,7 +24,7 @@ pub async fn on_connection_changed(engine: &Engine, clients: Option<Arc<Clients>
     let azure = clients.as_ref().is_some_and(|clients| clients.azure.is_some());
     let cal = engine.cal();
     let services = engine.services();
-    let page = engine.update(|state| {
+    let pages = engine.update(|state| {
         let controllers = &mut state.controllers;
         controllers.statistics.configure(configured);
         controllers.time_editor.configure(workspace.clone());
@@ -32,10 +32,12 @@ pub async fn on_connection_changed(engine: &Engine, clients: Option<Arc<Clients>
         weekly::configure(services, &mut controllers.weekly, workspace, &cal);
         controllers.offline.configure(configured);
         controllers.ticket_context.configure(azure);
-        state.visible_page.clone()
+        state.visible_pages()
     });
     if configured {
-        page_appeared(engine, page.as_deref());
+        for page in &pages {
+            page_appeared(engine, Some(page.as_str()));
+        }
     }
 }
 

@@ -116,7 +116,7 @@ export function FigmaSettings({ onboarding = false }: { onboarding?: boolean }) 
             />
           </div>
           <Hint>
-            Zero suppression allows a new suggestion at the next activation. Pause watching in the sidebar pauses both Git and Figma
+            Zero suppression allows a new suggestion at the next activation. Pausing branch watching (Settings → Git repositories) pauses Figma
             observations. Changes here save immediately.
           </Hint>
         </>

@@ -2,7 +2,8 @@ import { useId, type ReactNode } from 'react';
 import { useKeyboard, type KeyboardEvents } from 'react-aria';
 import { Dialog as AriaDialog, Modal, ModalOverlay } from 'react-aria-components';
 import { cx } from '../utils/cx';
-import { Button } from './Button';
+import { Button, IconButton } from './Button';
+import { CloseIcon } from './icons';
 import styles from './Dialog.module.css';
 
 export interface DialogAction {
@@ -19,19 +20,32 @@ export interface DialogProps {
   title: string;
   /** Short explanation under the title, linked as the dialog's description. */
   description?: ReactNode;
+  /** Above the title: status chips, the ticket number. */
+  eyebrow?: ReactNode;
+  /** Under the description, still in the header: facts about the subject (a `dl`). */
+  headerContent?: ReactNode;
+  /** A larger title (ticket details). */
+  titleSize?: 'default' | 'large';
+  /** An × button in the header that cancels, besides the footer's cancel button. */
+  showCloseButton?: boolean;
   children?: ReactNode;
   /** The default action: its button is filled and Return triggers it. */
   primaryAction?: DialogAction;
-  /** Additional footer buttons, placed before Cancel. */
+  /** Additional footer buttons on the leading side. */
   secondaryActions?: ReactNode;
+  /** Buttons next to Cancel and the primary action, on the trailing side. */
+  footerExtra?: ReactNode;
   /** Label of the cancel button; `null` removes it (Escape still cancels). */
   cancelLabel?: string | null;
   /** Called when the dialog is cancelled: Escape, the cancel button, or an outside click. */
   onCancel?: () => void;
   /** Allows closing with a click outside. Off by default, like macOS sheets. */
   isDismissable?: boolean;
-  /** `sheet` attaches to the top edge like a macOS sheet; `dialog` is centred. */
-  presentation?: 'dialog' | 'sheet';
+  /**
+   * `sheet` attaches to the top edge like a macOS sheet; `dialog` is centred; `drawer` is a
+   * full-height panel on the right (ticket picker, ticket details), with a tinted footer.
+   */
+  presentation?: 'dialog' | 'sheet' | 'drawer';
   size?: 'small' | 'medium' | 'large';
   role?: 'dialog' | 'alertdialog';
   className?: string;
@@ -58,9 +72,14 @@ export function Dialog({
   onOpenChange,
   title,
   description,
+  eyebrow,
+  headerContent,
+  titleSize = 'default',
+  showCloseButton = false,
   children,
   primaryAction,
   secondaryActions,
+  footerExtra,
   cancelLabel = 'Cancel',
   onCancel,
   isDismissable = false,
@@ -97,7 +116,7 @@ export function Dialog({
     },
   });
 
-  const hasFooter = Boolean(primaryAction || secondaryActions || cancelLabel);
+  const hasFooter = Boolean(primaryAction || secondaryActions || footerExtra || cancelLabel);
 
   return (
     <ModalOverlay
@@ -114,8 +133,14 @@ export function Dialog({
           className={styles.dialog}
         >
           <div {...keyboardProps} className={styles.content}>
-          <header className={styles.header}>
-            <h2 id={titleId} className={styles.title}>
+          <header className={cx(styles.header, headerContent ? styles.headerRich : undefined)}>
+            {eyebrow || showCloseButton ? (
+              <div className={styles.headerTop}>
+                {eyebrow ? <div className={styles.eyebrow}>{eyebrow}</div> : <span />}
+                {showCloseButton ? <IconButton label="Close" icon={CloseIcon} size="small" variant="secondary" tooltip={false} onPress={cancel} /> : null}
+              </div>
+            ) : null}
+            <h2 id={titleId} className={cx(styles.title, titleSize === 'large' && styles.titleLarge)}>
               {title}
             </h2>
             {description ? (
@@ -123,12 +148,14 @@ export function Dialog({
                 {description}
               </div>
             ) : null}
+            {headerContent}
           </header>
           {children ? <div className={styles.body}>{children}</div> : null}
           {hasFooter ? (
             <footer className={styles.footer}>
               {secondaryActions ? <div className={styles.secondary}>{secondaryActions}</div> : null}
               <div className={styles.primaryGroup}>
+                {footerExtra}
                 {cancelLabel ? <Button onPress={cancel}>{cancelLabel}</Button> : null}
                 {primaryAction ? (
                   <Button

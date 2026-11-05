@@ -1,150 +1,97 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import { Button } from '../components/Button';
-import { StatusDot } from '../components/Badge';
-import { Skeleton } from '../components/EmptyState';
 import { AppBanners } from '../features/app/AppBanners';
-import { ConnectionStatus } from '../features/app/ConnectionStatus';
-import { PageHeaderSlotContext } from '../features/app/PageHeaderActions';
 import { OnboardingGate } from '../features/onboarding/OnboardingGate';
 import { TicketContextSheet } from '../features/ticketContext/TicketContextSheet';
 import { TicketPickerSheet } from '../features/tracking/TicketPickerSheet';
+import { TopBarTimer } from '../features/tracking/TopBarTimer';
 import { isTauri } from '../ipc';
-import type { PageInfo } from '../ipc/contract';
 import { onNavigate } from '../ipc/shell';
-import { AppShell, type NavIndicator } from '../layout/AppShell';
-import { PAGES, type PageId } from '../layout/navigation';
-import { PageHeader } from '../layout/PageHeader';
-import { PAGE_COMPONENTS } from '../pages/registry';
+import { AppShell } from '../layout/AppShell';
+import { NavigationContext, type Navigation } from '../layout/NavigationContext';
+import {
+  enginePages,
+  pageVisibility,
+  parseNavTarget,
+  resolveRoute,
+  routeKey,
+  routesEqual,
+  toRoute,
+  type NavTarget,
+  type Route,
+} from '../layout/navigation';
+import { PageFallback } from '../places/PageFallback';
+import { PLACE_COMPONENTS } from '../places/registry';
 import { useAction, useSlice } from '../state/hooks';
-import { ActivityChip, activityColorIndex, useActivityColors } from '../features/activity';
-import { useTrackingSeconds } from '../features/tracking/status';
-import { formatClock } from '../utils/duration';
-import styles from './surfaces.module.css';
 
-function isPageId(value: string | null | undefined): value is PageId {
-  return !!value && Object.hasOwn(PAGES, value);
-}
-
-function indicatorFor(page: PageInfo): NavIndicator | undefined {
-  if (page.badge) {
-    const count = page.badge;
-    const label =
-      page.id === 'overview'
-        ? `${count} pending ${count === 1 ? 'suggestion' : 'suggestions'}`
-        : page.id === 'offlineDrafts'
-          ? `${count} ${count === 1 ? 'draft' : 'drafts'} ready to upload`
-          : `${count} pending`;
-    return { count, label };
-  }
-  if (page.dot) return { dot: true, label: page.id === 'dayReview' ? 'Review pending' : 'Needs attention' };
-  return undefined;
-}
-
-/** Tells the engine which page is on screen (`null` while the main window is hidden). */
-function useVisiblePage(page: PageId) {
-  const visible = useAction();
-  const { run } = visible;
+/**
+ * Tells the engine what the view shows (`null` while the main window is hidden): the view's
+ * first page, plus the pages it shows part of, so those load and refresh too.
+ */
+function useVisiblePages(page: string, also: readonly string[]) {
+  const { run } = useAction();
+  const alsoKey = also.join(',');
   useEffect(() => {
     const report = () => {
-      void run({ type: 'app.setVisiblePage', page: document.hidden ? null : page });
+      void run(
+        document.hidden
+          ? { type: 'app.setVisiblePage', page: null }
+          : { type: 'app.setVisiblePage', page, also: alsoKey ? alsoKey.split(',') : [] },
+      );
     };
     report();
     document.addEventListener('visibilitychange', report);
     return () => document.removeEventListener('visibilitychange', report);
-  }, [page, run]);
+  }, [page, alsoKey, run]);
 }
 
-/**
- * The running (or paused) 7pace timer at the bottom of the sidebar, so it stays in view on every
- * page (2.0 redesign). The clock is plain text, not a live region: nothing is announced per second.
- */
-function SidebarTracking() {
-  const tracking = useSlice('tracking');
-  const seconds = useTrackingSeconds(tracking);
-  const colors = useActivityColors();
-  if (!tracking || (!tracking.running && !tracking.paused)) return null;
-  const paused = !tracking.running ? tracking.paused : null;
-  const ticketId = paused ? paused.ticketId : tracking.ticketId;
-  const title = paused ? paused.title : tracking.title;
-  const activityId = paused ? paused.activityId : tracking.activityId;
-  const activityName = paused ? paused.activityName : tracking.activityName;
-  return (
-    <section aria-label="Current timer" className={styles.sidebarCard}>
-      <p className={styles.eyebrow}>{paused ? 'Paused' : 'Tracking'}</p>
-      <div className={styles.sidebarClockRow}>
-        <span className={styles.sidebarClock}>{paused ? 'Paused' : formatClock(seconds)}</span>
-        {activityName ? <ActivityChip name={activityName} colorIndex={activityColorIndex(colors, activityId)} /> : null}
-      </div>
-      <p className={styles.sidebarTitle}>{`${ticketId !== null ? `#${ticketId} ` : ''}${title}`}</p>
-    </section>
-  );
-}
-
-function WatchingFooter() {
-  const repositories = useSlice('repositories');
-  const toggle = useAction();
-  if (!repositories) return null;
-  const watching = repositories.watching;
-  return (
-    <div className={styles.sidebarFooter}>
-      <SidebarTracking />
-      <div className={styles.watchingCard}>
-        <StatusDot
-          tone={watching ? 'success' : 'paused'}
-          label={watching ? 'Watching branches' : 'Observations paused'}
-          showLabel
-        />
-        <Button
-          size="small"
-          aria-label={watching ? 'Pause watching' : 'Resume watching'}
-          isPending={toggle.pending}
-          onPress={() => void toggle.run({ type: 'repositories.toggleWatching' })}
-        >
-          {watching ? 'Pause' : 'Resume'}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function PageFallback() {
-  return (
-    <div aria-busy="true" aria-label="Loading page">
-      <Skeleton lines={4} />
-    </div>
-  );
-}
-
-/** Main window: sidebar pages from the engine, header, banners, the page and global sheets. */
+/** Main window: the top bar, banners, the current place and the global sheets. */
 export function MainSurface() {
   const app = useSlice('app');
-  const [page, setPage] = useState<PageId>(() => (isPageId(app?.visiblePage) ? app.visiblePage : 'overview'));
-  useVisiblePage(page);
+  // Reopening the window shows the view the engine last saw (a 1.14 page id), else Today.
+  const [route, setRoute] = useState<Route>(() => parseNavTarget(app?.visiblePage) ?? { place: 'today' });
 
+  const platform = app ? (app.os === 'windows' ? 'windows' : 'macos') : undefined;
   const pages = app?.pages;
-  const hiddenPages = useMemo(
-    () => (pages ?? []).filter((info) => info.hidden || !info.available).map((info) => info.id),
-    [pages],
+  const hiddenKey = (pages ?? [])
+    .filter((info) => info.hidden || !info.available)
+    .map((info) => info.id)
+    .join(',');
+  const isPageVisible = useMemo(
+    () => pageVisibility({ platform: platform ?? 'macos', hiddenPages: hiddenKey ? hiddenKey.split(',') : [] }),
+    [platform, hiddenKey],
   );
-  const indicators = useMemo(() => {
-    const result: Partial<Record<PageId, NavIndicator>> = {};
-    for (const info of pages ?? []) {
-      const indicator = indicatorFor(info);
-      if (indicator && isPageId(info.id)) result[info.id] = indicator;
-    }
-    return result;
-  }, [pages]);
 
-  const navigate = useCallback((next: PageId) => setPage(next), []);
-  const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
+  // A view the user just hid is no longer reachable: its place's first view, or Today.
+  const current = resolveRoute(route, isPageVisible);
+  const { page, also } = enginePages(current, isPageVisible);
+  useVisiblePages(page, also);
 
-  // The shell asks for a page (tray menu "Settings…", a prompt's "Review in Time editor", …).
+  const navigate = useCallback((target: NavTarget) => {
+    const next = toRoute(target);
+    setRoute((previous) => (routesEqual(previous, next) ? previous : next));
+  }, []);
+  const canNavigate = useCallback(
+    (target: NavTarget) => {
+      const wanted = toRoute(target);
+      return routesEqual(resolveRoute(wanted, isPageVisible), wanted);
+    },
+    [isPageVisible],
+  );
+  // Keyed by the route's string so the context stays stable while the route object is recreated.
+  const currentKey = routeKey(current);
+  const navigation = useMemo<Navigation>(
+    () => ({ route: parseNavTarget(currentKey) ?? { place: 'today' }, navigate, canNavigate, isPageVisible }),
+    [currentKey, navigate, canNavigate, isPageVisible],
+  );
+
+  // The shell asks for a view: tray menu "Settings…", a prompt's "Review in Time editor", …
   useEffect(() => {
     if (!isTauri()) return;
     let unlisten: (() => void) | undefined;
     let cancelled = false;
     void onNavigate((requested) => {
-      if (isPageId(requested)) setPage(requested);
+      const target = parseNavTarget(requested);
+      if (target) navigate(target);
     }).then((stop) => {
       if (cancelled) stop();
       else unlisten = stop;
@@ -153,39 +100,28 @@ export function MainSurface() {
       cancelled = true;
       unlisten?.();
     };
-  }, []);
+  }, [navigate]);
 
-  // A page the user just hid is no longer reachable: fall back to Overview.
-  const current: PageId = hiddenPages.includes(page) ? 'overview' : page;
-  const definition = PAGES[current];
-  const Page = PAGE_COMPONENTS[current];
+  const Place = PLACE_COMPONENTS[current.place];
 
   return (
     <OnboardingGate>
-      <AppShell
-        currentPage={current}
-        onNavigate={navigate}
-        platform={app ? (app.os === 'windows' ? 'windows' : 'macos') : undefined}
-        hiddenPages={hiddenPages}
-        indicators={indicators}
-        header={
-          <PageHeader
-            title={definition.title}
-            status={<ConnectionStatus />}
-            actions={<div ref={setHeaderSlot} className={styles.headerActions} />}
-          />
-        }
-        banners={<AppBanners />}
-        sidebarFooter={<WatchingFooter />}
-      >
-        <PageHeaderSlotContext.Provider value={headerSlot}>
+      <NavigationContext.Provider value={navigation}>
+        <AppShell
+          route={current}
+          onNavigate={navigate}
+          isPageVisible={isPageVisible}
+          platform={platform}
+          timer={<TopBarTimer />}
+          banners={<AppBanners />}
+        >
           <Suspense fallback={<PageFallback />}>
-            <Page />
+            <Place />
           </Suspense>
-        </PageHeaderSlotContext.Provider>
-      </AppShell>
-      <TicketPickerSheet />
-      <TicketContextSheet />
+        </AppShell>
+        <TicketPickerSheet />
+        <TicketContextSheet />
+      </NavigationContext.Provider>
     </OnboardingGate>
   );
 }

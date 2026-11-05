@@ -227,9 +227,11 @@ describe('features', () => {
 });
 
 describe('labels and links', () => {
-  it('parses deep links to sections and categories', () => {
-    expect(parseSettingsHash('#settings/calendar')).toEqual({ category: 'meetings', section: 'calendar' });
-    expect(parseSettingsHash('#settings/app')).toEqual({ category: 'app' });
+  it('parses deep links to sections and views', () => {
+    expect(parseSettingsHash('#settings/calendar')).toEqual({ view: 'calendars', section: 'calendar' });
+    expect(parseSettingsHash('#settings/app')).toEqual({ view: 'appearance', section: 'app' });
+    expect(parseSettingsHash('#settings/accounts')).toEqual({ view: 'accounts' });
+    expect(parseSettingsHash('#settings/tracking')).toEqual({ view: 'tracking' });
     expect(parseSettingsHash('#settings/unknown')).toBeNull();
     expect(parseSettingsHash('#other')).toBeNull();
   });

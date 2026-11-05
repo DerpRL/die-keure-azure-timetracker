@@ -1,73 +1,7 @@
-/* Settings page: category list, sections and the save bar. */
-
-/* `[data-orientation]` (set by React Aria) outranks the foundation tab styles. */
-.layout[data-orientation] {
-  display: grid;
-  grid-template-columns: minmax(10rem, 15rem) minmax(0, 1fr);
-  align-items: start;
-  gap: var(--space-6);
-  min-width: 0;
-}
-
-.categoryList[data-orientation] {
-  position: sticky;
-  top: calc(3.5rem + var(--space-4));
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  padding: 0;
-  border: 0;
-}
-
-/* Overrides the horizontal tab look of the foundation tabs. */
-.categoryList .category {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  min-height: var(--size-control-md);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  color: var(--color-secondary-text);
-  font-weight: var(--font-weight-medium);
-}
-
-.categoryList .category[data-hovered]:not([data-selected]) {
-  background: var(--color-hover);
-}
-
-.categoryList .category[data-selected] {
-  background: var(--color-accent-bg);
-  color: var(--color-accent);
-  /* Weight and background mark the selection, as in the sidebar (not colour alone). */
-  font-weight: var(--font-weight-semibold);
-}
-
-.categoryList .category[data-selected]::after {
-  content: none;
-}
-
-.categoryBadge {
-  flex: none;
-}
-
-.content {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
-  min-width: 0;
-  max-width: 56rem;
-}
-
-.panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
-  min-width: 0;
-}
+/* Settings cards (2.2 layout "S4 · Settings"): cards with h3 titles, setting rows and the save bar. */
 
 .sectionAnchor {
-  scroll-margin-top: calc(3.5rem + var(--space-4));
+  scroll-margin-top: calc(4.5rem + var(--space-4));
   outline: none;
 }
 
@@ -88,10 +22,10 @@
   gap: var(--space-5);
 }
 
-.sectionCard h2 {
-  font-size: var(--font-size-title-2);
-  font-weight: var(--font-weight-bold);
-  letter-spacing: -0.015em;
+.sectionCard h3 {
+  font-size: 1rem;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.005em;
 }
 
 .sectionCard > :last-child {
@@ -343,27 +277,8 @@
   gap: var(--space-2);
 }
 
-/* Weekly schedule */
-.weekGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
-  gap: var(--space-3);
-}
 
-.total {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-sunken);
-  font-weight: var(--font-weight-semibold);
-}
 
-.total output {
-  font-variant-numeric: tabular-nums;
-}
 
 .holidayList {
   display: grid;
@@ -504,7 +419,7 @@
 /* Save bar */
 .saveBar {
   position: sticky;
-  bottom: 0;
+  bottom: var(--space-4);
   z-index: var(--z-sticky);
   display: flex;
   flex-direction: column;
@@ -562,21 +477,314 @@
   gap: var(--space-4);
 }
 
-@media (max-width: 52rem) {
-  .layout[data-orientation] {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .categoryList[data-orientation] {
-    position: static;
-    flex-direction: row;
-    flex-wrap: wrap;
+/* A setting with its switch on the right: title and help on the left (the Switch's label and
+   description), the track on the right. The label element is laid out by its children so the
+   track can sit in the second column; it stays the click and focus target. */
+.toggleRow {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.125rem var(--space-4);
+}
+
+.toggleRow > label {
+  display: contents;
+}
+
+.toggleRow > label > [aria-hidden='true'] {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  align-self: center;
+}
+
+.toggleRow > label > :last-child {
+  grid-row: 1;
+  grid-column: 1;
+  font-weight: var(--font-weight-semibold);
+}
+
+.toggleRow > span {
+  grid-row: 2;
+  grid-column: 1;
+  padding-inline-start: 0;
+}
+
+/* Text on the left, a button or shortcut on the right. */
+.settingRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.settingText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.settingTitle {
+  font-weight: var(--font-weight-semibold);
+}
+
+.settingControl {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.settingDanger {
+  padding-top: var(--space-4);
+  border-top: var(--size-border) solid var(--color-separator);
+}
+
+/* "Stored in Keychain · Leave empty to keep it." */
+.chipLine {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Daily targets: one narrow column per weekday (the design's 7-column row). */
+.dayGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(4.5rem, 1fr));
+  gap: var(--space-2);
+}
+
+.weekend {
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 44rem) {
+  .dayGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
+.cardTotal {
+  font-size: var(--font-size-footnote);
+  font-variant-numeric: tabular-nums;
+}
+
+.cardTotal b {
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Theme choice: three cards with a swatch (System, Light, Dark). */
+.themeChoices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.themeLegend {
+  padding: 0 0 0.625rem;
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-secondary-text);
+}
+
+.themeCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0.625rem;
+  border: var(--size-border) solid var(--color-button-border);
+  border-radius: var(--radius-md);
+  color: var(--color-secondary-text);
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-semibold);
+  cursor: default;
+}
+
+.themeCard:hover {
+  background: var(--color-hover);
+}
+
+.themeCard:has(input:checked) {
+  border-color: var(--color-selected-indicator);
+  background: var(--color-selected-bg);
+  box-shadow: 0 0 0 1px var(--color-selected-indicator);
+  color: var(--color-selected-text);
+}
+
+.themeCard:has(input:focus-visible) {
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.themeInput {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* The swatches show the app's own light and dark backgrounds, whatever the current theme. */
+.themeSwatch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 3.5rem;
+  overflow: hidden;
+  border: var(--size-border) solid var(--color-border);
+  border-radius: 0.5rem;
+}
+
+.swatchLight {
+  background: #f6f7f9;
+}
+
+.swatchDark {
+  background: #0e1015;
+}
+
+.themeSwatch > :only-child {
+  grid-column: 1 / -1;
+}
+
+.segmentPair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  align-items: start;
+  gap: var(--space-4);
+}
+
+/* The save bar: one raised card under the view's cards (2.2 layout). */
+.saveHint {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-regular);
+}
+
 @media (forced-colors: active) {
-  .categoryList .category[data-selected] {
-    forced-color-adjust: none;
-    background: Highlight;
-    color: HighlightText;
+  .themeCard:has(input:checked) {
+    border: 2px solid Highlight;
+  }
+}
+
+.detailsText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+/* Calendars: swatch, name and switch per calendar. */
+.calendarList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.calendarRow {
+  display: grid;
+  grid-template-columns: 0.625rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 2.5rem;
+  font-size: var(--font-size-footnote);
+}
+
+.calendarRow .swatch {
+  background: var(--color-text-secondary);
+}
+
+.calendarName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--color-text-secondary);
+}
+
+/* Branch rules: the "Branch | Suggests" table. */
+.rules {
+  width: 100%;
+  overflow: hidden;
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-md);
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--font-size-footnote);
+}
+
+.rules th {
+  padding: 0.625rem 0.875rem;
+  background: var(--color-surface-sunken);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-align: start;
+  text-transform: uppercase;
+}
+
+.rules td {
+  padding: 0.625rem 0.875rem;
+  border-top: var(--size-border) solid var(--color-separator);
+  vertical-align: middle;
+}
+
+.code {
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.375rem;
+  background: var(--color-hover);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-footnote);
+  overflow-wrap: anywhere;
+}
+
+.testerRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.testerResult {
+  display: flex;
+  align-items: center;
+  min-height: var(--size-control-md);
+  margin: 0;
+}
+
+.testerResult output {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--size-control-md);
+  padding: 0 0.875rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-semibold);
+}
+
+.resultGood {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.resultBad {
+  background: var(--color-danger-bg);
+  color: var(--color-danger-text);
+}
+
+.resultPending {
+  background: var(--color-hover);
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 40rem) {
+  .testerRow {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

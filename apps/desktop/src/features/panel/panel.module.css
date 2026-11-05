@@ -126,3 +126,37 @@
   font-size: var(--font-size-footnote);
   font-weight: var(--font-weight-semibold);
 }
+
+/* The connection line and the drafts button share a row (2.2 "S9"); the drafts button wraps
+   under the connection line when the details need the room. */
+.statusRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2) 0.625rem;
+}
+
+.statusRow > :first-child {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.draftsButton {
+  flex: none;
+  color: var(--color-accent);
+}
+
+.draftsCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding: 0 0.375rem;
+  border-radius: 0.375rem;
+  background: var(--color-selected-bg);
+  color: var(--color-selected-text);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+}

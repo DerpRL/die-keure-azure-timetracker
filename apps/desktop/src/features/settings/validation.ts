@@ -188,10 +188,10 @@ export function validateConfiguration(
   if (!quietHoursValid(configuration.quietHours)) add('quietHours', 'notifications');
   const url = configuration.sevenPaceUrl.trim();
   const tokenNeedsUrl = secrets.sevenPaceToken.trim() !== '' && configuration.sevenPaceAuthMode !== 'mobilePIN';
-  if ((url !== '' || tokenNeedsUrl) && !sevenPaceUrlValid(url)) add('sevenPaceUrl', 'connection');
+  if ((url !== '' || tokenNeedsUrl) && !sevenPaceUrlValid(url)) add('sevenPaceUrl', 'sevenPace');
   const organization = configuration.organization.trim();
   if ((organization !== '' || secrets.azurePat.trim() !== '') && !organizationValid(organization)) {
-    add('organization', 'connection');
+    add('organization', 'azure');
   }
   return issues;
 }

@@ -12,16 +12,17 @@ import styles from './updates.module.css';
 /**
  * The App updates section of Settings (1.14 `UpdateSettingsView`). Automatic checks are the saved
  * `automaticUpdateChecks` setting, changed with the Settings form, so this section only shows
- * it; "Check for updates" and the install action work right away.
+ * it; "Check for updates" and the install action work right away. `headingLevel` places its title
+ * in the surrounding outline (3 inside a Settings view).
  */
-export function UpdateSettings() {
+export function UpdateSettings({ headingLevel = 2 }: { headingLevel?: 2 | 3 } = {}) {
   const { status, error } = useUpdateStatus();
   const settings = useSlice('settings');
   const automatic = settings?.configuration.automaticUpdateChecks ?? status?.automatic ?? true;
   const every = everyText(settings?.configuration.cadences.updateCheckSeconds ?? 60);
 
   return (
-    <Section title="App updates" subtitle="Get new versions from the public GitHub repository." variant="plain">
+    <Section title="App updates" subtitle="Get new versions from the public GitHub repository." variant="plain" headingLevel={headingLevel}>
       <div className={styles.setting}>
         <p className={styles.settingRow}>
           Automatic checks
@@ -44,7 +45,7 @@ export function UpdateSettings() {
         </Banner>
       ) : (
         <LoadingRegion label="Loading update status" isLoading={!status} placeholder={<Skeleton lines={3} />}>
-          {status ? <UpdateDetails status={status} headingLevel={3} /> : null}
+          {status ? <UpdateDetails status={status} headingLevel={headingLevel === 2 ? 3 : 4} /> : null}
         </LoadingRegion>
       )}
     </Section>

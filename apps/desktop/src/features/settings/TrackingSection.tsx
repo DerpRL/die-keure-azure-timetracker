@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { TextField } from '../../components/Fields';
 import { Select } from '../../components/Pickers';
-import { Switch } from '../../components/Toggles';
 import type { ShortcutStatus } from '../../ipc/shell';
 import { useAction, useSlice } from '../../state/hooks';
 import { POLL_LABELS } from './labels';
 import { fallbackShortcut, readShortcut } from './platform';
-import { Divider, Hint, InlineIssue, SettingsGroup, SettingsSection } from './SettingsSection';
+import { Divider, Hint, InlineIssue, SettingsSection, ToggleRow } from './SettingsSection';
 import { useSettingsForm } from './SettingsForm';
 import { POLL_CHOICES } from './validation';
 import styles from './settings.module.css';
@@ -56,28 +55,51 @@ function useBranchPatternTest(branch: string, pattern: string) {
   return { text: current?.text ?? null, invalid: current?.invalid ?? false, testing: current === null };
 }
 
-function BranchDetection() {
-  const { draft, update } = useSettingsForm();
-  const [branch, setBranch] = useState(TEST_BRANCH);
-  const test = useBranchPatternTest(branch, draft.branchPattern);
-  const pollOptions = (POLL_CHOICES as readonly number[]).includes(draft.pollSeconds)
-    ? POLL_CHOICES
-    : [...POLL_CHOICES, draft.pollSeconds].sort((a, b) => a - b);
+/** The rule table of the design's "Branch rules" card: what each kind of branch suggests. */
+function RuleTable() {
   return (
-    <SettingsGroup title="Branch detection">
-      <Switch isSelected={draft.watchEnabled} onChange={(watchEnabled) => update((current) => ({ ...current, watchEnabled }))}>
-        Watch repositories for branch changes
-      </Switch>
-      <Switch
-        isSelected={draft.autoStartWhenIdle}
-        onChange={(autoStartWhenIdle) => update((current) => ({ ...current, autoStartWhenIdle }))}
-        description="Every timer starts after you choose its activity and confirm. This option opens the chooser for a new branch change after connecting, not app startup."
-      >
-        Automatically open the activity chooser when no timer is running
-      </Switch>
+    <table className={styles.rules}>
+      <thead>
+        <tr>
+          <th scope="col">Branch</th>
+          <th scope="col">Suggests</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <code className={styles.code}>{TEST_BRANCH}</code>
+          </td>
+          <td>
+            Track ticket <b>#33624</b>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <code className={styles.code}>develop</code> · <code className={styles.code}>long-feature/*</code>
+          </td>
+          <td>Pause, stop or keep tracking</td>
+        </tr>
+        <tr>
+          <td>Detached HEAD</td>
+          <td>Nothing</td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
+/** Settings → Git repositories → Branch rules: what a branch suggests, the pattern and its tester. */
+export function BranchRulesSection() {
+  const { draft, update } = useSettingsForm();
+  const [branch, setBranch] = useState('feature/AB#4790-vat-number');
+  const test = useBranchPatternTest(branch, draft.branchPattern);
+  return (
+    <SettingsSection id="branchRules">
+      <RuleTable />
       <TextField
-        label="Ticket pattern"
-        description="A regular expression. The first capture group is the ticket number. Supports feature/123-name and featute/123-name."
+        label="Ticket number pattern"
+        description="A regular expression. The first capture group is the ticket number."
         value={draft.branchPattern}
         onChange={(branchPattern) => update((current) => ({ ...current, branchPattern }))}
         placeholder="Regular expression"
@@ -87,35 +109,46 @@ function BranchDetection() {
         autoComplete="off"
         spellCheck="false"
       />
-      <div className={styles.fieldRow}>
-        <TextField
-          label="Try a branch name"
-          value={branch}
-          onChange={setBranch}
-          className={styles.mono}
-          autoComplete="off"
-          spellCheck="false"
-        />
-        <p className={styles.narrow}>
+      <div className={styles.testerRow}>
+        <TextField label="Try a branch name" value={branch} onChange={setBranch} className={styles.mono} autoComplete="off" spellCheck="false" />
+        <p className={styles.testerResult}>
           <span className="visually-hidden">Result: </span>
-          <output aria-live="polite" className={test.invalid ? styles.issue : undefined}>
+          <output aria-live="polite" className={test.invalid ? styles.resultBad : test.testing ? styles.resultPending : styles.resultGood}>
             {test.testing ? 'Testing…' : test.text}
           </output>
         </p>
       </div>
-      <Select
-        label="Refresh 7pace"
-        items={pollOptions.map((seconds) => ({ id: seconds, label: POLL_LABELS[seconds] ?? `Every ${seconds} seconds` }))}
-        selectedKey={draft.pollSeconds}
-        onSelectionChange={(key) => {
-          if (typeof key === 'number') update((current) => ({ ...current, pollSeconds: key }));
-        }}
-        width="narrow"
+      <Divider />
+      <ToggleRow
+        title="Open the activity chooser for a new branch"
+        help="Only while no timer runs, after connecting. Every timer still starts after you choose its activity and confirm."
+        isSelected={draft.autoStartWhenIdle}
+        onChange={(autoStartWhenIdle) => update((current) => ({ ...current, autoStartWhenIdle }))}
       />
       <Hint>
-        {`Local branch checks run every ${draft.cadences.probeSeconds} ${draft.cadences.probeSeconds === 1 ? 'second' : 'seconds'}. Server rate limits are respected.`}
+        {`Local branch checks run every ${draft.cadences.probeSeconds} ${draft.cadences.probeSeconds === 1 ? 'second' : 'seconds'}.`}
       </Hint>
-    </SettingsGroup>
+    </SettingsSection>
+  );
+}
+
+/** How often the 7pace timer is refreshed (Advanced). */
+export function PollSelect() {
+  const { draft, update } = useSettingsForm();
+  const pollOptions = (POLL_CHOICES as readonly number[]).includes(draft.pollSeconds)
+    ? POLL_CHOICES
+    : [...POLL_CHOICES, draft.pollSeconds].sort((a, b) => a - b);
+  return (
+    <Select
+      label="Refresh 7pace"
+      description="Server rate limits are always respected."
+      items={pollOptions.map((seconds) => ({ id: seconds, label: POLL_LABELS[seconds] ?? `Every ${seconds} seconds` }))}
+      selectedKey={draft.pollSeconds}
+      onSelectionChange={(key) => {
+        if (typeof key === 'number') update((current) => ({ ...current, pollSeconds: key }));
+      }}
+      width="narrow"
+    />
   );
 }
 
@@ -141,7 +174,8 @@ export function spokenAccelerator(accelerator: string, os: 'macos' | 'windows'):
     .join(' + ');
 }
 
-function QuickSwitch() {
+/** The quick-switch shortcut (App card). */
+export function QuickSwitch() {
   const { draft, update, os, settings } = useSettingsForm();
   const [status, setStatus] = useState<ShortcutStatus>(() => fallbackShortcut(os));
   const stored = settings.configuration;
@@ -166,13 +200,13 @@ function QuickSwitch() {
   const label = typed.trim() ? typed.trim() : (status.label ?? status.defaultLabel);
   const looksInvalid = typed.trim() !== '' && !acceleratorLooksValid(typed);
   return (
-    <SettingsGroup title="Quick switch">
-      <Switch
+    <div className={styles.group}>
+      <ToggleRow
+        title={`Quick switch from any app · ${label}`}
+        help={`${spokenAccelerator(accelerator, os)} opens ticket search with favorites and recent tickets. Choose an activity before switching.`}
         isSelected={draft.quickSwitchEnabled}
         onChange={(quickSwitchEnabled) => update((current) => ({ ...current, quickSwitchEnabled }))}
-      >
-        {`Quick switch from any app · ${label}`}
-      </Switch>
+      />
       <TextField
         label="Quick switch shortcut"
         description={`Leave blank to use ${status.defaultLabel}. Write it as modifiers and a key, such as ${status.defaultAccelerator}.`}
@@ -185,59 +219,46 @@ function QuickSwitch() {
         spellCheck="false"
       />
       {looksInvalid ? <InlineIssue tone="warning">Include at least one modifier key and one other key, such as {status.defaultAccelerator}.</InlineIssue> : null}
-      <Hint>
-        {`${spokenAccelerator(accelerator, os)} opens ticket search with favorites and recent tickets. Choose an activity before switching.`}
-      </Hint>
       {status.issue ? <InlineIssue tone="warning">{status.issue}</InlineIssue> : null}
-    </SettingsGroup>
+    </div>
   );
 }
 
-/** Settings → Tracking (1.14 default activity, `branchSection` and quick switch). */
-export function TrackingSection() {
+/** Settings → Targets & reminders → Timer & reminders: the default activity and ticket reminders. */
+export function TimerSection() {
   const { draft, update } = useSettingsForm();
   const flow = useSlice('flow');
   const activities = flow?.activityTypes ?? [];
   return (
     <SettingsSection id="tracking" subtitle="Nothing starts a timer until you choose an activity and confirm.">
-      <SettingsGroup title="Default activity">
-        {activities.length > 0 ? (
-          <Select
-            label="Default activity"
-            items={activityOptions(activities, 'Use 7pace default', draft.activityTypeId)}
-            selectedKey={draft.activityTypeId === '' ? DEFAULT_ACTIVITY_KEY : draft.activityTypeId}
-            onSelectionChange={(key) =>
-              update((current) => ({ ...current, activityTypeId: key === DEFAULT_ACTIVITY_KEY || key === null ? '' : String(key) }))
-            }
-            width="narrow"
-          />
-        ) : (
-          <TextField
-            label="Activity type ID"
-            description="Optional. Only needed if your organization requires a specific activity."
-            placeholder="Use 7pace default"
-            value={draft.activityTypeId}
-            onChange={(activityTypeId) => update((current) => ({ ...current, activityTypeId }))}
-            width="narrow"
-            autoComplete="off"
-          />
-        )}
-        {flow?.activityError ? <InlineIssue tone="warning">{flow.activityError}</InlineIssue> : null}
-      </SettingsGroup>
-      <Divider />
-      <BranchDetection />
-      <Divider />
-      <SettingsGroup title="Ticket reminders">
-        <Switch
-          isSelected={draft.completionReminders}
-          onChange={(completionReminders) => update((current) => ({ ...current, completionReminders }))}
-          description="Checks Azure about once a minute while tracking. Requires an Azure PAT with Work Items read access. Choose Keep tracking, Stop or Switch ticket when a ticket enters a completed workflow state."
-        >
-          Remind me when the tracked ticket is completed
-        </Switch>
-      </SettingsGroup>
-      <Divider />
-      <QuickSwitch />
+      {activities.length > 0 ? (
+        <Select
+          label="Default activity"
+          items={activityOptions(activities, 'Use 7pace default', draft.activityTypeId)}
+          selectedKey={draft.activityTypeId === '' ? DEFAULT_ACTIVITY_KEY : draft.activityTypeId}
+          onSelectionChange={(key) =>
+            update((current) => ({ ...current, activityTypeId: key === DEFAULT_ACTIVITY_KEY || key === null ? '' : String(key) }))
+          }
+          width="narrow"
+        />
+      ) : (
+        <TextField
+          label="Activity type ID"
+          description="Optional. Only needed if your organization requires a specific activity."
+          placeholder="Use 7pace default"
+          value={draft.activityTypeId}
+          onChange={(activityTypeId) => update((current) => ({ ...current, activityTypeId }))}
+          width="narrow"
+          autoComplete="off"
+        />
+      )}
+      {flow?.activityError ? <InlineIssue tone="warning">{flow.activityError}</InlineIssue> : null}
+      <ToggleRow
+        title="Remind me when the tracked ticket is completed"
+        help="Checks Azure about once a minute while tracking (needs an Azure PAT with Work Items read access). You choose Keep tracking, Stop or Switch ticket."
+        isSelected={draft.completionReminders}
+        onChange={(completionReminders) => update((current) => ({ ...current, completionReminders }))}
+      />
     </SettingsSection>
   );
 }

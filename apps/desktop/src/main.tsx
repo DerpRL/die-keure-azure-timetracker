@@ -48,16 +48,24 @@ document.documentElement.dataset.surface = surface;
  */
 async function installPreviewEngine(): Promise<void> {
   if (isTauri()) return;
-  const [{ installMockEngine }, { sampleSlices, SAMPLE_NOW }, { pinClockTo }] = await Promise.all([
+  const [{ installMockEngine }, { sampleSlices, SAMPLE_NOW }, { pinClockTo }, { dayReviewToday }] = await Promise.all([
     import('./ipc/mockEngine'),
     import('./ipc/fixtures'),
     import('./ipc/sampleClock'),
+    import('./ipc/fixtures/slices/dayReview'),
   ]);
   if (new URLSearchParams(location.search).get('clock') !== 'real') pinClockTo(SAMPLE_NOW);
   installMockEngine({ slices: sampleSlices(), latencyMs: 120 })
     // Settings → App → "Show onboarding again", and finishing it, like the engine.
     .handle('app.restartOnboarding', (_intent, mock) => mock.patchSlice('app', { onboarding: true }))
-    .handle('app.finishOnboarding', (_intent, mock) => mock.patchSlice('app', { onboarding: false, visiblePage: 'settings' }));
+    .handle('app.finishOnboarding', (_intent, mock) => mock.patchSlice('app', { onboarding: false, visiblePage: 'settings' }))
+    // The ticket picker opens and closes like the engine's flow.
+    .handle('tracking.openPicker', (_intent, mock) => mock.patchSlice('flow', { surface: 'picker', draft: null }))
+    .handle('tracking.closePicker', (_intent, mock) => mock.patchSlice('flow', { surface: 'none', draft: null }))
+    // Today's day check and reviewing an earlier day: the sample review is Monday's.
+    .handle('dayReview.setDay', (intent, mock) =>
+      mock.setSlice('dayReview', intent.day === '2026-10-06' ? dayReviewToday : { ...sampleSlices().dayReview!, selectedDay: intent.day }),
+    );
 }
 
 const container = document.getElementById('root');

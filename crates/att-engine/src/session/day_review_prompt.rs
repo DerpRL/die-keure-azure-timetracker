@@ -127,7 +127,7 @@ pub(crate) fn snooze(engine: &Engine) {
 pub(crate) async fn open(engine: &Engine) {
     let today = today(engine);
     engine.services().shell.show_main(Some("dayReview"));
-    engine.update(|state| state.visible_page = Some("dayReview".to_string()));
+    engine.update(|state| state.show_page("dayReview"));
     let _ = controllers::handle(engine, ControllerIntent::SetDayReviewDay { day: today }).await;
     if !busy(engine) {
         connection::refresh(engine).await;

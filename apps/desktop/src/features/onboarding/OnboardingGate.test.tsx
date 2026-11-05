@@ -1,4 +1,4 @@
-import { act, screen } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { resetMockIpc } from '../../ipc';
 import type { AppSlice } from '../../ipc/contract';
@@ -50,9 +50,12 @@ describe('OnboardingGate', () => {
     expect(screen.queryByText('The app')).not.toBeInTheDocument();
     expect(screen.getByRole('main', { name: 'Make yourself comfortable' })).toBeInTheDocument();
     expect(screen.getByRole('heading', TITLE)).toHaveFocus();
-    expect(screen.getByRole('radiogroup', { name: 'Appearance' })).toBeInTheDocument();
-    expect(screen.getByRole('radiogroup', { name: 'UI scale' })).toBeInTheDocument();
-    expect(screen.getByRole('radiogroup', { name: 'UI contrast' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Theme' })).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: 'Text and control size' })).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: 'Contrast' })).toBeInTheDocument();
+    const steps = within(screen.getByRole('list', { name: 'Setup steps' })).getAllByRole('listitem');
+    expect(steps.map((step) => step.textContent)).toEqual(['1Appearance', '2Accounts']);
+    expect(steps[0]).toHaveAttribute('aria-current', 'step');
     expect(screen.getByRole('switch', { name: 'Observe Figma files' })).toBeInTheDocument();
     expect(screen.getByText('Next: connect Azure DevOps and 7pace.')).toBeInTheDocument();
   });
@@ -107,9 +110,9 @@ describe('OnboardingGate', () => {
   it('replaces the whole main window and gives it back afterwards', async () => {
     const { engine } = renderWithEngine(<MainSurface />, { with: { app: onboardingApp } });
     await screen.findByRole('heading', TITLE);
-    expect(screen.queryByRole('navigation', { name: 'Sections' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Main' })).not.toBeInTheDocument();
     act(() => engine.setSlice('app', { ...sampleSlices().app!, onboarding: false }));
-    expect(await screen.findByRole('navigation', { name: 'Sections' })).toBeInTheDocument();
+    expect(await screen.findByRole('navigation', { name: 'Main' })).toBeInTheDocument();
   });
 
   it('has no axe violations', async () => {

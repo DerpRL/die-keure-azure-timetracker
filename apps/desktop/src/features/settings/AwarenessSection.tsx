@@ -2,12 +2,11 @@ import { useState } from 'react';
 import { Button } from '../../components/Button';
 import { NumberField, TextField } from '../../components/Fields';
 import { MinusIcon, PlusIcon } from '../../components/icons';
-import { Switch } from '../../components/Toggles';
 import type { WorkAwarenessPreferences } from '../../ipc/contract';
 import { dispatch } from '../../ipc/engine';
 import { workAppName } from './labels';
 import { chooseApplications } from './platform';
-import { Divider, Hint, InlineIssue, SettingsGroup, SettingsSection } from './SettingsSection';
+import { Divider, Hint, InlineIssue, SettingsGroup, SettingsSection, ToggleRow } from './SettingsSection';
 import { useSettingsForm } from './SettingsForm';
 import { AWARENESS_MINUTES, issueFor } from './validation';
 import styles from './settings.module.css';
@@ -126,7 +125,7 @@ function WorkApps() {
   );
 }
 
-/** Settings → Tracking → Time awareness (1.14 `WorkAwarenessSettings`). */
+/** Settings → Targets & reminders → Time awareness (1.14 `WorkAwarenessSettings`). */
 export function AwarenessSection() {
   const { draft, update, issues, os } = useSettingsForm();
   const preferences = draft.awareness;
@@ -140,9 +139,11 @@ export function AwarenessSection() {
     preferences.forgottenMinutes > AWARENESS_MINUTES.max;
   return (
     <SettingsSection id="awareness" subtitle="Review suggestions before changing your timer or recorded time.">
-      <Switch isSelected={preferences.idleEnabled} onChange={(idleEnabled) => set({ idleEnabled })}>
-        Suggest reviewing time after inactivity
-      </Switch>
+      <ToggleRow
+        title="Suggest reviewing time after inactivity"
+        isSelected={preferences.idleEnabled}
+        onChange={(idleEnabled) => set({ idleEnabled })}
+      />
       <NumberField
         label="Inactivity threshold"
         unit="minutes"
@@ -157,17 +158,18 @@ export function AwarenessSection() {
         errorMessage={idleInvalid ? issue : undefined}
         formatOptions={{ maximumFractionDigits: 0 }}
       />
-      <Switch isSelected={preferences.lockEnabled} onChange={(lockEnabled) => set({ lockEnabled })}>
-        Detect screen lock, sleep and inactive sessions
-      </Switch>
-      <Hint>
-        A prompt appears when you return. Reading without input may count as idle; detected meetings suppress passive inactivity
-        prompts. Your timer keeps running until you choose an action.
-      </Hint>
+      <ToggleRow
+        title="Detect screen lock, sleep and inactive sessions"
+        help="A prompt appears when you return. Reading without input may count as idle; detected meetings suppress passive inactivity prompts. Your timer keeps running until you choose an action."
+        isSelected={preferences.lockEnabled}
+        onChange={(lockEnabled) => set({ lockEnabled })}
+      />
       <Divider />
-      <Switch isSelected={preferences.forgottenEnabled} onChange={(forgottenEnabled) => set({ forgottenEnabled })}>
-        Remind me when I work without a timer
-      </Switch>
+      <ToggleRow
+        title="Remind me when I work without a timer"
+        isSelected={preferences.forgottenEnabled}
+        onChange={(forgottenEnabled) => set({ forgottenEnabled })}
+      />
       <NumberField
         label="Remind after"
         unit="active minutes"
@@ -183,7 +185,7 @@ export function AwarenessSection() {
         formatOptions={{ maximumFractionDigits: 0 }}
       />
       <Hint>
-        Uses the workday start/end times in Day review and your scheduled working days. Paused tracking, detected meetings and a
+        Uses your workday (Daily targets) and your scheduled working days. Paused tracking, detected meetings and a
         running offline draft suppress reminders.
       </Hint>
       <WorkApps />

@@ -650,7 +650,7 @@ export type ForgottenTicketView = { repository: string; ticketId: number; title:
 /** Intents handled by the engine itself. */
 export type GenericIntent =
   | { type: "app.snapshot" }
-  | { type: "app.setVisiblePage"; page: string | null };
+  | { type: "app.setVisiblePage"; page: string | null; also?: Array<string> };
 
 export type Health =
   | "unconfigured"

@@ -2,30 +2,22 @@ import { useContext } from 'react';
 import { Button } from '../../components/Button';
 import { NumberField } from '../../components/Fields';
 import { KeyboardIcon } from '../../components/icons';
-import { Switch } from '../../components/Toggles';
 import type { Cadences } from '../../ipc/contract';
 import { ShortcutContext } from '../../shortcuts/hooks';
 import { useAction } from '../../state/hooks';
+import { KeyboardShortcut } from '../../components/KeyboardShortcut';
+import { PALETTE_SHORTCUT } from '../../shortcuts/ShortcutProvider';
 import { UpdateSettings } from '../updates/UpdateSettings';
 import { AppearanceSettings } from './AppearanceForm';
-import { FigmaSettings } from './FigmaSettings';
 import { osWords } from './labels';
-import { Divider, Hint, InlineIssue, SettingsCard, SettingsGroup, SettingsSection } from './SettingsSection';
+import { Divider, Hint, InlineIssue, SettingRow, SettingsCard, SettingsGroup, SettingsSection, ToggleRow } from './SettingsSection';
+import { PollSelect, QuickSwitch } from './TrackingSection';
 import { useSettingsForm } from './SettingsForm';
 import { useLaunchAtLogin } from './useLaunchAtLogin';
 import { CADENCE_BOUNDS, issueFor } from './validation';
 import styles from './settings.module.css';
 
-/** Settings → Tracking → Figma Desktop (applies immediately). */
-export function FigmaSection() {
-  return (
-    <SettingsSection id="figma" subtitle="Suggest Design tracking when you switch files. Always confirm before a timer changes.">
-      <FigmaSettings />
-    </SettingsSection>
-  );
-}
-
-/** Settings → Appearance (applies immediately). */
+/** Settings → Appearance & app → Appearance (applies immediately). */
 export function AppearanceSection() {
   const { os } = useSettingsForm();
   return (
@@ -35,79 +27,58 @@ export function AppearanceSection() {
   );
 }
 
-/** Settings → App → Window and startup: launch at login (immediate) and the mini timer. */
-export function WindowSection() {
-  const { draft, update, os, dirty, preview } = useSettingsForm();
-  const onboarding = useAction();
+/** Settings → Appearance & app → App: startup, the mini timer, the palette and quick switch. */
+export function AppSection() {
+  const { draft, update, os } = useSettingsForm();
   const launch = useLaunchAtLogin();
   const words = osWords(os);
   return (
-    <SettingsSection id="window" subtitle={`How Azure timetracker works on your ${words.device}.`}>
-      <Switch
+    <SettingsSection id="app">
+      <ToggleRow
+        title="Open at login"
+        help={launch.available ? `Starts in the ${words.trayPlace}, without a window. Applies right away.` : 'Available in the desktop app.'}
         isSelected={launch.enabled ?? false}
         isDisabled={!launch.available || launch.pending}
         onChange={launch.set}
-        description={launch.available ? 'Applies immediately.' : 'Available in the desktop app.'}
-      >
-        Open Azure timetracker at login
-      </Switch>
+      />
       {launch.error ? <InlineIssue>{launch.error}</InlineIssue> : null}
-      <Switch
+      <ToggleRow
+        title="Floating mini timer"
+        help={
+          os === 'windows'
+            ? 'Stays on top of other windows, because the notification area shows no clock.'
+            : 'Stays on top of other windows, next to the menu-bar clock.'
+        }
         isSelected={draft.miniTimer}
         onChange={(miniTimer) => update((current) => ({ ...current, miniTimer }))}
-        description={
-          os === 'windows'
-            ? 'A small always-on-top window with the elapsed time, because the notification area shows no clock.'
-            : 'A small always-on-top window with the elapsed time, next to the menu-bar clock.'
-        }
-      >
-        Show the mini timer
-      </Switch>
-      <Hint>{`The app stays in the ${words.trayPlace} when its window closes. Quitting leaves the 7pace timer running.`}</Hint>
+      />
+      <SettingRow title="Open the command palette" help="Works whenever the app window is open.">
+        <KeyboardShortcut shortcut={PALETTE_SHORTCUT} variant="standalone" />
+      </SettingRow>
       <Divider />
-      <SettingsGroup
-        title="Onboarding"
-        description={
-          preview
-            ? 'Not available in preview mode.'
-            : dirty
-              ? 'Save or revert your changes first: the onboarding replaces this window until you finish it.'
-              : 'Walk through the first-run setup again. Your settings, accounts and any running timer stay as they are.'
-        }
-      >
-        <div className={styles.row}>
-          <Button
-            isDisabled={dirty || preview}
-            isPending={onboarding.pending}
-            onPress={() => void onboarding.run({ type: 'app.restartOnboarding' })}
-          >
-            Show onboarding again
-          </Button>
-        </div>
-        {onboarding.error ? <InlineIssue>{onboarding.error.message}</InlineIssue> : null}
-      </SettingsGroup>
+      <QuickSwitch />
+      <Hint>{`The app stays in the ${words.trayPlace} when its window closes. Quitting leaves the 7pace timer running.`}</Hint>
     </SettingsSection>
   );
 }
 
 /**
- * Settings → App → App updates: the updater's own section (`UpdateSettings`, with its h2 and
- * the saved state of automatic checks) plus the draft switch it points to.
+ * Settings → Appearance & app → App updates: the updater's own section (`UpdateSettings`, with
+ * its h3 and the saved state of automatic checks) plus the draft switch it points to.
  */
 export function UpdatesSection() {
   const { draft, update } = useSettingsForm();
   const seconds = draft.cadences.updateCheckSeconds;
   return (
     <SettingsCard id="updates">
-      <UpdateSettings />
+      <UpdateSettings headingLevel={3} />
       <Divider />
-      <Switch
+      <ToggleRow
+        title="Check for updates automatically"
+        help={`Checks the update feed every ${seconds} seconds once saved. Change the interval under Advanced.`}
         isSelected={draft.automaticUpdateChecks}
         onChange={(automaticUpdateChecks) => update((current) => ({ ...current, automaticUpdateChecks }))}
-        description={`Checks the update feed every ${seconds} seconds once saved. Change the interval in Advanced.`}
-      >
-        Check for updates automatically
-      </Switch>
+      />
     </SettingsCard>
   );
 }
@@ -129,81 +100,88 @@ const CADENCES: readonly CadenceField[] = [
 /** `Cadences::default()`. */
 const DEFAULT_CADENCES: Cadences = { probeSeconds: 2, calendarSeconds: 30, progressSeconds: 300, updateCheckSeconds: 60 };
 
-/** Settings → Advanced: the polling cadences within the Rust bounds. */
+/**
+ * Settings → Appearance & app → Advanced: the version, keyboard help, the onboarding, how often
+ * things are checked, and where data is kept. (No log export or local-data reset: the engine has
+ * no such actions.)
+ */
 export function AdvancedSection() {
-  const { draft, update, issues, app } = useSettingsForm();
+  const { draft, update, issues, app, os, dirty, preview } = useSettingsForm();
+  const shortcuts = useContext(ShortcutContext);
+  const onboarding = useAction();
   const issue = issueFor(issues, 'cadences');
   const calendar = app?.features.calendar ?? true;
   const cadences = draft.cadences;
-  const isDefault = (Object.keys(DEFAULT_CADENCES) as Array<keyof Cadences>).every((key) => cadences[key] === DEFAULT_CADENCES[key]);
-  return (
-    <SettingsSection id="advanced" subtitle="How often the app checks things. Shorter intervals react faster and use a little more energy.">
-      <div className={styles.fieldRow}>
-        {CADENCES.filter((field) => !field.needsCalendar || calendar).map((field) => {
-          const bounds = CADENCE_BOUNDS[field.key];
-          const value = cadences[field.key];
-          const invalid = !Number.isInteger(value) || value < bounds.min || value > bounds.max;
-          return (
-            <NumberField
-              key={field.key}
-              label={field.label}
-              description={field.description}
-              unit="seconds"
-              minValue={bounds.min}
-              maxValue={bounds.max}
-              value={value}
-              onChange={(next) => {
-                if (Number.isInteger(next)) update((current) => ({ ...current, cadences: { ...current.cadences, [field.key]: next } }));
-              }}
-              isInvalid={invalid}
-              formatOptions={{ maximumFractionDigits: 0 }}
-              width="full"
-            />
-          );
-        })}
-      </div>
-      {issue ? <InlineIssue>{issue}</InlineIssue> : null}
-      <Hint>The 7pace timer refresh is under Tracking → Refresh 7pace. Server rate limits are always respected.</Hint>
-      <div className={styles.row}>
-        <Button isDisabled={isDefault} onPress={() => update((current) => ({ ...current, cadences: { ...DEFAULT_CADENCES } }))}>
-          Restore default intervals
-        </Button>
-      </div>
-    </SettingsSection>
-  );
-}
-
-/** Settings → App → About: version, system, keyboard and storage notes. */
-export function AboutSection() {
-  const { app, os } = useSettingsForm();
-  const shortcuts = useContext(ShortcutContext);
   const words = osWords(os);
   const mod = os === 'windows' ? 'Ctrl+' : '⌘';
+  const isDefault = (Object.keys(DEFAULT_CADENCES) as Array<keyof Cadences>).every((key) => cadences[key] === DEFAULT_CADENCES[key]);
   return (
-    <SettingsSection id="about">
-      <dl className={styles.levels}>
-        <dt>Version</dt>
-        <dd>{app ? `Azure timetracker ${app.version}` : 'Azure timetracker'}</dd>
-        <dt>System</dt>
-        <dd>{words.name}</dd>
-      </dl>
-      <Divider />
-      <SettingsGroup title="Keyboard navigation">
-        <Hint>
-          {`${mod}1–${mod}9 and ${mod}0 open the pages in sidebar order. ${mod}K opens the command palette and ? lists every shortcut. ${mod}S saves Settings.`}
-        </Hint>
-        <Hint>Every action is reachable with Tab and the arrow keys; buttons show a visible focus ring.</Hint>
+    <SettingsSection id="advanced">
+      <SettingRow title={app ? `Version ${app.version}` : 'Azure timetracker'} help={`${words.name} · Check for updates under App updates.`}>
         {shortcuts ? (
-          <div className={styles.row}>
-            <Button icon={KeyboardIcon} onPress={shortcuts.openCheatSheet}>
-              Show keyboard shortcuts
-            </Button>
-          </div>
+          <Button size="small" icon={KeyboardIcon} onPress={shortcuts.openCheatSheet}>
+            Show keyboard shortcuts
+          </Button>
         ) : null}
+      </SettingRow>
+      <Hint>{`${mod}1, ${mod}2 and ${mod}3 open Today, Timesheet and Insights; ${mod}, opens Settings and ${mod}K the command palette. ${mod}S saves Settings.`}</Hint>
+      <SettingRow
+        title="Onboarding"
+        help={
+          preview
+            ? 'Not available in preview mode.'
+            : dirty
+              ? 'Save or revert your changes first: the onboarding replaces this window until you finish it.'
+              : 'Walk through the first-run setup again. Your settings, accounts and any running timer stay as they are.'
+        }
+      >
+        <Button
+          size="small"
+          isDisabled={dirty || preview}
+          isPending={onboarding.pending}
+          onPress={() => void onboarding.run({ type: 'app.restartOnboarding' })}
+        >
+          Show onboarding again
+        </Button>
+      </SettingRow>
+      {onboarding.error ? <InlineIssue>{onboarding.error.message}</InlineIssue> : null}
+      <Divider />
+      <SettingsGroup title="Polling intervals" description="How often the app checks things. Shorter intervals react faster and use a little more energy.">
+        <PollSelect />
+        <div className={styles.fieldRow}>
+          {CADENCES.filter((field) => !field.needsCalendar || calendar).map((field) => {
+            const bounds = CADENCE_BOUNDS[field.key];
+            const value = cadences[field.key];
+            const invalid = !Number.isInteger(value) || value < bounds.min || value > bounds.max;
+            return (
+              <NumberField
+                key={field.key}
+                label={field.label}
+                description={field.description}
+                unit="seconds"
+                minValue={bounds.min}
+                maxValue={bounds.max}
+                value={value}
+                onChange={(next) => {
+                  if (Number.isInteger(next)) update((current) => ({ ...current, cadences: { ...current.cadences, [field.key]: next } }));
+                }}
+                isInvalid={invalid}
+                formatOptions={{ maximumFractionDigits: 0 }}
+                width="full"
+              />
+            );
+          })}
+        </div>
+        {issue ? <InlineIssue>{issue}</InlineIssue> : null}
+        <div className={styles.row}>
+          <Button size="small" isDisabled={isDefault} onPress={() => update((current) => ({ ...current, cadences: { ...DEFAULT_CADENCES } }))}>
+            Restore default intervals
+          </Button>
+        </div>
       </SettingsGroup>
       <Divider />
       <Hint>
-        {`Credentials are kept in ${os === 'windows' ? words.credentials : 'macOS Keychain'}. Day review status is stored only on this ${words.device}.`}
+        {`Tokens are kept in ${words.credentials}; your Git repositories stay untouched. Day review status, drafts and suggestions history are stored only on this ${words.device}.`}
       </Hint>
     </SettingsSection>
   );

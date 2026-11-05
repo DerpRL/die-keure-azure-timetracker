@@ -168,7 +168,7 @@ pub(crate) async fn finish_onboarding(engine: &Engine) {
         return;
     }
     engine.services().shell.show_main(Some("settings"));
-    engine.update(|state| state.visible_page = Some("settings".to_string()));
+    engine.update(|state| state.show_page("settings"));
     // The main loop starts the app on its next tick.
     engine.inner.wake.notify_one();
 }

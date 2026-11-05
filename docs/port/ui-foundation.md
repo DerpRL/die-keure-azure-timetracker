@@ -27,14 +27,14 @@ and test builds only (`__GALLERY__`); production bundles never contain it.
 
 | Folder | Contents |
 |---|---|
-| `surfaces/` | `SurfaceRoot` picks the window by Tauri label. `MainSurface` holds the sidebar from the `app` slice, routing, the visible-page report, banners and the global sheets. `PanelSurface` and `MiniSurface` delegate to `features/panel` and `features/mini`. |
-| `pages/<id>/index.tsx` | One lazily loaded page per sidebar entry (`pages/registry.ts`). |
+| `surfaces/` | `SurfaceRoot` picks the window by Tauri label. `MainSurface` holds the route (place and view), hidden views from the `app` slice, the visible-page report (`app.setVisiblePage` with `also` for every page a combined view shows), shell navigation requests, banners and the global sheets. `PanelSurface` and `MiniSurface` delegate to `features/panel` and `features/mini`. |
+| `places/<place>/` | The 2.2 layout's four places, lazily loaded (`places/registry.ts`): **Today** (day view and reviewing an earlier day), **Timesheet** (Week, Day, List, Drafts), **Insights** (Where time went, Patterns, Weekly report) and **Settings** (menu with Account, Tracking, Sources and App views). Each reads its view from `usePlaceView`. |
 | `features/` | Page-independent UI: `app` (banners, connection status, header actions, appearance sync), `tracking`, `prompts`, `panel`, `mini`, `progress`, `ticketContext`, `onboarding`, `updates`, `settings`. |
 | `ipc/` | `index.ts` (invoke/listen with a mock backend outside Tauri), `generated.ts` (types from Rust; do not edit), `contract.ts` (slice map and intent results), `engine.ts` (`dispatch`, `resync`, `onSlices`), `shell.ts` (windows, panel, shortcut, quit, shell events), `mockEngine.ts`, `fixtures/`. |
 | `state/` | `store.ts` (one store of the latest slices), `hooks.ts` (`useSlice`, `useWorkItem`, `useAction`, `useNow`, `useLiveSeconds`), `EngineProvider.tsx`. |
 | `components/` | Accessible primitives on react-aria-components: Button, fields, pickers, date and time fields, dialog, menu, popover, table, toggles, segmented control, tooltip, toast, banner, badge and status dot, card, empty state and skeleton, progress, keyboard shortcut, icons (lucide), and the live-region `Announcer`. |
 | `charts/` | d3-scale/shape charts: Timeline, ActivityBars, CalendarHeatmap, HourHeatmap, CumulativeProgress, Donut, Legend, ChartFrame, ChartTooltip. Each has keyboard navigation and a `DataTable` twin. |
-| `layout/` | AppShell (sidebar groups Today / Insights / Setup, ⌘1…⌘0 in visible order, hidden pages), PageHeader, PanelShell, MiniTimerShell, navigation model. |
+| `layout/` | AppShell (top bar: places, ⌘K search, running timer, Settings gear; ⌘1–⌘3 for the top-bar places and ⌘, for Settings), `PlaceBody` / `PlaceHeader` / `ViewTabs`, PanelShell, MiniTimerShell and the navigation model (`navigation.ts`: places, views, the 1.14 page ids the engine and shell still use, and which views a hidden page removes). |
 | `timer/` | TimerDisplay (rolling digits, progress ring, reduced motion) and status labels. |
 | `theme/` | Design tokens (`tokens.css`: light, dark, increased contrast, forced colours), appearance preferences (theme, scale 90–150 % through the root font size, contrast), ThemeProvider, contrast checks for every token pair. |
 | `shortcuts/` | Command registry, the ⌘K / Ctrl+K command palette, the `?` cheat sheet, platform-aware key labels. |

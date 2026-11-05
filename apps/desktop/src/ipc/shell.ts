@@ -4,7 +4,10 @@
  * `dispatch` (`engine.ts`) instead.
  */
 import { invoke, listen, type Unlisten } from './index';
-import type { PageId } from '../layout/navigation';
+import type { PageId, PlaceId } from '../layout/navigation';
+
+/** What the main window can be asked to show: a 1.14 page id, a place or `place/view`. */
+export type MainTarget = PageId | PlaceId | `${PlaceId}/${string}`;
 
 /** `shell_get_shortcut`. */
 export interface ShortcutStatus {
@@ -48,7 +51,7 @@ export function togglePanel(): Promise<void> {
 }
 
 /** Shows and focuses the main window (hiding the panel), optionally on `page`. */
-export function showMain(page?: PageId): Promise<void> {
+export function showMain(page?: MainTarget): Promise<void> {
   return invoke('shell_show_main', { page: page ?? null });
 }
 

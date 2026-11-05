@@ -1,22 +1,20 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { announce } from '../../components/Announcer';
-import { Badge, StatusDot } from '../../components/Badge';
-import { Banner } from '../../components/Banner';
+import { Badge, StatusDot, type Tone } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { TextField } from '../../components/Fields';
 import { CheckIcon, RefreshIcon } from '../../components/icons';
 import { SegmentedControl } from '../../components/Segmented';
 import { useToast } from '../../components/Toast';
-import type { SevenPaceAuthMode } from '../../ipc/contract';
+import type { Configuration, SevenPaceAuthMode } from '../../ipc/contract';
 import { dispatch } from '../../ipc/engine';
 import { useAction, useNow, useSlice } from '../../state/hooks';
 import { connectionTone } from '../app/ConnectionStatus';
 import { formatDateTime, formatTime, osWords } from './labels';
 import { copyText } from './platform';
-import { Divider, Hint, InlineIssue, SettingsGroup, SettingsSection } from './SettingsSection';
+import { Hint, InlineIssue, SettingsSection } from './SettingsSection';
 import { useSettingsForm } from './SettingsForm';
 import { issueFor } from './validation';
-import { cx } from '../../utils/cx';
 import styles from './settings.module.css';
 
 interface SecretFieldProps {
@@ -24,20 +22,21 @@ interface SecretFieldProps {
   value: string;
   onChange: (value: string) => void;
   stored: boolean;
-  storedText: string;
-  emptyText: string;
-  placeholder: string;
+  /** Where secrets are kept: "Keychain", "Windows Credential Manager". */
+  store: string;
+  emptyText: ReactNode;
+  emptyPlaceholder: string;
   isDisabled?: boolean;
 }
 
-/** A credential: never shown, blank keeps the stored one (1.14 `SecureField`). */
-function SecretField({ label, value, onChange, stored, storedText, emptyText, placeholder, isDisabled }: SecretFieldProps) {
+/** A credential: never shown, blank keeps the stored one. */
+function SecretField({ label, value, onChange, stored, store, emptyText, emptyPlaceholder, isDisabled }: SecretFieldProps) {
   const description: ReactNode = stored ? (
-    <span className={styles.secretDescription}>
+    <span className={styles.chipLine}>
       <Badge tone="success" icon={CheckIcon}>
-        Stored
+        {`Stored in ${store}`}
       </Badge>
-      <span>{storedText}</span>
+      <span>Leave empty to keep it.</span>
     </span>
   ) : (
     emptyText
@@ -49,11 +48,20 @@ function SecretField({ label, value, onChange, stored, storedText, emptyText, pl
       autoComplete="off"
       value={value}
       onChange={onChange}
-      placeholder={placeholder}
+      placeholder={stored ? 'Paste a new token to replace the stored one' : emptyPlaceholder}
       description={description}
       isDisabled={isDisabled}
       width="full"
     />
+  );
+}
+
+/** "Connected" and its siblings, next to a card title. */
+function ConnectionChip({ tone, label }: { tone: Tone; label: string }) {
+  return (
+    <Badge tone={tone} icon={tone === 'success' ? CheckIcon : undefined}>
+      {label}
+    </Badge>
   );
 }
 
@@ -184,137 +192,162 @@ function PinPairing() {
   );
 }
 
-/** 1.14 `ConnectionDetailsView`. */
-function ConnectionDetails() {
-  const { settings, draft, busy, preview } = useSettingsForm();
-  const connection = useSlice('connection');
-  const retry = useAction();
-  if (!connection) return null;
-  return (
-    <div className={styles.detailsRow}>
-      <SettingsGroup title="Connection details" className={styles.detailsText}>
-        <StatusDot tone={connectionTone(connection)} label={connection.status} showLabel />
-        {connection.detail ? <Hint>{connection.detail}</Hint> : null}
-        <ul role="list" className={cx(styles.details, styles.detailsInline)}>
-          <li>{connection.lastSync ? `Timer checked ${formatDateTime(connection.lastSync)}` : 'The timer has not been checked yet.'}</li>
-          {connection.worklogSync ? <li>{`Time entries checked ${formatDateTime(connection.worklogSync)}`}</li> : null}
-          {connection.connectionIssue ? <li className={styles.warning}>{connection.connectionIssue}</li> : null}
-          {connection.azureIssue ? <li className={styles.warning}>{`Azure tickets: ${connection.azureIssue}`}</li> : null}
-          {connection.progressIssue ? <li className={styles.warning}>{`Time totals: ${connection.progressIssue}`}</li> : null}
-          {draft.completionReminders && !settings.hasAzurePat ? (
-            <li>Add an Azure PAT in Accounts to enable ticket completion reminders.</li>
-          ) : null}
-        </ul>
-        {retry.error ? <InlineIssue>{retry.error.message}</InlineIssue> : null}
-      </SettingsGroup>
-      <Button
-        icon={RefreshIcon}
-        onPress={() => void retry.run({ type: 'connection.retry' })}
-        isDisabled={busy || preview}
-        isPending={retry.pending || connection.connecting}
-      >
-        Refresh connection
-      </Button>
-    </div>
-  );
-}
-
 const AUTH_MODES: ReadonlyArray<{ id: SevenPaceAuthMode; label: string }> = [
   { id: 'mobilePIN', label: 'Mobile PIN pairing' },
   { id: 'apiToken', label: 'API token' },
 ];
 
-/** Settings → Accounts (1.14 `accountSection` + `connectionSection`). */
-export function ConnectionSection() {
+function unconfigured(configuration: Configuration): boolean {
+  return configuration.sevenPaceUrl.trim() === '' && configuration.organization.trim() === '';
+}
+
+/** Settings → Azure DevOps & 7pace → Azure DevOps: organization, project and the PAT. */
+export function AzureSection() {
   const form = useSettingsForm();
   const { draft, update, settings, issues, preview, os } = form;
-  const words = osWords(os);
-  const unconfigured = settings.configuration.sevenPaceUrl.trim() === '' && settings.configuration.organization.trim() === '';
-  const mode = draft.sevenPaceAuthMode;
+  const connection = useSlice('connection');
   const organizationIssue = issueFor(issues, 'organization');
-  const urlIssue = issueFor(issues, 'sevenPaceUrl');
-
+  const chip: { tone: Tone; label: string } = !settings.hasAzurePat
+    ? { tone: 'neutral', label: 'Not connected yet' }
+    : connection?.azureIssue
+      ? { tone: 'warning', label: 'Needs attention' }
+      : connection?.connected
+        ? { tone: 'success', label: 'Connected' }
+        : { tone: 'neutral', label: 'Token stored' };
   return (
-    <SettingsSection id="connection" subtitle="Azure DevOps provides ticket details; 7pace Timetracker records your time.">
-      {unconfigured ? (
-        <Banner tone="info" title="Connect your accounts to start tracking" live="off">
-          Enter your Azure organization and 7pace workspace, add your credentials, then choose Save changes.
-        </Banner>
-      ) : null}
-      <SettingsGroup title="Azure DevOps">
-        <div className={styles.fieldPair}>
-          <TextField
-            label="Azure organization"
-            description="The name in dev.azure.com/your-organization"
-            placeholder="your-organization"
-            value={draft.organization}
-            onChange={(organization) => update((current) => ({ ...current, organization }))}
-            isInvalid={organizationIssue !== undefined}
-            errorMessage={organizationIssue}
-            autoComplete="off"
-            spellCheck="false"
-          />
-          <TextField
-            label="Azure project"
-            description="Optional. Leave empty to find tickets across your organization."
-            placeholder="Project name"
-            value={draft.project}
-            onChange={(project) => update((current) => ({ ...current, project }))}
-            autoComplete="off"
-            spellCheck="false"
-          />
-        </div>
-        <SecretField
-          label="Azure DevOps PAT"
-          value={form.azurePat}
-          onChange={form.setAzurePat}
-          stored={settings.hasAzurePat}
-          storedText={`Saved in ${words.credentials}. Leave blank to keep it.`}
-          emptyText="Work Items (Read) permission is enough for ticket lookup."
-          placeholder="Paste your Azure PAT"
-          isDisabled={preview}
-        />
-      </SettingsGroup>
-      <Divider />
-      <SettingsGroup title="7pace Timetracker">
+    <SettingsSection id="azure" actions={<ConnectionChip {...chip} />}>
+      <div className={styles.fieldPair}>
         <TextField
-          label="7pace workspace"
-          description="Use your organization’s 7pace workspace URL, without /api."
-          placeholder="https://your-organization.timehub.7pace.com"
-          value={draft.sevenPaceUrl}
-          onChange={(sevenPaceUrl) => update((current) => ({ ...current, sevenPaceUrl }))}
-          isInvalid={urlIssue !== undefined}
-          errorMessage={urlIssue}
-          type="url"
+          label="Organization"
+          description="The name in dev.azure.com/your-organization"
+          placeholder="your-organization"
+          value={draft.organization}
+          onChange={(organization) => update((current) => ({ ...current, organization }))}
+          isInvalid={organizationIssue !== undefined}
+          errorMessage={organizationIssue}
           autoComplete="off"
           spellCheck="false"
         />
-        <SegmentedControl
-          label="7pace sign-in"
-          options={AUTH_MODES}
-          selectedKey={mode}
-          onSelectionChange={(sevenPaceAuthMode) => update((current) => ({ ...current, sevenPaceAuthMode }))}
+        <TextField
+          label="Project (optional)"
+          description="Leave empty to find tickets in every project."
+          placeholder="Project name"
+          value={draft.project}
+          onChange={(project) => update((current) => ({ ...current, project }))}
+          autoComplete="off"
+          spellCheck="false"
         />
-        {mode === 'mobilePIN' ? (
-          <PinPairing />
-        ) : (
-          <>
-            <SecretField
-              label="7pace API token"
-              value={form.sevenPaceToken}
-              onChange={form.setSevenPaceToken}
-              stored={settings.hasSevenPaceToken}
-              storedText={`Saved in ${words.credentials}. Leave blank to keep the existing API token.`}
-              emptyText={`Saved in ${words.credentials} when you save.`}
-              placeholder="Paste your 7pace API token"
-              isDisabled={preview}
-            />
-            <Hint>Or choose Mobile PIN pairing above to connect without creating an API token.</Hint>
-          </>
-        )}
-      </SettingsGroup>
-      <Divider />
-      <ConnectionDetails />
+      </div>
+      <SecretField
+        label="Personal access token"
+        value={form.azurePat}
+        onChange={form.setAzurePat}
+        stored={settings.hasAzurePat}
+        store={osWords(os).credentials}
+        emptyText="Needs “Work Items (Read)”. That is enough for ticket lookup."
+        emptyPlaceholder="Paste your Azure PAT"
+        isDisabled={preview}
+      />
+      {connection?.azureIssue ? <InlineIssue tone="warning">{`Azure tickets: ${connection.azureIssue}`}</InlineIssue> : null}
     </SettingsSection>
   );
+}
+
+/** Settings → Azure DevOps & 7pace → 7pace Timetracker: workspace and sign-in. */
+export function SevenPaceSection() {
+  const form = useSettingsForm();
+  const { draft, update, settings, issues, preview, os } = form;
+  const connection = useSlice('connection');
+  const mode = draft.sevenPaceAuthMode;
+  const urlIssue = issueFor(issues, 'sevenPaceUrl');
+  const chip: { tone: Tone; label: string } =
+    !connection || connection.health === 'unconfigured'
+      ? { tone: 'neutral', label: 'Not connected yet' }
+      : connection.health === 'confirmed'
+        ? { tone: 'success', label: 'Connected' }
+        : { tone: connectionTone(connection), label: connection.status };
+  return (
+    <SettingsSection id="sevenPace" actions={<ConnectionChip {...chip} />}>
+      <TextField
+        label="Workspace URL"
+        description="Without /api at the end."
+        placeholder="https://your-organization.timehub.7pace.com"
+        value={draft.sevenPaceUrl}
+        onChange={(sevenPaceUrl) => update((current) => ({ ...current, sevenPaceUrl }))}
+        isInvalid={urlIssue !== undefined}
+        errorMessage={urlIssue}
+        type="url"
+        autoComplete="off"
+        spellCheck="false"
+      />
+      <SegmentedControl
+        label="Sign in with"
+        options={AUTH_MODES}
+        selectedKey={mode}
+        onSelectionChange={(sevenPaceAuthMode) => update((current) => ({ ...current, sevenPaceAuthMode }))}
+      />
+      {mode === 'mobilePIN' ? (
+        <PinPairing />
+      ) : (
+        <SecretField
+          label="API token"
+          value={form.sevenPaceToken}
+          onChange={form.setSevenPaceToken}
+          stored={settings.hasSevenPaceToken}
+          store={osWords(os).credentials}
+          emptyText={`Saved in ${osWords(os).credentials} when you save. Or choose Mobile PIN pairing to connect without a token.`}
+          emptyPlaceholder="Paste your 7pace API token"
+          isDisabled={preview}
+        />
+      )}
+    </SettingsSection>
+  );
+}
+
+/** Settings → Azure DevOps & 7pace → Connection: when things were checked, and Test connection. */
+export function ConnectionCardSection() {
+  const { settings, draft, busy, preview } = useSettingsForm();
+  const connection = useSlice('connection');
+  const retry = useAction();
+  const checked = connection?.lastSync
+    ? `Timer checked ${formatDateTime(connection.lastSync)}${connection.worklogSync ? ` · time entries checked ${formatTime(connection.worklogSync)}` : ''}`
+    : 'The timer has not been checked yet.';
+  return (
+    <SettingsSection
+      id="connection"
+      actions={
+        <Button
+          icon={RefreshIcon}
+          onPress={() => void retry.run({ type: 'connection.retry' })}
+          isDisabled={busy || preview || !connection}
+          isPending={retry.pending || (connection?.connecting ?? false)}
+        >
+          Test connection
+        </Button>
+      }
+    >
+      {connection ? (
+        <div className={styles.detailsText}>
+          <StatusDot tone={connectionTone(connection)} label={connection.status} showLabel />
+          {connection.detail ? <Hint>{connection.detail}</Hint> : null}
+          <ul role="list" className={styles.details}>
+            <li className={styles.hint}>{checked}</li>
+            {connection.connectionIssue ? <li className={styles.warning}>{connection.connectionIssue}</li> : null}
+            {connection.progressIssue ? <li className={styles.warning}>{`Time totals: ${connection.progressIssue}`}</li> : null}
+            {draft.completionReminders && !settings.hasAzurePat ? (
+              <li className={styles.hint}>Add an Azure PAT above to enable ticket completion reminders.</li>
+            ) : null}
+          </ul>
+        </div>
+      ) : (
+        <Hint>Connecting…</Hint>
+      )}
+      {retry.error ? <InlineIssue>{retry.error.message}</InlineIssue> : null}
+    </SettingsSection>
+  );
+}
+
+/** Is the draft's saved configuration still empty (the first run)? */
+export function useAccountsUnconfigured(): boolean {
+  return unconfigured(useSettingsForm().settings.configuration);
 }
