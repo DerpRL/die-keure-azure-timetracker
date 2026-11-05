@@ -2,11 +2,12 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { useMemo, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { TextField } from '../components/Fields';
+import { KeyboardIcon } from '../components/icons';
 import { AppShell } from '../layout/AppShell';
 import { pageVisibility, toRoute, type Route } from '../layout/navigation';
 import { expectNoA11yViolations } from '../test/axe';
 import { renderWithProviders } from '../test/render';
-import { useCommand, useRegisteredCommands, useSaveShortcut } from './hooks';
+import { useCommand, useRefreshShortcut, useRegisteredCommands, useSaveShortcut } from './hooks';
 import { formatKeyCombo, isTextEntryTarget, matchesKeyCombo, type KeyCombo } from './keys';
 import { detectPlatform, getPlatform, setPlatformOverride, usePlatform } from './platform';
 
@@ -141,7 +142,7 @@ describe('place shortcuts', () => {
 });
 
 function Commands({ onHelp, onSave }: { onHelp: () => void; onSave: () => void }) {
-  useCommand({ id: 'test.help', label: 'Help', shortcut: { key: 'h' }, onAction: onHelp });
+  useCommand({ id: 'test.help', label: 'Help', icon: KeyboardIcon, shortcut: { key: 'h' }, onAction: onHelp });
   useSaveShortcut(onSave);
   return <TextField label="Comment" />;
 }
@@ -188,6 +189,28 @@ describe('command palette', () => {
     await user.keyboard('{Enter}');
     await waitFor(() => expect(onNavigate).toHaveBeenCalledWith({ place: 'insights', view: 'time' }));
     expect(screen.queryByRole('dialog', { name: 'Command palette' })).toBeNull();
+  });
+
+  it('leads every row with an icon or a swatch', async () => {
+    function Refresh() {
+      useRefreshShortcut(() => {});
+      return null;
+    }
+    const { user } = renderWithProviders(
+      <>
+        <Shell onNavigate={() => {}} />
+        <Refresh />
+      </>,
+    );
+    await user.keyboard('{Meta>}k{/Meta}');
+    const dialog = await screen.findByRole('dialog', { name: 'Command palette' });
+    const options = within(dialog).getAllByRole('menuitem');
+    expect(options.map((option) => option.textContent)).toContain('Refresh⌘R');
+    for (const option of options) {
+      const lead = option.firstElementChild;
+      const marked = !!lead?.querySelector('svg') || !!lead?.querySelector('[style*="--swatch"]');
+      expect(marked, option.textContent ?? '').toBe(true);
+    }
   });
 
   it('finds views by keyword', async () => {

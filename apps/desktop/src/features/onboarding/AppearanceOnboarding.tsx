@@ -11,6 +11,7 @@ import { FigmaSettings } from '../settings/FigmaSettings';
 import { InlineIssue } from '../settings/SettingsSection';
 import { SetupSteps } from './FirstRunSteps';
 import styles from './onboarding.module.css';
+import { ArrowRightIcon } from '../../components/icons';
 
 export const CONTINUE_SHORTCUT: KeyCombo = { key: 'Enter', mod: true };
 
@@ -37,6 +38,7 @@ export function AppearanceOnboarding() {
   };
   useCommand({
     id: 'onboarding.continue',
+    icon: ArrowRightIcon,
     label: 'Continue to setup',
     group: 'Actions',
     shortcut: CONTINUE_SHORTCUT,

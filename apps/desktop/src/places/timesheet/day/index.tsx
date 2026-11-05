@@ -5,7 +5,7 @@ import { Card, Heading } from '../../../components/Card';
 import { DatePicker } from '../../../components/DateFields';
 import { LoadingRegion, Skeleton } from '../../../components/EmptyState';
 import { SearchField } from '../../../components/Fields';
-import { PlusIcon, WarningIcon } from '../../../components/icons';
+import { HistoryIcon, MergeIcon, PlusIcon, WarningIcon } from '../../../components/icons';
 import { useEchoDraft, useEngineDraft } from '../../../features/ticketContext/drafts';
 import { deviceName, formatDayLong, localToday, toCalendarDay } from '../../../features/ticketContext/format';
 import { useCommands, useRefreshShortcut } from '../../../shortcuts/hooks';
@@ -81,6 +81,7 @@ export function DayView() {
   useCommands([
     {
       id: 'timeEditor.corrections',
+      icon: WarningIcon,
       label: 'Gaps & overlaps…',
       group: 'Actions',
       keywords: ['time editor', 'gaps', 'overlaps', 'corrections'],
@@ -89,6 +90,7 @@ export function DayView() {
     },
     {
       id: 'timeEditor.recentEdits',
+      icon: HistoryIcon,
       label: 'Recent edits',
       group: 'Actions',
       keywords: ['time editor', 'journal', 'undo', 'history'],
@@ -97,6 +99,7 @@ export function DayView() {
     },
     {
       id: 'timeEditor.merge',
+      icon: MergeIcon,
       label: 'Merge selected entries…',
       group: 'Actions',
       keywords: ['time editor', 'merge'],

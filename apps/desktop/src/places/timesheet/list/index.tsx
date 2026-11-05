@@ -6,7 +6,7 @@ import { Card, Heading } from '../../../components/Card';
 import { DatePicker } from '../../../components/DateFields';
 import { EmptyState, LoadingRegion, Skeleton } from '../../../components/EmptyState';
 import { SearchField } from '../../../components/Fields';
-import { AttentionIcon, CircleIcon, HistoryIcon, InboxIcon, PlayIcon, SpinnerIcon } from '../../../components/icons';
+import { AttentionIcon, CircleIcon, DownloadIcon, HistoryIcon, InboxIcon, PlayIcon, SpinnerIcon } from '../../../components/icons';
 import { SegmentedControl, Tab, TabList, TabPanel, TabsRoot } from '../../../components/Segmented';
 import { seriesColor } from '../../../charts/palette';
 import type { AuditEntry, HistorySlice, WorkItemsSlice, WorkLog } from '../../../ipc/contract';
@@ -371,6 +371,7 @@ export function ListView() {
   useCommands([
     {
       id: 'history.export',
+      icon: DownloadIcon,
       label: 'Export worklogs as CSV…',
       group: 'Actions',
       keywords: ['history', 'csv', 'export'],
@@ -379,6 +380,7 @@ export function ListView() {
     },
     {
       id: 'history.activity',
+      icon: HistoryIcon,
       label: source === 'activity' ? 'Show 7pace worklogs' : 'Show App activity',
       group: 'Actions',
       keywords: ['history', 'audit', 'activity', 'worklogs'],

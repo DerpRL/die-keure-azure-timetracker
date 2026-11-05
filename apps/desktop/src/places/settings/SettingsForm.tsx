@@ -14,6 +14,7 @@ import { PLACES, type SettingsView } from '../../layout/navigation';
 import { useCommand, useCommands, useSaveShortcut } from '../../shortcuts/hooks';
 import { useSlice } from '../../state/hooks';
 import { useReducedMotion } from '../../theme/ThemeProvider';
+import { ResetIcon } from '../../components/icons';
 
 /** Whether a section is shown on this system and with these views. */
 export function useSectionVisible(): (section: SettingsSectionId, isViewShown: (view: SettingsView) => boolean) => boolean {
@@ -110,6 +111,7 @@ export function SettingsFormProvider({ settings, view, navigation, children }: S
   useSaveShortcut(() => void draft.save(), { isDisabled: busy || preview || draft.saving, label: 'Save settings' });
   useCommand({
     id: 'settings.revert',
+    icon: ResetIcon,
     label: 'Revert settings changes',
     group: 'Actions',
     isDisabled: !draft.dirty,
@@ -121,6 +123,8 @@ export function SettingsFormProvider({ settings, view, navigation, children }: S
         id: `settings.section.${section.id}`,
         label: `Settings: ${section.title}`,
         group: 'Pages' as const,
+        // The Settings place's colour (AppShell's `PLACE_SWATCHES`).
+        swatch: 'var(--chart-4)',
         keywords: ['settings', 'preferences'],
         onAction: () => goTo(section.id),
       })),

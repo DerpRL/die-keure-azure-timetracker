@@ -1,5 +1,6 @@
 import { createContext, useContext, useId, useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 import type { CommandStore, Command } from './store';
+import { RefreshIcon, SaveIcon } from '../components/icons';
 
 export interface ShortcutContextValue {
   store: CommandStore;
@@ -35,8 +36,9 @@ export function useShortcutUi(): { openPalette: () => void; openCheatSheet: () =
 }
 
 function signature(command: Command): string {
-  // Everything but the handler; JSON.stringify drops the undefined onAction.
-  return JSON.stringify({ ...command, onAction: undefined });
+  // Everything but the handler; JSON.stringify drops the undefined onAction. The icon, a
+  // function, would be dropped too: its name keeps an icon change visible.
+  return JSON.stringify({ ...command, onAction: undefined, icon: command.icon?.displayName });
 }
 
 /**
@@ -91,6 +93,7 @@ export interface ShortcutHookOptions {
 export function useSaveShortcut(onSave: () => void, { isDisabled, label = 'Save changes' }: ShortcutHookOptions = {}): void {
   useCommand({
     id: 'app.save',
+    icon: SaveIcon,
     label,
     group: 'Actions',
     shortcut: { key: 's', mod: true },
@@ -104,6 +107,7 @@ export function useSaveShortcut(onSave: () => void, { isDisabled, label = 'Save 
 export function useRefreshShortcut(onRefresh: () => void, { isDisabled, label = 'Refresh' }: ShortcutHookOptions = {}): void {
   useCommand({
     id: 'app.refresh',
+    icon: RefreshIcon,
     label,
     group: 'Actions',
     shortcut: { key: 'r', mod: true },
@@ -117,28 +121,4 @@ export function useRefreshShortcut(onRefresh: () => void, { isDisabled, label = 
 export function pageShortcutDigit(index: number): string | null {
   if (index < 0 || index > 9) return null;
   return index === 9 ? '0' : String(index + 1);
-}
-
-/**
- * ⌘1…⌘9, ⌘0 (Ctrl on Windows) in the visible sidebar order, plus a palette entry per page.
- * Fixes 1.14, where hidden or unordered pages shared numbers.
- */
-export function usePageCommands<Id extends string>(
-  pages: ReadonlyArray<{ id: Id; title: string }>,
-  onNavigate: (id: Id) => void,
-): void {
-  useCommands(
-    pages.map((page, index) => {
-      const digit = pageShortcutDigit(index);
-      return {
-        id: `page.${page.id}`,
-        label: page.title,
-        group: 'Pages' as const,
-        keywords: ['go to', 'open', 'page'],
-        shortcut: digit ? { key: digit, mod: true } : undefined,
-        allowInInputs: true,
-        onAction: () => onNavigate(page.id),
-      };
-    }),
-  );
 }

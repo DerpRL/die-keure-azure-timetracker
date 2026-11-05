@@ -4,7 +4,7 @@ import { Banner } from '../../components/Banner';
 import { Button, IconButton } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { EmptyState, Skeleton } from '../../components/EmptyState';
-import { ChevronLeftIcon, ChevronRightIcon, DayReviewIcon, SuccessIcon } from '../../components/icons';
+import { CalendarIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, DayReviewIcon, SuccessIcon } from '../../components/icons';
 import { seriesColor } from '../../charts/palette';
 import { activityColorIndex, useActivityColors } from '../../features/activity';
 import { useFocusRecovery } from '../../features/tracking/focus';
@@ -165,18 +165,20 @@ export default function TodayPlace() {
   });
   const markAction = useAction();
   useCommands([
-    { id: 'today.previousDay', label: 'Previous day', group: 'Actions', keywords: ['day review', 'yesterday'], onAction: () => changeDay(shiftDay(day, -1)) },
+    { id: 'today.previousDay', icon: ChevronLeftIcon, label: 'Previous day', group: 'Actions', keywords: ['day review', 'yesterday'], onAction: () => changeDay(shiftDay(day, -1)) },
     {
       id: 'today.nextDay',
+      icon: ChevronRightIcon,
       label: 'Next day',
       group: 'Actions',
       keywords: ['day review'],
       isDisabled: !reviewing,
       onAction: () => changeDay(shiftDay(day, 1)),
     },
-    { id: 'today.backToToday', label: 'Back to today', group: 'Actions', isDisabled: !reviewing, onAction: () => changeDay(today) },
+    { id: 'today.backToToday', icon: CalendarIcon, label: 'Back to today', group: 'Actions', isDisabled: !reviewing, onAction: () => changeDay(today) },
     {
       id: 'dayReview.markReviewed',
+      icon: CheckIcon,
       label: reviewing ? 'Mark this day reviewed' : 'Mark day reviewed',
       group: 'Actions',
       keywords: ['day review', 'finish'],

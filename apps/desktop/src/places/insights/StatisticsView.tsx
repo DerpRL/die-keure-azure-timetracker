@@ -5,7 +5,7 @@ import { Banner } from '../../components/Banner';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { EmptyState, LoadingRegion, Skeleton } from '../../components/EmptyState';
-import { StatisticsIcon, WarningIcon } from '../../components/icons';
+import { ArrowLeftIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, ClearFilterIcon, ResetIcon, StatisticsIcon, WarningIcon, ZoomInIcon, ZoomOutIcon } from '../../components/icons';
 import type { AnalysisView, Interval, StatisticsSlice } from '../../ipc/contract';
 import { duration, plural, syncedLabel } from './explore/format';
 import { activityColors, analysisKey, isFilterActive } from './explore/model';
@@ -329,18 +329,20 @@ function useStatisticsCommands(slice: StatisticsSlice) {
   const keywords = ['statistics', 'insights'];
   const atLatest = isCurrentOrFuture(slice, today(getLocalTimeZone()));
   useCommands([
-    { id: 'statistics.previous', label: 'Previous period', group: 'Actions', keywords, onAction: () => void run({ type: 'statistics.move', amount: -1 }) },
+    { id: 'statistics.previous', icon: ChevronLeftIcon, label: 'Previous period', group: 'Actions', keywords, onAction: () => void run({ type: 'statistics.move', amount: -1 }) },
     {
       id: 'statistics.next',
+      icon: ChevronRightIcon,
       label: 'Next period',
       group: 'Actions',
       keywords,
       isDisabled: atLatest,
       onAction: () => void run({ type: 'statistics.move', amount: 1 }),
     },
-    { id: 'statistics.current', label: `Current ${slice.period}`, group: 'Actions', keywords, onAction: () => void run({ type: 'statistics.current' }) },
+    { id: 'statistics.current', icon: CalendarIcon, label: `Current ${slice.period}`, group: 'Actions', keywords, onAction: () => void run({ type: 'statistics.current' }) },
     {
       id: 'statistics.zoomIn',
+      icon: ZoomInIcon,
       label: 'Zoom in',
       group: 'Actions',
       keywords,
@@ -349,6 +351,7 @@ function useStatisticsCommands(slice: StatisticsSlice) {
     },
     {
       id: 'statistics.zoomOut',
+      icon: ZoomOutIcon,
       label: 'Zoom out',
       group: 'Actions',
       keywords,
@@ -357,6 +360,7 @@ function useStatisticsCommands(slice: StatisticsSlice) {
     },
     {
       id: 'statistics.back',
+      icon: ArrowLeftIcon,
       label: 'Back to the previous zoom',
       group: 'Actions',
       keywords,
@@ -365,6 +369,7 @@ function useStatisticsCommands(slice: StatisticsSlice) {
     },
     {
       id: 'statistics.resetZoom',
+      icon: ResetIcon,
       label: 'Reset zoom',
       group: 'Actions',
       keywords,
@@ -373,6 +378,7 @@ function useStatisticsCommands(slice: StatisticsSlice) {
     },
     {
       id: 'statistics.clearFilters',
+      icon: ClearFilterIcon,
       label: 'Clear filters',
       group: 'Actions',
       keywords,

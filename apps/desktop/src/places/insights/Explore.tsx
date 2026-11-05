@@ -7,6 +7,7 @@ import { TimeSection, type TimeChart } from './explore/TimeSection';
 import { useCommands } from '../../shortcuts/hooks';
 import { useAction } from '../../state/hooks';
 import styles from './insights.module.css';
+import { StatisticsIcon } from '../../components/icons';
 
 type ExploreSection = Exclude<StatisticsSection, 'patterns'>;
 
@@ -47,6 +48,7 @@ export function Explore({ slice, analysis, analysisKey, colors, chart, onChartCh
   useCommands(
     EXPLORE_SECTIONS.map((item) => ({
       id: `statistics.section.${item.id}`,
+      icon: StatisticsIcon,
       label: `Show ${item.label}`,
       group: 'Actions' as const,
       keywords: ['statistics', 'section', 'insights'],

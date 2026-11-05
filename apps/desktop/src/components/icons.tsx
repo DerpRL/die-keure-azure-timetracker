@@ -28,9 +28,11 @@ import {
   Clock,
   Command,
   Copy,
+  Download,
   Ellipsis,
   ExternalLink,
   FileText,
+  FunnelX,
   History,
   HardDrive,
   Info,
@@ -40,6 +42,7 @@ import {
   LayoutGrid,
   ListChecks,
   ListFilter,
+  Merge,
   LoaderCircle,
   Minus,
   Network,
@@ -49,11 +52,14 @@ import {
   Plus,
   Power,
   RefreshCw,
+  RotateCcw,
+  Save,
   Search,
   Settings,
   Square,
   SquarePen,
   Table2,
+  Trash2,
   TriangleAlert,
   X,
   ZoomIn,
@@ -109,13 +115,16 @@ export const CircleIcon = decorative(Circle, 'CircleIcon');
 export const ClockIcon = decorative(Clock, 'ClockIcon');
 export const CloseIcon = decorative(X, 'CloseIcon');
 export const CommandIcon = decorative(Command, 'CommandIcon');
+export const ClearFilterIcon = decorative(FunnelX, 'ClearFilterIcon');
 export const CopyIcon = decorative(Copy, 'CopyIcon');
+export const DownloadIcon = decorative(Download, 'DownloadIcon');
 export const ErrorIcon = decorative(OctagonAlert, 'ErrorIcon');
 export const ExternalLinkIcon = decorative(ExternalLink, 'ExternalLinkIcon');
 export const FilterIcon = decorative(ListFilter, 'FilterIcon');
 export const InboxIcon = decorative(Inbox, 'InboxIcon');
 export const InfoIcon = decorative(Info, 'InfoIcon');
 export const KeyboardIcon = decorative(Keyboard, 'KeyboardIcon');
+export const MergeIcon = decorative(Merge, 'MergeIcon');
 export const MinusIcon = decorative(Minus, 'MinusIcon');
 export const MoreIcon = decorative(Ellipsis, 'MoreIcon');
 export const NoticeIcon = decorative(CircleAlert, 'NoticeIcon');
@@ -124,11 +133,14 @@ export const PlayIcon = decorative(Play, 'PlayIcon');
 export const PlusIcon = decorative(Plus, 'PlusIcon');
 export const PowerIcon = decorative(Power, 'PowerIcon');
 export const RefreshIcon = decorative(RefreshCw, 'RefreshIcon');
+export const ResetIcon = decorative(RotateCcw, 'ResetIcon');
+export const SaveIcon = decorative(Save, 'SaveIcon');
 export const SearchIcon = decorative(Search, 'SearchIcon');
 export const SpinnerIcon = decorative(LoaderCircle, 'SpinnerIcon');
 export const StopIcon = decorative(Square, 'StopIcon');
 export const SuccessIcon = decorative(CircleCheck, 'SuccessIcon');
 export const TableIcon = decorative(Table2, 'TableIcon');
+export const TrashIcon = decorative(Trash2, 'TrashIcon');
 export const WarningIcon = decorative(TriangleAlert, 'WarningIcon');
 export const ZoomInIcon = decorative(ZoomIn, 'ZoomInIcon');
 export const ZoomOutIcon = decorative(ZoomOut, 'ZoomOutIcon');

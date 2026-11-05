@@ -3,7 +3,7 @@ import { Banner } from '../../../components/Banner';
 import { Button } from '../../../components/Button';
 import { LoadingRegion, Skeleton } from '../../../components/EmptyState';
 import { SearchField } from '../../../components/Fields';
-import { PlusIcon } from '../../../components/icons';
+import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from '../../../components/icons';
 import { activityColorIndex, useActivityColors } from '../../../features/activity';
 import { deviceName, localToday, toCalendarDay } from '../../../features/ticketContext/format';
 import { useNavigation } from '../../../layout/NavigationContext';
@@ -177,6 +177,7 @@ export function WeekView() {
   useCommands([
     {
       id: 'timesheet.previousWeek',
+      icon: ChevronLeftIcon,
       label: 'Previous week',
       group: 'Actions',
       keywords: ['timesheet', 'week'],
@@ -184,6 +185,7 @@ export function WeekView() {
     },
     {
       id: 'timesheet.nextWeek',
+      icon: ChevronRightIcon,
       label: 'Next week',
       group: 'Actions',
       keywords: ['timesheet', 'week'],

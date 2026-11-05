@@ -4,7 +4,7 @@ import { Button } from '../../../components/Button';
 import { Card } from '../../../components/Card';
 import { Dialog } from '../../../components/Dialog';
 import { EmptyState, LoadingRegion, Skeleton } from '../../../components/EmptyState';
-import { PlusIcon } from '../../../components/icons';
+import { PauseIcon, PlayIcon, PlusIcon } from '../../../components/icons';
 import { Switch } from '../../../components/Toggles';
 import type { RepositoryView } from '../../../ipc/contract';
 import { useCommands } from '../../../shortcuts/hooks';
@@ -105,6 +105,7 @@ export function RepositoriesPanel({ variant = 'full', onOpenGit }: RepositoriesP
   useCommands([
     {
       id: 'repositories.add',
+      icon: PlusIcon,
       label: ADD_LABEL,
       group: 'Actions',
       keywords: ['scan', 'folder', 'git'],
@@ -113,6 +114,7 @@ export function RepositoriesPanel({ variant = 'full', onOpenGit }: RepositoriesP
     },
     {
       id: 'repositories.toggleWatching',
+      icon: watching ? PauseIcon : PlayIcon,
       label: watching ? 'Pause branch watching' : 'Resume branch watching',
       group: 'Actions',
       keywords: ['git', 'observations'],

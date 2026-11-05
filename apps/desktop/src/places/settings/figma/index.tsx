@@ -14,6 +14,7 @@ import { formatSeen } from './model';
 import { ObservationSection } from './ObservationSection';
 import { SuggestionCard } from './SuggestionCard';
 import styles from './figma.module.css';
+import { FigmaIcon, TrashIcon } from '../../../components/icons';
 
 /** Announces suggestions that arrive while the page is open (not the ones already shown). */
 function useSuggestionAnnouncements(figma: FigmaSlice | undefined) {
@@ -78,6 +79,7 @@ export function FigmaPanel() {
   useCommands([
     {
       id: 'figma.toggleObservation',
+      icon: FigmaIcon,
       label: enabled ? 'Stop observing Figma files' : 'Observe Figma files',
       group: 'Actions',
       keywords: ['figma', 'design'],
@@ -88,6 +90,7 @@ export function FigmaPanel() {
     },
     {
       id: 'figma.clearHistory',
+      icon: TrashIcon,
       label: 'Clear Figma history…',
       group: 'Actions',
       keywords: ['figma', 'context'],

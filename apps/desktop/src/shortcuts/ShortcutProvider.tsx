@@ -5,6 +5,7 @@ import { ShortcutCheatSheet, type ShortcutInfo } from './ShortcutCheatSheet';
 import { isTextEntryTarget, matchesKeyCombo, type KeyCombo } from './keys';
 import { getPlatform } from './platform';
 import { CommandStore } from './store';
+import { KeyboardIcon } from '../components/icons';
 
 export const PALETTE_SHORTCUT: KeyCombo = { key: 'k', mod: true };
 export const CHEAT_SHEET_SHORTCUT: KeyCombo = { key: '?' };
@@ -96,6 +97,7 @@ function BuiltInCommands({ onPalette, onCheatSheet }: { onPalette: () => void; o
     },
     {
       id: 'app.keyboardShortcuts',
+      icon: KeyboardIcon,
       label: 'Show keyboard shortcuts',
       group: 'General',
       keywords: ['help', 'keys', 'cheat sheet'],

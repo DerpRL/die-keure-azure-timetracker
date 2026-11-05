@@ -6,7 +6,7 @@ import { Button } from '../../../components/Button';
 import { Card, Heading } from '../../../components/Card';
 import { Dialog } from '../../../components/Dialog';
 import { EmptyState, Skeleton } from '../../../components/EmptyState';
-import { OfflineDraftsIcon, WarningIcon } from '../../../components/icons';
+import { OfflineDraftsIcon, PlayIcon, PlusIcon, StopIcon, WarningIcon } from '../../../components/icons';
 import { ProgressBar } from '../../../components/Progress';
 import { Switch } from '../../../components/Toggles';
 import type { OfflineDraft, OfflineDraftView, OfflineSlice, WorkItemsSlice } from '../../../ipc/contract';
@@ -221,9 +221,10 @@ export function DraftsView() {
   const stopLocal = useAction();
 
   useCommands([
-    { id: 'offline.start', label: 'Start local timer…', group: 'Tracking', keywords: ['offline', 'local'], isDisabled: !canStart, onAction: () => setStarting(true) },
+    { id: 'offline.start', icon: PlayIcon, label: 'Start local timer…', group: 'Tracking', keywords: ['offline', 'local'], isDisabled: !canStart, onAction: () => setStarting(true) },
     {
       id: 'offline.stop',
+      icon: StopIcon,
       label: 'Stop local timer',
       group: 'Tracking',
       keywords: ['offline', 'local'],
@@ -235,6 +236,7 @@ export function DraftsView() {
     },
     {
       id: 'offline.addPast',
+      icon: PlusIcon,
       label: 'Add past time…',
       group: 'Actions',
       keywords: ['offline', 'draft'],

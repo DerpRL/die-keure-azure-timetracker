@@ -19,6 +19,6 @@ const PAGE_IDS: readonly PageId[] = ['overview', 'dayReview', 'offlineDrafts', '
 
 /** Registers the main window's `page.<id>` commands (normally done by `AppShell`), reporting each open. */
 export function FakePageCommands({ onOpen }: { onOpen: (page: PageId) => void }) {
-  useCommands(PAGE_IDS.map((id) => ({ id: `page.${id}`, label: id, group: 'Pages' as const, onAction: () => onOpen(id) })));
+  useCommands(PAGE_IDS.map((id) => ({ id: `page.${id}`, label: id, group: 'Pages' as const, showInPalette: false, onAction: () => onOpen(id) })));
   return null;
 }

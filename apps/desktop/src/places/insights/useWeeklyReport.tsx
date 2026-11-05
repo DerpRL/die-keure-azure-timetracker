@@ -7,6 +7,7 @@ import type { IpcError } from '../../ipc';
 import type { WeeklySlice } from '../../ipc/contract';
 import { useCommands } from '../../shortcuts/hooks';
 import { ipcErrorKind, useAction, useSlice, useStore } from '../../state/hooks';
+import { ChevronLeftIcon, ChevronRightIcon, CopyIcon, DownloadIcon, WeeklyReportIcon } from '../../components/icons';
 
 interface TextState {
   /** The week the text belongs to (`range.start`). */
@@ -138,23 +139,25 @@ export function useWeeklyReport({ commands = false }: { commands?: boolean } = {
       ? [
           {
             id: 'weekly.generate',
+            icon: WeeklyReportIcon,
             label: empty ? 'Generate weekly report draft' : 'Regenerate weekly report draft…',
             group: 'Actions',
             keywords: ['weekly report', 'generate'],
             isDisabled: !hasData || loading,
             onAction: () => void generate(),
           },
-          { id: 'weekly.copy', label: 'Copy weekly report', group: 'Actions', keywords: ['weekly report', 'clipboard'], isDisabled: empty, onAction: () => void copy() },
+          { id: 'weekly.copy', icon: CopyIcon, label: 'Copy weekly report', group: 'Actions', keywords: ['weekly report', 'clipboard'], isDisabled: empty, onAction: () => void copy() },
           {
             id: 'weekly.export',
+            icon: DownloadIcon,
             label: 'Export weekly report as Markdown…',
             group: 'Actions',
             keywords: ['weekly report', 'markdown', 'export'],
             isDisabled: empty || choosing,
             onAction: () => void exportMarkdown(),
           },
-          { id: 'weekly.previous', label: 'Previous week', group: 'Actions', keywords: ['weekly report'], isDisabled: !weekly, onAction: () => move(-1) },
-          { id: 'weekly.next', label: 'Next week', group: 'Actions', keywords: ['weekly report'], isDisabled: !weekly || isFuture, onAction: () => move(1) },
+          { id: 'weekly.previous', icon: ChevronLeftIcon, label: 'Previous week', group: 'Actions', keywords: ['weekly report'], isDisabled: !weekly, onAction: () => move(-1) },
+          { id: 'weekly.next', icon: ChevronRightIcon, label: 'Next week', group: 'Actions', keywords: ['weekly report'], isDisabled: !weekly || isFuture, onAction: () => move(1) },
         ]
       : [],
   );

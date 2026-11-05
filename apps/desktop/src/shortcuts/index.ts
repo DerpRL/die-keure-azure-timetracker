@@ -3,7 +3,6 @@ export {
   pageShortcutDigit,
   useCommand,
   useCommands,
-  usePageCommands,
   useRefreshShortcut,
   useRegisteredCommands,
   useSaveShortcut,

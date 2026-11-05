@@ -1,8 +1,13 @@
 import type { IconComponent } from '../components/icons';
 import type { KeyCombo } from './keys';
 
-/** Something the user can trigger from the command palette and, optionally, a shortcut. */
-export interface Command {
+/**
+ * Something the user can trigger from the command palette and, optionally, a shortcut. A command
+ * listed in the palette leads with an icon or a swatch, so every row lines up.
+ */
+export type Command = CommandFields & ({ icon: IconComponent } | { swatch: string } | { showInPalette: false });
+
+interface CommandFields {
   id: string;
   label: string;
   /** Palette section and cheat-sheet group. */

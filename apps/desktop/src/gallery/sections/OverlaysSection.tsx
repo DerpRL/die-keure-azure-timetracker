@@ -3,7 +3,7 @@ import { Button } from '../../components/Button';
 import { useAnnounce } from '../../components/Announcer';
 import { Dialog } from '../../components/Dialog';
 import { TextField } from '../../components/Fields';
-import { MoreIcon } from '../../components/icons';
+import { DayReviewIcon, MoreIcon, PauseIcon, PlayIcon, StopIcon } from '../../components/icons';
 import { MenuButton } from '../../components/Menu';
 import { Select } from '../../components/Pickers';
 import { Popover, PopoverTrigger } from '../../components/Popover';
@@ -27,14 +27,15 @@ export function OverlaysSection() {
   useCommands([
     {
       id: 'gallery.review',
+      icon: DayReviewIcon,
       label: 'Review today',
       group: 'Tracking',
       shortcut: { key: 'd', mod: true, shift: true },
       onAction: () => setLast('Review today'),
     },
-    { id: 'gallery.choose', label: 'Choose ticket…', group: 'Tracking', shortcut: { key: 'n', mod: true }, onAction: () => setLast('Choose ticket…') },
-    { id: 'gallery.pause', label: 'Pause tracking', group: 'Tracking', onAction: () => setLast('Pause tracking') },
-    { id: 'gallery.stop', label: 'Stop tracking', group: 'Tracking', onAction: () => setLast('Stop tracking') },
+    { id: 'gallery.choose', icon: PlayIcon, label: 'Choose ticket…', group: 'Tracking', shortcut: { key: 'n', mod: true }, onAction: () => setLast('Choose ticket…') },
+    { id: 'gallery.pause', icon: PauseIcon, label: 'Pause tracking', group: 'Tracking', onAction: () => setLast('Pause tracking') },
+    { id: 'gallery.stop', icon: StopIcon, label: 'Stop tracking', group: 'Tracking', onAction: () => setLast('Stop tracking') },
   ]);
 
   return (
