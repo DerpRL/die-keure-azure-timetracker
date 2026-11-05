@@ -92,7 +92,7 @@ async function installPreviewEngine(): Promise<void> {
         );
       }
     })
-    // Settings → App → "Show onboarding again", and finishing it, like the engine.
+    // Settings → Updates & advanced → "Show onboarding again", and finishing it, like the engine.
     .handle('app.restartOnboarding', (_intent, mock) => mock.patchSlice('app', { onboarding: true }))
     .handle('app.finishOnboarding', (_intent, mock) => mock.patchSlice('app', { onboarding: false, visiblePage: 'overview' }))
     // Deleting an offline draft (or the running local timer), like the engine's `offline.remove`.

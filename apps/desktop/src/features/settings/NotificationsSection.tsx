@@ -1,11 +1,14 @@
+import { Badge } from '../../components/Badge';
+import { Button } from '../../components/Button';
 import { TimeField } from '../../components/DateFields';
-import { Select } from '../../components/Pickers';
+import { CheckIcon } from '../../components/icons';
 import type { Interruption, InterruptionChoice, PromptKind, QuietHours } from '../../ipc/contract';
 import { useAction } from '../../state/hooks';
 import { minutesToTime, timeToMinutes } from './DayReviewSection';
 import { useImmediateValue } from './FigmaSettings';
 import { INTERRUPTION_LEVELS, osWords } from './labels';
-import { Divider, Hint, InlineIssue, SettingsGroup, SettingsSection, ToggleRow } from './SettingsSection';
+import { SystemSettingsButton } from './MeetingsSections';
+import { HintRow, InlineIssue, IssueRow, SectionFooter, SettingRow, SettingsSection, ToggleRow } from './SettingsSection';
 import { useSettingsForm } from './SettingsForm';
 import styles from './settings.module.css';
 
@@ -14,7 +17,8 @@ const KIND_HINTS: Partial<Record<PromptKind, string>> = {
   trackingAttention: '7pace stops the timer when its checks go unanswered, so these also interrupt during quiet hours.',
 };
 
-function Interruptions() {
+/** Settings → Notifications → Prompts: how each kind of prompt reaches you (applies right away). */
+export function PromptsSection() {
   const { settings, draft } = useSettingsForm();
   const action = useAction();
   const [choices, setLocal, reset] = useImmediateValue<readonly InterruptionChoice[]>(settings.interruptions);
@@ -24,38 +28,86 @@ function Interruptions() {
       if (!result.ok) reset();
     });
   };
-  const levels = INTERRUPTION_LEVELS.map(({ id, label }) => ({ id, label }));
+  const changed = choices.filter((choice) => choice.level !== DEFAULT_INTERRUPTION);
+  const resetAll = () => {
+    setLocal(choices.map((choice) => ({ ...choice, level: DEFAULT_INTERRUPTION })));
+    void Promise.all(
+      changed.map((choice) => action.run({ type: 'settings.setPromptInterruption', kind: choice.kind, level: DEFAULT_INTERRUPTION })),
+    ).then((results) => {
+      if (results.some((result) => !result.ok)) reset();
+    });
+  };
   return (
-    <SettingsGroup title="Interruptions" description="Choose how strongly each kind of prompt may interrupt you. Changes apply immediately.">
-      <dl className={styles.levels}>
-        {INTERRUPTION_LEVELS.map((level) => (
-          <div key={level.id} style={{ display: 'contents' }}>
-            <dt>{level.label}</dt>
-            <dd>{level.description}</dd>
-          </div>
-        ))}
-      </dl>
-      {!draft.notificationsEnabled ? <Hint>Notifications are off, so Notify only works like Off.</Hint> : null}
-      <div className={styles.interruptions}>
-        {choices.map((choice) => (
-          <Select
-            key={choice.kind}
-            label={choice.label}
-            items={levels}
-            selectedKey={choice.level}
-            onSelectionChange={(key) => {
-              if (typeof key === 'string' && key !== choice.level) choose(choice.kind, key as Interruption);
-            }}
-            description={KIND_HINTS[choice.kind]}
-          />
-        ))}
+    <SettingsSection
+      id="prompts"
+      subtitle={
+        <>
+          <b>Notify</b> shows a banner. <b>Open panel</b> opens the panel without taking focus. <b>Open & focus</b> also brings it to the
+          front. Changes apply right away.
+        </>
+      }
+      actions={
+        <Button size="small" variant="plain" onPress={resetAll} isDisabled={changed.length === 0}>
+          Reset to defaults
+        </Button>
+      }
+    >
+      {!draft.notificationsEnabled ? <HintRow>Notifications are off, so Notify works like Off.</HintRow> : null}
+      <div className={styles.tableScroll}>
+        <table className={styles.matrix}>
+          <thead>
+            <tr>
+              <th scope="col">Prompt</th>
+              {INTERRUPTION_LEVELS.map((level) => (
+                <th key={level.id} scope="col" title={level.description}>
+                  {MATRIX_LABELS[level.id]}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {choices.map((choice) => (
+              <tr key={choice.kind}>
+                <th scope="row">
+                  <span className={styles.matrixPrompt}>{choice.label}</span>
+                  {KIND_HINTS[choice.kind] ? <span className={styles.listMeta}>{KIND_HINTS[choice.kind]}</span> : null}
+                </th>
+                {INTERRUPTION_LEVELS.map((level) => (
+                  <td key={level.id}>
+                    <input
+                      type="radio"
+                      name={`interruption-${choice.kind}`}
+                      aria-label={`${choice.label}: ${MATRIX_LABELS[level.id]}`}
+                      checked={choice.level === level.id}
+                      onChange={() => {
+                        if (choice.level !== level.id) choose(choice.kind, level.id);
+                      }}
+                      className={styles.radio}
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-      {action.error ? <InlineIssue>{action.error.message}</InlineIssue> : null}
-    </SettingsGroup>
+      {action.error ? <IssueRow>{action.error.message}</IssueRow> : null}
+      <SectionFooter>Off only hides the prompt: it stays listed in the panel and on Today. 7pace activity checks keep running.</SectionFooter>
+    </SettingsSection>
   );
 }
 
-function QuietHoursSettings() {
+/** `Interruption::default`: every prompt kind opens the panel unless changed. */
+const DEFAULT_INTERRUPTION: Interruption = 'openPanel';
+
+const MATRIX_LABELS: Record<Interruption, string> = {
+  off: 'Off',
+  notifyOnly: 'Notify',
+  openPanel: 'Open panel',
+  openAndFocus: 'Open & focus',
+};
+
+function QuietHoursRows() {
   const { settings } = useSettingsForm();
   const action = useAction();
   const [quiet, setLocal, reset] = useImmediateValue<QuietHours>(settings.configuration.quietHours);
@@ -66,62 +118,80 @@ function QuietHoursSettings() {
     });
   };
   return (
-    <div className={styles.group}>
+    <>
       <ToggleRow
         title="Quiet hours"
-        help={`No panel or banners between ${formatClockMinutes(quiet.startMinute)} and ${formatClockMinutes(quiet.endMinute)}. Applies right away.`}
+        help="No banners and no panels in this period. Prompts wait in the panel and on Today; 7pace activity checks still interrupt. Applies right away."
         isSelected={quiet.enabled}
         onChange={(enabled) => apply({ ...quiet, enabled })}
       />
-      <div className={styles.fieldRow}>
-        <TimeField
-          label="Quiet from"
-          value={minutesToTime(quiet.startMinute)}
-          onChange={(value) => {
-            if (value && timeToMinutes(value) !== quiet.startMinute) apply({ ...quiet, startMinute: timeToMinutes(value) });
-          }}
-          isDisabled={!quiet.enabled}
-        />
-        <TimeField
-          label="Quiet until"
-          value={minutesToTime(quiet.endMinute)}
-          onChange={(value) => {
-            if (value && timeToMinutes(value) !== quiet.endMinute) apply({ ...quiet, endMinute: timeToMinutes(value) });
-          }}
-          isDisabled={!quiet.enabled}
-        />
-      </div>
-      <Hint>
-        Prompts stay listed in the panel and on Today. 7pace activity checks still interrupt, because 7pace stops the timer when they
-        go unanswered. The period can run past midnight.
-      </Hint>
-      {action.error ? <InlineIssue>{action.error.message}</InlineIssue> : null}
-    </div>
+      <SettingRow sub title="From" help="The period can run past midnight." dimmed={!quiet.enabled} below={action.error ? <InlineIssue>{action.error.message}</InlineIssue> : null}>
+        {({ helpId }) => (
+          <>
+            <TimeField
+              label="Quiet from"
+              hideLabel
+              aria-describedby={helpId}
+              value={minutesToTime(quiet.startMinute)}
+              onChange={(value) => {
+                if (value && timeToMinutes(value) !== quiet.startMinute) apply({ ...quiet, startMinute: timeToMinutes(value) });
+              }}
+              isDisabled={!quiet.enabled}
+            />
+            <span className={styles.muted} aria-hidden="true">
+              to
+            </span>
+            <TimeField
+              label="Quiet until"
+              hideLabel
+              aria-describedby={helpId}
+              value={minutesToTime(quiet.endMinute)}
+              onChange={(value) => {
+                if (value && timeToMinutes(value) !== quiet.endMinute) apply({ ...quiet, endMinute: timeToMinutes(value) });
+              }}
+              isDisabled={!quiet.enabled}
+            />
+          </>
+        )}
+      </SettingRow>
+    </>
   );
 }
 
-/** "18:00" for minutes after midnight. */
-function formatClockMinutes(minutes: number): string {
-  const time = minutesToTime(minutes);
-  return `${String(time.hour).padStart(2, '0')}:${String(time.minute).padStart(2, '0')}`;
-}
-
-/** Settings → Targets & reminders → Notifications: notifications, quiet hours and interruption levels. */
+/** Settings → Notifications → macOS notifications: banners, their permission and quiet hours. */
 export function NotificationsSection() {
-  const { draft, update, os } = useSettingsForm();
+  const { draft, update, os, settings } = useSettingsForm();
   const words = osWords(os);
+  const authorized = settings.notificationsAuthorized;
   return (
-    <SettingsSection id="notifications" subtitle="Prompts never change your timer by themselves; these settings decide how they get your attention.">
+    <SettingsSection id="notifications" title={`${words.name} notifications`}>
       <ToggleRow
-        title={`${words.name} notifications`}
+        title="Banners"
         help={`For branch changes, prompts and day reviews. Saved with Save changes; ${words.name} asks for permission the first time.`}
         isSelected={draft.notificationsEnabled}
         onChange={(notificationsEnabled) => update((current) => ({ ...current, notificationsEnabled }))}
       />
-      <Divider />
-      <QuietHoursSettings />
-      <Divider />
-      <Interruptions />
+      <SettingRow
+        sub
+        title="Permission"
+        help={
+          authorized === false
+            ? `Turned off for Azure timetracker in ${os === 'windows' ? 'Windows Settings' : 'System Settings › Notifications'}.`
+            : `Managed in ${os === 'windows' ? 'Windows Settings' : 'System Settings › Notifications'}.`
+        }
+      >
+        {authorized === true ? (
+          <Badge tone="success" icon={CheckIcon}>
+            Allowed
+          </Badge>
+        ) : authorized === false ? (
+          <Badge tone="warning">Not allowed</Badge>
+        ) : (
+          <Badge tone="neutral">Not asked yet</Badge>
+        )}
+        <SystemSettingsButton pane="notifications" />
+      </SettingRow>
+      <QuietHoursRows />
     </SettingsSection>
   );
 }

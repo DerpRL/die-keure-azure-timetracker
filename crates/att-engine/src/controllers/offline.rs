@@ -17,6 +17,7 @@ use att_core::model::ActivityType;
 use att_core::offline::{
     OfflineDraft, OfflineDraftStatus, OfflineLedger, OfflineReview, OfflineSync,
 };
+use att_core::rounding::Rounding;
 use att_core::service::OfflineDraftService;
 
 use super::{detached, done, internal, persist, same_workspace, still_current};
@@ -239,7 +240,7 @@ fn validate(
         return Err(AppError::message("The local timer cannot start in the future."));
     }
     if draft.end.is_some() {
-        draft.proposal(now, cal)?;
+        draft.proposal(Rounding::Exact, &[], now, cal)?;
     }
     Ok(())
 }
@@ -284,7 +285,9 @@ pub(crate) fn stop(engine: &Engine) -> Result<Value, IpcError> {
         }
         let Some(mut draft) = offline.ledger.active().cloned() else { return };
         draft.end = Some(now);
-        let result = draft.proposal(now, &cal).and_then(|_| checkpoint(services, offline, draft));
+        let result = draft
+            .proposal(Rounding::Exact, &[], now, &cal)
+            .and_then(|_| checkpoint(services, offline, draft));
         match result {
             Ok(()) => {
                 offline.review = None;
@@ -372,7 +375,9 @@ async fn check(
             return Ok(None);
         }
         cache_activities(engine, &workspace, &types);
-        let review = OfflineSync::review(&draft, service, engine.now(), &engine.cal()).await?;
+        let rounding = engine.read(|state| state.config.rounding());
+        let review =
+            OfflineSync::review(&draft, service, rounding, engine.now(), &engine.cal()).await?;
         Ok(current(engine).then_some(review))
     }
     .await;
@@ -436,7 +441,8 @@ async fn send(engine: &Engine, clients: &Arc<Clients>, review: OfflineReview) ->
     let service: &dyn OfflineDraftService = clients.seven_pace.as_ref();
     // `same_workspace` was checked; the draft's own spelling satisfies the exact core check.
     let workspace = review.draft.workspace.clone();
-    let result = OfflineSync::upload(&review, &workspace, service, now, &cal, |draft| {
+    let rounding = engine.read(|state| state.config.rounding());
+    let result = OfflineSync::upload(&review, &workspace, service, rounding, now, &cal, |draft| {
         ready(checkpoint_draft(engine, draft))
     })
     .await;
@@ -485,10 +491,10 @@ pub(crate) async fn link(engine: &Engine, log_id: String) -> Result<Value, IpcEr
     let task_engine = engine.clone();
     let linked = detached(async move {
         let engine = &task_engine;
-        let (now, cal) = (engine.now(), engine.cal());
+        let cal = engine.cal();
         let result: att_core::Result<()> = async {
             let fresh = clients.seven_pace.work_log(&log_id).await?;
-            if !review.draft.proposal(now, &cal)?.matches(&fresh, &cal) {
+            if !review.proposal.matches(&fresh, &cal) {
                 return Err(AppError::message("This entry changed. Refresh the review."));
             }
             let mut draft = review.draft.clone();

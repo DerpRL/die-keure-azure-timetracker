@@ -1,16 +1,20 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type * as ipc from '../../ipc';
 import { isTauri } from '../../ipc';
 import { sampleSlices } from '../../ipc/fixtures';
 import { expectNoA11yViolations } from '../../test/axe';
 import { renderWithEngine, type EngineRenderOptions } from '../../test/engine';
+import type { SettingsSlice } from '../../ipc/contract';
+import { useSlice } from '../../state/hooks';
+import { UpdatesSection } from '../settings/AppSections';
+import { SettingsFormContext, type SettingsFormValue } from '../settings/SettingsForm';
+import { useSettingsDraft } from '../settings/useSettingsDraft';
 import { DISABLED_MESSAGE, DOWNLOADS_URL, UPDATE_EVENT, type UpdateStatus } from './api';
 import { formatBytes, formatDateTime } from './model';
 import { UpdateBanner } from './UpdateBanner';
 import { UpdateNotice } from './UpdateNotice';
-import { UpdateSettings } from './UpdateSettings';
 
 vi.mock('../../ipc', async (importOriginal) => {
   const actual = await importOriginal<typeof ipc>();
@@ -157,70 +161,71 @@ describe('UpdateBanner', () => {
   });
 });
 
-describe('UpdateSettings', () => {
-  it('shows the saved automatic setting read-only and checks on request', async () => {
-    const { user, commands, container } = renderUpdates(<UpdateSettings />, status());
-    expect(screen.getByRole('heading', { level: 2, name: 'App updates' })).toBeInTheDocument();
-    expect(screen.getByText('On')).toBeInTheDocument();
-    expect(screen.getByText(/Checks at startup and every minute/)).toBeInTheDocument();
-    expect(screen.queryByRole('switch')).not.toBeInTheDocument();
-    expect(await screen.findByText('Installed version 2.0.0')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Check for updates' }));
+/** The Settings form the Updates card reads its draft from, as in Settings → Updates & advanced. */
+function InSettings({ children }: { children: ReactNode }) {
+  const settings = useSlice('settings');
+  if (!settings) return null;
+  return <SettingsDraftHost settings={settings}>{children}</SettingsDraftHost>;
+}
+
+function SettingsDraftHost({ settings, children }: { settings: SettingsSlice; children: ReactNode }) {
+  const draft = useSettingsDraft(settings.configuration);
+  const value: SettingsFormValue = { ...draft, settings, app: undefined, os: 'macos', busy: false, preview: false, goTo: () => undefined };
+  return <SettingsFormContext.Provider value={value}>{children}</SettingsFormContext.Provider>;
+}
+
+const updatesCard = (
+  <InSettings>
+    <UpdatesSection />
+  </InSettings>
+);
+
+describe('Settings → Updates & advanced → Updates', () => {
+  it('shows the installed version and checks on request', async () => {
+    const { user, commands, container } = renderUpdates(updatesCard, status());
+    expect(await screen.findByRole('heading', { name: 'Updates' })).toBeInTheDocument();
+    expect(await screen.findByText('Version 2.0.0')).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: /Check for updates automatically/ })).toBeChecked();
+    await user.click(screen.getByRole('button', { name: 'Check now' }));
     expect(commands('shell_update_check')).toHaveLength(1);
-    expect(await screen.findByText('You’re up to date.')).toBeInTheDocument();
-    expect(screen.getByText(`Last checked: ${formatDateTime('2026-10-06T08:00:00Z')}`)).toBeInTheDocument();
+    expect(await screen.findByText('Up to date')).toBeInTheDocument();
+    expect(screen.getByText(`You’re up to date. · Last checked ${formatDateTime('2026-10-06T08:00:00Z')}`)).toBeInTheDocument();
     await waitFor(() => expect(politeAnnouncement()).toHaveTextContent('You’re up to date.'));
     await expectNoA11yViolations(container);
   });
 
-  it('follows the saved settings for automatic checks and the cadence', async () => {
+  it('follows the saved setting for automatic checks', async () => {
     const settings = sampleSlices().settings!;
-    renderUpdates(<UpdateSettings />, status({ automatic: false }), {
-      with: {
-        settings: {
-          ...settings,
-          configuration: { ...settings.configuration, automaticUpdateChecks: false, cadences: { ...settings.configuration.cadences, updateCheckSeconds: 300 } },
-        },
-      },
+    renderUpdates(updatesCard, status({ automatic: false }), {
+      with: { settings: { ...settings, configuration: { ...settings.configuration, automaticUpdateChecks: false } } },
     });
-    expect(screen.getByText('Off')).toBeInTheDocument();
-    expect(screen.getByText(/only checks when you choose Check for updates/)).toBeInTheDocument();
-    expect(await screen.findByText('Installed version 2.0.0')).toBeInTheDocument();
+    expect(await screen.findByRole('switch', { name: /Check for updates automatically/ })).not.toBeChecked();
   });
 
   it('shows the offered release with notes and the install action', async () => {
-    const { user, commands } = renderUpdates(<UpdateSettings />, AVAILABLE);
-    expect(await screen.findByRole('heading', { level: 3, name: 'Version 2.0.1' })).toBeInTheDocument();
+    const { user, commands } = renderUpdates(updatesCard, AVAILABLE);
+    expect(await screen.findByText('2.0.1 available')).toBeInTheDocument();
     expect(screen.getByText(/Faster history/)).toBeInTheDocument();
     expect(screen.getByText('Published 5 Oct 2026')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Download and restart' }));
     expect(commands('shell_update_install')).toHaveLength(1);
-    await user.click(screen.getByRole('button', { name: /Download installer on GitHub/ }));
+    await user.click(screen.getByRole('button', { name: /Open GitHub releases/ }));
     expect(openUrl).toHaveBeenCalledWith(DOWNLOADS_URL);
   });
 
-  it('disables everything in preview and development builds', async () => {
-    renderUpdates(<UpdateSettings />, status({ enabled: false, message: DISABLED_MESSAGE }));
+  it('disables checks in preview and development builds', async () => {
+    renderUpdates(updatesCard, status({ enabled: false, message: DISABLED_MESSAGE }));
     expect(await screen.findByText(DISABLED_MESSAGE)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Check for updates' })).toBeDisabled();
-  });
-
-  it('falls back to the preview status outside the app', async () => {
-    const { engine } = renderWithEngine(<UpdateSettings />);
-    expect(screen.getByRole('status')).toHaveTextContent('Loading update status');
-    expect(await screen.findByText(DISABLED_MESSAGE)).toBeInTheDocument();
-    expect(engine.ipc.calls.map((call) => call.command)).toContain('shell_update_status');
-    expect(screen.getByText(`Installed version ${sampleSlices().app!.version}`)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Check now' })).toBeDisabled();
   });
 
   it('shows why the status is unavailable inside the app', async () => {
     vi.mocked(isTauri).mockReturnValue(true);
-    const { engine } = renderWithEngine(<UpdateSettings />);
+    const { engine } = renderWithEngine(updatesCard);
     engine.ipc.handle('shell_update_status', () => {
       throw new Error('The updater is not ready.');
     });
-    expect(await screen.findByText('Update status is unavailable')).toBeInTheDocument();
-    expect(screen.getByText('The updater is not ready.')).toBeInTheDocument();
+    expect(await screen.findByText('Update status is unavailable: The updater is not ready.')).toBeInTheDocument();
   });
 });
 

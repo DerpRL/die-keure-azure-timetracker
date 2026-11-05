@@ -18,6 +18,8 @@
     "allow-shell-set-shortcut",
     "allow-shell-get-shortcut",
     "allow-shell-quit",
+    "allow-shell-reveal-data-dir",
+    "allow-shell-open-system-settings",
     "allow-engine-dispatch",
     "allow-engine-snapshot",
     "allow-engine-resync",

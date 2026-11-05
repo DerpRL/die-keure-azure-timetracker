@@ -6,6 +6,7 @@
 mod support;
 
 use att_core::AppError;
+use att_core::holidays::{TargetException, TargetExceptionKind};
 use att_core::model::{TrackingState, WorkLog};
 use att_core::productivity::{ConnectionHealth, MeetingReturn, QuickTickets};
 use att_core::statistics::{ActivityStatistics, StatisticsPeriod, StatisticsRange};
@@ -29,12 +30,11 @@ fn progress(
 #[test]
 fn target_defaults_and_weekend() {
     let targets = WorkTargets::default();
-    assert_eq!(targets.weekly_hours, 38.0);
+    assert_eq!(targets.weekly_target_minutes(), 38 * 60);
     assert_eq!(targets.daily_seconds(date("2026-09-29T10:00:00Z"), &cal()), 27360.0);
     assert_eq!(targets.daily_seconds(date("2026-10-03T10:00:00Z"), &cal()), 0.0);
-    let invalid = WorkTargets { weekly_hours: f64::INFINITY, ..targets.clone() };
-    assert!(!invalid.is_valid());
-    let invalid = WorkTargets { daily_hours: 25.0, ..targets };
+    let mut invalid = targets;
+    invalid.set_minutes(25 * 60, 3);
     assert!(!invalid.is_valid());
 }
 
@@ -243,11 +243,11 @@ fn recent_is_bounded_unique_and_favorites_appear_first() {
 fn legacy_settings_retain_targets_and_convert_on_first_edit() {
     let mut targets: WorkTargets =
         serde_json::from_str(r#"{"weeklyHours":38,"dailyHours":7.6}"#).expect("legacy");
-    assert!(targets.hours_by_weekday.is_none() && targets.weekly_target_hours() == 38.0);
-    assert!(targets.hours(2) == 7.6 && targets.hours(1) == 0.0);
-    targets.set_hours(6.0, 6);
-    assert_eq!(targets.hours_by_weekday, Some(vec![0.0, 7.6, 7.6, 7.6, 7.6, 6.0, 0.0]));
-    assert!((targets.weekly_target_hours() - 36.4).abs() < 0.0001);
+    assert_eq!(targets.minutes_by_weekday, [0, 456, 456, 456, 456, 456, 0]);
+    assert!(targets.weekly_target_minutes() == 38 * 60 && targets.is_valid());
+    targets.set_minutes(6 * 60, 6);
+    assert_eq!(targets.minutes_by_weekday, [0, 456, 456, 456, 456, 360, 0]);
+    assert_eq!(targets.weekly_target_minutes(), 36 * 60 + 24);
     let json = serde_json::to_string(&targets).expect("encode");
     assert_eq!(serde_json::from_str::<WorkTargets>(&json).expect("decode"), targets);
 }
@@ -255,11 +255,11 @@ fn legacy_settings_retain_targets_and_convert_on_first_edit() {
 #[test]
 fn custom_schedule_drives_daily_weekly_and_monthly_charts() {
     let mut targets = WorkTargets {
-        hours_by_weekday: Some(vec![0.0, 8.0, 8.0, 8.0, 8.0, 6.0, 0.0]),
+        minutes_by_weekday: vec![0, 480, 480, 480, 480, 360, 0],
         ..WorkTargets::default()
     };
     let anchor = date("2026-10-02T12:00:00Z");
-    assert_eq!(targets.weekly_target_hours(), 38.0);
+    assert_eq!(targets.weekly_target_minutes(), 38 * 60);
     assert_eq!(targets.daily_seconds(anchor, &cal()), 21600.0);
     let week = ActivityStatistics::calculate(
         &[],
@@ -277,23 +277,84 @@ fn custom_schedule_drives_daily_weekly_and_monthly_charts() {
         &cal(),
     );
     assert_eq!(month.target_seconds(), 166.0 * 3600.0);
-    targets.set_hours(2.0, 7);
-    assert_eq!(targets.weekly_target_hours(), 40.0);
+    targets.set_minutes(2 * 60, 7);
+    assert_eq!(targets.weekly_target_minutes(), 40 * 60);
     assert_eq!(targets.daily_seconds(add_secs(anchor, 86400.0), &cal()), 7200.0);
 }
 
 #[test]
 fn validates_each_day_and_allows_days_off() {
-    let mut t = WorkTargets { hours_by_weekday: Some(vec![0.0; 7]), ..WorkTargets::default() };
-    assert!(t.is_valid() && t.weekly_target_hours() == 0.0);
-    for value in [f64::NAN, f64::INFINITY, -1.0, 24.1] {
-        t.hours_by_weekday = Some(vec![0.0, 8.0, 8.0, value, 8.0, 6.0, 0.0]);
+    let mut t = WorkTargets { minutes_by_weekday: vec![0; 7], ..WorkTargets::default() };
+    assert!(t.is_valid() && t.weekly_target_minutes() == 0);
+    for value in [-1, 24 * 60 + 1, i32::MAX] {
+        t.minutes_by_weekday = vec![0, 480, 480, value, 480, 360, 0];
         assert!(!t.is_valid(), "{value}");
     }
-    t.hours_by_weekday = Some(vec![8.0]);
+    t.minutes_by_weekday = vec![480];
     assert!(!t.is_valid());
-    t.hours_by_weekday = Some(vec![24.0; 7]);
+    t.minutes_by_weekday = vec![24 * 60; 7];
     assert!(t.is_valid());
+}
+
+#[test]
+fn minute_targets_stay_exact() {
+    // 7h 36m four days and 7h 37m on Friday: no float drift, so 38h 1m rather than 38h 0m.
+    let targets = WorkTargets {
+        minutes_by_weekday: vec![0, 456, 456, 456, 456, 457, 0],
+        ..WorkTargets::default()
+    };
+    assert_eq!(targets.weekly_target_minutes(), 38 * 60 + 1);
+    assert_eq!(targets.daily_seconds(date("2026-10-02T12:00:00Z"), &cal()), 457.0 * 60.0);
+    let week = ActivityStatistics::calculate(
+        &[],
+        &StatisticsRange::new(StatisticsPeriod::Week, date("2026-10-02T12:00:00Z"), &cal()),
+        &targets,
+        &cal(),
+    );
+    assert_eq!(week.target_seconds(), f64::from(38 * 3600 + 60));
+    let json = serde_json::to_value(&targets).expect("encode");
+    assert_eq!(json["minutesByWeekday"], serde_json::json!([0, 456, 456, 456, 456, 457, 0]));
+    assert_eq!(serde_json::from_value::<WorkTargets>(json).expect("decode"), targets);
+}
+
+#[test]
+fn decimal_hour_schedules_migrate_to_the_nearest_minute() {
+    // 2.0–2.3 wrote decimal hours; 7.6 is 455.99… minutes as a float.
+    let saved = r#"{"weeklyHours":37.1,"dailyHours":7.6,"hoursByWeekday":[0,7.5,7.6,8,7.25,6.75,0.0166666667]}"#;
+    let targets: WorkTargets = serde_json::from_str(saved).expect("decimal hours");
+    assert_eq!(targets.minutes_by_weekday, [0, 450, 456, 480, 435, 405, 1]);
+    assert!(targets.is_valid());
+    // Written back as minutes only; the old keys are gone and reading it again changes nothing.
+    let written = serde_json::to_value(&targets).expect("encode");
+    assert_eq!(written, serde_json::json!({ "minutesByWeekday": [0, 450, 456, 480, 435, 405, 1] }));
+    assert_eq!(serde_json::from_value::<WorkTargets>(written).expect("round trip"), targets);
+    // Minutes win over hours when both are present.
+    let both: WorkTargets = serde_json::from_str(
+        r#"{"minutesByWeekday":[0,1,2,3,4,5,6],"hoursByWeekday":[8,8,8,8,8,8,8]}"#,
+    )
+    .expect("both");
+    assert_eq!(both.minutes_by_weekday, [0, 1, 2, 3, 4, 5, 6]);
+    // An incomplete hours schedule was ignored before, in favour of `dailyHours`.
+    let short: WorkTargets =
+        serde_json::from_str(r#"{"dailyHours":8,"hoursByWeekday":[8]}"#).expect("short");
+    assert_eq!(short.minutes_by_weekday, [0, 480, 480, 480, 480, 480, 0]);
+    // Out-of-range hours a hand-edited file might hold stay invalid instead of being clamped.
+    let invalid: WorkTargets =
+        serde_json::from_str(r#"{"hoursByWeekday":[0,25,8,8,8,8,-1]}"#).expect("invalid");
+    assert_eq!(invalid.minutes_by_weekday, [0, 1500, 480, 480, 480, 480, -60]);
+    assert!(!invalid.is_valid());
+}
+
+#[test]
+fn custom_exception_hours_count_whole_minutes() {
+    let mut targets = WorkTargets::default();
+    targets.set_exceptions(vec![TargetException::new(
+        cal().date(date("2026-10-02T12:00:00Z")),
+        TargetExceptionKind::Custom,
+        7.6,
+        "",
+    )]);
+    assert_eq!(targets.daily_seconds(date("2026-10-02T12:00:00Z"), &cal()), 456.0 * 60.0);
 }
 
 // Decoding the JSON 1.14.x wrote (`JSONEncoder` with sorted keys, dates as seconds since 2001).
@@ -310,12 +371,14 @@ fn swift_work_targets_decode_with_schedule_and_exceptions() {
         Some("Full-day leave · Leave")
     );
     assert_eq!(targets.daily_seconds(date("2026-10-02T12:00:00Z"), &cal()), 7200.0);
-    assert_eq!(targets.daily_seconds(date("2026-09-28T12:00:00Z"), &cal()), 7.6 * 1800.0);
+    assert_eq!(targets.daily_seconds(date("2026-09-28T12:00:00Z"), &cal()), 456.0 * 30.0);
     assert_eq!(targets.daily_seconds(date("2026-08-17T12:00:00Z"), &cal()), 0.0);
-    // Writing keeps the Swift keys and raw values.
+    assert_eq!(targets.minutes_by_weekday, [0, 456, 456, 456, 456, 360, 0]);
+    // Writing keeps the Swift exception keys and raw values; the schedule is written as minutes.
     let written = serde_json::to_value(&targets).expect("encode");
     assert_eq!(written["dateExceptions"][1]["kind"], "Custom target");
-    assert_eq!(written["hoursByWeekday"][5], 6.0);
+    assert_eq!(written["minutesByWeekday"][5], 360);
+    assert!(written.get("hoursByWeekday").is_none());
     assert_eq!(serde_json::from_value::<WorkTargets>(written).expect("round trip"), targets);
 }
 
@@ -325,10 +388,13 @@ fn swift_default_and_partial_work_targets_decode() {
         serde_json::from_str(r#"{"dailyHours":7.6,"weeklyHours":38}"#).expect("defaults");
     assert_eq!(defaults, WorkTargets::default());
     // Missing keys fall back to the defaults instead of failing.
+    // `weeklyHours` was only ever the sum; `dailyHours` drove the schedule.
     let partial: WorkTargets = serde_json::from_str(r#"{"weeklyHours":40}"#).expect("partial");
-    assert_eq!((partial.weekly_hours, partial.daily_hours), (40.0, 7.6));
+    assert_eq!(partial, WorkTargets::default());
+    let empty: WorkTargets = serde_json::from_str("{}").expect("empty");
+    assert_eq!(empty, WorkTargets::default());
     let written = serde_json::to_string(&WorkTargets::default()).expect("encode");
-    assert_eq!(written, r#"{"weeklyHours":38.0,"dailyHours":7.6}"#);
+    assert_eq!(written, r#"{"minutesByWeekday":[0,456,456,456,456,456,0]}"#);
 }
 
 #[test]

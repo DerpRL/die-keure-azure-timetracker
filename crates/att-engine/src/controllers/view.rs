@@ -460,7 +460,8 @@ fn time_editor(state: &AppState, cal: &Cal, now: Timestamp) -> TimeEditorSlice {
     // Newest first; unreadable dates last.
     logs.sort_by_cached_key(|log| std::cmp::Reverse(log.date(cal.tz())));
     let selected = editor.selected.is_some();
-    let plan = selected.then(|| editor.proposed_plan(now, cal));
+    let rounding = state.config.rounding();
+    let plan = selected.then(|| editor.proposed_plan(rounding, now, cal));
     TimeEditorSlice {
         day: editor.day,
         filter: editor.filter.clone(),
@@ -512,7 +513,7 @@ fn time_editor(state: &AppState, cal: &Cal, now: Timestamp) -> TimeEditorSlice {
         separate_idle: editor.separate_idle,
         configured: editor.configured,
         loaded_conflicts: if selected {
-            loaded_conflicts(editor, tracking.as_ref(), now, cal)
+            loaded_conflicts(editor, tracking.as_ref(), rounding, now, cal)
         } else {
             Vec::new()
         },

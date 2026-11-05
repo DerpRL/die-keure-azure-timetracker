@@ -49,9 +49,7 @@ const configuration: Configuration = {
   selectedCalendarIds: ['cal-work', 'cal-team'],
   calendarEnabled: true,
   targets: {
-    weeklyHours: 38,
-    dailyHours: 7.6,
-    hoursByWeekday: [0, 8, 8, 8, 8, 6, 0],
+    minutesByWeekday: [0, 480, 480, 480, 480, 360, 0],
     belgianHolidaysEnabled: true,
     dateExceptions: [
       { id: '2026-11-02', kind: 'Full-day leave', hours: 0, note: 'Autumn break' },

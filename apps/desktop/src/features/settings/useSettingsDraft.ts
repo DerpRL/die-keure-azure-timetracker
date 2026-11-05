@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import type { IpcError } from '../../ipc';
 import type { Configuration } from '../../ipc/contract';
 import { useAction, type ActionResult } from '../../state/hooks';
-import { configurationToSave, deepEqual, draftFields, hasDraftChanges, rebaseDraft, type DraftState } from './configDraft';
+import { configurationToSave, deepEqual, draftChanges, draftFields, hasDraftChanges, rebaseDraft, type DraftState } from './configDraft';
 import { validateConfiguration, type SettingsIssue } from './validation';
 
 export interface SettingsDraft {
@@ -16,6 +16,8 @@ export interface SettingsDraft {
   setSevenPaceToken: (value: string) => void;
   /** Save would write something: an edited field or a new secret. */
   dirty: boolean;
+  /** The names of what Save would write, for the save bar ("Friday target", "Azure token"). */
+  changes: string[];
   /** Inline problems with the draft (same rules as Rust). */
   issues: SettingsIssue[];
   /** Save was pressed while `issues` were not empty. */
@@ -83,6 +85,11 @@ export function useSettingsDraft(
   const secrets = { azurePat, sevenPaceToken };
   const issues = validateConfiguration(current.draft, secrets);
   const dirty = hasDraftChanges(current.draft, current.base) || azurePat.trim() !== '' || sevenPaceToken.trim() !== '';
+  const changes = [
+    ...draftChanges(current.draft, current.base),
+    ...(azurePat.trim() !== '' ? ['Azure token'] : []),
+    ...(sevenPaceToken.trim() !== '' ? ['7pace token'] : []),
+  ];
   const { run, clearError } = action;
   const draft = current.draft;
 
@@ -146,6 +153,7 @@ export function useSettingsDraft(
     sevenPaceToken,
     setSevenPaceToken,
     dirty,
+    changes,
     issues,
     showIssues: showIssues && issues.length > 0,
     save,

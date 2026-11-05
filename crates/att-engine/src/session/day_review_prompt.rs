@@ -1,6 +1,10 @@
 //! The end-of-day review prompt (Swift AppModel L1325–1378): scheduling with
 //! `DayReviewSchedule`, records per workspace and day (45-day pruning), snooze and mark
 //! reviewed. The Day review page itself belongs to the controllers.
+//!
+//! The reminder comes 15 minutes before the finish time, at it, or at the next review day's
+//! start time (`DayReviewReminder`); the record and the prompted day are always those of the
+//! day under review, so a `nextMorning` reminder snoozes and completes the previous review day.
 
 use std::collections::BTreeMap;
 
@@ -47,18 +51,20 @@ pub(crate) fn check(engine: &Engine, now: Timestamp) {
     let busy = busy(engine);
     update_with(engine, |state, effects| {
         let preferences = state.config.day_review.clone();
+        // The day the reminder is about: today, or the previous review day for `nextMorning`.
+        let reviewed = preferences.reviewed_day(now, &cal);
         let applies = !preview
             && has_client
             && preferences.enabled
             && preferences.is_valid()
-            && preferences.weekdays.contains(&i64::from(cal.swift_weekday(now)))
-            && state.config.targets.daily_seconds(now, &cal) > 0.0;
-        if !applies {
+            && reviewed.is_some_and(|day| {
+                state.config.targets.daily_seconds(cal.start_of_date(day), &cal) > 0.0
+            });
+        let Some(day) = reviewed.filter(|_| applies) else {
             state.session.day_review.prompt_day = None;
             return;
-        }
-        let day = cal.date(now);
-        let key = DayReviewSchedule::key(&workspace(state), now, &cal);
+        };
+        let key = key(&workspace(state), day);
         let flow = &state.session.flow;
         let flow_open = flow.show_picker || flow.menu_tracking;
         let review = &mut state.session.day_review;
@@ -94,7 +100,7 @@ pub(crate) fn mark_reviewed(engine: &Engine, day: Date) {
         let record = review.records.entry(key).or_default();
         record.reviewed_at = Some(now);
         record.snoozed_until = None;
-        if day == today {
+        if day == today || review.prompt_day == Some(day) {
             review.prompt_day = None;
             effects.remove_notification(announce::DAY_REVIEW_ID);
         }
@@ -112,7 +118,8 @@ pub(crate) fn snooze(engine: &Engine) {
         if !can_snooze(state, now, &cal) {
             return;
         }
-        let key = DayReviewSchedule::key(&workspace(state), now, &cal);
+        let day = state.config.day_review.reviewed_day(now, &cal).unwrap_or(cal.date(now));
+        let key = key(&workspace(state), day);
         let review = &mut state.session.day_review;
         let record = review.records.entry(key).or_default();
         record.prompted_at = Some(now);
@@ -123,12 +130,14 @@ pub(crate) fn snooze(engine: &Engine) {
     });
 }
 
-/// Swift `openDayReview()`: today's review in the main window, after a 7pace refresh.
+/// Swift `openDayReview()`: the prompted day's review (today's unless the reminder comes the
+/// next morning) in the main window, after a 7pace refresh.
 pub(crate) async fn open(engine: &Engine) {
     let today = today(engine);
+    let day = engine.read(|state| state.session.day_review.prompt_day).unwrap_or(today);
     engine.services().shell.show_main(Some("dayReview"));
     engine.update(|state| state.show_page("dayReview"));
-    let _ = controllers::handle(engine, ControllerIntent::SetDayReviewDay { day: today }).await;
+    let _ = controllers::handle(engine, ControllerIntent::SetDayReviewDay { day }).await;
     if !busy(engine) {
         connection::refresh(engine).await;
     }

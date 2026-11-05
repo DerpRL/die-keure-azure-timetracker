@@ -90,9 +90,10 @@ impl WorkLogDraft {
     }
 
     /// Valid times, a billable length within `0…Int32.max`, and a ticket in `1…Int32.max` or a
-    /// comment for ticket-free time.
+    /// comment for ticket-free time. A whole number of quarter hours may end up to 15 minutes
+    /// after `now`, for entries rounded up (see [`crate::rounding::latest_end`]).
     pub fn validate(&self, now: Timestamp, cal: &Cal) -> Result<()> {
-        self.edit().validate(now, cal)?;
+        self.edit().validate(crate::rounding::latest_end(self.seconds, now), cal)?;
         let limit = i64::from(i32::MAX);
         let target = match self.ticket_id {
             Some(id) => (1..=limit).contains(&id),

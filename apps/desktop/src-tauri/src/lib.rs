@@ -68,6 +68,8 @@ pub fn run() {
             shell::shell_set_shortcut,
             shell::shell_get_shortcut,
             shell::shell_quit,
+            shell::shell_reveal_data_dir,
+            shell::shell_open_system_settings,
             engine_bridge::engine_dispatch,
             engine_bridge::engine_snapshot,
             engine_bridge::engine_resync,

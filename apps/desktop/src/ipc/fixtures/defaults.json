@@ -32,6 +32,7 @@
       "finishMinute": 1020,
       "gapMinutes": 20,
       "longSessionMinutes": 180,
+      "reminder": "atEnd",
       "startMinute": 540,
       "weekdays": [
         2,
@@ -59,6 +60,7 @@
       "defaultTicket": "",
       "enabled": true
     },
+    "menuBarTimer": true,
     "microphone": {
       "apps": [
         "Slack",
@@ -81,12 +83,21 @@
       "startMinute": 1080
     },
     "repositories": [],
+    "resumeAfterMeetings": true,
+    "roundToQuarterHours": false,
     "selectedCalendarIds": [],
     "sevenPaceAuthMode": "apiToken",
     "sevenPaceUrl": "",
     "targets": {
-      "dailyHours": 7.6,
-      "weeklyHours": 38.0
+      "minutesByWeekday": [
+        0,
+        456,
+        456,
+        456,
+        456,
+        456,
+        0
+      ]
     },
     "watchEnabled": true
   }

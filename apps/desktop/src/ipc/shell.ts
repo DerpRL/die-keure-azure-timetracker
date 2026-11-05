@@ -1,7 +1,7 @@
 /**
  * Typed calls into the desktop shell (`apps/desktop/src-tauri/src/shell.rs`): windows, the tray
- * panel, the mini timer, the quick-switch shortcut and quitting. Business actions go through
- * `dispatch` (`engine.ts`) instead.
+ * panel, the mini timer, the quick-switch shortcut, the data folder, system settings and
+ * quitting. Business actions go through `dispatch` (`engine.ts`) instead.
  */
 import { invoke, listen, type Unlisten } from './index';
 import type { PageId, PlaceId } from '../layout/navigation';
@@ -72,6 +72,19 @@ export function getShortcut(): Promise<ShortcutStatus> {
 /** Quits the app. The 7pace timer keeps running, as in 1.x. */
 export function quit(): Promise<void> {
   return invoke('shell_quit');
+}
+
+/** The system settings pages `openSystemSettings` can open. */
+export type SystemSettingsPane = 'notifications' | 'calendars' | 'microphone' | 'accessibility';
+
+/** Opens the app's data folder (`app.dataDirectory`) in Finder or File Explorer. */
+export function revealDataDirectory(): Promise<void> {
+  return invoke('shell_reveal_data_dir');
+}
+
+/** Opens the macOS System Settings privacy pane, or the Windows Settings page, for `pane`. */
+export function openSystemSettings(pane: SystemSettingsPane): Promise<void> {
+  return invoke('shell_open_system_settings', { pane });
 }
 
 /** The main window was asked to show `page` (tray menu, prompts, `showMain(page)`). */

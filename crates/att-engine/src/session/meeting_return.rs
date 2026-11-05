@@ -3,6 +3,7 @@
 use jiff::Timestamp;
 
 use att_core::config::PromptKind;
+use att_core::productivity::MeetingReturn;
 
 use crate::engine::Engine;
 use crate::state::AppState;
@@ -12,23 +13,21 @@ use super::microphone;
 use super::tracking::{self as flows, Choice};
 use super::{announce, busy, update_with};
 
+/// The return plan, unless Settings turned "Resume after meetings" off
+/// (`Configuration::resume_after_meetings`): then nothing offers to resume.
+pub(crate) fn plan(state: &AppState) -> Option<&MeetingReturn> {
+    state.session.meeting_return.as_ref().filter(|_| state.config.resume_after_meetings)
+}
+
 /// Swift `meetingReturnReady`.
 pub(crate) fn ready(state: &AppState, now: Timestamp, preview: bool) -> bool {
     microphone::end_prompt(state, now, preview).is_none()
-        && state
-            .session
-            .meeting_return
-            .as_ref()
-            .is_some_and(|plan| plan.is_due(tracking(state), &workspace(state), now))
+        && plan(state).is_some_and(|plan| plan.is_due(tracking(state), &workspace(state), now))
 }
 
 /// Swift `canReturnAfterMicrophone`.
 pub(crate) fn can_return_after_microphone(state: &AppState, now: Timestamp) -> bool {
-    state
-        .session
-        .meeting_return
-        .as_ref()
-        .is_some_and(|plan| plan.is_due(tracking(state), &workspace(state), now))
+    plan(state).is_some_and(|plan| plan.is_due(tracking(state), &workspace(state), now))
 }
 
 /// Swift `checkMeetingReturn(now:)`: follows a moved calendar end, drops a plan that no longer
@@ -38,6 +37,14 @@ pub(crate) fn check(engine: &Engine, now: Timestamp) {
     let busy = busy(engine);
     update_with(engine, |state, effects| {
         let Some(mut plan) = state.session.meeting_return.clone() else { return };
+        // "Resume after meetings" is off: the plan a meeting timer left is dropped unannounced.
+        if !state.config.resume_after_meetings {
+            state.session.meeting_return = None;
+            if plan.notified {
+                effects.remove_notification(announce::MEETING_RETURN_ID);
+            }
+            return;
+        }
         let calendar = &state.session.calendar;
         if state.config.calendar_enabled
             && calendar.authorized()
@@ -90,7 +97,7 @@ pub(crate) async fn resume(engine: &Engine) {
     let now = engine.now();
     let plan = engine.read(|state| {
         let session = &state.session;
-        let plan = session.meeting_return.clone()?;
+        let plan = plan(state).cloned()?;
         let ready = plan.is_due(tracking(state), &workspace(state), now)
             && session.connection.connected
             && !session.flow.show_picker

@@ -13,6 +13,7 @@ export function SevenPaceInstructions({
   workspace,
   credentials,
   open,
+  collapsible = true,
 }: {
   mode: SevenPaceAuthMode;
   /** The workspace URL as typed, when it is valid: linked so 7pace opens in the browser. */
@@ -21,14 +22,12 @@ export function SevenPaceInstructions({
   credentials: string;
   /** Shown expanded (nothing is connected yet), or folded away behind its summary. */
   open: boolean;
+  /** `false`: the steps are always shown, under a visually hidden title (Settings). */
+  collapsible?: boolean;
 }) {
   const titleId = useId();
   const title = mode === 'mobilePIN' ? 'How to get a pairing PIN approved' : 'How to get a 7pace API token';
-  return (
-    <details className={styles.instructions} open={open}>
-      <summary id={titleId} className={styles.instructionsSummary}>
-        {title}
-      </summary>
+  const steps = (
       <ol aria-labelledby={titleId} className={styles.steps}>
         {mode === 'mobilePIN' ? (
           <>
@@ -57,11 +56,31 @@ export function SevenPaceInstructions({
           </>
         )}
       </ol>
-      {mode === 'mobilePIN' && workspace ? (
-        <p className={styles.hint}>
-          Your workspace: <WorkspaceLink url={workspace} />
+  );
+  const workspaceLine =
+    mode === 'mobilePIN' && workspace ? (
+      <p className={styles.hint}>
+        Your workspace: <WorkspaceLink url={workspace} />
+      </p>
+    ) : null;
+  if (!collapsible) {
+    return (
+      <div className={styles.instructionsPlain}>
+        <p id={titleId} className="visually-hidden">
+          {title}
         </p>
-      ) : null}
+        {steps}
+        {workspaceLine}
+      </div>
+    );
+  }
+  return (
+    <details className={styles.instructions} open={open}>
+      <summary id={titleId} className={styles.instructionsSummary}>
+        {title}
+      </summary>
+      {steps}
+      {workspaceLine}
     </details>
   );
 }

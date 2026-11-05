@@ -47,6 +47,7 @@ mod day_review_prompt;
 mod figma;
 mod head_watch;
 mod history;
+mod maintenance;
 mod meeting_return;
 mod meetings;
 mod microphone;
@@ -148,6 +149,17 @@ pub enum SessionIntent {
         #[cfg_attr(feature = "ts", ts(optional = nullable))]
         issue: Option<String>,
     },
+    /// Settings → App → Reset local data: clears the day review status (reviewed and snoozed
+    /// days), the Figma file history and the records of offline drafts already synced to 7pace.
+    /// Settings, accounts, tokens and unsent offline drafts stay. Shows `app.notice`; refused
+    /// (`busy`) while a write or an offline upload runs.
+    #[serde(rename = "app.resetLocalData")]
+    ResetLocalData,
+    /// Settings → App → Save diagnostics: writes a plain-text report to `path` (chosen in a save
+    /// dialog): version, OS, preview, connection status and check times, the settings and the
+    /// App activity log. Never credentials; URLs lose user info and queries.
+    #[serde(rename = "app.saveDiagnostics")]
+    SaveDiagnostics { path: String },
 
     #[serde(rename = "connection.retry")]
     RetryConnection,
@@ -199,6 +211,11 @@ pub enum SessionIntent {
     },
     #[serde(rename = "pairing.cancel")]
     CancelPairing,
+    /// Settings → Accounts → Unpair: forgets the stored 7pace credential (mobile-PIN pairing
+    /// and API token) of the saved workspace and disconnects (`connection.connected` false,
+    /// `hasSevenPaceToken` false). Every other setting stays.
+    #[serde(rename = "pairing.unpair")]
+    Unpair,
 
     /// Results arrive in the `repositories` slice under `scan`.
     #[serde(rename = "repositories.scan")]
@@ -403,6 +420,8 @@ async fn route(engine: &Engine, intent: SessionIntent) -> Result<Value, IpcError
         I::ReportShortcutIssue { issue } => {
             engine.update(|state| state.session.shortcut_issue = issue);
         }
+        I::ResetLocalData => return maintenance::reset_local_data(engine),
+        I::SaveDiagnostics { path } => return maintenance::save_diagnostics(engine, path).await,
 
         I::RetryConnection => connection::retry(engine).await,
         I::Refresh => connection::refresh(engine).await,
@@ -441,6 +460,7 @@ async fn route(engine: &Engine, intent: SessionIntent) -> Result<Value, IpcError
             pairing::begin(engine, workspace);
         }
         I::CancelPairing => pairing::cancel(engine),
+        I::Unpair => return pairing::unpair(engine).await,
 
         I::ScanRepositories { path } => repositories::scan(engine, path).await,
         I::CancelRepositoryScan => repositories::cancel_scan(engine),

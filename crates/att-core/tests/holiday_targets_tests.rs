@@ -52,15 +52,15 @@ fn holidays_reduce_week_and_do_not_invent_replacement_dates() {
     let targets = WorkTargets::default();
     let week = TargetProgress::week_interval(date("2026-07-21"), &cal());
     assert_eq!(targets.daily_seconds(date("2026-07-21"), &cal()), 0.0);
-    assert_eq!(targets.seconds_in(week, &cal()), 4.0 * 7.6 * 3600.0);
-    assert_eq!(targets.daily_seconds(date("2026-08-17"), &cal()), 7.6 * 3600.0);
+    assert_eq!(targets.seconds_in(week, &cal()), 4.0 * 456.0 * 60.0);
+    assert_eq!(targets.daily_seconds(date("2026-08-17"), &cal()), 456.0 * 60.0);
 }
 
 #[test]
 fn half_day_custom_and_replacement_priority() {
     let mut targets = WorkTargets::default();
-    targets.set_hours(8.0, 2);
-    targets.set_hours(6.0, 6);
+    targets.set_minutes(8 * 60, 2);
+    targets.set_minutes(6 * 60, 6);
     targets.set_exceptions(vec![
         exception("2026-09-28", TargetExceptionKind::HalfDay, 0.0, ""),
         exception("2026-10-02", TargetExceptionKind::HalfDay, 0.0, ""),
@@ -105,7 +105,7 @@ fn invalid_hours_dates_and_duplicates_rejected() {
 #[test]
 fn dst_civil_dates_and_partial_day_totals() {
     let mut targets = WorkTargets::default();
-    targets.set_hours(8.0, 1);
+    targets.set_minutes(8 * 60, 1);
     let day = cal().day_interval(date("2026-03-29"));
     assert_eq!(day.duration(), 23.0 * 3600.0);
     assert_eq!(targets.seconds_in(day, &cal()), 8.0 * 3600.0);

@@ -18,7 +18,7 @@
   flex-direction: column;
   gap: var(--space-5);
   min-width: 0;
-  max-width: 53.75rem;
+  max-width: 57.5rem;
 }
 
 .nav {
@@ -105,8 +105,29 @@
 
 .sectionHeadActions {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.headerMeta {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+}
+
+/* A search result: the section, then its view. */
+.result {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  column-gap: var(--space-2);
+  padding-block: var(--space-2);
+}
+
+.resultView {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-regular);
 }
 
 .sectionTitle {
@@ -162,18 +183,11 @@
   font-size: var(--font-size-caption);
 }
 
-/* Sources (design "S4 · Settings & sources"). */
-.cols2 {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(22.5rem, 100%), 1fr));
-  align-items: start;
-  gap: var(--space-5);
-}
-
 .sourceCard {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  border-radius: var(--radius-lg);
 }
 
 .sourceHeader {
@@ -182,11 +196,12 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: 1.125rem var(--space-5);
+  padding: var(--space-4) var(--space-5);
 }
 
 .sourceTitle {
   display: flex;
+  flex: 1 1 16rem;
   align-items: center;
   gap: var(--space-3);
   min-width: 0;
@@ -195,12 +210,13 @@
 .sourceText {
   display: flex;
   flex-direction: column;
+  gap: 0.125rem;
   min-width: 0;
 }
 
 .sourceName {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--font-size-headline);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -212,57 +228,71 @@
 
 .sourceActions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: var(--space-3);
-  max-width: 22rem;
 }
 
-.sourceBody {
+.sourceBody,
+.sourceBodyFlush {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding: 0 var(--space-5) var(--space-5);
-}
-
-.sourceBodyFlush {
   border-top: var(--size-border) solid var(--color-separator);
 }
 
-/* The source's tinted tile: the activity colours the design gives Git, Figma and calendars. */
+/* One line under a source's header (design "lrow"). */
+.sourceRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+  min-height: 2.875rem;
+  padding: var(--space-3) var(--space-5);
+}
+
+.sourceRow + .sourceRow {
+  border-top: var(--size-border) solid var(--color-separator);
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) 0.875rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-size-footnote);
+}
+
+.swatches li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.swatch {
+  flex: none;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  background: var(--color-text-secondary);
+}
+
+/* The source's icon (design: a muted glyph before the title). */
 .iconTile {
   display: grid;
   flex: none;
   place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 0.625rem;
-  color: var(--color-text);
-  font-size: 1.125rem;
-}
-
-.tile-git {
-  background: var(--color-selected-bg);
-  color: var(--color-selected-text);
-}
-
-.tile-figma {
-  background: color-mix(in srgb, var(--chart-1) 16%, var(--color-surface));
-}
-
-.tile-calendar {
-  background: color-mix(in srgb, var(--chart-3) 16%, var(--color-surface));
+  color: var(--color-text-secondary);
+  font-size: 1.25rem;
 }
 
 .activeRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  margin: 0;
-  padding: 0.625rem var(--space-3);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-sunken);
+  min-width: 0;
   font-size: var(--font-size-footnote);
 }
 
@@ -270,10 +300,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.muted {
-  color: var(--color-text-secondary);
 }
 
 .sourceMeta {
@@ -290,7 +316,7 @@
 }
 
 @media (forced-colors: active) {
-  .iconTile {
+  .swatch {
     border: 1px solid CanvasText;
   }
 }

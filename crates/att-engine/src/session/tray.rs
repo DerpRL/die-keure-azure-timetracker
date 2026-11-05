@@ -1,7 +1,7 @@
 //! The menu-bar/tray status (Swift `MenuBarController`): the ` HH:MM:SS` title of
-//! `menuElapsed` (the local timer when it leads), the tooltip from
-//! `att_core::indicator::status_description` and the icon state. Runs once per second, so it
-//! reads the state once and allocates only the two strings it returns.
+//! `menuElapsed` (the local timer when it leads; no title when `Configuration::menu_bar_timer`
+//! is off), the tooltip from `att_core::indicator::status_description` and the icon state. Runs
+//! once per second, so it reads the state once and allocates only the two strings it returns.
 
 use jiff::Timestamp;
 
@@ -98,7 +98,8 @@ pub fn tray_status(state: &AppState, now: Timestamp) -> TrayStatus {
         tooltip
     };
     TrayStatus {
-        title: Some(format!(" {clock}")),
+        // Settings → "Show the timer in the menu bar" off: the icon only.
+        title: state.config.menu_bar_timer.then(|| format!(" {clock}")),
         tooltip,
         state: tray_state(indicator(state, now)),
     }

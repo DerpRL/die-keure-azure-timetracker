@@ -10,6 +10,7 @@ use att_core::model::ActivityType;
 use att_core::offline::{
     LocalTimerDisplay, OfflineDraft, OfflineDraftStatus, OfflineLedger, OfflineSync,
 };
+use att_core::rounding::Rounding;
 use att_core::service::WorkLogMutationService;
 use att_core::time::{add_secs, swift_date};
 use att_core::worklog::WorkLogDraft;
@@ -59,10 +60,12 @@ fn local_timer_persists_and_only_one_may_run_across_workspaces() {
 async fn uploads_once_with_durable_sending_checkpoint_then_confirmation() {
     let api = MutationFixture::new(Vec::new());
     let capture = DraftCheckpoint::default();
-    let review = OfflineSync::review(&draft(), &api, now(), &cal()).await.unwrap();
-    let result = OfflineSync::upload(&review, "test", &api, now(), &cal(), |d| capture.save(d))
-        .await
-        .unwrap();
+    let review = OfflineSync::review(&draft(), &api, Rounding::Exact, now(), &cal()).await.unwrap();
+    let result = OfflineSync::upload(&review, "test", &api, Rounding::Exact, now(), &cal(), |d| {
+        capture.save(d)
+    })
+    .await
+    .unwrap();
     assert!(result.status == OfflineDraftStatus::Synced && result.remote_id.is_some());
     assert_eq!(capture.statuses().await, [OfflineDraftStatus::Sending, OfflineDraftStatus::Synced]);
     assert_eq!(api.mutations().await, ["create"]);
@@ -72,16 +75,21 @@ async fn uploads_once_with_durable_sending_checkpoint_then_confirmation() {
 async fn lost_response_needs_reconciliation_and_cannot_replay() {
     let api = MutationFixture::new(Vec::new());
     let capture = DraftCheckpoint::default();
-    let review = OfflineSync::review(&draft(), &api, now(), &cal()).await.unwrap();
+    let review = OfflineSync::review(&draft(), &api, Rounding::Exact, now(), &cal()).await.unwrap();
     api.state.lock().await.lose_create_response = true;
-    let upload =
-        OfflineSync::upload(&review, "test", &api, now(), &cal(), |d| capture.save(d)).await;
+    let upload = OfflineSync::upload(&review, "test", &api, Rounding::Exact, now(), &cal(), |d| {
+        capture.save(d)
+    })
+    .await;
     assert!(upload.is_err());
     let pending = capture.records().await.last().cloned().expect("a sending checkpoint");
     assert_eq!(pending.status, OfflineDraftStatus::Sending);
-    let retry = OfflineSync::review(&pending, &api, now(), &cal()).await.unwrap();
+    let retry = OfflineSync::review(&pending, &api, Rounding::Exact, now(), &cal()).await.unwrap();
     assert_eq!(retry.matches.len(), 1);
-    let again = OfflineSync::upload(&retry, "test", &api, now(), &cal(), |d| capture.save(d)).await;
+    let again = OfflineSync::upload(&retry, "test", &api, Rounding::Exact, now(), &cal(), |d| {
+        capture.save(d)
+    })
+    .await;
     assert!(again.is_err());
     assert_eq!(api.mutations().await, ["create"]);
 }
@@ -91,9 +99,13 @@ async fn checkpoint_failure_before_write_prevents_request_and_after_write_preser
     for stage in [0, 1] {
         let api = MutationFixture::new(Vec::new());
         let capture = DraftCheckpoint::failing_at(stage);
-        let review = OfflineSync::review(&draft(), &api, now(), &cal()).await.unwrap();
+        let review =
+            OfflineSync::review(&draft(), &api, Rounding::Exact, now(), &cal()).await.unwrap();
         let upload =
-            OfflineSync::upload(&review, "test", &api, now(), &cal(), |d| capture.save(d)).await;
+            OfflineSync::upload(&review, "test", &api, Rounding::Exact, now(), &cal(), |d| {
+                capture.save(d)
+            })
+            .await;
         assert!(upload.is_err(), "stage {stage}");
         assert_eq!(api.mutations().await.len(), stage, "stage {stage}");
         if stage == 1 {
@@ -106,15 +118,20 @@ async fn checkpoint_failure_before_write_prevents_request_and_after_write_preser
 async fn workspace_mismatch_and_missing_activity_never_write() {
     let api = MutationFixture::new(Vec::new());
     let capture = DraftCheckpoint::default();
-    let review = OfflineSync::review(&draft(), &api, now(), &cal()).await.unwrap();
-    let other =
-        OfflineSync::upload(&review, "other", &api, now(), &cal(), |d| capture.save(d)).await;
+    let review = OfflineSync::review(&draft(), &api, Rounding::Exact, now(), &cal()).await.unwrap();
+    let other = OfflineSync::upload(&review, "other", &api, Rounding::Exact, now(), &cal(), |d| {
+        capture.save(d)
+    })
+    .await;
     assert!(other.is_err());
     let mut missing = draft();
     missing.activity_id = Some("removed".into());
-    let invalid = OfflineSync::review(&missing, &api, now(), &cal()).await.unwrap();
-    let upload =
-        OfflineSync::upload(&invalid, "test", &api, now(), &cal(), |d| capture.save(d)).await;
+    let invalid =
+        OfflineSync::review(&missing, &api, Rounding::Exact, now(), &cal()).await.unwrap();
+    let upload = OfflineSync::upload(&invalid, "test", &api, Rounding::Exact, now(), &cal(), |d| {
+        capture.save(d)
+    })
+    .await;
     assert!(upload.is_err());
     assert!(api.mutations().await.is_empty());
 }
@@ -125,17 +142,23 @@ async fn overlaps_are_advisory_but_changed_overlap_requires_review() {
     log.work_item_id = Some(456);
     let api = MutationFixture::new(vec![log.clone()]);
     let capture = DraftCheckpoint::default();
-    let review = OfflineSync::review(&draft(), &api, now(), &cal()).await.unwrap();
+    let review = OfflineSync::review(&draft(), &api, Rounding::Exact, now(), &cal()).await.unwrap();
     assert!(review.conflicts.len() == 1 && review.matches.is_empty());
-    let result = OfflineSync::upload(&review, "test", &api, now(), &cal(), |d| capture.save(d))
-        .await
-        .unwrap();
+    let result = OfflineSync::upload(&review, "test", &api, Rounding::Exact, now(), &cal(), |d| {
+        capture.save(d)
+    })
+    .await
+    .unwrap();
     assert_eq!(result.status, OfflineDraftStatus::Synced);
     let changed_api = MutationFixture::new(Vec::new());
-    let stale = OfflineSync::review(&draft(), &changed_api, now(), &cal()).await.unwrap();
+    let stale =
+        OfflineSync::review(&draft(), &changed_api, Rounding::Exact, now(), &cal()).await.unwrap();
     changed_api.replace(log).await;
     let upload =
-        OfflineSync::upload(&stale, "test", &changed_api, now(), &cal(), |d| capture.save(d)).await;
+        OfflineSync::upload(&stale, "test", &changed_api, Rounding::Exact, now(), &cal(), |d| {
+            capture.save(d)
+        })
+        .await;
     assert_eq!(
         upload.unwrap_err().to_string(),
         "Overlap details changed. Refresh the review before uploading."
@@ -146,11 +169,15 @@ async fn overlaps_are_advisory_but_changed_overlap_requires_review() {
 #[tokio::test]
 async fn duplicate_appearing_after_review_prevents_another_create() {
     let api = MutationFixture::new(Vec::new());
-    let review = OfflineSync::review(&draft(), &api, now(), &cal()).await.unwrap();
+    let review = OfflineSync::review(&draft(), &api, Rounding::Exact, now(), &cal()).await.unwrap();
     let capture = DraftCheckpoint::default();
-    api.create_work_log(&draft().proposal(now(), &cal()).unwrap()).await.unwrap();
-    let upload =
-        OfflineSync::upload(&review, "test", &api, now(), &cal(), |d| capture.save(d)).await;
+    api.create_work_log(&draft().proposal(Rounding::Exact, &[], now(), &cal()).unwrap())
+        .await
+        .unwrap();
+    let upload = OfflineSync::upload(&review, "test", &api, Rounding::Exact, now(), &cal(), |d| {
+        capture.save(d)
+    })
+    .await;
     assert_eq!(
         upload.unwrap_err().to_string(),
         "A matching entry already exists. Refresh the review and link it instead of uploading again."
@@ -187,11 +214,11 @@ fn ticket_free_draft_needs_comment_and_future_time_is_rejected() {
     let mut value = draft();
     value.ticket_id = None;
     value.comment = String::new();
-    assert!(value.proposal(now(), &cal()).is_err());
+    assert!(value.proposal(Rounding::Exact, &[], now(), &cal()).is_err());
     value.comment = "Daily standup".into();
-    assert_eq!(value.proposal(now(), &cal()).unwrap().ticket_id, None);
+    assert_eq!(value.proposal(Rounding::Exact, &[], now(), &cal()).unwrap().ticket_id, None);
     value.end = Some(add_secs(now(), 3600.0));
-    assert!(value.proposal(now(), &cal()).is_err());
+    assert!(value.proposal(Rounding::Exact, &[], now(), &cal()).is_err());
 }
 
 /// ManualTrackingTests.swift › LocalTimerDisplayTests › localClockWhenRemoteIsIdleOrUnavailable.
@@ -334,7 +361,7 @@ async fn running_timer_without_worklog_id_becomes_an_overlap_notice() {
     let mut tracking = state(Some(456), "session");
     tracking.track.as_mut().unwrap().work_log_id = None;
     let api = MutationFixture::with_tracking(Vec::new(), tracking);
-    let review = OfflineSync::review(&draft(), &api, now(), &cal()).await.unwrap();
+    let review = OfflineSync::review(&draft(), &api, Rounding::Exact, now(), &cal()).await.unwrap();
     assert!(review.conflicts.is_empty());
     assert_eq!(
         review.overlap_issue.as_deref(),
@@ -367,9 +394,13 @@ async fn activity_must_still_resolve_against_fresh_types() {
         api.state.lock().await.activity_types = types;
         let mut value = draft();
         value.activity_id = activity.map(str::to_string);
-        let review = OfflineSync::review(&value, &api, now(), &cal()).await.unwrap();
+        let review =
+            OfflineSync::review(&value, &api, Rounding::Exact, now(), &cal()).await.unwrap();
         let upload =
-            OfflineSync::upload(&review, "test", &api, now(), &cal(), |d| capture.save(d)).await;
+            OfflineSync::upload(&review, "test", &api, Rounding::Exact, now(), &cal(), |d| {
+                capture.save(d)
+            })
+            .await;
         assert_eq!(upload.unwrap_err().to_string(), message, "{case}");
         assert!(api.mutations().await.is_empty(), "{case}");
     }
@@ -379,9 +410,11 @@ async fn activity_must_still_resolve_against_fresh_types() {
     api.state.lock().await.activity_types = Vec::new();
     let mut value = draft();
     value.activity_id = None;
-    let review = OfflineSync::review(&value, &api, now(), &cal()).await.unwrap();
-    let synced =
-        OfflineSync::upload(&review, "test", &api, now(), &cal(), |d| capture.save(d)).await;
+    let review = OfflineSync::review(&value, &api, Rounding::Exact, now(), &cal()).await.unwrap();
+    let synced = OfflineSync::upload(&review, "test", &api, Rounding::Exact, now(), &cal(), |d| {
+        capture.save(d)
+    })
+    .await;
     assert_eq!(synced.unwrap().status, OfflineDraftStatus::Synced);
 }
 
@@ -390,9 +423,11 @@ async fn unconfirmed_create_stays_sending() {
     let api = MutationFixture::new(Vec::new());
     api.state.lock().await.alter_create = true;
     let capture = DraftCheckpoint::default();
-    let review = OfflineSync::review(&draft(), &api, now(), &cal()).await.unwrap();
-    let upload =
-        OfflineSync::upload(&review, "test", &api, now(), &cal(), |d| capture.save(d)).await;
+    let review = OfflineSync::review(&draft(), &api, Rounding::Exact, now(), &cal()).await.unwrap();
+    let upload = OfflineSync::upload(&review, "test", &api, Rounding::Exact, now(), &cal(), |d| {
+        capture.save(d)
+    })
+    .await;
     assert_eq!(
         upload.unwrap_err().to_string(),
         "7pace did not confirm this draft exactly. Check 7pace before retrying."
@@ -400,9 +435,11 @@ async fn unconfirmed_create_stays_sending() {
     assert_eq!(capture.statuses().await, [OfflineDraftStatus::Sending]);
     let mut synced = draft();
     synced.status = OfflineDraftStatus::Synced;
-    let review = OfflineSync::review(&synced, &api, now(), &cal()).await.unwrap();
-    let again =
-        OfflineSync::upload(&review, "test", &api, now(), &cal(), |d| capture.save(d)).await;
+    let review = OfflineSync::review(&synced, &api, Rounding::Exact, now(), &cal()).await.unwrap();
+    let again = OfflineSync::upload(&review, "test", &api, Rounding::Exact, now(), &cal(), |d| {
+        capture.save(d)
+    })
+    .await;
     assert_eq!(
         again.unwrap_err().to_string(),
         "This draft belongs to another workspace or has an unconfirmed upload. Review it before sending."
@@ -415,8 +452,15 @@ async fn upload_future_can_move_between_threads() {
     let api = MutationFixture::new(Vec::new());
     let capture = DraftCheckpoint::default();
     let cal = cal();
-    let review = OfflineSync::review(&draft(), &api, now(), &cal).await.unwrap();
-    let upload =
-        assert_send(OfflineSync::upload(&review, "test", &api, now(), &cal, |d| capture.save(d)));
+    let review = OfflineSync::review(&draft(), &api, Rounding::Exact, now(), &cal).await.unwrap();
+    let upload = assert_send(OfflineSync::upload(
+        &review,
+        "test",
+        &api,
+        Rounding::Exact,
+        now(),
+        &cal,
+        |d| capture.save(d),
+    ));
     assert_eq!(upload.await.unwrap().status, OfflineDraftStatus::Synced);
 }

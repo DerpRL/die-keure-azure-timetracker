@@ -1,17 +1,24 @@
 //! 7pace mobile PIN pairing (Swift `PinPairingModel`): request a PIN, poll its status every
 //! 2 s for at most 60 s, exchange the secret and save the tokens with the 1.14.x Keychain
-//! account (`7pace-oauth:<host>`).
+//! account (`7pace-oauth:<host>`). `pairing.unpair` forgets them again.
 
 use std::time::Duration;
 
 use jiff::Timestamp;
 
+use serde_json::Value;
+
 use att_core::AppError;
 use att_core::time::add_secs;
 use att_net::{Endpoint, SevenPacePinStatus};
 
-use crate::clients::save_oauth;
+use crate::clients::{accounts, save_oauth};
+use crate::controllers::hooks as controllers;
 use crate::engine::Engine;
+use crate::intent::done;
+use crate::ipc::IpcError;
+
+use super::{busy, connection};
 
 /// The PIN is valid this long (Swift 60 s).
 const PIN_SECONDS: u64 = 60;
@@ -146,4 +153,48 @@ async fn run(engine: &Engine, workspace: &str, generation: u64) -> att_core::Res
         "The PIN expired. Request a new PIN and enter it within one minute.",
     );
     Ok(())
+}
+
+/// `pairing.unpair` (Settings → Accounts → Unpair): forgets the 7pace credential of the saved
+/// workspace (the paired mobile-PIN tokens and the API token, both under the 1.14.x Keychain
+/// accounts `7pace-oauth:<host>` and `7pace:<host>`) and disconnects. Every setting, the Azure
+/// token and the 7pace timer itself are left alone. Refused while a write or an upload runs;
+/// nothing is stored in preview.
+pub(crate) async fn unpair(engine: &Engine) -> Result<Value, IpcError> {
+    if engine.preview() {
+        return done();
+    }
+    if busy(engine) || engine.read(controllers::offline_working) {
+        return Err(IpcError::busy());
+    }
+    cancel(engine);
+    let url = engine.read(|state| state.config.seven_pace_url.clone());
+    let host = Endpoint::seven_pace(&url)
+        .ok()
+        .and_then(|url| url.host_str().map(str::to_string))
+        .filter(|host| !host.is_empty());
+    if let Some(host) = host.clone() {
+        let credentials = engine.services().platform.credentials.clone();
+        // Keychain writes can wait for a system prompt: blocking pool, no short deadline.
+        tokio::task::spawn_blocking(move || {
+            credentials.delete(&accounts::seven_pace_oauth(&host))?;
+            credentials.delete(&accounts::seven_pace_token(&host))
+        })
+        .await
+        .map_err(|error| IpcError::new("internal", error.to_string()))?
+        .map_err(|error| {
+            IpcError::new(
+                "message",
+                format!("Keychain could not remove the 7pace credential ({error})."),
+            )
+        })?;
+    }
+    // The Azure token is not touched: Settings keeps showing it as stored.
+    let has_azure_pat = engine.read(|state| state.session.connection.has_azure_pat);
+    if !connection::disconnect(engine).await {
+        return Err(IpcError::busy());
+    }
+    engine.update(|state| state.session.connection.has_azure_pat = has_azure_pat);
+    engine.record("Unpaired from 7pace", host.unwrap_or_default());
+    done()
 }

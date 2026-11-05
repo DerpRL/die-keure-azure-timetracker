@@ -76,6 +76,11 @@ export type AppSlice = {
   error: string | null;
   storageIssue: string | null;
   features: Features;
+  /**
+   * The folder the app keeps its data in (absolute; `null` without one, e.g. in tests).
+   * Settings → App shows it and reveals it with the shell's `shell_reveal_data_dir`.
+   */
+  dataDirectory: string | null;
 };
 
 export type AttentionView = {
@@ -187,6 +192,21 @@ export type Configuration = {
    * Ctrl+Alt+Shift+T on Windows).
    */
   quickSwitchShortcut: string | null;
+  /**
+   * Save every entry the app writes to 7pace as a multiple of 15 minutes (see
+   * [`crate::rounding`]). Off by default and for settings saved before 2.4.
+   */
+  roundToQuarterHours: boolean;
+  /**
+   * When a meeting timer ends, offer to resume the ticket tracked before it (the
+   * `meetingReturn` prompt). On by default and for settings saved before 2.4.
+   */
+  resumeAfterMeetings: boolean;
+  /**
+   * Show the elapsed time next to the macOS menu-bar icon. Off: the icon only (the tooltip
+   * still shows it). On by default and for settings saved before 2.4.
+   */
+  menuBarTimer: boolean;
 };
 
 export type ConnectionSlice = {
@@ -340,6 +360,8 @@ export type DayReviewPreferences = {
   weekdays: Array<number>;
   longSessionMinutes: number;
   gapMinutes: number;
+  /** When the reminder comes; [`DayReviewReminder::AtEnd`] for settings saved before 2.4. */
+  reminder: DayReviewReminder;
 };
 
 export type DayReviewPromptView = { day: string; canSnooze: boolean };
@@ -350,6 +372,9 @@ export type DayReviewRecord = {
   snoozedUntil?: string | null;
   reviewedAt?: string | null;
 };
+
+/** When the day review reminder comes. Settings saved before 2.4 remind at the finish time. */
+export type DayReviewReminder = "beforeEnd" | "atEnd" | "nextMorning";
 
 export type DayReviewSlice = {
   selectedDay: string;
@@ -901,6 +926,8 @@ export type OfflineReview = {
   overlapIssue: string | null;
   /** Existing entries identical to the draft's proposal (link one instead of uploading). */
   matches: Array<WorkLog>;
+  /** The entry an upload creates, with the quarter-hour setting applied. */
+  proposal: WorkLogDraft;
 };
 
 export type OfflineSlice = {
@@ -1095,6 +1122,8 @@ export type SessionIntent =
   | { type: "app.dismissError" }
   | { type: "app.dismissNotice" }
   | { type: "app.reportShortcutIssue"; issue?: string | null }
+  | { type: "app.resetLocalData" }
+  | { type: "app.saveDiagnostics"; path: string }
   | { type: "connection.retry" }
   | { type: "connection.refresh" }
   | { type: "connection.recheck" }
@@ -1113,6 +1142,7 @@ export type SessionIntent =
   | { type: "app.reportNotificationPermission"; authorized: boolean }
   | { type: "pairing.generatePin"; workspace?: string | null }
   | { type: "pairing.cancel" }
+  | { type: "pairing.unpair" }
   | { type: "repositories.scan"; path: string }
   | { type: "repositories.cancelScan" }
   | { type: "repositories.add"; paths: Array<string> }
@@ -1616,17 +1646,20 @@ export type WorkLogTimeEdit = { start: string; end: string };
 export type WorkLogUser = { id?: string | null };
 
 /**
- * The user's working-time schedule. Persisted in the configuration as Swift wrote it.
+ * The user's working-time schedule, as whole minutes per weekday so a target like 7h 36m stays
+ * exact.
  *
- * Settings written before per-weekday schedules have only `weeklyHours` and `dailyHours`; they
- * keep working (`dailyHours` Monday to Friday) and convert to `hoursByWeekday` on the first
- * [`WorkTargets::set_hours`].
+ * Reads also accept the formats saved before 2.4: decimal `hoursByWeekday` (1.14 and 2.0–2.3),
+ * and `weeklyHours`/`dailyHours` from before per-weekday schedules (`dailyHours` Monday to
+ * Friday). Both convert to minutes when read, rounded to the nearest minute, and are written
+ * back as `minutesByWeekday` only.
  */
 export type WorkTargets = {
-  weeklyHours: number;
-  dailyHours: number;
-  /** Sunday first, matching Swift weekday numbers (index 0 = Sunday). */
-  hoursByWeekday?: Array<number> | null;
+  /**
+   * Regular minutes per weekday, Sunday first, matching Swift weekday numbers (index 0 =
+   * Sunday). Seven entries, each from 0 to 1440 ([`MAX_DAILY_MINUTES`]).
+   */
+  minutesByWeekday: Array<number>;
   belgianHolidaysEnabled?: boolean | null;
   dateExceptions?: Array<TargetException> | null;
 };

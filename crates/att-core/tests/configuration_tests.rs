@@ -218,3 +218,43 @@ fn validation_messages_match_settings() {
     config.quiet_hours = QuietHours { enabled: true, start_minute: 24 * 60, end_minute: 0 };
     assert!(config.validate().is_err());
 }
+
+/// Settings saved by 2.0–2.3 (`targets` with decimal `hoursByWeekday`) and 1.14.x (`workTargets`)
+/// load with their schedule in whole minutes, and are written back in minutes only.
+#[test]
+fn saved_decimal_hour_targets_load_as_minutes() {
+    let saved = r#"{"organization":"org","targets":{"weeklyHours":37.5,"dailyHours":7.6,
+        "hoursByWeekday":[0,7.5,7.5,7.5,7.5,7.5,0],"belgianHolidaysEnabled":false}}"#;
+    let config: Configuration = serde_json::from_str(saved).unwrap();
+    assert_eq!(config.organization, "org");
+    assert_eq!(config.targets.minutes_by_weekday, [0, 450, 450, 450, 450, 450, 0]);
+    assert_eq!(config.targets.weekly_target_minutes(), 37 * 60 + 30);
+    assert!(!config.targets.uses_belgian_holidays());
+    assert!(config.validate().is_ok());
+    let written = serde_json::to_value(&config).unwrap();
+    assert_eq!(
+        written["targets"],
+        serde_json::json!({ "minutesByWeekday": [0, 450, 450, 450, 450, 450, 0], "belgianHolidaysEnabled": false })
+    );
+    assert_eq!(round_trip(&config), config);
+
+    let swift = r#"{"workTargets":{"dailyHours":7.6,"weeklyHours":38}}"#;
+    let config: Configuration = serde_json::from_str(swift).unwrap();
+    assert_eq!(config.targets.minutes_by_weekday, [0, 456, 456, 456, 456, 456, 0]);
+    assert_eq!(config.targets.weekly_target_minutes(), 38 * 60);
+}
+
+#[test]
+fn targets_past_24_hours_are_rejected() {
+    let mut config = Configuration::default();
+    config.targets.set_minutes(24 * 60, 2);
+    assert!(config.validate().is_ok());
+    config.targets.set_minutes(24 * 60 + 1, 2);
+    assert_eq!(
+        config.validate().unwrap_err().to_string(),
+        "Each daily target must be between 0 and 24 hours. Use 0 for a day off."
+    );
+    // The UI sends whole minutes; anything else is not a schedule.
+    let fractional = r#"{"targets":{"minutesByWeekday":[0,456.5,456,456,456,456,0]}}"#;
+    assert!(serde_json::from_str::<Configuration>(fractional).is_err());
+}

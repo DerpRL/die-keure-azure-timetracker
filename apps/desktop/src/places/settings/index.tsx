@@ -3,38 +3,63 @@ import { EmptyState, LoadingRegion, Skeleton } from '../../components/EmptyState
 import { ErrorIcon } from '../../components/icons';
 import { useToast } from '../../components/Toast';
 import { SaveBar, VIEW_TITLE_ID } from '../../features/settings/SaveBar';
-import { SETTINGS_SECTIONS, VIEW_INTROS } from '../../features/settings/sections';
+import { SETTINGS_SECTIONS, VIEW_INTROS, type SettingsSectionDefinition, type SettingsSectionId } from '../../features/settings/sections';
 import { useSettingsForm } from '../../features/settings/SettingsForm';
 import { usePlaceView, type Navigation } from '../../layout/NavigationContext';
 import type { SettingsView } from '../../layout/navigation';
 import { useEngineStatus } from '../../state/EngineProvider';
 import { useSlice } from '../../state/hooks';
 import { WatchSwitch } from './git';
-import { SettingsFormProvider } from './SettingsForm';
+import { SettingsFormProvider, useVisibleSections } from './SettingsForm';
 import { SettingsNav } from './SettingsNav';
+import { TestConnectionsButton } from '../../features/settings/ConnectionSection';
+import { AboutView } from './views/AboutView';
 import { AccountsView } from './views/AccountsView';
+import { AdvancedView } from './views/AdvancedView';
 import { AppearanceView } from './views/AppearanceView';
 import { CalendarsView } from './views/CalendarsView';
+import { FeaturesView } from './views/FeaturesView';
 import { FigmaView } from './views/FigmaView';
 import { GitView } from './views/GitView';
+import { MeetingsView } from './views/MeetingsView';
+import { NotificationsView } from './views/NotificationsView';
+import { RemindersView } from './views/RemindersView';
+import { ScheduleView } from './views/ScheduleView';
 import { SourcesView } from './views/SourcesView';
-import { TrackingView } from './views/TrackingView';
 import styles from './settings.module.css';
 
 const VIEWS: Record<SettingsView, ComponentType> = {
   accounts: AccountsView,
-  tracking: TrackingView,
+  schedule: ScheduleView,
+  meetings: MeetingsView,
+  reminders: RemindersView,
+  notifications: NotificationsView,
   sources: SourcesView,
   git: GitView,
   figma: FigmaView,
   calendars: CalendarsView,
   appearance: AppearanceView,
+  features: FeaturesView,
+  advanced: AdvancedView,
+  about: AboutView,
 };
 
-/** Controls next to a view's title (the Git view's "Watching" switch). */
+/** Controls next to a view's title (design: "Test both connections", the Git "Watching" switch). */
 const VIEW_ACTIONS: Partial<Record<SettingsView, () => ReactNode>> = {
-  git: () => <WatchSwitch label="Watching" />,
+  accounts: () => <TestConnectionsButton />,
+  git: () => <GitWatchHeader />,
 };
+
+/** "Checks every 2 s" and the watch switch, next to the Git repositories title. */
+function GitWatchHeader() {
+  const { draft } = useSettingsForm();
+  return (
+    <>
+      <span className={styles.headerMeta}>{`Checks every ${draft.cadences.probeSeconds} s`}</span>
+      <WatchSwitch label="Watch repositories" compact />
+    </>
+  );
+}
 
 function ViewIntro({ view }: { view: SettingsView }) {
   const intro = VIEW_INTROS[view];
@@ -73,6 +98,7 @@ function SettingsContent({ view, navigation }: { view: SettingsView; navigation:
     }
     return counts;
   }, [form.issues]);
+  const sections = useVisibleSections(navigation.isPageVisible);
   const View = VIEWS[view];
   // The save bar asks to save only what is unsaved: an edit that differs from the saved settings
   // or a typed token. It stays while saving and when saving failed, and goes away once the
@@ -80,7 +106,7 @@ function SettingsContent({ view, navigation }: { view: SettingsView; navigation:
   const showSave = form.dirty || form.showIssues || form.saving || form.saveError !== null;
   useSavedToast(form.saved);
   return (
-    <SettingsLayout view={view} navigation={navigation} issueCounts={issueCounts}>
+    <SettingsLayout view={view} navigation={navigation} issueCounts={issueCounts} sections={sections} onFind={form.goTo}>
       <ViewIntro view={view} />
       <View />
       {showSave ? <SaveBar /> : null}
@@ -106,11 +132,15 @@ function SettingsLayout({
   view,
   navigation,
   issueCounts,
+  sections,
+  onFind,
   children,
 }: {
   view: SettingsView;
   navigation: Navigation;
   issueCounts?: Partial<Record<SettingsView, number>>;
+  sections?: readonly SettingsSectionDefinition[];
+  onFind?: (section: SettingsSectionId) => void;
   children: ReactNode;
 }) {
   return (
@@ -120,6 +150,8 @@ function SettingsLayout({
           current={view}
           isPageVisible={navigation.isPageVisible}
           issueCounts={issueCounts}
+          sections={sections}
+          onFind={onFind}
           onSelect={(next) => navigation.navigate({ place: 'settings', view: next })}
         />
       </div>
@@ -129,9 +161,9 @@ function SettingsLayout({
 }
 
 /**
- * Settings (2.2 layout "S4"): the Settings menu on the left (Account, Tracking, Sources, App) and
- * the chosen view, up to 860 px wide. One draft serves every view; appearance, Figma, quiet
- * hours, interruptions, repositories and launch at login apply immediately.
+ * Settings (2.4 layout "S4"): the Settings menu with search on the left (Account, Tracking,
+ * Sources, App: 13 views) and the chosen view, up to 920 px wide. One draft serves every view;
+ * appearance, Figma, quiet hours, prompts, repositories and launch at login apply immediately.
  */
 export default function SettingsPlace() {
   const { view, navigation } = usePlaceView<SettingsView>('settings');

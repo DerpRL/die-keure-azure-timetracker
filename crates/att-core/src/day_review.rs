@@ -14,6 +14,25 @@ use crate::model::WorkLog;
 use crate::text::NonEmpty;
 use crate::time::{Cal, add_secs, diff_secs};
 
+/// When the day review reminder comes. Settings saved before 2.4 remind at the finish time.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum DayReviewReminder {
+    /// [`DayReviewReminder::BEFORE_END_MINUTES`] before the finish time.
+    BeforeEnd,
+    /// At the finish time (the behaviour before 2.4).
+    #[default]
+    AtEnd,
+    /// At the start time of the next review day, about the review day before it.
+    NextMorning,
+}
+
+impl DayReviewReminder {
+    /// How long before the finish time `beforeEnd` reminds.
+    pub const BEFORE_END_MINUTES: i64 = 15;
+}
+
 /// Persisted in the configuration as `endOfDayReview`.
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -27,6 +46,8 @@ pub struct DayReviewPreferences {
     pub weekdays: Vec<i64>,
     pub long_session_minutes: i64,
     pub gap_minutes: i64,
+    /// When the reminder comes; [`DayReviewReminder::AtEnd`] for settings saved before 2.4.
+    pub reminder: DayReviewReminder,
 }
 
 impl Default for DayReviewPreferences {
@@ -39,6 +60,7 @@ impl Default for DayReviewPreferences {
             weekdays: vec![2, 3, 4, 5, 6],
             long_session_minutes: 180,
             gap_minutes: 20,
+            reminder: DayReviewReminder::AtEnd,
         }
     }
 }
@@ -52,6 +74,38 @@ impl DayReviewPreferences {
             && self.weekdays.iter().all(|day| (1..=7).contains(day))
             && (30..=720).contains(&self.long_session_minutes)
             && (5..=180).contains(&self.gap_minutes)
+    }
+
+    /// When the reminder is due on the local day containing `day` (a review day): before or at
+    /// its finish time, or at its start time for `nextMorning`.
+    pub fn reminder_time(&self, day: Timestamp, cal: &Cal) -> Timestamp {
+        let minute = match self.reminder {
+            DayReviewReminder::BeforeEnd => {
+                (self.finish_minute - DayReviewReminder::BEFORE_END_MINUTES).max(0)
+            }
+            DayReviewReminder::AtEnd => self.finish_minute,
+            DayReviewReminder::NextMorning => self.start_minute,
+        };
+        self.time(minute, day, cal)
+    }
+
+    /// The local day a reminder on the day of `now` is about, or `None` when `now` is not on a
+    /// selected weekday. `beforeEnd` and `atEnd` review today; `nextMorning` the previous
+    /// selected weekday (a week back when only one weekday is selected).
+    pub fn reviewed_day(&self, now: Timestamp, cal: &Cal) -> Option<civil::Date> {
+        let today = cal.date(now);
+        let selected = |date: civil::Date| {
+            self.weekdays.contains(&i64::from(date.weekday().to_sunday_one_offset()))
+        };
+        if !selected(today) {
+            return None;
+        }
+        match self.reminder {
+            DayReviewReminder::BeforeEnd | DayReviewReminder::AtEnd => Some(today),
+            DayReviewReminder::NextMorning => {
+                (1..=7).map(|back| cal.add_date_days(today, -back)).find(|day| selected(*day))
+            }
+        }
     }
 
     /// The instant `minute` minutes into the local day containing `day`.
@@ -117,8 +171,10 @@ impl DayReviewSchedule {
         format!("{workspace}|{}-{}-{}", date.year(), date.month(), date.day())
     }
 
-    /// Due at the finish time on a selected weekday, once; after a snooze, when it ends (even in
-    /// the morning). Never after the day was reviewed.
+    /// Due at [`DayReviewPreferences::reminder_time`] on a selected weekday, once; after a
+    /// snooze, when it ends (even in the morning). Never after the day was reviewed. `record` is
+    /// the record of [`DayReviewPreferences::reviewed_day`] (the previous review day for
+    /// `nextMorning`).
     pub fn is_due(
         now: Timestamp,
         preferences: &DayReviewPreferences,
@@ -135,7 +191,7 @@ impl DayReviewSchedule {
         if let Some(snooze) = record.and_then(|record| record.snoozed_until) {
             return now >= snooze;
         }
-        now >= preferences.time(preferences.finish_minute, now, cal)
+        now >= preferences.reminder_time(now, cal)
             && record.is_none_or(|record| record.prompted_at.is_none())
     }
 

@@ -1,4 +1,4 @@
-import type { OfflineDraft, OfflineDraftView, OfflineReview, OfflineSlice, SliceMap } from '../../contract';
+import type { OfflineDraft, OfflineDraftView, OfflineReview, OfflineSlice, SliceMap, WorkLogDraft } from '../../contract';
 import { activities } from './history';
 
 const WORKSPACE = 'https://contoso.timehub.7pace.com';
@@ -73,6 +73,20 @@ const offline: OfflineSlice = {
   configured: true,
 };
 
+/** The entry an upload of `view` creates, without quarter-hour rounding. */
+function proposalOf(view: OfflineDraftView): WorkLogDraft {
+  const seconds = view.end ? (Date.parse(view.end) - Date.parse(view.start)) / 1000 : 0;
+  return {
+    start: view.start,
+    seconds,
+    billableSeconds: view.billable ? seconds : 0,
+    ticketId: view.ticketId,
+    comment: view.comment.trim() || null,
+    activityId: view.activityId,
+    allowDefaultActivity: view.activityId === null,
+  };
+}
+
 /** Reviewed: one overlap with an existing entry; uploading is still allowed. */
 export const reviewWithConflicts: OfflineReview = {
   draft: readyDraft,
@@ -89,6 +103,7 @@ export const reviewWithConflicts: OfflineReview = {
   ],
   overlapIssue: null,
   matches: [],
+  proposal: proposalOf(readyDraft),
 };
 
 /** Reviewed: an identical entry already exists. */
@@ -106,13 +121,29 @@ export const reviewWithMatch: OfflineReview = {
       activityType: activities.dev,
     },
   ],
+  proposal: proposalOf(readyDraft),
 };
 
 /** Reviewing a draft whose upload may have reached 7pace. */
-export const reviewSending: OfflineReview = { draft: sendingDraft, conflicts: [], overlapIssue: null, matches: [] };
+export const reviewSending: OfflineReview = {
+  draft: sendingDraft,
+  conflicts: [],
+  overlapIssue: null,
+  matches: [],
+  proposal: proposalOf(sendingDraft),
+};
 
 /** Reviewed: no overlaps. */
-export const reviewClean: OfflineReview = { draft: readyDraft, conflicts: [], overlapIssue: null, matches: [] };
+export const reviewClean: OfflineReview = { draft: readyDraft, conflicts: [], overlapIssue: null, matches: [], proposal: proposalOf(readyDraft) };
+
+/** Reviewed with quarter-hour rounding: 1h 12m is saved as 1h 15m. */
+export const reviewRounded: OfflineReview = {
+  draft: { ...readyDraft, end: '2026-10-05T17:12:00Z' },
+  conflicts: [],
+  overlapIssue: null,
+  matches: [],
+  proposal: { ...proposalOf(readyDraft), seconds: 4_500, billableSeconds: 4_500 },
+};
 
 export const offlineReviewing: OfflineSlice = { ...offline, review: reviewWithConflicts };
 

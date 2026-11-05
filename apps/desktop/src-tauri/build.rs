@@ -14,6 +14,8 @@ const COMMANDS: &[&str] = &[
     "shell_set_shortcut",
     "shell_get_shortcut",
     "shell_quit",
+    "shell_reveal_data_dir",
+    "shell_open_system_settings",
     "engine_dispatch",
     "engine_snapshot",
     "engine_resync",

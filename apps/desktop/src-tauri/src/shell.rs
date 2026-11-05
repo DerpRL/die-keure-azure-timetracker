@@ -6,10 +6,12 @@
 //! Failures reject the `invoke` promise with a readable English message.
 
 use std::fmt;
+use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, PoisonError, mpsc};
 
 use serde::Serialize;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
+use tauri_plugin_opener::OpenerExt;
 
 use crate::shortcut::{self, ShortcutStatus};
 use crate::surfaces;
@@ -123,6 +125,62 @@ pub fn shell_quit(app: AppHandle) {
     app.exit(0);
 }
 
+/// The folder the engine keeps its data in (managed state, set when the engine starts). The
+/// `app` slice reports it to the UI as `dataDirectory`.
+pub struct DataDirectory(pub PathBuf);
+
+/// Opens the app's data folder (Settings → App) in Finder or File Explorer.
+#[tauri::command]
+pub fn shell_reveal_data_dir(app: AppHandle) -> Result<(), String> {
+    let directory = app
+        .try_state::<DataDirectory>()
+        .map(|state| state.0.clone())
+        .ok_or_else(|| "The data folder is not known yet.".to_string())?;
+    if !directory.is_dir() {
+        return Err(format!("The data folder {} does not exist.", directory.display()));
+    }
+    app.opener()
+        .open_path(directory.to_string_lossy(), None::<&str>)
+        .map_err(|error| format!("The data folder could not be opened: {error}"))
+}
+
+/// Opens the system settings page for `pane`: `notifications`, `calendars`, `microphone` or
+/// `accessibility` (the macOS System Settings privacy pane, or the matching Windows Settings
+/// page). Any other pane is an error.
+#[tauri::command]
+pub fn shell_open_system_settings(app: AppHandle, pane: String) -> Result<(), String> {
+    let url = system_settings_url(&pane, cfg!(windows)).map_err(message)?;
+    app.opener()
+        .open_url(url, None::<&str>)
+        .map_err(|error| format!("System settings could not be opened: {error}"))
+}
+
+/// The settings URL of `pane` on macOS (`x-apple.systempreferences:`) or Windows (`ms-settings:`).
+pub(crate) fn system_settings_url(pane: &str, windows: bool) -> Result<&'static str, ShellError> {
+    let url = match (pane, windows) {
+        ("notifications", false) => "x-apple.systempreferences:com.apple.preference.notifications",
+        ("calendars", false) => {
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars"
+        }
+        ("microphone", false) => {
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
+        }
+        ("accessibility", false) => {
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+        }
+        ("notifications", true) => "ms-settings:notifications",
+        ("calendars", true) => "ms-settings:privacy-calendar",
+        ("microphone", true) => "ms-settings:privacy-microphone",
+        ("accessibility", true) => "ms-settings:easeofaccess",
+        _ => {
+            return Err(ShellError::Invalid(format!(
+                "Unknown settings pane “{pane}”. Use notifications, calendars, microphone or accessibility."
+            )));
+        }
+    };
+    Ok(url)
+}
+
 /// Errors of the shell functions behind the commands.
 #[derive(Debug)]
 pub enum ShellError {
@@ -178,4 +236,30 @@ pub(crate) fn on_main_thread<T: Send + 'static>(
         let _ = sender.send(task());
     })?;
     receiver.recv().map_err(|_| ShellError::Interrupted)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn system_settings_panes_map_to_each_os() {
+        assert_eq!(
+            system_settings_url("microphone", false).unwrap(),
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
+        );
+        assert_eq!(
+            system_settings_url("notifications", false).unwrap(),
+            "x-apple.systempreferences:com.apple.preference.notifications"
+        );
+        assert_eq!(system_settings_url("calendars", true).unwrap(), "ms-settings:privacy-calendar");
+        assert_eq!(system_settings_url("accessibility", true).unwrap(), "ms-settings:easeofaccess");
+        for windows in [false, true] {
+            for pane in ["notifications", "calendars", "microphone", "accessibility"] {
+                assert!(system_settings_url(pane, windows).is_ok(), "{pane}");
+            }
+            assert!(system_settings_url("camera", windows).is_err());
+            assert!(system_settings_url("", windows).is_err());
+        }
+    }
 }

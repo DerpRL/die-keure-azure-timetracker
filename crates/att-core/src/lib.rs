@@ -23,6 +23,7 @@ pub mod tracking;
 
 // Worklogs and offline drafts.
 pub mod offline;
+pub mod rounding;
 pub mod worklog;
 
 // Targets, statistics and review.

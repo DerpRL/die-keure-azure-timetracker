@@ -36,6 +36,7 @@ export const sampleApp: AppSlice = {
   error: null,
   storageIssue: null,
   features: { calendar: true, microphone: true, figmaTitleOnly: false },
+  dataDirectory: '/Users/sam/Library/Application Support/be.yarne.azure-timetracker',
 };
 
 /** A 7pace write is in flight: every button that writes is disabled. */

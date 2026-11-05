@@ -226,14 +226,22 @@ impl WorkLogEditingService for FakeSevenPace {
 
 #[async_trait]
 impl WorkLogMutationService for FakeSevenPace {
-    async fn find_work_log(&self, _id: &str) -> Result<Option<WorkLog>> {
-        Ok(None)
+    async fn find_work_log(&self, id: &str) -> Result<Option<WorkLog>> {
+        Ok(self.server.lock().unwrap().logs.iter().find(|log| log.id == id).cloned())
     }
     async fn create_work_log(&self, _draft: &WorkLogDraft) -> Result<WorkLog> {
         Err(AppError::message("Not supported by the fake."))
     }
-    async fn replace_work_log_time(&self, _id: &str, _draft: &WorkLogDraft) -> Result<WorkLog> {
-        Err(AppError::message("Not supported by the fake."))
+    /// Updates a log in `logs`, recorded as `replace(id,start,seconds)` with a UTC start.
+    async fn replace_work_log_time(&self, id: &str, draft: &WorkLogDraft) -> Result<WorkLog> {
+        let mut server = self.server.lock().unwrap();
+        server.calls.push(format!("replace({id},{},{})", draft.start, draft.seconds));
+        let log = server.logs.iter_mut().find(|log| log.id == id).ok_or(AppError::NotFound)?;
+        let tz = jiff::tz::TimeZone::get("Europe/Brussels").expect("tzdb");
+        log.timestamp = att_core::time::wire_date::local_string(draft.start, &tz);
+        log.length = draft.seconds as f64;
+        log.billable_length = Some(draft.billable_seconds as f64);
+        Ok(log.clone())
     }
     async fn delete_work_log(&self, _id: &str) -> Result<()> {
         Err(AppError::message("Not supported by the fake."))

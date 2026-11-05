@@ -34,11 +34,13 @@ export function ReviewCard({ review, title, activities, disabled, onDeleted }: R
   const [confirmUpload, setConfirmUpload] = useState(false);
   const [confirmRetry, setConfirmRetry] = useState(false);
   const headingId = useId();
-  const { draft, conflicts, overlapIssue, matches } = review;
+  const { draft, conflicts, overlapIssue, matches, proposal } = review;
   const activity = activities.find((entry) => entry.id === draft.activityId)?.name;
   const start = parseInstant(draft.start);
   const end = parseInstant(draft.end);
   const seconds = start && end ? (end.getTime() - start.getTime()) / 1000 : 0;
+  // Settings → Reminders → Timer defaults can round saved time to quarter hours.
+  const rounded = Math.abs(proposal.seconds - seconds) >= 1;
   const clean = conflicts.length === 0 && !overlapIssue;
   const uploadLabel = clean ? 'Upload draft to 7pace' : 'Upload with overlap warning';
   const sending = draft.status === 'Check 7pace before retrying';
@@ -53,6 +55,7 @@ export function ReviewCard({ review, title, activities, disabled, onDeleted }: R
       <p>{`Activity: ${activity ?? 'Choose an activity by editing this draft'}`}</p>
       <p className={styles.mono}>{`${preciseTime(draft.start)} → ${preciseTime(draft.end)}`}</p>
       <p>{`${draft.billable ? 'Billable' : 'Non-billable'} · ${formatClock(seconds)}`}</p>
+      {rounded ? <p className={styles.caption}>{`Saved as ${formatShortDuration(proposal.seconds)}, rounded to the nearest quarter hour.`}</p> : null}
       {draft.comment ? <p className={styles.caption}>{draft.comment}</p> : null}
 
       <div role="status" className={styles.reviewResult}>
@@ -130,7 +133,7 @@ export function ReviewCard({ review, title, activities, disabled, onDeleted }: R
         role="alertdialog"
         size="small"
         title="Upload this draft to 7pace?"
-        description={`A ${formatShortDuration(seconds)} entry is created in your 7pace account${
+        description={`A ${formatShortDuration(proposal.seconds)} entry is created in your 7pace account${
           draft.ticketId ? ` for #${draft.ticketId}` : ''
         }. If the upload is interrupted, the draft stays locked until you check 7pace.`}
         primaryAction={{

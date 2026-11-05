@@ -196,6 +196,7 @@ pub fn start(app: &AppHandle) -> Result<(), String> {
             .then(att_platform::paths::legacy_data_dir)
             .flatten();
     let data_dir = custom_dir.unwrap_or_else(att_platform::data_dir);
+    app.manage(crate::shell::DataDirectory(data_dir.clone()));
     let store = Store::open(&data_dir).map_err(|error| error.to_string())?;
     let clients = NetClientFactory::new().map_err(|error| error.to_string())?;
     let services = Services {

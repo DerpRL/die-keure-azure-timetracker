@@ -41,9 +41,9 @@ describe('navigation model', () => {
     expect(visibleViews('insights', all).map((view) => view.title)).toEqual(['Where time went', 'Patterns', 'Weekly report']);
     expect(SETTINGS_GROUPS.map((group) => [group.title, group.views])).toEqual([
       ['Account', ['accounts']],
-      ['Tracking', ['tracking']],
+      ['Tracking', ['schedule', 'meetings', 'reminders', 'notifications']],
       ['Sources', ['sources', 'git', 'figma', 'calendars']],
-      ['App', ['appearance']],
+      ['App', ['appearance', 'features', 'advanced', 'about']],
     ]);
   });
 

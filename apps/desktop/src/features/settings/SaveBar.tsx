@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef } from 'react';
 import { Banner } from '../../components/Banner';
 import { Button } from '../../components/Button';
-import { CircleIcon, SuccessIcon } from '../../components/icons';
+import { SuccessIcon } from '../../components/icons';
 import type { KeyCombo } from '../../shortcuts/keys';
 import { useSlice } from '../../state/hooks';
 import { sectionTitle } from './sections';
@@ -30,13 +30,15 @@ export function SaveBar() {
     };
   }, []);
   const connection = useSlice('connection');
-  const { dirty, saving, saved, busy, preview, os } = form;
-  const mod = os === 'windows' ? 'Ctrl+S' : '⌘S';
+  const { dirty, saving, saved, busy, preview, changes } = form;
+  const count = changes.length;
   let state: string;
   if (saving) state = 'Saving…';
-  else if (dirty) state = 'Unsaved changes';
+  else if (dirty) state = `${count} unsaved ${count === 1 ? 'change' : 'changes'}`;
   else if (saved) state = connection?.connected ? 'Settings saved · connection verified' : 'Settings saved';
   else state = 'No unsaved changes';
+  // At most four names, then "and 3 more".
+  const named = changes.length > 4 ? `${changes.slice(0, 4).join(', ')} and ${changes.length - 4} more` : changes.join(', ');
   return (
     <div ref={bar} className={styles.saveBar}>
       {form.showIssues ? (
@@ -62,22 +64,23 @@ export function SaveBar() {
         <div className={styles.saveText}>
           <p role="status" className={styles.saveState}>
             {saved && !dirty && !saving ? <SuccessIcon className={styles.statusIcon} /> : null}
-            {dirty && !saving ? <CircleIcon className={styles.statusIcon} /> : null}
-            <span>{state}</span>
-            <span className={styles.saveHint} aria-hidden="true">{` · ${mod} saves`}</span>
+            <span className={styles.saveCount}>{state}</span>
+            {dirty && !saving && named ? <span className={styles.saveNames}>{`· ${named}`}</span> : null}
           </p>
-          {preview ? <p className={styles.hint}>Preview mode: saving settings and credentials is turned off.</p> : null}
+          {preview ? <p className={styles.saveNote}>Preview mode: saving settings and credentials is turned off.</p> : null}
         </div>
         <div className={styles.saveButtons}>
-          <Button onPress={form.revert} isDisabled={!dirty || saving}>
+          <Button size="small" variant="plain" onPress={form.revert} isDisabled={!dirty || saving} className={styles.saveRevert}>
             Revert
           </Button>
           <Button
-            variant="primary"
+            size="small"
             onPress={() => void form.save()}
             isPending={saving}
             isDisabled={busy || preview}
             shortcut={SAVE_SHORTCUT}
+            showShortcut
+            className={styles.saveSubmit}
           >
             Save changes
           </Button>

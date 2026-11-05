@@ -71,6 +71,37 @@ const DEFAULT_RESULTS: {
   },
 };
 
+/** The notice the engine shows after `app.resetLocalData`. */
+export const RESET_NOTICE = 'Local data was reset. Settings, accounts and unsent offline drafts were kept.';
+
+/**
+ * Settings actions the preview answers like the engine unless a test registers its own handler.
+ * `app.saveDiagnostics` writes nothing in the browser.
+ */
+const DEFAULT_HANDLERS: { [T in IntentType]?: MockIntentHandler<T> } = {
+  'pairing.unpair': (_intent, mock) => {
+    const { connection, settings } = mock.slices;
+    if (connection) {
+      mock.patchSlice('connection', {
+        health: 'unconfigured',
+        indicator: 'disconnected',
+        status: 'Set up 7pace',
+        hasSevenPaceToken: false,
+        connected: false,
+        connecting: false,
+        lastSync: null,
+      });
+    }
+    if (settings) {
+      mock.patchSlice('settings', { hasSevenPaceToken: false, pairing: { ...settings.pairing, pairedHost: null } });
+    }
+  },
+  'app.resetLocalData': (_intent, mock) => {
+    if (mock.slices.app) mock.patchSlice('app', { notice: RESET_NOTICE });
+  },
+  'app.saveDiagnostics': () => null,
+};
+
 function updatesOf(slices: Partial<SliceMap>): SliceUpdate[] {
   return (Object.keys(slices) as SliceName[]).map((name) => ({ name, value: slices[name] }) as SliceUpdate);
 }
@@ -113,6 +144,9 @@ export function installMockEngine({ slices = {}, ipc, latencyMs }: MockEngineOpt
     return null;
   });
   backend.handle('engine_snapshot', () => updatesOf(current));
+  // Shell commands of Settings → App that have nothing to show in a browser.
+  backend.handle('shell_reveal_data_dir', () => null);
+  backend.handle('shell_open_system_settings', () => null);
   backend.handle('engine_dispatch', (args) => {
     const intent = (args as { intent: Intent } | undefined)?.intent;
     if (!intent || typeof intent.type !== 'string') {
@@ -120,7 +154,9 @@ export function installMockEngine({ slices = {}, ipc, latencyMs }: MockEngineOpt
     }
     intents.push(intent);
     if (intent.type === 'app.snapshot') return updatesOf(current);
-    const handler = handlers.get(intent.type);
+    const handler =
+      handlers.get(intent.type) ??
+      (DEFAULT_HANDLERS[intent.type] as ((intent: Intent, engine: MockEngine) => unknown) | undefined);
     if (handler) return handler(intent, engine) ?? null;
     const fallback = DEFAULT_RESULTS[intent.type as keyof typeof DEFAULT_RESULTS] as
       | ((intent: Intent) => unknown)

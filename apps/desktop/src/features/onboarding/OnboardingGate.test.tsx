@@ -218,7 +218,7 @@ describe('the onboarding steps', () => {
     await next(user, TITLES.accounts);
     await next(user, TITLES.sources);
     await next(user, TITLES.calendars);
-    const show = screen.getByRole('switch', { name: /Show my calendar on Today/ });
+    const show = screen.getByRole('switch', { name: /Show events on Today/ });
     await user.click(show);
     await expectNoA11yViolations();
     await user.click(continueButton());

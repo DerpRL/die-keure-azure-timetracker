@@ -84,22 +84,6 @@
   overflow-wrap: anywhere;
 }
 
-.setting {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding-bottom: var(--space-3);
-  border-bottom: var(--size-border) solid var(--color-separator);
-}
-
-.settingRow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  font-weight: var(--font-weight-medium);
-}
-
 .bannerBody {
   display: flex;
   flex-direction: column;

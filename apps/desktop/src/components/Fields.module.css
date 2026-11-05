@@ -101,6 +101,58 @@
   outline: none;
 }
 
+/* Duration field (design "dur-in"): "[7] h [36] m" in one box. */
+.duration {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.1875rem;
+  min-height: var(--size-control-md);
+  padding: 0 var(--space-2);
+  border: var(--size-border) solid var(--color-control-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-field-bg);
+  line-height: calc(var(--size-control-md) - 2px);
+  cursor: text;
+}
+
+.duration:focus-within {
+  border-color: var(--color-focus-ring);
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+}
+
+.durationInvalid {
+  border-color: var(--color-danger);
+}
+
+.durationBox {
+  width: 2.6ch;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-body);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.durationBox:focus {
+  outline: none;
+  background: var(--color-accent-bg);
+}
+
+.durationUnit {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+}
+
+.durationUnit:not(:last-child) {
+  margin-right: 0.375rem;
+}
+
 .unit {
   align-self: center;
   padding-inline-end: var(--space-2);

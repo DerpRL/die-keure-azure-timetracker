@@ -156,6 +156,24 @@ pub(crate) async fn connect(engine: &Engine) {
     });
 }
 
+/// Drops the connection without building a new one (`pairing.unpair`): forgets everything that
+/// belonged to it, as `connect` does first, and leaves 7pace unconfigured until the settings are
+/// saved again or the connection is retried. Returns false while another connection operation
+/// or a write holds `busy`.
+pub(crate) async fn disconnect(engine: &Engine) -> bool {
+    let Some(_busy) = engine.inner.busy.try_acquire() else { return false };
+    update_with(engine, reset_for_connect);
+    engine.set_clients(None);
+    controllers::on_connection_changed(engine, None).await;
+    let now = engine.now();
+    engine.update(|state| {
+        let connection = &mut state.session.connection;
+        connection.last_remote_check = Some(now);
+        connection.connecting = false;
+    });
+    true
+}
+
 async fn connected(engine: &Engine, clients: Clients) {
     let generation = engine.set_clients(Some(clients));
     let Some(clients) = engine.clients() else { return };

@@ -3,6 +3,7 @@
  * the draft is shaped exactly as Rust writes it. Display only: the engine computes progress.
  */
 import type { TargetException, TargetExceptionKind, WorkTargets } from '../../ipc/contract';
+import { formatMinutes } from '../../utils/duration';
 
 /** Swift weekday numbers (1 = Sunday … 7 = Saturday) in the Monday-first order Settings shows. */
 export const WEEKDAYS_MONDAY_FIRST = [2, 3, 4, 5, 6, 7, 1] as const;
@@ -24,52 +25,60 @@ export const EXCEPTION_KINDS: readonly TargetExceptionKind[] = [
   'Custom target',
 ];
 
-/** `WorkTargets::hours`: regular hours for a Swift weekday. */
-export function targetHours(targets: WorkTargets, weekday: number): number {
+/** `MAX_DAILY_MINUTES`: a day's target is 0 to 24 hours. */
+export const MAX_DAILY_MINUTES = 24 * 60;
+
+/** The steppers and arrow keys move a target by a quarter hour. */
+export const TARGET_STEP_MINUTES = 15;
+
+/** `WorkTargets::minutes`: regular minutes for a Swift weekday. */
+export function targetMinutes(targets: WorkTargets, weekday: number): number {
   if (weekday < 1 || weekday > 7) return 0;
-  const schedule = targets.hoursByWeekday;
-  if (schedule && schedule.length === 7) return schedule[weekday - 1] ?? 0;
-  return weekday === 1 || weekday === 7 ? 0 : targets.dailyHours;
+  return targets.minutesByWeekday[weekday - 1] ?? 0;
 }
 
-/** `WorkTargets::set_hours`: sets one weekday and converts legacy settings to a full schedule. */
-export function setTargetHours(targets: WorkTargets, hours: number, weekday: number): WorkTargets {
+/** `WorkTargets::set_minutes`: sets one weekday's regular minutes. */
+export function setTargetMinutes(targets: WorkTargets, minutes: number, weekday: number): WorkTargets {
   if (weekday < 1 || weekday > 7) return targets;
-  const schedule = [1, 2, 3, 4, 5, 6, 7].map((day) => targetHours(targets, day));
-  schedule[weekday - 1] = hours;
-  return { ...targets, weeklyHours: schedule.reduce((total, value) => total + value, 0), hoursByWeekday: schedule };
+  const schedule = [1, 2, 3, 4, 5, 6, 7].map((day) => targetMinutes(targets, day));
+  schedule[weekday - 1] = minutes;
+  return { ...targets, minutesByWeekday: schedule };
 }
 
-/** `WorkTargets::weekly_target_hours`. */
-export function weeklyTargetHours(targets: WorkTargets): number {
-  return targets.hoursByWeekday ? targets.hoursByWeekday.reduce((total, value) => total + value, 0) : targets.weeklyHours;
+/** `WorkTargets::weekly_target_minutes`. */
+export function weeklyTargetMinutes(targets: WorkTargets): number {
+  return targets.minutesByWeekday.reduce((total, value) => total + value, 0);
 }
 
-/** The 1.14 preset: Monday to Thursday 8 h, Friday 6 h (38 h). */
-export function applyPreset(targets: WorkTargets): WorkTargets {
-  const preset: Array<[number, number]> = [
-    [1, 0],
-    [2, 8],
-    [3, 8],
-    [4, 8],
-    [5, 8],
-    [6, 6],
-    [7, 0],
-  ];
-  return preset.reduce((current, [day, hours]) => setTargetHours(current, hours, day), targets);
+export interface TargetPreset {
+  id: string;
+  label: string;
+  /** Minutes per weekday, Sunday first (`minutesByWeekday`). */
+  minutesByWeekday: readonly number[];
+}
+
+/** Schedules Settings fills in with one press: the 1.14 preset and the 2.x default. */
+export const TARGET_PRESETS: readonly TargetPreset[] = [
+  { id: 'fourDays', label: 'Mon–Thu 8h, Fri 6h', minutesByWeekday: [0, 480, 480, 480, 480, 360, 0] },
+  { id: 'fiveDays', label: '5 × 7h 36m', minutesByWeekday: [0, 456, 456, 456, 456, 456, 0] },
+];
+
+export function applyPreset(targets: WorkTargets, preset: TargetPreset): WorkTargets {
+  return { ...targets, minutesByWeekday: [...preset.minutesByWeekday] };
+}
+
+/** Whether the weekly schedule is exactly a preset's. */
+export function matchesPreset(targets: WorkTargets, preset: TargetPreset): boolean {
+  return preset.minutesByWeekday.every((minutes, index) => targets.minutesByWeekday[index] === minutes);
 }
 
 export function usesBelgianHolidays(targets: WorkTargets): boolean {
   return targets.belgianHolidaysEnabled ?? true;
 }
 
-/** "7h 36m", "8h", "45m": the short duration format used next to targets. */
+/** `formatMinutes` for decimal hours (date exceptions), rounded to the nearest minute. */
 export function formatHours(hours: number): string {
-  const minutes = Math.round(hours * 60);
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (h === 0) return `${m}m`;
-  return m === 0 ? `${h}h` : `${h}h ${m}m`;
+  return formatMinutes(hours * 60);
 }
 
 export interface CivilDate {
@@ -148,9 +157,10 @@ export function belgianHolidays(year: number): BelgianHoliday[] {
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const SHORT_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-/** "Mon 1 January", as the 1.14 holiday list. */
-export function formatHolidayDate(date: CivilDate): string {
-  return `${SHORT_WEEKDAYS[weekdayOf(date) - 1] ?? ''} ${date.day} ${MONTHS[date.month - 1] ?? ''}`;
+/** "Mon 1 January", as the 1.14 holiday list; `short`: "Mon 1 Jan". */
+export function formatHolidayDate(date: CivilDate, style: 'long' | 'short' = 'long'): string {
+  const month = MONTHS[date.month - 1] ?? '';
+  return `${SHORT_WEEKDAYS[weekdayOf(date) - 1] ?? ''} ${date.day} ${style === 'short' ? month.slice(0, 3) : month}`;
 }
 
 /** Every day from `start` through `end` (inclusive), at most 367 days, like 1.14. */

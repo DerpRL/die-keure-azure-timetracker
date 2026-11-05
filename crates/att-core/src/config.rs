@@ -20,6 +20,7 @@ use crate::interface_prefs::InterfacePreferences;
 use crate::meetings::MeetingPreferences;
 use crate::microphone::MicrophonePreferences;
 use crate::model::Repository;
+use crate::rounding::Rounding;
 use crate::targets::WorkTargets;
 
 /// How the app signs in to 7pace. Ported from `SevenPaceAuthMode`; a missing value means
@@ -236,6 +237,17 @@ pub struct Configuration {
     /// Quick-switch accelerator; `None` uses the OS default (⌃⌥T on macOS,
     /// Ctrl+Alt+Shift+T on Windows).
     pub quick_switch_shortcut: Option<String>,
+
+    // 2.4 settings.
+    /// Save every entry the app writes to 7pace as a multiple of 15 minutes (see
+    /// [`crate::rounding`]). Off by default and for settings saved before 2.4.
+    pub round_to_quarter_hours: bool,
+    /// When a meeting timer ends, offer to resume the ticket tracked before it (the
+    /// `meetingReturn` prompt). On by default and for settings saved before 2.4.
+    pub resume_after_meetings: bool,
+    /// Show the elapsed time next to the macOS menu-bar icon. Off: the icon only (the tooltip
+    /// still shows it). On by default and for settings saved before 2.4.
+    pub menu_bar_timer: bool,
 }
 
 impl Default for Configuration {
@@ -271,11 +283,19 @@ impl Default for Configuration {
             hidden_pages: Vec::new(),
             mini_timer: false,
             quick_switch_shortcut: None,
+            round_to_quarter_hours: false,
+            resume_after_meetings: true,
+            menu_bar_timer: true,
         }
     }
 }
 
 impl Configuration {
+    /// How entries the app saves to 7pace are rounded.
+    pub fn rounding(&self) -> Rounding {
+        Rounding::from_setting(self.round_to_quarter_hours)
+    }
+
     pub fn interruption(&self, kind: PromptKind) -> Interruption {
         self.interruptions.get(&kind).copied().unwrap_or_default()
     }

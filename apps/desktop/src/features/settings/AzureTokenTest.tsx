@@ -4,7 +4,7 @@ import { Button } from '../../components/Button';
 import { SuccessIcon } from '../../components/icons';
 import { useAction } from '../../state/hooks';
 import { osWords } from './labels';
-import { InlineIssue } from './SettingsSection';
+import { InlineIssue, SectionFooter } from './SettingsSection';
 import { useSettingsForm } from './SettingsForm';
 import styles from './settings.module.css';
 
@@ -70,6 +70,7 @@ export function useAzureTokenTest() {
   return { run, canRun, pending, outcome: current, organization, hasToken, preview };
 }
 
+/** Test and save in the Azure card's footer, with what it found or why it cannot run yet. */
 export function AzureTokenTest({ tester }: { tester: ReturnType<typeof useAzureTokenTest> }) {
   const { run, canRun, pending, outcome, organization, hasToken, preview } = tester;
   const { settings } = useSettingsForm();
@@ -79,23 +80,35 @@ export function AzureTokenTest({ tester }: { tester: ReturnType<typeof useAzureT
       ? 'Enter your organization to test the token.'
       : !hasToken
         ? 'Paste a token to test it.'
-        : null;
+        : settings.hasAzurePat
+          ? 'Tests the stored token, or a new one you paste, before saving it.'
+          : null;
   return (
-    <div className={styles.tokenTest}>
-      <div className={styles.row}>
-        <Button variant={settings.hasAzurePat ? 'secondary' : 'primary'} onPress={() => void run()} isPending={pending} isDisabled={!canRun}>
+    <SectionFooter
+      actions={
+        <Button
+          size="small"
+          variant={settings.hasAzurePat ? 'secondary' : 'primary'}
+          onPress={() => void run()}
+          isPending={pending}
+          isDisabled={!canRun}
+        >
           Test and save
         </Button>
-        {pending ? <span className={styles.hint}>Checking the token with Azure DevOps…</span> : hint ? <span className={styles.hint}>{hint}</span> : null}
-      </div>
-      {outcome?.tone === 'success' ? (
-        <p className={`${styles.status} ${styles.success}`}>
+      }
+    >
+      {pending ? (
+        <span>Checking the token with Azure DevOps…</span>
+      ) : outcome?.tone === 'success' ? (
+        <span className={`${styles.status} ${styles.success}`}>
           <SuccessIcon className={styles.statusIcon} />
           <span>{outcome.message}</span>
-        </p>
+        </span>
       ) : outcome ? (
         <InlineIssue>{outcome.message}</InlineIssue>
+      ) : hint ? (
+        <span>{hint}</span>
       ) : null}
-    </div>
+    </SectionFooter>
   );
 }

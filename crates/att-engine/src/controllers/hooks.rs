@@ -7,9 +7,9 @@ use jiff::Timestamp;
 use uuid::Uuid;
 
 use att_core::model::ActivityType;
-use att_core::offline::OfflineDraft;
+use att_core::offline::{OfflineDraft, OfflineDraftStatus};
 
-use super::{offline, page_appeared, time_editor, weekly};
+use super::{offline, page_appeared, persist, time_editor, weekly};
 use crate::clients::Clients;
 use crate::engine::Engine;
 use crate::state::AppState;
@@ -99,4 +99,35 @@ pub fn offline_working(state: &AppState) -> bool {
 pub fn time_editor_busy(state: &AppState) -> bool {
     let editor = &state.controllers.time_editor;
     editor.working || editor.selected.is_some() || editor.show_corrections
+}
+
+/// `app.resetLocalData`: removes the local records of offline drafts that were already synced
+/// to 7pace, in every workspace. Unsent drafts (local, running, or with an unconfirmed upload)
+/// stay. Written to the store before memory changes, like every ledger change; refused while
+/// the ledger is unreadable or a review or upload runs. Returns how many were removed.
+pub fn clear_synced_offline_drafts(engine: &Engine) -> Result<usize, String> {
+    let services = engine.services();
+    engine.update(|state| {
+        let offline = &mut state.controllers.offline;
+        if offline.unreadable {
+            return Err(
+                "The saved drafts are unreadable; the original file has been preserved.".into()
+            );
+        }
+        if offline.working {
+            return Err("Wait for the offline draft upload to finish.".into());
+        }
+        let mut next = offline.ledger.clone();
+        next.drafts.retain(|draft| draft.status != OfflineDraftStatus::Synced);
+        let removed = offline.ledger.drafts.len() - next.drafts.len();
+        if removed == 0 {
+            return Ok(0);
+        }
+        if !services.preview {
+            persist::write_ledger(services, &next).map_err(|error| error.to_string())?;
+        }
+        offline.ledger = next;
+        offline.review = None;
+        Ok(removed)
+    })
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { NumberField, TextField } from '../../components/Fields';
 import { MinusIcon, PlusIcon } from '../../components/icons';
@@ -6,7 +7,7 @@ import type { WorkAwarenessPreferences } from '../../ipc/contract';
 import { dispatch } from '../../ipc/engine';
 import { workAppName } from './labels';
 import { chooseApplications } from './platform';
-import { Divider, Hint, InlineIssue, SettingsGroup, SettingsSection, ToggleRow } from './SettingsSection';
+import { FullRow, Hint, InlineIssue, IssueRow, SectionFooter, SettingRow, SettingsSection, ToggleRow } from './SettingsSection';
 import { useSettingsForm } from './SettingsForm';
 import { AWARENESS_MINUTES, issueFor } from './validation';
 import styles from './settings.module.css';
@@ -23,7 +24,8 @@ function messageOf(error: unknown): string {
   return String(error);
 }
 
-function WorkApps() {
+/** Settings → Reminders → Work applications: the apps that count as work for forgotten-timer reminders. */
+export function WorkAppsSection() {
   const { draft, update, os, settings } = useSettingsForm();
   const [entry, setEntry] = useState('');
   const [issue, setIssue] = useState<string | null>(null);
@@ -69,18 +71,28 @@ function WorkApps() {
     }
   };
   return (
-    <SettingsGroup title="Work applications">
+    <SettingsSection
+      id="workApps"
+      subtitle="Using one of these without a running timer starts the reminder above."
+      actions={
+        <Button size="small" icon={PlusIcon} onPress={() => void choose()} isPending={choosing}>
+          Add app…
+        </Button>
+      }
+    >
       {apps.length === 0 ? (
-        <Hint>No work applications. Forgotten-timer reminders need at least one.</Hint>
+        <FullRow>
+          <Hint>No work applications. Forgotten-timer reminders need at least one.</Hint>
+        </FullRow>
       ) : (
-        <ul role="list" className={styles.list}>
+        <ul role="list" aria-label="Work applications" className={styles.appGrid}>
           {apps.map((id) => (
-            <li key={id} className={styles.listItem}>
+            <li key={id} className={styles.appRow}>
               <span className={styles.listText}>
-                <span>{nameOf(id)}</span>
+                <span className={notInstalled(id) ? styles.appNameMuted : styles.appName}>{nameOf(id)}</span>
                 {nameOf(id) !== id ? <span className={styles.listMeta}>{id}</span> : null}
-                {notInstalled(id) ? <span className={styles.listMeta}>Not installed on this Mac</span> : null}
               </span>
+              {notInstalled(id) ? <Badge tone="neutral">Not installed</Badge> : null}
               <Button
                 size="small"
                 variant="plain"
@@ -94,106 +106,111 @@ function WorkApps() {
           ))}
         </ul>
       )}
-      <div className={styles.fieldRow}>
-        <TextField
-          label={windows ? 'Executable name' : 'Bundle identifier'}
-          description={windows ? 'For example code.exe.' : 'For example com.microsoft.VSCode.'}
-          value={entry}
-          onChange={setEntry}
-          autoComplete="off"
-          spellCheck="false"
-          className={styles.mono}
-        />
-        <div className={styles.row}>
-          <Button
-            icon={PlusIcon}
-            isDisabled={typed === '' || apps.includes(typed)}
-            onPress={() => {
-              add([typed]);
-              setEntry('');
-            }}
-          >
-            Add work application
-          </Button>
-          <Button onPress={() => void choose()} isPending={choosing}>
-            Choose applications…
-          </Button>
-        </div>
-      </div>
-      {issue ? <InlineIssue tone="warning">{issue}</InlineIssue> : null}
-    </SettingsGroup>
+      <SettingRow title={windows ? 'Add by executable name' : 'Add by bundle identifier'} help={windows ? 'For example code.exe.' : 'For example com.microsoft.VSCode.'}>
+        {({ helpId }) => (
+          <>
+            <TextField
+              label={windows ? 'Executable name' : 'Bundle identifier'}
+              hideLabel
+              aria-describedby={helpId}
+              value={entry}
+              onChange={setEntry}
+              autoComplete="off"
+              spellCheck="false"
+              className={`${styles.mono} ${styles.fieldMedium}`}
+            />
+            <Button
+              size="small"
+              isDisabled={typed === '' || apps.includes(typed)}
+              onPress={() => {
+                add([typed]);
+                setEntry('');
+              }}
+            >
+              Add
+            </Button>
+          </>
+        )}
+      </SettingRow>
+      {issue ? <IssueRow tone="warning">{issue}</IssueRow> : null}
+    </SettingsSection>
   );
 }
 
-/** Settings → Targets & reminders → Time awareness (1.14 `WorkAwarenessSettings`). */
+/** Settings → Reminders → Time awareness (1.14 `WorkAwarenessSettings`). */
 export function AwarenessSection() {
-  const { draft, update, issues, os } = useSettingsForm();
+  const { draft, update, issues } = useSettingsForm();
   const preferences = draft.awareness;
   const set = (patch: Partial<WorkAwarenessPreferences>) =>
     update((current) => ({ ...current, awareness: { ...current.awareness, ...patch } }));
   const issue = issueFor(issues, 'awareness');
-  const idleInvalid = !Number.isInteger(preferences.idleMinutes) || preferences.idleMinutes < AWARENESS_MINUTES.min || preferences.idleMinutes > AWARENESS_MINUTES.max;
-  const forgottenInvalid =
-    !Number.isInteger(preferences.forgottenMinutes) ||
-    preferences.forgottenMinutes < AWARENESS_MINUTES.min ||
-    preferences.forgottenMinutes > AWARENESS_MINUTES.max;
+  const outOfRange = (minutes: number) => !Number.isInteger(minutes) || minutes < AWARENESS_MINUTES.min || minutes > AWARENESS_MINUTES.max;
+  const idleInvalid = outOfRange(preferences.idleMinutes);
+  const forgottenInvalid = outOfRange(preferences.forgottenMinutes);
   return (
-    <SettingsSection id="awareness" subtitle="Review suggestions before changing your timer or recorded time.">
+    <SettingsSection id="awareness" subtitle="Suggestions to review; your timer and recorded time only change when you confirm.">
       <ToggleRow
-        title="Suggest reviewing time after inactivity"
+        title="Ask what I did after being away"
+        help="Lets you keep, drop or move the idle time."
         isSelected={preferences.idleEnabled}
         onChange={(idleEnabled) => set({ idleEnabled })}
       />
-      <NumberField
-        label="Inactivity threshold"
-        unit="minutes"
-        minValue={AWARENESS_MINUTES.min}
-        maxValue={AWARENESS_MINUTES.max}
-        value={preferences.idleMinutes}
-        onChange={(idleMinutes) => {
-          if (Number.isFinite(idleMinutes)) set({ idleMinutes });
-        }}
-        isDisabled={!preferences.idleEnabled}
-        isInvalid={idleInvalid}
-        errorMessage={idleInvalid ? issue : undefined}
-        formatOptions={{ maximumFractionDigits: 0 }}
-      />
+      <SettingRow sub title="After" dimmed={!preferences.idleEnabled} below={idleInvalid && issue ? <InlineIssue>{issue}</InlineIssue> : null}>
+        <NumberField
+          label="Away minutes"
+          hideLabel
+          unit="min"
+          minValue={AWARENESS_MINUTES.min}
+          maxValue={AWARENESS_MINUTES.max}
+          value={preferences.idleMinutes}
+          onChange={(idleMinutes) => {
+            if (Number.isFinite(idleMinutes)) set({ idleMinutes });
+          }}
+          isDisabled={!preferences.idleEnabled}
+          isInvalid={idleInvalid}
+          formatOptions={{ maximumFractionDigits: 0 }}
+          className={styles.numberField}
+        />
+      </SettingRow>
       <ToggleRow
-        title="Detect screen lock, sleep and inactive sessions"
-        help="A prompt appears when you return. Reading without input may count as idle; detected meetings suppress passive inactivity prompts. Your timer keeps running until you choose an action."
+        title="Treat a locked screen as away"
+        help="Locking, sleep and inactive sessions count as away right away. A prompt appears when you return."
         isSelected={preferences.lockEnabled}
         onChange={(lockEnabled) => set({ lockEnabled })}
       />
-      <Divider />
       <ToggleRow
-        title="Remind me when I work without a timer"
+        title="Remind me to start a timer"
+        help="When you use a work app without a timer, inside your workday. Paused tracking, meetings and offline drafts suppress it."
         isSelected={preferences.forgottenEnabled}
         onChange={(forgottenEnabled) => set({ forgottenEnabled })}
       />
-      <NumberField
-        label="Remind after"
-        unit="active minutes"
-        minValue={AWARENESS_MINUTES.min}
-        maxValue={AWARENESS_MINUTES.max}
-        value={preferences.forgottenMinutes}
-        onChange={(forgottenMinutes) => {
-          if (Number.isFinite(forgottenMinutes)) set({ forgottenMinutes });
-        }}
-        isDisabled={!preferences.forgottenEnabled}
-        isInvalid={forgottenInvalid}
-        errorMessage={forgottenInvalid ? issue : undefined}
-        formatOptions={{ maximumFractionDigits: 0 }}
-      />
-      <Hint>
-        Uses your workday (Daily targets) and your scheduled working days. Paused tracking, detected meetings and a
-        running offline draft suppress reminders.
-      </Hint>
-      <WorkApps />
-      <Hint>
-        {os === 'windows'
-          ? 'Only elapsed input inactivity and the foreground app’s identity are read. No keystrokes, window titles, documents or screenshots are collected. Lock events use Windows session notifications.'
-          : 'Only elapsed input inactivity and the foreground app’s identity are read. No keystrokes, window titles, documents or screenshots are collected. Lock events use macOS notifications with sleep/session fallback.'}
-      </Hint>
+      <SettingRow
+        sub
+        title="After"
+        help="Counts only minutes in which you use a work app."
+        dimmed={!preferences.forgottenEnabled}
+        below={forgottenInvalid && issue ? <InlineIssue>{issue}</InlineIssue> : null}
+      >
+        {({ helpId }) => (
+          <NumberField
+            label="Active minutes"
+            hideLabel
+            aria-describedby={helpId}
+            unit="min"
+            minValue={AWARENESS_MINUTES.min}
+            maxValue={AWARENESS_MINUTES.max}
+            value={preferences.forgottenMinutes}
+            onChange={(forgottenMinutes) => {
+              if (Number.isFinite(forgottenMinutes)) set({ forgottenMinutes });
+            }}
+            isDisabled={!preferences.forgottenEnabled}
+            isInvalid={forgottenInvalid}
+            formatOptions={{ maximumFractionDigits: 0 }}
+            className={styles.numberField}
+          />
+        )}
+      </SettingRow>
+      <SectionFooter>Only input inactivity and the foreground app’s identity are read. No keystrokes, window titles, documents or screenshots.</SectionFooter>
     </SettingsSection>
   );
 }

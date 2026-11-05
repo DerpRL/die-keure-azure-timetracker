@@ -1,6 +1,11 @@
-import { CalendarSection } from '../../../features/settings/MeetingsSections';
+import { CalendarListSection, CalendarSection } from '../../../features/settings/MeetingsSections';
 
-/** Settings → Calendars: the calendar on Today, calendar access and which calendars it shows. */
+/** Settings → Calendars (design "S4h"): access, events on Today and which calendars count. */
 export function CalendarsView() {
-  return <CalendarSection />;
+  return (
+    <>
+      <CalendarSection />
+      <CalendarListSection />
+    </>
+  );
 }

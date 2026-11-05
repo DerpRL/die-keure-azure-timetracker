@@ -1,5 +1,4 @@
 import { useId } from 'react';
-import { Button } from '../../components/Button';
 import { StatusDot } from '../../components/Badge';
 import { SegmentedControl } from '../../components/Segmented';
 import type { InterfacePreferences } from '../../ipc/contract';
@@ -7,8 +6,6 @@ import { useAction, useSlice } from '../../state/hooks';
 import {
   CONTRAST_LABELS,
   CONTRAST_PREFERENCES,
-  DEFAULT_INTERFACE_PREFERENCES,
-  preferencesEqual,
   resolveAppearance,
   SCALE_PREFERENCES,
   scaleLabel,
@@ -19,7 +16,7 @@ import {
 import { useSystemAppearance, useTheme } from '../../theme/ThemeProvider';
 import { useImmediateValue } from './FigmaSettings';
 import { osWords } from './labels';
-import { Hint, InlineIssue } from './SettingsSection';
+import { Hint } from './SettingsSection';
 import styles from './settings.module.css';
 
 /**
@@ -74,7 +71,7 @@ export interface AppearanceFormProps {
 }
 
 /**
- * The theme as three cards with a swatch (2.2 layout "Appearance & app"): native radios, so
+ * The theme as three cards with a swatch (the onboarding's first step): native radios, so
  * arrow keys move between them and screen readers hear "Dark, radio button, 3 of 3".
  */
 function ThemeChoice({ value, onChange }: { value: ThemePreference; onChange: (theme: ThemePreference) => void }) {
@@ -140,27 +137,6 @@ export function AppearanceForm({ preferences, onChange, os, showPreview = false 
         </div>
       </div>
       {showPreview ? <AppearancePreview preferences={preferences} /> : null}
-    </>
-  );
-}
-
-/** Settings → Appearance & app → Appearance: applies immediately, never through Save. */
-export function AppearanceSettings({ os }: { os: 'macos' | 'windows' }) {
-  const { preferences, apply, error } = useInterfacePreferences();
-  return (
-    <>
-      <AppearanceForm preferences={preferences} onChange={apply} os={os} />
-      {error ? <InlineIssue>{error.message}</InlineIssue> : null}
-      <div className={styles.row}>
-        <Button
-          size="small"
-          variant="plain"
-          onPress={() => apply({ ...DEFAULT_INTERFACE_PREFERENCES })}
-          isDisabled={preferencesEqual(preferences, DEFAULT_INTERFACE_PREFERENCES)}
-        >
-          Reset appearance defaults
-        </Button>
-      </div>
     </>
   );
 }

@@ -84,7 +84,7 @@ export function isPageId(value: unknown): value is PageId {
 export interface VisibilityOptions {
   platform: Platform;
   features?: FeatureFlags;
-  /** Pages the user hid (Settings → Appearance & app → Features) or the engine reports as unavailable. */
+  /** Pages the user hid (Settings → Features & privacy) or the engine reports as unavailable. */
   hiddenPages?: readonly string[];
 }
 
@@ -104,7 +104,25 @@ export function isPageVisible(
 export type PlaceId = 'today' | 'timesheet' | 'insights' | 'settings';
 export type TimesheetView = 'week' | 'day' | 'list' | 'drafts';
 export type InsightsView = 'time' | 'patterns' | 'report';
-export type SettingsView = 'accounts' | 'tracking' | 'sources' | 'git' | 'figma' | 'calendars' | 'appearance';
+export type SettingsView =
+  | 'accounts'
+  | 'schedule'
+  | 'meetings'
+  | 'reminders'
+  | 'notifications'
+  | 'sources'
+  | 'git'
+  | 'figma'
+  | 'calendars'
+  | 'appearance'
+  | 'features'
+  | 'advanced'
+  | 'about';
+
+/** Settings views of 2.2–2.3 that were split up, for links and saved routes that still name them. */
+export const SETTINGS_VIEW_ALIASES: Readonly<Record<string, SettingsView>> = {
+  tracking: 'schedule',
+};
 
 /** Where the main window is. Today has a single view; its day is page state. */
 export type Route =
@@ -175,12 +193,18 @@ export const PLACES: Readonly<Record<PlaceId, PlaceDefinition>> = {
     inTopBar: false,
     views: [
       { id: 'accounts', title: 'Azure DevOps & 7pace', pages: ['settings'] },
-      { id: 'tracking', title: 'Targets & reminders', pages: ['settings'] },
+      { id: 'schedule', title: 'Schedule & holidays', pages: ['settings'] },
+      { id: 'meetings', title: 'Meetings', pages: ['settings'] },
+      { id: 'reminders', title: 'Reminders', pages: ['settings'] },
+      { id: 'notifications', title: 'Notifications', pages: ['settings'] },
       { id: 'sources', title: 'Overview', pages: ['settings', 'repositories', 'figma'] },
       { id: 'git', title: 'Git repositories', pages: ['repositories'] },
       { id: 'figma', title: 'Figma', pages: ['figma'], requires: 'figma' },
       { id: 'calendars', title: 'Calendars', pages: ['settings', 'agenda'], requiresAvailable: 'agenda' },
-      { id: 'appearance', title: 'Appearance & app', pages: ['settings'] },
+      { id: 'appearance', title: 'Appearance & shortcuts', pages: ['settings'] },
+      { id: 'features', title: 'Features & privacy', pages: ['settings'] },
+      { id: 'advanced', title: 'Updates & advanced', pages: ['settings'] },
+      { id: 'about', title: 'About', pages: ['settings'] },
     ],
   },
 };
@@ -190,9 +214,9 @@ export const PLACE_ORDER: readonly PlaceId[] = ['today', 'timesheet', 'insights'
 /** The Settings menu: groups of views, as in the design's settings sidebar. */
 export const SETTINGS_GROUPS: ReadonlyArray<{ id: string; title: string; views: readonly SettingsView[] }> = [
   { id: 'account', title: 'Account', views: ['accounts'] },
-  { id: 'tracking', title: 'Tracking', views: ['tracking'] },
+  { id: 'tracking', title: 'Tracking', views: ['schedule', 'meetings', 'reminders', 'notifications'] },
   { id: 'sources', title: 'Sources', views: ['sources', 'git', 'figma', 'calendars'] },
-  { id: 'app', title: 'App', views: ['appearance'] },
+  { id: 'app', title: 'App', views: ['appearance', 'features', 'advanced', 'about'] },
 ];
 
 function routeView(route: Route): string {
@@ -288,10 +312,11 @@ export type NavTarget = PageId | Route;
 export function parseNavTarget(value: string | null | undefined): Route | null {
   if (!value) return null;
   if (isPageId(value)) return LEGACY_ROUTES[value];
-  const [place = '', view] = value.split('/');
+  const [place = '', named] = value.split('/');
   if (!Object.hasOwn(PLACES, place)) return null;
   const definition = PLACES[place as PlaceId];
-  if (view === undefined) return placeRoute(definition.id);
+  if (named === undefined) return placeRoute(definition.id);
+  const view = place === 'settings' ? (SETTINGS_VIEW_ALIASES[named] ?? named) : named;
   return definition.views.some((entry) => entry.id === view) ? makeRoute(definition.id, view) : null;
 }
 

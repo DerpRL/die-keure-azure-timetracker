@@ -5,16 +5,22 @@ import { configuredSettings, invalidConfiguration } from '../../ipc/fixtures/sli
 import { ACCOUNT_DEFAULTS, accountSetupUnfinished, withAccountDefaults } from './accountDefaults';
 import { configurationToSave, deepEqual, hasDraftChanges, mergeUnderneath, rebaseDraft } from './configDraft';
 import { FEATURES, pageShown, setPageShown } from './features';
+import { formatMinutes, stepDuration } from '../../utils/duration';
 import { parseSettingsHash } from './sections';
 import {
   addExceptions,
   applyPreset,
+  matchesPreset,
+  TARGET_PRESETS,
   belgianHolidays,
   daysBetween,
   dateKey,
-  setTargetHours,
-  targetHours,
-  weeklyTargetHours,
+  formatHours,
+  MAX_DAILY_MINUTES,
+  setTargetMinutes,
+  TARGET_STEP_MINUTES,
+  targetMinutes,
+  weeklyTargetMinutes,
 } from './targets';
 import {
   cadencesValid,
@@ -161,9 +167,13 @@ describe('validation (Configuration::validate)', () => {
   });
 
   it('checks targets and exceptions', () => {
-    expect(targetsValid(setTargetHours(stored.targets, 25, 2))).toBe(false);
+    expect(targetsValid(setTargetMinutes(stored.targets, 24 * 60 + 1, 2))).toBe(false);
+    expect(targetsValid(setTargetMinutes(stored.targets, -1, 2))).toBe(false);
+    expect(targetsValid(setTargetMinutes(stored.targets, 7.5, 2))).toBe(false);
+    expect(targetsValid(setTargetMinutes(stored.targets, 24 * 60, 2))).toBe(true);
+    expect(targetsValid(setTargetMinutes(stored.targets, 0, 2))).toBe(true);
     expect(targetsValid(addExceptions(stored.targets, [{ id: '2026-02-30', kind: 'Full-day leave', hours: 0, note: '' }]))).toBe(false);
-    expect(targetsValid({ weeklyHours: 0.5, dailyHours: 7.6 })).toBe(false);
+    expect(targetsValid({ minutesByWeekday: [480] })).toBe(false);
   });
 
   it('parses the default meeting ticket like Rust', () => {
@@ -199,14 +209,50 @@ describe('validation (Configuration::validate)', () => {
 });
 
 describe('targets', () => {
-  it('converts legacy schedules on the first edit, like WorkTargets::set_hours', () => {
-    const legacy = { weeklyHours: 38, dailyHours: 7.6 };
-    expect(targetHours(legacy, 1)).toBe(0);
-    expect(targetHours(legacy, 2)).toBe(7.6);
-    const edited = setTargetHours(legacy, 6, 6);
-    expect(edited.hoursByWeekday).toEqual([0, 7.6, 7.6, 7.6, 7.6, 6, 0]);
-    expect(edited.weeklyHours).toBeCloseTo(36.4);
-    expect(weeklyTargetHours(applyPreset(legacy))).toBe(38);
+  it('edits one weekday in whole minutes, like WorkTargets::set_minutes', () => {
+    const targets = { minutesByWeekday: [0, 456, 456, 456, 456, 456, 0] };
+    expect(targetMinutes(targets, 1)).toBe(0);
+    expect(targetMinutes(targets, 2)).toBe(456);
+    expect(targetMinutes(targets, 8)).toBe(0);
+    const edited = setTargetMinutes(targets, 457, 6);
+    expect(edited.minutesByWeekday).toEqual([0, 456, 456, 456, 456, 457, 0]);
+    expect(targets.minutesByWeekday[5]).toBe(456);
+    // 4 × 7h 36m + 7h 37m: exact, where decimal hours could drift to 38h 0m.
+    expect(weeklyTargetMinutes(edited)).toBe(38 * 60 + 1);
+    expect(weeklyTargetMinutes(targets)).toBe(38 * 60);
+  });
+
+  it('fills the week from a preset and recognises it, keeping 7h 36m exact', () => {
+    const [fourDays, fiveDays] = TARGET_PRESETS;
+    const edited = { minutesByWeekday: [0, 456, 456, 456, 456, 457, 0] };
+    expect(applyPreset(edited, fourDays!).minutesByWeekday).toEqual([0, 480, 480, 480, 480, 360, 0]);
+    expect(weeklyTargetMinutes(applyPreset(edited, fourDays!))).toBe(38 * 60);
+    expect(applyPreset(edited, fiveDays!).minutesByWeekday).toEqual([0, 456, 456, 456, 456, 456, 0]);
+    expect(weeklyTargetMinutes(applyPreset(edited, fiveDays!))).toBe(38 * 60);
+    expect(matchesPreset(applyPreset(edited, fiveDays!), fiveDays!)).toBe(true);
+    expect(matchesPreset(edited, fiveDays!)).toBe(false);
+  });
+
+  it('formats targets to the minute', () => {
+    expect(formatMinutes(456)).toBe('7h 36m');
+    expect(formatMinutes(480)).toBe('8h');
+    expect(formatMinutes(45)).toBe('45m');
+    expect(formatMinutes(0)).toBe('0h');
+    expect(formatMinutes(1440)).toBe('24h');
+    expect(formatHours(7.6)).toBe('7h 36m');
+  });
+
+  it('steps to the next quarter hour within 0 to 24 hours', () => {
+    const stepMinutes = (minutes: number, direction: 1 | -1) =>
+      stepDuration(minutes, direction, { step: TARGET_STEP_MINUTES, min: 0, max: MAX_DAILY_MINUTES });
+    expect(stepMinutes(480, 1)).toBe(495);
+    expect(stepMinutes(480, -1)).toBe(465);
+    expect(stepMinutes(456, 1)).toBe(465);
+    expect(stepMinutes(456, -1)).toBe(450);
+    expect(stepMinutes(0, -1)).toBe(0);
+    expect(stepMinutes(1440, 1)).toBe(1440);
+    expect(stepMinutes(1435, 1)).toBe(1440);
+    expect(stepMinutes(1500, -1)).toBe(1440);
   });
 
   it('computes the Belgian holidays (Meeus computus)', () => {
@@ -282,7 +328,10 @@ describe('labels and links', () => {
     expect(parseSettingsHash('#settings/calendar')).toEqual({ view: 'calendars', section: 'calendar' });
     expect(parseSettingsHash('#settings/app')).toEqual({ view: 'appearance', section: 'app' });
     expect(parseSettingsHash('#settings/accounts')).toEqual({ view: 'accounts' });
-    expect(parseSettingsHash('#settings/tracking')).toEqual({ view: 'tracking' });
+    // 2.3's Targets & reminders view: its Timer & reminders card is now Reminders → Timer defaults.
+    expect(parseSettingsHash('#settings/tracking')).toEqual({ view: 'reminders', section: 'tracking' });
+    expect(parseSettingsHash('#settings/schedule')).toEqual({ view: 'schedule' });
+    expect(parseSettingsHash('#settings/workday')).toEqual({ view: 'schedule', section: 'workday' });
     expect(parseSettingsHash('#settings/unknown')).toBeNull();
     expect(parseSettingsHash('#other')).toBeNull();
   });

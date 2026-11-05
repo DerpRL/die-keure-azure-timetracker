@@ -20,6 +20,7 @@ use att_core::meetings::{MeetingEvent, meeting_activity};
 use att_core::microphone::MicrophoneSession;
 use att_core::model::{ActivityType, TrackingState, WorkItem, resolve_activity};
 use att_core::productivity::MeetingReturn;
+use att_core::rounding::{Rounding, round_stopped_entry, stopped_entry};
 use att_core::text::NonEmpty;
 use att_core::{AppError, Result};
 
@@ -174,6 +175,35 @@ pub(crate) struct Choice {
 fn set_error(engine: &Engine, message: impl Into<String>) {
     let message = message.into();
     engine.update(|state| state.session.error = Some(message));
+}
+
+/// Rounds the entry 7pace wrote for a timer the app just stopped (between `before` and `after`),
+/// when Settings asks for quarter hours. Called while the 7pace write lock is held. A failure
+/// leaves the entry as 7pace saved it and is shown as the session error.
+async fn round_stopped(
+    engine: &Engine,
+    clients: &Clients,
+    before: &TrackingState,
+    after: &TrackingState,
+) {
+    let rounding = engine.read(|state| state.config.rounding());
+    let Some(id) = stopped_entry(before, after).filter(|_| rounding != Rounding::Exact) else {
+        return;
+    };
+    let service = clients.seven_pace.as_ref();
+    match round_stopped_entry(&id, rounding, service, engine.now(), &engine.cal()).await {
+        Ok(Some(_)) => {
+            engine.record("Time rounded", "Saved the stopped entry to the nearest quarter hour")
+        }
+        Ok(None) => {}
+        Err(error) => {
+            let message = format!(
+                "The stopped entry was saved as tracked, not rounded to a quarter hour. {error}"
+            );
+            set_error(engine, message.clone());
+            engine.record("Rounding needs attention", message);
+        }
+    }
 }
 
 fn connected_state(state: &AppState) -> Option<TrackingState> {
@@ -751,7 +781,13 @@ pub(crate) async fn start(
     let Some(_busy) = engine.inner.busy.try_acquire() else { return Err(IpcError::busy()) };
     match run_start(engine, &clients, &draft, activity_id, comment, include_ticket).await {
         Ok(started) => {
+            // `switch_to` confirmed 7pace still showed `expected_identity` before stopping it.
+            let switched = (started.previous.identity() == draft.expected_identity)
+                .then(|| (started.previous.clone(), started.next.clone()));
             finish_start(engine, &draft, started);
+            if let Some((previous, next)) = switched {
+                round_stopped(engine, &clients, &previous, &next).await;
+            }
             history::load(engine).await;
             progress::load(engine).await;
         }
@@ -999,7 +1035,7 @@ pub(crate) async fn stop(
     .await;
     match result {
         Ok(stopped) => {
-            connection::apply(engine, stopped);
+            connection::apply(engine, stopped.clone());
             update_with(engine, |state, effects| {
                 state.session.paused = None;
                 if let Prompt::Branch(Some(change)) = &prompt {
@@ -1009,6 +1045,7 @@ pub(crate) async fn stop(
                 effects.record("Tracking stopped", "Stopped the active 7pace timer");
             });
             let _ = engine.persist();
+            round_stopped(engine, &clients, &shown, &stopped).await;
             history::load(engine).await;
             progress::load(engine).await;
         }
@@ -1048,7 +1085,7 @@ pub(crate) async fn pause(
     .await;
     match result {
         Ok(stopped) => {
-            connection::apply(engine, stopped);
+            connection::apply(engine, stopped.clone());
             update_with(engine, |state, effects| {
                 state.session.paused = Some(paused);
                 state.session.error = None;
@@ -1058,6 +1095,7 @@ pub(crate) async fn pause(
                 effects.record("Tracking paused", "No time is logged until you resume");
             });
             let _ = engine.persist();
+            round_stopped(engine, &clients, &shown, &stopped).await;
             history::load(engine).await;
             progress::load(engine).await;
         }

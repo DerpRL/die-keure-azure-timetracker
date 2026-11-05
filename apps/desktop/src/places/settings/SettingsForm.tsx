@@ -5,13 +5,14 @@ import {
   sectionAnchorId,
   SETTINGS_SECTIONS,
   viewOf,
+  type SettingsSectionDefinition,
   type SettingsSectionId,
 } from '../../features/settings/sections';
 import { withAccountDefaults } from '../../features/settings/accountDefaults';
 import { useSettingsDraft } from '../../features/settings/useSettingsDraft';
 import type { SettingsSlice } from '../../ipc/contract';
 import { type Navigation } from '../../layout/NavigationContext';
-import { PLACES, type SettingsView } from '../../layout/navigation';
+import { isViewVisible, PLACES, type SettingsView } from '../../layout/navigation';
 import { useCommand, useCommands, useSaveShortcut } from '../../shortcuts/hooks';
 import { useSlice } from '../../state/hooks';
 import { useReducedMotion } from '../../theme/ThemeProvider';
@@ -30,6 +31,18 @@ export function useSectionVisible(): (section: SettingsSectionId, isViewShown: (
     },
     [calendar],
   );
+}
+
+/** The sections shown on this system with the views the user can reach (Settings search). */
+export function useVisibleSections(isPageVisible: Navigation['isPageVisible']): SettingsSectionDefinition[] {
+  const sectionVisible = useSectionVisible();
+  return useMemo(() => {
+    const isViewShown = (candidate: SettingsView) => {
+      const definition = PLACES.settings.views.find((entry) => entry.id === candidate);
+      return definition !== undefined && isViewVisible(definition, isPageVisible);
+    };
+    return SETTINGS_SECTIONS.filter((section) => sectionVisible(section.id, isViewShown));
+  }, [sectionVisible, isPageVisible]);
 }
 
 function currentHash(): string {

@@ -11,21 +11,23 @@ use crate::model::{TrackingState, WorkLog};
 use crate::text::NonEmpty;
 use crate::time::{Cal, Interval, add_secs, diff_secs};
 
-/// The user's working-time schedule. Persisted in the configuration as Swift wrote it.
+/// Most minutes a single day's target can have.
+pub const MAX_DAILY_MINUTES: i32 = 24 * 60;
+
+/// The user's working-time schedule, as whole minutes per weekday so a target like 7h 36m stays
+/// exact.
 ///
-/// Settings written before per-weekday schedules have only `weeklyHours` and `dailyHours`; they
-/// keep working (`dailyHours` Monday to Friday) and convert to `hoursByWeekday` on the first
-/// [`WorkTargets::set_hours`].
+/// Reads also accept the formats saved before 2.4: decimal `hoursByWeekday` (1.14 and 2.0–2.3),
+/// and `weeklyHours`/`dailyHours` from before per-weekday schedules (`dailyHours` Monday to
+/// Friday). Both convert to minutes when read, rounded to the nearest minute, and are written
+/// back as `minutesByWeekday` only.
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", default)]
+#[serde(rename_all = "camelCase", from = "StoredWorkTargets")]
 pub struct WorkTargets {
-    pub weekly_hours: f64,
-    pub daily_hours: f64,
-    /// Sunday first, matching Swift weekday numbers (index 0 = Sunday).
-    #[cfg_attr(feature = "ts", ts(optional = nullable))]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub hours_by_weekday: Option<Vec<f64>>,
+    /// Regular minutes per weekday, Sunday first, matching Swift weekday numbers (index 0 =
+    /// Sunday). Seven entries, each from 0 to 1440 ([`MAX_DAILY_MINUTES`]).
+    pub minutes_by_weekday: Vec<i32>,
     #[cfg_attr(feature = "ts", ts(optional = nullable))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub belgian_holidays_enabled: Option<bool>,
@@ -34,13 +36,69 @@ pub struct WorkTargets {
     pub date_exceptions: Option<Vec<TargetException>>,
 }
 
-impl Default for WorkTargets {
-    /// 38 hours a week: 7.6 hours Monday to Friday.
+/// 1.x and 2.0–2.3 default: 7.6 hours Monday to Friday.
+const LEGACY_DAILY_HOURS: f64 = 7.6;
+
+/// Decimal hours to whole minutes, rounded to the nearest minute (7.6 is 456, 7.5 is 450).
+fn hours_to_minutes(hours: f64) -> i32 {
+    // `as` saturates out-of-range values; they then fail `is_valid`.
+    (hours * 60.0).round() as i32
+}
+
+/// The JSON a [`WorkTargets`] may be read from: the current `minutesByWeekday`, or one of the
+/// older formats. A present `minutesByWeekday` wins.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+struct StoredWorkTargets {
+    minutes_by_weekday: Option<Vec<i32>>,
+    /// 1.14 and 2.0–2.3: decimal hours per weekday, Sunday first.
+    hours_by_weekday: Option<Vec<f64>>,
+    /// Before per-weekday schedules: hours Monday to Friday (`weeklyHours` was only their sum).
+    daily_hours: f64,
+    belgian_holidays_enabled: Option<bool>,
+    date_exceptions: Option<Vec<TargetException>>,
+}
+
+impl Default for StoredWorkTargets {
     fn default() -> Self {
         Self {
-            weekly_hours: 38.0,
-            daily_hours: 7.6,
+            minutes_by_weekday: None,
             hours_by_weekday: None,
+            daily_hours: LEGACY_DAILY_HOURS,
+            belgian_holidays_enabled: None,
+            date_exceptions: None,
+        }
+    }
+}
+
+impl From<StoredWorkTargets> for WorkTargets {
+    fn from(stored: StoredWorkTargets) -> Self {
+        let minutes_by_weekday = match (stored.minutes_by_weekday, stored.hours_by_weekday) {
+            (Some(minutes), _) => minutes,
+            // An incomplete schedule was ignored before too, in favour of `dailyHours`.
+            (None, Some(hours)) if hours.len() == 7 => {
+                hours.into_iter().map(hours_to_minutes).collect()
+            }
+            _ => weekdays_only(hours_to_minutes(stored.daily_hours)),
+        };
+        Self {
+            minutes_by_weekday,
+            belgian_holidays_enabled: stored.belgian_holidays_enabled,
+            date_exceptions: stored.date_exceptions,
+        }
+    }
+}
+
+/// `minutes` Monday to Friday, weekends off (Sunday first).
+fn weekdays_only(minutes: i32) -> Vec<i32> {
+    (1..=7).map(|day| if day == 1 || day == 7 { 0 } else { minutes }).collect()
+}
+
+impl Default for WorkTargets {
+    /// 38 hours a week: 7h 36m Monday to Friday.
+    fn default() -> Self {
+        Self {
+            minutes_by_weekday: weekdays_only(hours_to_minutes(LEGACY_DAILY_HOURS)),
             belgian_holidays_enabled: None,
             date_exceptions: None,
         }
@@ -48,33 +106,27 @@ impl Default for WorkTargets {
 }
 
 impl WorkTargets {
-    pub fn weekly_target_hours(&self) -> f64 {
-        match &self.hours_by_weekday {
-            Some(hours) => hours.iter().fold(0.0, |total, h| total + h),
-            None => self.weekly_hours,
-        }
+    /// The regular schedule's total, in minutes.
+    pub fn weekly_target_minutes(&self) -> i64 {
+        self.minutes_by_weekday.iter().map(|minutes| i64::from(*minutes)).sum()
     }
 
-    /// Regular hours for a Swift weekday (1 = Sunday … 7 = Saturday); 0 outside that range.
-    pub fn hours(&self, weekday: i64) -> f64 {
+    /// Regular minutes for a Swift weekday (1 = Sunday … 7 = Saturday); 0 outside that range.
+    pub fn minutes(&self, weekday: i64) -> i32 {
         if !(1..=7).contains(&weekday) {
-            return 0.0;
+            return 0;
         }
-        if let Some(hours) = self.hours_by_weekday.as_ref().filter(|h| h.len() == 7) {
-            return hours[weekday as usize - 1];
-        }
-        if weekday == 1 || weekday == 7 { 0.0 } else { self.daily_hours }
+        self.minutes_by_weekday.get(weekday as usize - 1).copied().unwrap_or(0)
     }
 
-    /// Sets one weekday and converts legacy settings to a full schedule.
-    pub fn set_hours(&mut self, hours: f64, weekday: i64) {
+    /// Sets one weekday's regular minutes.
+    pub fn set_minutes(&mut self, minutes: i32, weekday: i64) {
         if !(1..=7).contains(&weekday) {
             return;
         }
-        let mut schedule: Vec<f64> = (1..=7).map(|day| self.hours(day)).collect();
-        schedule[weekday as usize - 1] = hours;
-        self.weekly_hours = schedule.iter().fold(0.0, |total, h| total + h);
-        self.hours_by_weekday = Some(schedule);
+        let mut schedule: Vec<i32> = (1..=7).map(|day| self.minutes(day)).collect();
+        schedule[weekday as usize - 1] = minutes;
+        self.minutes_by_weekday = schedule;
     }
 
     pub fn is_valid(&self) -> bool {
@@ -83,14 +135,11 @@ impl WorkTargets {
         if !exceptions.iter().all(TargetException::is_valid) || unique.len() != exceptions.len() {
             return false;
         }
-        if let Some(hours) = &self.hours_by_weekday {
-            return hours.len() == 7
-                && hours.iter().all(|h| h.is_finite() && (0.0..=24.0).contains(h));
-        }
-        self.weekly_hours.is_finite()
-            && self.daily_hours.is_finite()
-            && (1.0..=168.0).contains(&self.weekly_hours)
-            && (0.1..=24.0).contains(&self.daily_hours)
+        self.minutes_by_weekday.len() == 7
+            && self
+                .minutes_by_weekday
+                .iter()
+                .all(|minutes| (0..=MAX_DAILY_MINUTES).contains(minutes))
     }
 
     /// Target seconds for the local day containing `at`.
@@ -100,18 +149,19 @@ impl WorkTargets {
 
     /// Precedence: a date exception, then a Belgian holiday, then the regular weekday hours.
     pub fn daily_seconds_on(&self, date: Date) -> f64 {
-        let regular = self.hours(date.weekday().to_sunday_one_offset() as i64);
+        let regular = f64::from(self.minutes(date.weekday().to_sunday_one_offset() as i64));
         if let Some(item) = self.exception_on(date) {
             return match item.kind {
                 TargetExceptionKind::Leave | TargetExceptionKind::Replacement => 0.0,
-                TargetExceptionKind::HalfDay => regular * 1800.0,
-                TargetExceptionKind::Custom => item.hours * 3600.0,
+                TargetExceptionKind::HalfDay => regular * 30.0,
+                // Whole minutes, so 7.6 hours is 7h 36m rather than a few microseconds less.
+                TargetExceptionKind::Custom => f64::from(hours_to_minutes(item.hours)) * 60.0,
             };
         }
         if self.uses_belgian_holidays() && BelgianHoliday::on(date).is_some() {
             return 0.0;
         }
-        regular * 3600.0
+        regular * 60.0
     }
 }
 

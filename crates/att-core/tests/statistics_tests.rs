@@ -36,8 +36,11 @@ fn hours(id: &str, hours: f64) -> WorkLog {
 }
 
 fn calculate_weekly(logs: &[WorkLog], range: &StatisticsRange, weekly: f64) -> ActivityStatistics {
-    let targets =
-        WorkTargets { weekly_hours: weekly, daily_hours: weekly / 5.0, ..WorkTargets::default() };
+    let daily = (weekly * 12.0) as i32; // weekly hours × 60 / 5 weekdays
+    let targets = WorkTargets {
+        minutes_by_weekday: vec![0, daily, daily, daily, daily, daily, 0],
+        ..WorkTargets::default()
+    };
     ActivityStatistics::calculate(logs, range, &targets, &cal())
 }
 
@@ -221,7 +224,8 @@ fn unnamed_activities_take_a_later_name_and_ties_sort_by_id() {
 
 #[test]
 fn invalid_targets_contribute_no_target() {
-    let targets = WorkTargets { daily_hours: 25.0, ..WorkTargets::default() };
+    let mut targets = WorkTargets::default();
+    targets.set_minutes(25 * 60, 2);
     let result = ActivityStatistics::calculate(&[], &week(), &targets, &cal());
     assert_eq!(result.target_seconds(), 0.0);
 }

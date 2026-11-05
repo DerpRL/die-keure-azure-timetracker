@@ -106,6 +106,70 @@ export function hasDraftChanges(draft: Configuration, stored: Configuration): bo
   return !deepEqual(comparable(draft), comparable(stored));
 }
 
+/** What each draft field is called in the save bar ("2 unsaved changes · Friday target, Workday"). */
+const FIELD_NAMES: Partial<Record<keyof Configuration, string>> = {
+  organization: 'Azure organization',
+  project: 'Azure project',
+  sevenPaceUrl: '7pace workspace',
+  sevenPaceAuthMode: '7pace sign-in',
+  branchPattern: 'Ticket number pattern',
+  autoStartWhenIdle: 'Activity on branch change',
+  notificationsEnabled: 'Notifications',
+  watchEnabled: 'Git branch watching',
+  calendarEnabled: 'Calendar on Today',
+  selectedCalendarIds: 'Calendars',
+  activityTypeId: 'Default activity',
+  pollSeconds: 'Timer status interval',
+  microphone: 'Call detection',
+  meetings: 'Calendar meetings',
+  completionReminders: 'Ticket closed reminders',
+  automaticUpdateChecks: 'Automatic update checks',
+  quickSwitchEnabled: 'Quick switch',
+  quickSwitchShortcut: 'Quick switch shortcut',
+  awareness: 'Time awareness',
+  cadences: 'Sync intervals',
+  hiddenPages: 'Features',
+  miniTimer: 'Mini timer',
+  roundToQuarterHours: 'Quarter-hour rounding',
+  resumeAfterMeetings: 'Resume after meetings',
+  menuBarTimer: 'Menu-bar timer',
+};
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+/**
+ * The names of the settings the draft changes, in Settings order, for the save bar. Fields
+ * without a name of their own are counted under their card's name.
+ */
+export function draftChanges(draft: Configuration, stored: Configuration): string[] {
+  const mine = comparable(draft);
+  const theirs = comparable(stored);
+  const names: string[] = [];
+  const add = (name: string) => {
+    if (!names.includes(name)) names.push(name);
+  };
+  for (const key of Object.keys(mine) as Array<keyof typeof mine>) {
+    if (deepEqual(mine[key], theirs[key])) continue;
+    if (key === 'targets') {
+      const days = mine.targets.minutesByWeekday;
+      // Monday first, like the weekly target grid.
+      for (const index of [1, 2, 3, 4, 5, 6, 0]) {
+        if (days[index] !== theirs.targets.minutesByWeekday[index]) add(`${DAY_NAMES[index]} target`);
+      }
+      if (mine.targets.belgianHolidaysEnabled !== theirs.targets.belgianHolidaysEnabled) add('Public holidays');
+      if (!deepEqual(mine.targets.dateExceptions ?? [], theirs.targets.dateExceptions ?? [])) add('Days off & exceptions');
+    } else if (key === 'dayReview') {
+      const { startMinute, finishMinute, ...rest } = mine.dayReview;
+      const { startMinute: savedStart, finishMinute: savedFinish, ...savedRest } = theirs.dayReview;
+      if (startMinute !== savedStart || finishMinute !== savedFinish) add('Workday');
+      if (!deepEqual(rest, savedRest)) add('Day review');
+    } else {
+      add(FIELD_NAMES[key as keyof Configuration] ?? String(key));
+    }
+  }
+  return names;
+}
+
 export interface DraftState {
   /** The slice value the draft was last reconciled with. */
   base: Configuration;

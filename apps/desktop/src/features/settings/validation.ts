@@ -26,8 +26,10 @@ export const AWARENESS_MINUTES: Bounds = { min: 1, max: 120 };
 /** `DayReviewPreferences::is_valid` (steps from the 1.14 steppers). */
 export const LONG_SESSION_MINUTES: Bounds = { min: 30, max: 720, step: 30 };
 export const GAP_MINUTES: Bounds = { min: 5, max: 180, step: 5 };
-/** `TargetException::is_valid` and the per-weekday hours. */
+/** `TargetException::is_valid` (decimal hours). */
 export const TARGET_HOURS: Bounds = { min: 0, max: 24 };
+/** `WorkTargets::is_valid`: whole minutes per weekday, 0 to 24 hours. */
+export const TARGET_MINUTES: Bounds = { min: 0, max: 24 * 60, step: 15 };
 /** `FigmaPreferences` (1.14 steppers). */
 export const FIGMA_DISMISSAL_MINUTES: Bounds = { min: 0, max: 120 };
 export const FIGMA_HISTORY_DAYS: Bounds = { min: 1, max: 365 };
@@ -122,10 +124,8 @@ export function targetsValid(targets: WorkTargets): boolean {
   const exceptions = targets.dateExceptions ?? [];
   const unique = new Set(exceptions.map((item) => item.id));
   if (!exceptions.every(exceptionValid) || unique.size !== exceptions.length) return false;
-  if (targets.hoursByWeekday) {
-    return targets.hoursByWeekday.length === 7 && targets.hoursByWeekday.every((hours) => within(hours, TARGET_HOURS));
-  }
-  return within(targets.weeklyHours, { min: 1, max: 168 }) && within(targets.dailyHours, { min: 0.1, max: 24 });
+  const schedule = targets.minutesByWeekday;
+  return schedule.length === 7 && schedule.every((minutes) => Number.isInteger(minutes) && within(minutes, TARGET_MINUTES));
 }
 
 export function defaultTicketValid(text: string): boolean {

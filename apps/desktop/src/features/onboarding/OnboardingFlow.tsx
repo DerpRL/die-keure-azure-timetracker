@@ -14,7 +14,7 @@ import { AppearanceForm, useInterfacePreferences } from '../settings/AppearanceF
 import { AzureSection, SevenPaceSection } from '../settings/ConnectionSection';
 import { FigmaSettings } from '../settings/FigmaSettings';
 import { osWords } from '../settings/labels';
-import { CalendarSection } from '../settings/MeetingsSections';
+import { CalendarListSection, CalendarSection } from '../settings/MeetingsSections';
 import { Hint, InlineIssue, SectionHeadingLevel } from '../settings/SettingsSection';
 import { SettingsFormContext, useSettingsForm, type SettingsFormValue } from '../settings/SettingsForm';
 import { useSettingsDraft } from '../settings/useSettingsDraft';
@@ -74,7 +74,7 @@ interface StepCopy {
 const COPY: Record<SetupStep, StepCopy> = {
   appearance: {
     title: 'Make yourself comfortable',
-    lead: 'Choose Light, Dark or System, the text size and the contrast. Changes apply right away; you can change them later in Settings → Appearance & app.',
+    lead: 'Choose Light, Dark or System, the text size and the contrast. Changes apply right away; you can change them later in Settings → Appearance & shortcuts.',
     optional: false,
   },
   accounts: {
@@ -255,12 +255,13 @@ function StepBody({ step }: { step: SetupStep }) {
       return (
         <div className={styles.stack}>
           <CalendarSection />
+          <CalendarListSection />
         </div>
       );
   }
 }
 
-/** Step 1: the Settings → Appearance & app controls, applied as they change. */
+/** Step 1: the Settings → Appearance & shortcuts controls, applied as they change. */
 function AppearanceStep() {
   const { os } = useSettingsForm();
   const { preferences, apply, error } = useInterfacePreferences();

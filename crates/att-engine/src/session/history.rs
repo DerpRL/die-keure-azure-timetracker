@@ -196,7 +196,7 @@ pub(crate) async fn export_csv(engine: &Engine, path: String) {
     engine.update(|state| state.session.history.issue = issue);
 }
 
-fn write_atomically(path: &std::path::Path, text: &str) -> att_core::Result<()> {
+pub(crate) fn write_atomically(path: &std::path::Path, text: &str) -> att_core::Result<()> {
     let name = path.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_default();
     let temporary = path.with_file_name(format!(".{name}.{}.tmp", uuid::Uuid::new_v4()));
     let failed = |error: std::io::Error| {

@@ -42,8 +42,8 @@ use crate::state::{AppState, PAGES};
 
 use super::tracking::{TrackingDraft, can_start, preferred_activity_id};
 use super::{
-    branches, completion, connection, day_review_prompt, figma, history, meeting_return, meetings,
-    microphone, settings, tray,
+    branches, completion, connection, day_review_prompt, figma, history, maintenance,
+    meeting_return, meetings, microphone, settings, tray,
 };
 
 // -- app -------------------------------------------------------------------------------------
@@ -67,6 +67,9 @@ pub struct AppSlice {
     pub error: Option<String>,
     pub storage_issue: Option<String>,
     pub features: Features,
+    /// The folder the app keeps its data in (absolute; `null` without one, e.g. in tests).
+    /// Settings → App shows it and reveals it with the shell's `shell_reveal_data_dir`.
+    pub data_directory: Option<String>,
 }
 
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
@@ -798,6 +801,7 @@ struct Context {
     os: HostOs,
     microphone_supported: bool,
     health: ConnectionHealth,
+    data_directory: Option<String>,
 }
 
 /// Every session slice.
@@ -815,6 +819,7 @@ pub(crate) fn slices(
         os: services.os,
         microphone_supported: services.platform.microphone.supported(),
         health: connection::health(state, now),
+        data_directory: maintenance::data_directory(engine),
     };
     let interface: InterfacePreferences = state.config.interface;
     vec![
@@ -853,6 +858,7 @@ fn app_slice(state: &AppState, context: &Context) -> AppSlice {
             microphone: context.microphone_supported,
             figma_title_only: context.os == HostOs::Windows,
         },
+        data_directory: context.data_directory.clone(),
     }
 }
 
@@ -1191,7 +1197,7 @@ fn prompts_slice(state: &AppState, context: &Context) -> PromptsSlice {
             ticket_id: meetings::ticket(event, default_ticket),
         })
         .collect();
-    let meeting_return = session.meeting_return.as_ref().map(|plan| MeetingReturnView {
+    let meeting_return = meeting_return::plan(state).map(|plan| MeetingReturnView {
         ticket_id: plan.ticket_id,
         title: title(plan.ticket_id),
         activity_name: activity_name(state, plan.activity_id.as_deref()),

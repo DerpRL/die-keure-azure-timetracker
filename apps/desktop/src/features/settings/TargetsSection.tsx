@@ -1,35 +1,41 @@
 import { getLocalTimeZone, today, type CalendarDate } from '@internationalized/date';
 import { useMemo, useState } from 'react';
+import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { DatePicker } from '../../components/DateFields';
-import { NumberField, TextField } from '../../components/Fields';
+import { DurationField, NumberField, TextField } from '../../components/Fields';
 import { Select } from '../../components/Pickers';
 import { Checkbox } from '../../components/Toggles';
 import type { TargetExceptionKind } from '../../ipc/contract';
 import { formatShortDuration } from '../../utils/duration';
 import { ExternalLink } from './ExternalLink';
 import { WorkdayTimes } from './DayReviewSection';
-import { Divider, Hint, InlineIssue, SettingsSection, ToggleRow } from './SettingsSection';
+import { ChoiceButtons } from './ChoiceButtons';
+import { FullRow, Hint, InlineIssue, SectionBody, SectionFooter, SettingRow, SettingsSection, ToggleRow } from './SettingsSection';
 import { useSettingsForm } from './SettingsForm';
 import {
   addExceptions,
   applyPreset,
+  matchesPreset,
+  TARGET_PRESETS,
   belgianHolidays,
   dateKey,
   daysBetween,
   EXCEPTION_KINDS,
   formatHolidayDate,
   formatHours,
+  MAX_DAILY_MINUTES,
   removeException,
-  setTargetHours,
-  targetHours,
+  setTargetMinutes,
+  TARGET_STEP_MINUTES,
+  targetMinutes,
   usesBelgianHolidays,
   weekdayOf,
   WEEKDAY_NAMES,
   WEEKDAYS_MONDAY_FIRST,
-  weeklyTargetHours,
+  weeklyTargetMinutes,
 } from './targets';
-import { issueFor, TARGET_HOURS, targetsValid } from './validation';
+import { issueFor, TARGET_MINUTES, targetsValid } from './validation';
 import styles from './settings.module.css';
 
 const HOLIDAY_RULES_URL =
@@ -41,53 +47,75 @@ export const EXCEPTIONS_PAGE_SIZE = 20;
 /** Monday-first short day names for the target grid ("Mon"). */
 const SHORT_DAY = (weekday: number) => (WEEKDAY_NAMES[weekday] ?? '').slice(0, 3);
 
-/** Settings → Targets & reminders → Daily targets: hours per weekday and the workday. */
+/** What a target field says about text it cannot use (short: the day columns are narrow). */
+const TARGET_FORMAT_MESSAGE = 'Use whole hours and 0–59 minutes';
+const TARGET_RANGE_MESSAGE = 'Use 0 to 24h';
+
+/** Settings → Schedule & holidays → Weekly target: hours and minutes per weekday, and presets. */
 export function DailyTargetsSection() {
   const { draft, update, issues } = useSettingsForm();
   const targets = draft.targets;
   const valid = targetsValid(targets);
   const issue = issueFor(issues, 'targets');
+  const preset = TARGET_PRESETS.find((entry) => matchesPreset(targets, entry));
   return (
     <SettingsSection
       id="targets"
+      subtitle="Hours and minutes you aim to log each day, for example 7h 36m."
       actions={
-        <p className={styles.cardTotal}>
+        <Badge tone="accent" className={styles.totalChip}>
           <span className="visually-hidden">Weekly total: </span>
-          <b>{valid ? formatShortDuration(weeklyTargetHours(targets) * 3600) : 'Check daily hours'}</b> a week
-        </p>
+          {valid ? `${formatShortDuration(weeklyTargetMinutes(targets) * 60).replace(/ 0m$/, '')} a week` : 'Check daily targets'}
+        </Badge>
       }
     >
-      <div className={styles.dayGrid}>
-        {WEEKDAYS_MONDAY_FIRST.map((weekday) => {
-          const hours = targetHours(targets, weekday);
-          const invalid = !Number.isFinite(hours) || hours < TARGET_HOURS.min || hours > TARGET_HOURS.max;
-          return (
-            <NumberField
-              key={weekday}
-              label={SHORT_DAY(weekday)}
-              minValue={TARGET_HOURS.min}
-              maxValue={TARGET_HOURS.max}
-              value={hours}
-              onChange={(value) => {
-                if (Number.isFinite(value)) update((current) => ({ ...current, targets: setTargetHours(current.targets, value, weekday) }));
-              }}
-              isInvalid={invalid}
-              formatOptions={{ maximumFractionDigits: 2 }}
-              width="full"
-              className={hours === 0 ? styles.weekend : undefined}
-            />
-          );
-        })}
-      </div>
-      {issue ? <InlineIssue>{issue}</InlineIssue> : null}
-      <Hint>Hours per day, as decimals: 7.5 is 7h 30m and 0 is a day off.</Hint>
+      <SectionBody className={styles.dayGridFrame}>
+        <div className={styles.dayGrid}>
+          {WEEKDAYS_MONDAY_FIRST.map((weekday) => {
+            const minutes = targetMinutes(targets, weekday);
+            const invalid = !Number.isInteger(minutes) || minutes < TARGET_MINUTES.min || minutes > TARGET_MINUTES.max;
+            return (
+              <DurationField
+                key={weekday}
+                label={SHORT_DAY(weekday)}
+                minValue={0}
+                maxValue={MAX_DAILY_MINUTES}
+                step={TARGET_STEP_MINUTES}
+                value={minutes}
+                onChange={(value) => update((current) => ({ ...current, targets: setTargetMinutes(current.targets, value, weekday) }))}
+                isInvalid={invalid}
+                formatMessage={TARGET_FORMAT_MESSAGE}
+                rangeMessage={TARGET_RANGE_MESSAGE}
+                width="full"
+                className={minutes === 0 ? styles.weekend : undefined}
+              />
+            );
+          })}
+        </div>
+        {issue ? <InlineIssue>{issue}</InlineIssue> : null}
+        <Hint>Use 0 for a day off. In a box, the arrow keys step by an hour or a quarter hour.</Hint>
+      </SectionBody>
+      <SettingRow title="Presets" help="Fills in the days above. You can still change each day.">
+        <ChoiceButtons
+          label="Presets"
+          selectionMode="single"
+          items={TARGET_PRESETS.map(({ id, label }) => ({ id, label }))}
+          selected={new Set(preset ? [preset.id] : [])}
+          onChange={(keys) => {
+            const chosen = TARGET_PRESETS.find((entry) => keys.has(entry.id));
+            if (chosen) update((current) => ({ ...current, targets: applyPreset(current.targets, chosen) }));
+          }}
+        />
+      </SettingRow>
+    </SettingsSection>
+  );
+}
+
+/** Settings → Schedule & holidays → Workday: when gaps can happen and the day review comes. */
+export function WorkdaySection() {
+  return (
+    <SettingsSection id="workday" subtitle="Gaps are only looked for inside these hours.">
       <WorkdayTimes />
-      <Hint>Gaps are only looked for inside your workday. Holidays and leave lower the target for that day.</Hint>
-      <div className={styles.row}>
-        <Button size="small" onPress={() => update((current) => ({ ...current, targets: applyPreset(current.targets) }))}>
-          Use Mon–Thu 8h, Friday 6h
-        </Button>
-      </div>
     </SettingsSection>
   );
 }
@@ -102,20 +130,23 @@ function AddException() {
   const [through, setThrough] = useState<CalendarDate>(() => today(getLocalTimeZone()));
   const [range, setRange] = useState(false);
   const [kind, setKind] = useState<TargetExceptionKind>('Full-day leave');
-  const [hours, setHours] = useState(0);
+  const [minutes, setMinutes] = useState(0);
+  const [minutesTyped, setMinutesTyped] = useState(true);
   const [note, setNote] = useState('');
   const days = daysBetween(toCivil(from), toCivil(range ? through : from));
-  const hoursValid = Number.isFinite(hours) && hours >= TARGET_HOURS.min && hours <= TARGET_HOURS.max;
+  // Exceptions keep decimal hours (`TargetException::hours`); the engine counts them to the minute.
+  const hours = minutes / 60;
   return (
-    <div className={styles.group}>
-      <h4 className={styles.subTitle}>Add a date exception</h4>
-      <div className={styles.fieldRow}>
-        <DatePicker label="From" value={from} onChange={(value) => {
-          if (value) setFrom(value);
-        }} />
-        <Checkbox isSelected={range} onChange={setRange}>
-          Date range
-        </Checkbox>
+    <SectionBody tone="sunken">
+      <p className="visually-hidden">Add a date exception</p>
+      <div className={styles.addForm}>
+        <DatePicker
+          label={range ? 'From' : 'Date'}
+          value={from}
+          onChange={(value) => {
+            if (value) setFrom(value);
+          }}
+        />
         {range ? (
           <DatePicker
             label="Through"
@@ -127,33 +158,34 @@ function AddException() {
             errorMessage="Choose an end date on or after the start date, within a year."
           />
         ) : null}
-      </div>
-      <div className={styles.fieldRow}>
         <Select
-          label="Exception"
+          label="Type"
           items={EXCEPTION_KINDS.map((id) => ({ id, label: id }))}
           selectedKey={kind}
           onSelectionChange={(key) => {
-            if (typeof key === 'string') setKind(key as TargetExceptionKind);
+            if (typeof key !== 'string') return;
+            setKind(key as TargetExceptionKind);
+            // The target field remounts showing the last valid target.
+            setMinutesTyped(true);
           }}
         />
         {kind === 'Custom target' ? (
-          <NumberField
-            label="Target hours"
-            unit="hours"
-            minValue={TARGET_HOURS.min}
-            maxValue={TARGET_HOURS.max}
-            value={hours}
-            onChange={(value) => setHours(value)}
-            formatOptions={{ maximumFractionDigits: 2 }}
-            width="full"
+          <DurationField
+            label="Target"
+            minValue={0}
+            maxValue={MAX_DAILY_MINUTES}
+            step={TARGET_STEP_MINUTES}
+            value={minutes}
+            onChange={setMinutes}
+            onTextValidChange={setMinutesTyped}
+            formatMessage={TARGET_FORMAT_MESSAGE}
+            rangeMessage={TARGET_RANGE_MESSAGE}
           />
         ) : null}
         <TextField label="Note (optional)" value={note} onChange={setNote} />
-      </div>
-      <div className={styles.row}>
         <Button
-          isDisabled={days.length === 0 || !hoursValid}
+          variant="primary"
+          isDisabled={days.length === 0 || (kind === 'Custom target' && !minutesTyped)}
           onPress={() =>
             update((current) => ({
               ...current,
@@ -164,15 +196,17 @@ function AddException() {
             }))
           }
         >
-          Add / replace dates
+          {range ? 'Add / replace dates' : 'Add exception'}
         </Button>
-        <Hint>Save changes below to apply.</Hint>
       </div>
+      <Checkbox isSelected={range} onChange={setRange}>
+        A range of dates
+      </Checkbox>
       <Hint>
-        Half-day leave halves your normal weekday hours. Custom hours override holidays too. Exceptions take priority over the weekly
-        schedule.
+        Half-day leave halves your normal weekday target. Custom targets override holidays too. Exceptions take priority over the weekly
+        schedule. Save changes to apply.
       </Hint>
-    </div>
+    </SectionBody>
   );
 }
 
@@ -183,19 +217,25 @@ function ExceptionList() {
     () => [...(draft.targets.dateExceptions ?? [])].sort((a, b) => a.id.localeCompare(b.id)),
     [draft.targets.dateExceptions],
   );
-  if (exceptions.length === 0) return <Hint>No date exceptions yet.</Hint>;
+  if (exceptions.length === 0) {
+    return (
+      <FullRow className={styles.emptyRow}>
+        <p className={styles.rowTitle}>No exceptions yet</p>
+        <Hint>Add your leave so the day review does not flag those days as empty.</Hint>
+      </FullRow>
+    );
+  }
   const shown = exceptions.slice(0, visible);
   const rest = exceptions.length - shown.length;
   return (
-    <div className={styles.group}>
-      <h4 className={styles.subTitle}>{`Date exceptions (${exceptions.length})`}</h4>
-      <ul role="list" className={styles.list}>
+    <>
+      <ul role="list" aria-label={`Date exceptions (${exceptions.length})`} className={styles.rowList}>
         {shown.map((item) => (
-          <li key={item.id} className={styles.listItem}>
+          <li key={item.id} className={styles.listRow}>
+            <span className={styles.listDate}>{item.id}</span>
             <span className={styles.listText}>
               <span>
-                <span className={styles.countdown}>{item.id}</span>
-                {` · ${item.kind}`}
+                {item.kind}
                 {item.kind === 'Custom target' ? ` · ${formatHours(item.hours)}` : ''}
               </span>
               {item.note ? <span className={styles.listMeta}>{item.note}</span> : null}
@@ -212,68 +252,105 @@ function ExceptionList() {
         ))}
       </ul>
       {rest > 0 ? (
-        <div className={styles.row}>
-          <Button size="small" onPress={() => setVisible((count) => count + EXCEPTIONS_PAGE_SIZE)}>
-            {`Show ${Math.min(rest, EXCEPTIONS_PAGE_SIZE)} more`}
-          </Button>
-          <Hint>{`${rest} more not shown`}</Hint>
-        </div>
+        <FullRow>
+          <div className={styles.buttonRow}>
+            <Button size="small" onPress={() => setVisible((count) => count + EXCEPTIONS_PAGE_SIZE)}>
+              {`Show ${Math.min(rest, EXCEPTIONS_PAGE_SIZE)} more`}
+            </Button>
+            <Hint>{`${rest} more not shown`}</Hint>
+          </div>
+        </FullRow>
       ) : null}
-    </div>
+    </>
   );
 }
 
-/** Settings → Targets & reminders → Holidays & leave (1.14 `HolidaySettingsView`). */
+/** Days from `from` to `to` (both civil dates). */
+function daysUntil(from: CivilDay, to: CivilDay): number {
+  return Math.round((Date.UTC(to.year, to.month - 1, to.day) - Date.UTC(from.year, from.month - 1, from.day)) / 86_400_000);
+}
+
+type CivilDay = { year: number; month: number; day: number };
+
+/** Settings → Schedule & holidays → Public holidays (1.14 `HolidaySettingsView`). */
 export function HolidaysSection() {
   const { draft, update } = useSettingsForm();
-  const [year, setYear] = useState(() => today(getLocalTimeZone()).year);
+  const now = today(getLocalTimeZone());
+  const [year, setYear] = useState(() => now.year);
   const targets = draft.targets;
+  const enabled = usesBelgianHolidays(targets);
   const holidays = belgianHolidays(year);
+  const todayCivil = toCivil(now);
+  // The next holiday that lowers a target (one on a day off changes nothing).
+  const upcoming = holidays.find(
+    (holiday) => daysUntil(todayCivil, holiday.date) >= 0 && targetMinutes(targets, weekdayOf(holiday.date)) > 0,
+  );
+  const onWorkdays = holidays.filter((holiday) => targetMinutes(targets, weekdayOf(holiday.date)) > 0).length;
   return (
-    <SettingsSection id="holidays" subtitle="Adjust targets without creating or changing 7pace entries.">
+    <SettingsSection
+      id="holidays"
+      subtitle="Holidays set the target for that day to 0h. Nothing is created or changed in 7pace."
+      actions={
+        <NumberField
+          label="Holiday year"
+          hideLabel
+          minValue={1900}
+          maxValue={2200}
+          value={year}
+          onChange={(value) => {
+            if (Number.isInteger(value)) setYear(value);
+          }}
+          formatOptions={{ useGrouping: false }}
+          className={styles.yearField}
+        />
+      }
+    >
       <ToggleRow
-        title="Use Belgian public holidays"
-        isSelected={usesBelgianHolidays(targets)}
+        title="Lower my target on Belgian public holidays"
+        help={
+          <>
+            {'Replacement days follow your employer’s arrangements: add them under Days off & exceptions. '}
+            <ExternalLink href={HOLIDAY_RULES_URL}>Belgian public holiday rules</ExternalLink>
+          </>
+        }
+        isSelected={enabled}
         onChange={(belgianHolidaysEnabled) => update((current) => ({ ...current, targets: { ...current.targets, belgianHolidaysEnabled } }))}
       />
-      <NumberField
-        label="Holiday year"
-        minValue={1900}
-        maxValue={2200}
-        value={year}
-        onChange={(value) => {
-          if (Number.isInteger(value)) setYear(value);
-        }}
-        formatOptions={{ useGrouping: false }}
-      />
-      <h4 className={styles.subTitle}>{`Belgium · ${year}`}</h4>
       {holidays.length > 0 ? (
-        <dl className={styles.holidayList}>
-          {holidays.map((holiday) => (
-            <div key={`${dateKey(holiday.date)}-${holiday.name}`} style={{ display: 'contents' }}>
-              <dt>{formatHolidayDate(holiday.date)}</dt>
-              <dd>{holiday.name}</dd>
-              <dd className={styles.listMeta}>
-                {targetHours(targets, weekdayOf(holiday.date)) === 0 ? 'Set replacement date below' : ''}
-              </dd>
-            </div>
-          ))}
-        </dl>
+        <ul role="list" aria-label={`Belgian public holidays ${year}`} className={styles.holidayGrid}>
+          {holidays.map((holiday) => {
+            const days = daysUntil(todayCivil, holiday.date);
+            const past = days < 0;
+            const dayOff = targetMinutes(targets, weekdayOf(holiday.date)) === 0;
+            return (
+              <li key={`${dateKey(holiday.date)}-${holiday.name}`} className={past || !enabled ? styles.holidayPast : styles.holiday}>
+                <span className={styles.holidayDate}>{formatHolidayDate(holiday.date, 'short')}</span>
+                <span className={styles.holidayName}>{holiday.name}</span>
+                {dayOff ? (
+                  <Badge tone="warning">Day off · no effect</Badge>
+                ) : holiday === upcoming && enabled ? (
+                  <Badge tone="accent">{days === 0 ? 'Today' : `Next · in ${days} ${days === 1 ? 'day' : 'days'}`}</Badge>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
       ) : (
-        <Hint>Holidays are calculated for 1583 and later.</Hint>
+        <FullRow>
+          <Hint>Holidays are calculated for 1583 and later.</Hint>
+        </FullRow>
       )}
-      <Hint>
-        Replacement dates follow your employer’s arrangements. Add them below; the app does not assume the following Monday. Regional
-        or company days off can also be added.
-      </Hint>
-      <p>
-        <ExternalLink href={HOLIDAY_RULES_URL} className={styles.calendarLabel}>
-          Belgian public holiday rules
-        </ExternalLink>
-      </p>
-      <Divider />
-      <AddException />
+      {holidays.length > 0 ? <SectionFooter>{`${onWorkdays} of ${holidays.length} fall on a workday in ${year}`}</SectionFooter> : null}
+    </SettingsSection>
+  );
+}
+
+/** Settings → Schedule & holidays → Days off & exceptions: leave, half days, other targets. */
+export function ExceptionsSection() {
+  return (
+    <SettingsSection id="exceptions" subtitle="Leave, half days or a different target for one date.">
       <ExceptionList />
+      <AddException />
     </SettingsSection>
   );
 }

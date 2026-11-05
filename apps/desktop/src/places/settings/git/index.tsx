@@ -25,7 +25,7 @@ function messageOf(error: unknown): string {
  * Branch watching on or off (`repositories.toggleWatching`); pausing also pauses Figma
  * observations. Renders nothing until the repositories slice arrives.
  */
-export function WatchSwitch({ label = 'Watch branches' }: { label?: string }) {
+export function WatchSwitch({ label = 'Watch branches', compact = false }: { label?: string; compact?: boolean }) {
   const repositories = useSlice('repositories');
   const toggle = useAction();
   if (!repositories) return null;
@@ -38,9 +38,10 @@ export function WatchSwitch({ label = 'Watch branches' }: { label?: string }) {
         onChange={(next) => {
           if (next !== watching) void toggle.run({ type: 'repositories.toggleWatching' });
         }}
-        description="Pausing also pauses Figma observations."
+        aria-label={compact ? label : undefined}
+        description={compact ? undefined : 'Pausing also pauses Figma observations.'}
       >
-        {label}
+        {compact ? null : label}
       </Switch>
       {toggle.error ? (
         <p role="alert" className={styles.error}>

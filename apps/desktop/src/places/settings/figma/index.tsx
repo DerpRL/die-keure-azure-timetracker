@@ -11,7 +11,7 @@ import { cx } from '../../../utils/cx';
 import { ContextHistory } from './ContextHistory';
 import { FileRegister } from './FileRegister';
 import { formatSeen } from './model';
-import { ObservationSection } from './ObservationSection';
+import { FigmaTiles, ObservationSection } from './ObservationSection';
 import { SuggestionCard } from './SuggestionCard';
 import styles from './figma.module.css';
 import { FigmaIcon, TrashIcon } from '../../../components/icons';
@@ -123,6 +123,7 @@ export function FigmaPanel() {
           {toggle.error.message}
         </Banner>
       ) : null}
+      <FigmaTiles figma={figma} titleOnly={titleOnly} />
       <ObservationSection figma={figma} titleOnly={titleOnly} />
       {hasSuggestions || hasLastWorked ? (
         <div className={cx(styles.pair, hasSuggestions && hasLastWorked && styles.pairSplit)}>

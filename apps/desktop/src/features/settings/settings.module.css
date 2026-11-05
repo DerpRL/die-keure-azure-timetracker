@@ -1,97 +1,4 @@
-/* Settings cards (2.2 layout "S4 · Settings"): cards with h3 titles, setting rows and the save bar. */
 
-.sectionAnchor {
-  scroll-margin-top: calc(4.5rem + var(--space-4));
-  outline: none;
-}
-
-.sectionAnchor:focus-visible {
-  outline: var(--size-focus-ring) solid var(--color-focus-ring);
-  outline-offset: var(--space-1);
-  border-radius: var(--radius-lg);
-}
-
-.card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-/* Section cards: a larger title and more room between the groups (2.0 layout). */
-.sectionCard {
-  gap: var(--space-5);
-}
-
-.sectionCard h3 {
-  font-size: 1rem;
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: -0.005em;
-}
-
-.sectionCard > :last-child {
-  gap: var(--space-5);
-}
-
-/* Two short fields side by side when there is room. */
-.fieldPair {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-  align-items: start;
-  gap: var(--space-4);
-  min-width: 0;
-}
-
-/* Connection details: status on the left, Refresh on the right. */
-.detailsRow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  min-width: 0;
-}
-
-/* The two "checked" stamps share a line; warnings and hints take a line of their own. */
-.details.detailsInline {
-  display: flex;
-  flex-flow: row wrap;
-  gap: var(--space-1) var(--space-5);
-}
-
-.detailsInline > .warning,
-.detailsInline > li:nth-child(n + 3) {
-  flex-basis: 100%;
-}
-
-.detailsRow .detailsText {
-  flex: 1 1 18rem;
-  gap: var(--space-1);
-}
-
-.group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  min-width: 0;
-}
-
-.groupTitle {
-  font-size: var(--font-size-headline);
-  font-weight: var(--font-weight-semibold);
-  line-height: var(--line-height-tight);
-}
-
-.subTitle {
-  font-size: var(--font-size-footnote);
-  font-weight: var(--font-weight-semibold);
-}
-
-.hint {
-  max-width: 44rem;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-footnote);
-  overflow-wrap: anywhere;
-}
 
 .issue {
   display: flex;
@@ -110,13 +17,6 @@
 .statusIcon {
   flex: none;
   margin-top: 0.15em;
-}
-
-.divider {
-  width: 100%;
-  margin: 0;
-  border: 0;
-  border-top: var(--size-border) solid var(--color-separator);
 }
 
 .row {
@@ -162,23 +62,7 @@
   font-size: var(--font-size-footnote);
 }
 
-.secretDescription {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
-
 /* PIN pairing */
-.pairing {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border: var(--size-border) solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-sunken);
-}
 
 .pinDetails {
   display: grid;
@@ -202,30 +86,6 @@
 
 .countdown {
   font-variant-numeric: tabular-nums;
-}
-
-/* Fieldsets for checkbox groups */
-.fieldset {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.legend {
-  margin-bottom: var(--space-1);
-  padding: 0;
-  font-size: var(--font-size-body);
-  font-weight: var(--font-weight-medium);
-}
-
-.checkGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
-  gap: var(--space-2) var(--space-4);
 }
 
 .list {
@@ -269,88 +129,6 @@
   height: 0.75rem;
   border: var(--size-border) solid var(--color-control-border);
   border-radius: 50%;
-}
-
-.calendarLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-
-
-
-.holidayList {
-  display: grid;
-  grid-template-columns: max-content minmax(0, 1fr) auto;
-  gap: var(--space-1) var(--space-4);
-  font-size: var(--font-size-footnote);
-}
-
-.holidayList dt {
-  font-variant-numeric: tabular-nums;
-}
-
-.holidayList dd {
-  margin: 0;
-}
-
-/* Interruptions */
-.levels {
-  display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
-  gap: var(--space-1) var(--space-4);
-  font-size: var(--font-size-footnote);
-}
-
-.levels dt {
-  font-weight: var(--font-weight-semibold);
-}
-
-.levels dd {
-  margin: 0;
-  color: var(--color-text-secondary);
-}
-
-.interruptions {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
-  gap: var(--space-3) var(--space-4);
-}
-
-/* Features */
-.featureList {
-  display: flex;
-  flex-direction: column;
-}
-
-.feature {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-3) 0;
-}
-
-.feature + .feature {
-  border-top: var(--size-border) solid var(--color-separator);
-}
-
-.featureFacts {
-  display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
-  gap: 0 var(--space-3);
-  margin-top: var(--space-1);
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-footnote);
-  overflow-wrap: anywhere;
-}
-
-.featureNote {
-  grid-column: 1 / -1;
-}
-
-.factLabel {
-  font-weight: var(--font-weight-semibold);
 }
 
 /* Appearance preview */
@@ -416,52 +194,6 @@
   gap: var(--space-2);
 }
 
-/* Save bar */
-.saveBar {
-  position: sticky;
-  bottom: var(--space-4);
-  z-index: var(--z-sticky);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-5);
-  border: var(--size-border) solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface-raised);
-  box-shadow: var(--elevation-2);
-}
-
-.saveRow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3) var(--space-4);
-}
-
-.saveText {
-  display: flex;
-  flex: 1 1 16rem;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-}
-
-.saveButtons {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.saveState {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-  font-weight: var(--font-weight-semibold);
-}
-
 .issueList {
   margin: var(--space-1) 0 0;
   padding-inline-start: var(--space-5);
@@ -477,82 +209,15 @@
   gap: var(--space-4);
 }
 
-/* A setting with its switch on the right: title and help on the left (the Switch's label and
-   description), the track on the right. The label element is laid out by its children so the
-   track can sit in the second column; it stays the click and focus target. */
-.toggleRow {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.125rem var(--space-4);
+/* Daily targets: one column per weekday (the design's 7-column row) while each fits "10h 45m"
+   and its steppers; then two rows of four, then four rows of two. */
+.dayGridFrame {
+  container-type: inline-size;
 }
 
-.toggleRow > label {
-  display: contents;
-}
-
-.toggleRow > label > [aria-hidden='true'] {
-  grid-row: 1 / span 2;
-  grid-column: 2;
-  align-self: center;
-}
-
-.toggleRow > label > :last-child {
-  grid-row: 1;
-  grid-column: 1;
-  font-weight: var(--font-weight-semibold);
-}
-
-.toggleRow > span {
-  grid-row: 2;
-  grid-column: 1;
-  padding-inline-start: 0;
-}
-
-/* Text on the left, a button or shortcut on the right. */
-.settingRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--space-4);
-}
-
-.settingText {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  min-width: 0;
-}
-
-.settingTitle {
-  font-weight: var(--font-weight-semibold);
-}
-
-.settingControl {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.settingDanger {
-  padding-top: var(--space-4);
-  border-top: var(--size-border) solid var(--color-separator);
-}
-
-/* "Stored in Keychain · Leave empty to keep it." */
-.chipLine {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-/* Daily targets: one narrow column per weekday (the design's 7-column row). */
 .dayGrid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(4.5rem, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: var(--space-2);
 }
 
@@ -560,19 +225,16 @@
   color: var(--color-text-secondary);
 }
 
-@media (max-width: 44rem) {
+@container (max-width: 46rem) {
   .dayGrid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
-.cardTotal {
-  font-size: var(--font-size-footnote);
-  font-variant-numeric: tabular-nums;
-}
-
-.cardTotal b {
-  font-weight: var(--font-weight-semibold);
+@container (max-width: 26rem) {
+  .dayGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* Theme choice: three cards with a swatch (System, Light, Dark). */
@@ -658,23 +320,10 @@
   gap: var(--space-4);
 }
 
-/* The save bar: one raised card under the view's cards (2.2 layout). */
-.saveHint {
-  color: var(--color-text-secondary);
-  font-weight: var(--font-weight-regular);
-}
-
 @media (forced-colors: active) {
   .themeCard:has(input:checked) {
     border: 2px solid Highlight;
   }
-}
-
-.detailsText {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
 }
 
 /* Calendars: swatch, name and switch per calendar. */
@@ -682,19 +331,6 @@
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.calendarRow {
-  display: grid;
-  grid-template-columns: 0.625rem minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.625rem;
-  min-height: 2.5rem;
-  font-size: var(--font-size-footnote);
-}
-
-.calendarRow .swatch {
-  background: var(--color-text-secondary);
 }
 
 .calendarName {
@@ -708,32 +344,6 @@
 }
 
 /* Branch rules: the "Branch | Suggests" table. */
-.rules {
-  width: 100%;
-  overflow: hidden;
-  border: var(--size-border) solid var(--color-border);
-  border-radius: var(--radius-md);
-  border-collapse: separate;
-  border-spacing: 0;
-  font-size: var(--font-size-footnote);
-}
-
-.rules th {
-  padding: 0.625rem 0.875rem;
-  background: var(--color-surface-sunken);
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-caption);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.04em;
-  text-align: start;
-  text-transform: uppercase;
-}
-
-.rules td {
-  padding: 0.625rem 0.875rem;
-  border-top: var(--size-border) solid var(--color-separator);
-  vertical-align: middle;
-}
 
 .code {
   padding: 0.125rem 0.375rem;
@@ -742,30 +352,6 @@
   font-family: var(--font-family-mono);
   font-size: var(--font-size-footnote);
   overflow-wrap: anywhere;
-}
-
-.testerRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: var(--space-3);
-}
-
-.testerResult {
-  display: flex;
-  align-items: center;
-  min-height: var(--size-control-md);
-  margin: 0;
-}
-
-.testerResult output {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--size-control-md);
-  padding: 0 0.875rem;
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-footnote);
-  font-weight: var(--font-weight-semibold);
 }
 
 .resultGood {
@@ -781,19 +367,6 @@
 .resultPending {
   background: var(--color-hover);
   color: var(--color-text-secondary);
-}
-
-@media (max-width: 40rem) {
-  .testerRow {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-/* Azure DevOps → Test and save */
-.tokenTest {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
 }
 
 .success {
@@ -818,19 +391,961 @@
   margin-bottom: var(--space-2);
 }
 
-.steps {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  max-width: 44rem;
-  margin: 0 0 var(--space-2);
-  padding-left: var(--space-5);
-  list-style: decimal;
-}
-
 .inlineLink {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
   overflow-wrap: anywhere;
+}
+
+/* -- Settings cards (design "sg"): header, rows divided by hairlines, a grey footer ---------- */
+
+.sectionCard {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  scroll-margin-top: calc(4.5rem + var(--space-4));
+  outline: none;
+  container: settings-card / inline-size;
+}
+
+.sectionCard:focus-visible {
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: var(--space-1);
+}
+
+.sectionCard > * + * {
+  border-top: var(--size-border) solid var(--color-separator);
+}
+
+.dangerCard {
+  border-color: var(--color-danger-bg);
+}
+
+.sectionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+}
+
+.sectionHeaderText {
+  display: flex;
+  flex: 1 1 16rem;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--font-size-headline);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.sectionSubtitle {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+  overflow-wrap: anywhere;
+}
+
+.sectionActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.sectionBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: 1.125rem var(--space-5);
+}
+
+.sunken {
+  background: var(--color-surface-sunken);
+}
+
+/* A row: title and help on the left, the control on the right (design "sr"). */
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.625rem var(--space-8);
+  min-width: 0;
+  padding: 0.875rem var(--space-5);
+}
+
+.fullRow {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.stackedRow {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.stackedRow > .rowControl {
+  justify-content: flex-start;
+}
+
+.sectionCard > .subRow {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.dimmedRow > .rowText,
+.dimmedRow > .rowControl {
+  opacity: 0.55;
+}
+
+.rowText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.rowTitle {
+  margin: 0;
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.rowHelp {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+  overflow-wrap: anywhere;
+}
+
+.rowControl {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.rowBelow {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.rowExtra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  font-size: var(--font-size-caption);
+}
+
+.issueRow,
+.hintRow {
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-3);
+}
+
+.sectionCard > .issueRow,
+.sectionCard > .hintRow {
+  border-top: 0;
+  padding-top: 0;
+}
+
+/* A switch row: the switch's label and description on the left, the track on the right. */
+.toggleRowFrame {
+  display: block;
+}
+
+.toggleRow {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.125rem var(--space-8);
+}
+
+.toggleRow > label {
+  display: contents;
+}
+
+.toggleRow > label > [aria-hidden='true'] {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  align-self: center;
+}
+
+.toggleRow > label > :last-child {
+  grid-row: 1;
+  grid-column: 1;
+}
+
+.toggleRow > span {
+  grid-row: 2;
+  grid-column: 1;
+  padding-inline-start: 0;
+}
+
+.groupLabel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-5);
+  background: var(--color-surface-sunken);
+}
+
+.groupTitle {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sectionFooter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.625rem;
+  padding: var(--space-3) var(--space-5);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+}
+
+.footerText {
+  display: flex;
+  flex: 1 1 14rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.footerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.hint {
+  margin: 0;
+  max-width: 44rem;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+  overflow-wrap: anywhere;
+}
+
+/* Below 34rem a row stacks: text first, then the control, left-aligned. */
+@container settings-card (max-width: 34rem) {
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rowControl {
+    justify-content: flex-start;
+  }
+
+  .toggleRow {
+    gap: 0.125rem var(--space-4);
+  }
+}
+
+/* -- The save bar (design "savebar"): dark, sticky at the bottom of the view ---------------- */
+
+.saveBar {
+  position: sticky;
+  bottom: var(--space-4);
+  z-index: var(--z-sticky);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.saveRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-tooltip-bg);
+  color: var(--color-tooltip-text);
+  box-shadow: var(--elevation-3);
+}
+
+.saveText {
+  display: flex;
+  flex: 1 1 16rem;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  font-size: var(--font-size-footnote);
+}
+
+.saveState {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+}
+
+.saveCount {
+  font-weight: var(--font-weight-semibold);
+}
+
+.saveNames {
+  opacity: 0.8;
+  overflow-wrap: anywhere;
+}
+
+.saveNote {
+  margin: 0;
+  opacity: 0.8;
+}
+
+.saveButtons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* -- Page parts ------------------------------------------------------------------------------ */
+
+.anchorBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  scroll-margin-top: calc(4.5rem + var(--space-4));
+  outline: none;
+}
+
+.anchorBlock:focus-visible {
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: var(--space-1);
+  border-radius: var(--radius-lg);
+}
+
+.headerAction {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+/* Status tiles (design "stiles"). */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13.75rem, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: 0.875rem var(--space-4);
+  border: var(--size-border) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.tileIcon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-sm);
+  font-size: 1.125rem;
+}
+
+.tile-success {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.tile-neutral {
+  background: var(--color-hover);
+  color: var(--color-secondary-text);
+}
+
+.tile-accent {
+  background: var(--color-accent-bg);
+  color: var(--color-selected-text);
+}
+
+.tile-warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.tile-danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger-text);
+}
+
+.tileText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tileTitle {
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.tileDetail {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* -- Controls in rows ----------------------------------------------------------------------- */
+
+/* Doubled class: wins over the field's own width class. */
+.fieldWide.fieldWide {
+  width: 22.5rem;
+  max-width: 100%;
+}
+
+.fieldMedium.fieldMedium {
+  width: 17.5rem;
+  max-width: 100%;
+}
+
+.fieldNarrow.fieldNarrow {
+  width: 12rem;
+  max-width: 100%;
+}
+
+.numberField.numberField {
+  width: 8rem;
+}
+
+.yearField.yearField {
+  width: 7rem;
+}
+
+.optional {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-regular);
+}
+
+.rangeHint {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+}
+
+.buttonRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.secretControl {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.secretControl > :nth-child(2),
+.secretControl > :only-child {
+  flex: 1 1 16rem;
+}
+
+.dangerButton {
+  color: var(--color-danger-text);
+}
+
+/* Toggle buttons in a row (design "dp"): days, presets. */
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.choice {
+  min-width: 2.875rem;
+  min-height: 2.25rem;
+  padding: 0 var(--space-3);
+  border: var(--size-border) solid var(--color-control-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-semibold);
+  cursor: default;
+}
+
+.choice[data-hovered] {
+  background: var(--color-hover);
+}
+
+.choice[data-selected] {
+  border-color: var(--color-primary);
+  background: var(--color-accent-bg);
+  color: var(--color-selected-text);
+}
+
+.choice[data-focus-visible] {
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.totalChip {
+  font-size: var(--font-size-body);
+}
+
+/* -- Lists inside cards (design "lrow") ------------------------------------------------------ */
+
+.rowList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.listRow,
+.checkRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+  min-height: 2.875rem;
+  padding: var(--space-2) var(--space-5);
+}
+
+.listRow + .listRow,
+.checkRow + .checkRow {
+  border-top: var(--size-border) solid var(--color-separator);
+}
+
+.listDate {
+  flex: none;
+  min-width: 6rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-semibold);
+}
+
+.checkLabel {
+  font-weight: var(--font-weight-medium);
+}
+
+.calendarCheck {
+  align-items: center;
+}
+
+.calendarCheck .swatch {
+  display: inline-block;
+  margin-inline-end: var(--space-2);
+  vertical-align: -0.0625rem;
+  background: var(--color-text-secondary);
+}
+
+.calendarRow {
+  display: flex;
+  align-items: center;
+  min-height: 2.5rem;
+  font-size: var(--font-size-footnote);
+}
+
+.emptyRow {
+  justify-items: center;
+  padding-block: 1.375rem 1.125rem;
+  text-align: center;
+}
+
+.addForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.625rem;
+}
+
+.addForm > * {
+  flex: 0 1 11rem;
+}
+
+.addForm > button {
+  flex: none;
+}
+
+/* Work applications in two columns (design "Work applications"). */
+.appGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18.75rem, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.appRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 2.875rem;
+  padding: var(--space-2) var(--space-5);
+  border-top: var(--size-border) solid var(--color-separator);
+}
+
+.sectionCard > .appGrid > .appRow:first-child {
+  border-top: 0;
+}
+
+.appRow > .listText {
+  flex: 1 1 auto;
+}
+
+.appName {
+  font-weight: var(--font-weight-semibold);
+}
+
+.appNameMuted {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* -- Public holidays -------------------------------------------------------------------------- */
+
+.holidayGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(23.75rem, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.holiday,
+.holidayPast {
+  display: grid;
+  grid-template-columns: 6rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 2.875rem;
+  padding: 0.375rem var(--space-5);
+  border-top: var(--size-border) solid var(--color-separator);
+}
+
+.sectionCard > .holidayGrid {
+  margin-top: -1px;
+}
+
+.holidayPast {
+  color: var(--color-text-secondary);
+}
+
+.holidayDate {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-semibold);
+}
+
+.holidayName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* -- 7pace pairing --------------------------------------------------------------------------- */
+
+.pairing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+}
+
+.pairingSteps {
+  display: flex;
+  flex: 1 1 23.75rem;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.pairingActions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.instructionsPlain {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Numbered steps with round counters (design "steps"). */
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  max-width: 44rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.steps li {
+  position: relative;
+  min-height: 1.5rem;
+  padding-inline-start: 2.25rem;
+  padding-top: 0.125rem;
+  counter-increment: step;
+}
+
+.steps li::before {
+  content: counter(step);
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--color-accent-bg);
+  color: var(--color-selected-text);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-bold);
+}
+
+/* -- Tables (branch rules, prompts) ------------------------------------------------------------ */
+
+.tableScroll {
+  overflow-x: auto;
+}
+
+.rules,
+.matrix {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-footnote);
+}
+
+.rules th,
+.matrix thead th {
+  padding: 0.625rem var(--space-5);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-align: start;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.rules td {
+  padding: 0.625rem var(--space-5);
+  border-top: var(--size-border) solid var(--color-separator);
+  vertical-align: middle;
+}
+
+.matrix thead th:not(:first-child) {
+  text-align: center;
+}
+
+.matrix tbody th {
+  padding: 0.625rem var(--space-5);
+  border-top: var(--size-border) solid var(--color-separator);
+  font-weight: var(--font-weight-regular);
+  text-align: start;
+}
+
+.matrix td {
+  border-top: var(--size-border) solid var(--color-separator);
+  text-align: center;
+  vertical-align: middle;
+}
+
+.matrixPrompt {
+  display: block;
+  color: var(--color-text);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+}
+
+.radio {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  accent-color: var(--color-primary);
+}
+
+.radio:focus-visible {
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* -- Shortcut recorder ---------------------------------------------------------------------- */
+
+.recorder,
+.recorderActive {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0.25rem 0.625rem;
+  border: var(--size-border) dashed var(--color-control-border);
+  border-radius: var(--radius-sm);
+}
+
+.recorderActive {
+  border-style: solid;
+  border-color: var(--color-focus-ring);
+  color: var(--color-selected-text);
+  font-size: var(--font-size-footnote);
+}
+
+/* -- Updates ---------------------------------------------------------------------------------- */
+
+.release {
+  gap: var(--space-2);
+}
+
+.releaseNotes {
+  margin: 0;
+  white-space: pre-line;
+  font-size: var(--font-size-footnote);
+}
+
+/* -- About -------------------------------------------------------------------------------------- */
+
+.aboutApp {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+
+.aboutText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.aboutName {
+  margin: 0;
+  font-size: var(--font-size-title-2);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.015em;
+}
+
+.aboutVersion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-1) 0 0;
+}
+
+.dataList,
+.helpList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dataList li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: 0.625rem var(--space-5);
+}
+
+.dataList li + li,
+.helpList li + li {
+  border-top: var(--size-border) solid var(--color-separator);
+}
+
+.helpLink {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 0.8125rem var(--space-5);
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-weight: var(--font-weight-medium);
+  text-align: start;
+  cursor: default;
+}
+
+.helpLink:hover {
+  background: var(--color-hover);
+}
+
+.helpLink:focus-visible {
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: calc(-1 * var(--size-focus-ring));
+}
+
+.helpIcon {
+  flex: none;
+  margin-top: 0.15em;
+  color: var(--color-text-secondary);
+}
+
+.helpLink .helpIcon {
+  margin-top: 0;
+}
+
+.helpLabel {
+  min-width: 0;
+}
+
+.helpArrow {
+  flex: none;
+  margin-inline-start: auto;
+  color: var(--color-text-secondary);
+}
+
+/* The save bar's buttons on its inverted background. */
+.saveRevert {
+  color: inherit;
+}
+
+.saveSubmit {
+  border-color: var(--color-tooltip-text);
+  background: var(--color-tooltip-text);
+  color: var(--color-tooltip-bg);
 }

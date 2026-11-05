@@ -18,9 +18,10 @@ use uuid::Uuid;
 
 use crate::error::{AppError, Result};
 use crate::model::{ActivityType, TrackingState, WorkLog, resolve_activity};
+use crate::rounding::{QUARTER_HOUR_SECONDS, Rounding, previous_end};
 use crate::service::OfflineDraftService;
 use crate::text::NonEmpty;
-use crate::time::{Cal, diff_secs, secs};
+use crate::time::{Cal, add_secs, diff_secs, secs};
 use crate::worklog::WorkLogDraft;
 use crate::worklog::edit::{WorkLogConflict, WorkLogOverlap};
 use crate::worklog::ops::is_swift_uuid;
@@ -122,12 +123,20 @@ impl OfflineDraft {
     }
 
     /// The 7pace entry this draft would create. Times round down to whole seconds and must not
-    /// lie in the future; a blank comment counts as none.
-    pub fn proposal(&self, now: Timestamp, cal: &Cal) -> Result<WorkLogDraft> {
+    /// lie in the future; a blank comment counts as none. `rounding` applies the quarter-hour
+    /// setting (see [`crate::rounding`]); `others` are the entries around it, which bound how far
+    /// a rounded start may move back.
+    pub fn proposal(
+        &self,
+        rounding: Rounding,
+        others: &[WorkLog],
+        now: Timestamp,
+        cal: &Cal,
+    ) -> Result<WorkLogDraft> {
         let Some(end) = self.end else {
             return Err(AppError::message("Stop the local timer before reviewing this draft."));
         };
-        WorkLogDraft::from_times(
+        let proposal = WorkLogDraft::from_times(
             self.start,
             end,
             self.ticket_id,
@@ -136,7 +145,11 @@ impl OfflineDraft {
             self.billable,
             now,
             cal,
-        )
+        )?;
+        let previous = previous_end(proposal.start, others, &[], cal);
+        let rounded = proposal.rounded(rounding, now, previous);
+        rounded.validate(now, cal)?;
+        Ok(rounded)
     }
 }
 
@@ -198,6 +211,8 @@ pub struct OfflineReview {
     pub overlap_issue: Option<String>,
     /// Existing entries identical to the draft's proposal (link one instead of uploading).
     pub matches: Vec<WorkLog>,
+    /// The entry an upload creates, with the quarter-hour setting applied.
+    pub proposal: WorkLogDraft,
 }
 
 impl OfflineReview {
@@ -206,17 +221,18 @@ impl OfflineReview {
         draft: OfflineDraft,
         logs: &[WorkLog],
         state: &TrackingState,
+        rounding: Rounding,
         now: Timestamp,
         cal: &Cal,
     ) -> Result<Self> {
-        let proposal = draft.proposal(now, cal)?;
+        let proposal = draft.proposal(rounding, logs, now, cal)?;
         let matches = logs.iter().filter(|log| proposal.matches(log, cal)).cloned().collect();
         let (conflicts, overlap_issue) =
             match WorkLogOverlap::conflicts(&proposal.edit(), "", logs, state, now, cal) {
                 Ok(conflicts) => (conflicts, None),
                 Err(error) => (Vec::new(), Some(error.to_string())),
             };
-        Ok(Self { draft, conflicts, overlap_issue, matches })
+        Ok(Self { draft, conflicts, overlap_issue, matches, proposal })
     }
 
     /// Fingerprint of the overlap advice the user saw. An upload is refused when a fresh review
@@ -241,13 +257,18 @@ impl OfflineSync {
     pub async fn review(
         draft: &OfflineDraft,
         service: &dyn OfflineDraftService,
+        rounding: Rounding,
         now: Timestamp,
         cal: &Cal,
     ) -> Result<OfflineReview> {
-        let proposal = draft.proposal(now, cal)?;
-        let logs = service.work_logs_before(proposal.edit().end).await?;
+        let mut end = draft.proposal(Rounding::Exact, &[], now, cal)?.edit().end;
+        if rounding != Rounding::Exact {
+            // Rounding up may move the end up to a quarter hour later.
+            end = add_secs(end, QUARTER_HOUR_SECONDS as f64);
+        }
+        let logs = service.work_logs_before(end).await?;
         let state = service.current_tracking().await?.checked()?;
-        OfflineReview::new(draft.clone(), &logs, &state, now, cal)
+        OfflineReview::new(draft.clone(), &logs, &state, rounding, now, cal)
     }
 
     /// Uploads a reviewed draft once. The draft must belong to `workspace` and still be a local
@@ -259,6 +280,7 @@ impl OfflineSync {
         reviewed: &OfflineReview,
         workspace: &str,
         service: &dyn OfflineDraftService,
+        rounding: Rounding,
         now: Timestamp,
         cal: &Cal,
         mut checkpoint: F,
@@ -273,7 +295,7 @@ impl OfflineSync {
                 "This draft belongs to another workspace or has an unconfirmed upload. Review it before sending.",
             ));
         }
-        let fresh = Self::review(draft, service, now, cal).await?;
+        let fresh = Self::review(draft, service, rounding, now, cal).await?;
         if !fresh.matches.is_empty() {
             return Err(AppError::message(
                 "A matching entry already exists. Refresh the review and link it instead of uploading again.",
@@ -291,7 +313,7 @@ impl OfflineSync {
                 "The saved activity is no longer available. Edit the draft’s activity.",
             ));
         }
-        let proposal = draft.proposal(now, cal)?;
+        let proposal = fresh.proposal;
         let mut pending = draft.clone();
         pending.status = OfflineDraftStatus::Sending;
         // Persist BEFORE the request. If the response or final checkpoint is lost, never replay

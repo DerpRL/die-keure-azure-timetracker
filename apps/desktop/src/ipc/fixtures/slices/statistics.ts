@@ -41,7 +41,7 @@ const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 /** `SAMPLE_NOW` in `fixtures/index.ts` (not imported: that module globs this file). */
 const NOW = Date.parse('2026-10-06T08:00:00Z');
-const DAILY_TARGET = defaultConfiguration().targets.dailyHours * 3600;
+const DAILY_TARGET = (defaultConfiguration().targets.minutesByWeekday[1] ?? 0) * 60;
 const SYNCED_AT = '2026-10-06T07:55:00Z';
 
 type ActivityKey = 'dev' | 'review' | 'meeting' | 'standup' | 'design';

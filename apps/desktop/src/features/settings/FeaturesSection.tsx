@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
 import { Badge } from '../../components/Badge';
-import { Switch } from '../../components/Toggles';
+import { Button } from '../../components/Button';
 import type { HostOs } from '../../ipc/contract';
 import { useFigmaPreferences } from './FigmaSettings';
 import { FEATURES, pageShown, setPageShown, type FeatureDefinition, type FeatureGroup } from './features';
-import { Hint, InlineIssue, SettingsGroup, SettingsSection } from './SettingsSection';
+import { IssueRow, SectionFooter, SettingRow, SettingsGroup, SettingsSection, ToggleRow } from './SettingsSection';
 import { useSettingsForm } from './SettingsForm';
 import { useLaunchAtLogin, type LaunchAtLogin } from './useLaunchAtLogin';
 import styles from './settings.module.css';
@@ -18,16 +18,20 @@ const GROUP_DESCRIPTIONS: Record<FeatureGroup, string> = {
   App: 'How the app runs on this device.',
 };
 
-/** The privacy line and permission, linked to the switch as its description. */
-function facts(feature: FeatureDefinition, os: HostOs, note?: string): ReactNode {
+/** The permission a module needs, as a chip ("Accessibility"), or nothing when it needs none. */
+function permissionChip(feature: FeatureDefinition, os: HostOs): ReactNode {
+  const permission = feature.permission(os);
+  if (permission === 'None') return null;
+  return <Badge tone="neutral">{permission}</Badge>;
+}
+
+/** The privacy line and the permission chip, under a feature's description. */
+function facts(feature: FeatureDefinition, os: HostOs): ReactNode {
   return (
-    <span className={styles.featureFacts}>
-      {note ? <span className={styles.featureNote}>{note}</span> : null}
-      <span className={styles.factLabel}>Privacy</span>
+    <>
       <span>{feature.privacy(os)}</span>
-      <span className={styles.factLabel}>Permission</span>
-      <span>{feature.permission(os)}</span>
-    </span>
+      {permissionChip(feature, os)}
+    </>
   );
 }
 
@@ -36,14 +40,14 @@ function FigmaFeature({ feature }: { feature: FeatureDefinition }) {
   const figma = useFigmaPreferences();
   return (
     <>
-      <Switch
+      <ToggleRow
+        title={feature.title}
+        help="Applies right away."
+        extra={facts(feature, os)}
         isSelected={figma.preferences.enabled}
         onChange={(enabled) => figma.apply({ ...figma.preferences, enabled })}
-        description={facts(feature, os, 'Applies immediately.')}
-      >
-        {feature.title}
-      </Switch>
-      {figma.error ? <InlineIssue>{figma.error.message}</InlineIssue> : null}
+      />
+      {figma.error ? <IssueRow>{figma.error.message}</IssueRow> : null}
     </>
   );
 }
@@ -52,15 +56,15 @@ function LaunchFeature({ feature, launch }: { feature: FeatureDefinition; launch
   const { os } = useSettingsForm();
   return (
     <>
-      <Switch
+      <ToggleRow
+        title={feature.title}
+        help={launch.available ? 'Applies right away.' : 'Available in the desktop app.'}
+        extra={facts(feature, os)}
         isSelected={launch.enabled ?? false}
         isDisabled={!launch.available || launch.pending}
         onChange={launch.set}
-        description={facts(feature, os, launch.available ? 'Applies immediately.' : 'Available in the desktop app.')}
-      >
-        {feature.title}
-      </Switch>
-      {launch.error ? <InlineIssue>{launch.error}</InlineIssue> : null}
+      />
+      {launch.error ? <IssueRow>{launch.error}</IssueRow> : null}
     </>
   );
 }
@@ -69,77 +73,69 @@ function FeatureRow({ feature, launch }: { feature: FeatureDefinition; launch: L
   const { draft, update, os, app } = useSettingsForm();
   const binding = feature.binding;
   const unavailable = feature.needsMicrophone === true && app?.features.microphone === false;
-  let control: ReactNode;
   switch (binding.kind) {
     case 'field':
-      control = (
-        <Switch
+      return (
+        <ToggleRow
+          title={feature.title}
+          help={unavailable ? 'Not available on this system.' : undefined}
+          extra={facts(feature, os)}
           isSelected={binding.get(draft)}
           isDisabled={unavailable}
           onChange={(on) => update((current) => binding.set(current, on))}
-          description={facts(feature, os, unavailable ? 'Not available on this system.' : undefined)}
-        >
-          {feature.title}
-        </Switch>
+        />
       );
-      break;
     case 'page':
-      control = (
-        <Switch
+      return (
+        <ToggleRow
+          title={feature.title}
+          help={binding.where}
+          extra={facts(feature, os)}
           isSelected={pageShown(draft, binding.page)}
           onChange={(on) => update((current) => setPageShown(current, binding.page, on))}
-          description={facts(feature, os, binding.where)}
-        >
-          {feature.title}
-        </Switch>
+        />
       );
-      break;
     case 'figma':
-      control = <FigmaFeature feature={feature} />;
-      break;
+      return <FigmaFeature feature={feature} />;
     case 'launchAtLogin':
-      control = <LaunchFeature feature={feature} launch={launch} />;
-      break;
+      return <LaunchFeature feature={feature} launch={launch} />;
     case 'info':
-      control = (
-        <>
-          <p className={styles.row}>
-            <span className={styles.groupTitle}>{feature.title}</span>
-            <Badge tone="neutral">No switch</Badge>
-          </p>
-          <Hint>{binding.text}</Hint>
-          <p className={styles.hint}>{facts(feature, os)}</p>
-        </>
+      return (
+        <SettingRow title={feature.title} help={binding.text} below={<p className={styles.rowExtra}>{facts(feature, os)}</p>}>
+          <Badge tone="neutral">Always on</Badge>
+        </SettingRow>
       );
-      break;
   }
-  return <li className={styles.feature}>{control}</li>;
 }
 
-/** Settings → Appearance & app → Features (rewrite plan §9): every module with its switch, privacy and permission. */
+/** Settings → Features & privacy: every module with its switch, what it reads and the permission it needs. */
 export function FeaturesSection() {
-  const { app } = useSettingsForm();
+  const { app, goTo } = useSettingsForm();
   const launch = useLaunchAtLogin();
   const calendar = app?.features.calendar ?? true;
   const visible = FEATURES.filter((feature) => !feature.needsCalendar || calendar);
   return (
-    <SettingsSection
-      id="features"
-      subtitle="Turn modules on or off. Changes are saved with Save changes, except Figma context and Launch at login, which apply immediately."
-    >
+    <SettingsSection id="features" subtitle="Saved with Save changes, except Figma and Launch at login, which apply right away.">
       {GROUPS.map((group) => {
         const rows = visible.filter((feature) => feature.group === group);
         if (rows.length === 0) return null;
         return (
           <SettingsGroup key={group} title={group} description={GROUP_DESCRIPTIONS[group]}>
-            <ul role="list" className={styles.featureList}>
-              {rows.map((feature) => (
-                <FeatureRow key={feature.id} feature={feature} launch={launch} />
-              ))}
-            </ul>
+            {rows.map((feature) => (
+              <FeatureRow key={feature.id} feature={feature} launch={launch} />
+            ))}
           </SettingsGroup>
         );
       })}
+      <SectionFooter
+        actions={
+          <Button size="small" variant="plain" onPress={() => goTo('about')}>
+            What is stored where
+          </Button>
+        }
+      >
+        Nothing is sent anywhere except to Azure DevOps and 7pace.
+      </SectionFooter>
     </SettingsSection>
   );
 }

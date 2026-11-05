@@ -41,3 +41,22 @@ export function formatPercent(fraction: number): string {
   if (!Number.isFinite(fraction)) return '0%';
   return `${Math.trunc(fraction * 100)}%`;
 }
+
+/** Whole minutes as "7h 36m", "8h", "45m" or "0h". */
+export function formatMinutes(total: number): string {
+  const minutes = Math.max(0, Math.round(total));
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (m === 0) return `${h}h`;
+  return h === 0 ? `${m}m` : `${h}h ${m}m`;
+}
+
+/** Snaps to the next multiple of `step` up or down, then keeps the result within `min`–`max`. */
+export function stepDuration(
+  minutes: number,
+  direction: 1 | -1,
+  { step, min, max }: { step: number; min: number; max: number },
+): number {
+  const next = direction > 0 ? Math.floor(minutes / step) * step + step : Math.ceil(minutes / step) * step - step;
+  return Math.min(max, Math.max(min, next));
+}

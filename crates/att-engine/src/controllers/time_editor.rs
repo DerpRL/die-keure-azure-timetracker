@@ -16,6 +16,7 @@ use serde_json::Value;
 use uuid::Uuid;
 
 use att_core::model::{TrackingState, WorkLog};
+use att_core::rounding::Rounding;
 use att_core::service::{TrackingService, WorkLogMutationService};
 use att_core::text::NonEmpty;
 use att_core::time::{Cal, Interval, add_secs, wire_date};
@@ -131,8 +132,18 @@ impl TimeEditorState {
             .collect()
     }
 
-    /// Swift `proposedPlan()`.
-    pub(crate) fn proposed_plan(&self, now: Timestamp, cal: &Cal) -> Result<WorkLogPlan> {
+    /// Swift `proposedPlan()`, with the quarter-hour setting applied to the entries it creates or
+    /// changes (never to an undo).
+    pub(crate) fn proposed_plan(
+        &self,
+        rounding: Rounding,
+        now: Timestamp,
+        cal: &Cal,
+    ) -> Result<WorkLogPlan> {
+        self.exact_plan(now, cal)?.rounded(rounding, &self.logs, now, cal)
+    }
+
+    fn exact_plan(&self, now: Timestamp, cal: &Cal) -> Result<WorkLogPlan> {
         let Some(selected) = &self.selected else {
             return Err(AppError::message("Choose an entry."));
         };
@@ -599,6 +610,7 @@ fn unknown_change() -> IpcError {
 pub(crate) async fn check_changes(engine: &Engine) -> Result<Value, IpcError> {
     let (now, cal) = (engine.now(), engine.cal());
     let started = engine.update(|state| {
+        let rounding = state.config.rounding();
         let editor = &mut state.controllers.time_editor;
         if editor.working || editor.needs_reload {
             return None;
@@ -606,7 +618,7 @@ pub(crate) async fn check_changes(engine: &Engine) -> Result<Value, IpcError> {
         editor.working = true;
         editor.issue = None;
         editor.review = None;
-        Some((editor.generation, editor.proposed_plan(now, &cal)))
+        Some((editor.generation, editor.proposed_plan(rounding, now, &cal)))
     });
     let Some((request, plan)) = started else { return done() };
     let engine = engine.clone();
@@ -749,6 +761,7 @@ async fn save(engine: &Engine) -> SaveOutcome {
     let Some(clients) = engine.clients() else { return SaveOutcome::Refused };
     let (now, cal) = (engine.now(), engine.cal());
     let started = engine.update(|state| {
+        let rounding = state.config.rounding();
         let editor = &mut state.controllers.time_editor;
         if editor.selected.is_none()
             || editor.working
@@ -762,7 +775,8 @@ async fn save(engine: &Engine) -> SaveOutcome {
         editor.message = None;
         // Swift: `timeEditor.idleInterval != nil ? workAwareness.correction?.id : nil`.
         let idle = editor.idle_interval.and(editor.idle_correction);
-        Some((editor.generation, editor.proposed_plan(now, &cal), editor.workspace.clone(), idle))
+        let plan = editor.proposed_plan(rounding, now, &cal);
+        Some((editor.generation, plan, editor.workspace.clone(), idle))
     });
     let Some((request, plan, workspace, idle)) = started else { return SaveOutcome::Refused };
     let result: Result<(WorkLogEditReview, WorkLogChange)> = async {
@@ -1121,10 +1135,11 @@ pub(crate) async fn prepare_idle(
 pub(crate) fn loaded_conflicts(
     editor: &TimeEditorState,
     state: Option<&TrackingState>,
+    rounding: Rounding,
     now: Timestamp,
     cal: &Cal,
 ) -> Vec<WorkLogConflict> {
-    let (Ok(plan), Some(state)) = (editor.proposed_plan(now, cal), state) else {
+    let (Ok(plan), Some(state)) = (editor.proposed_plan(rounding, now, cal), state) else {
         return Vec::new();
     };
     let Some(first) = plan.before.first() else { return Vec::new() };

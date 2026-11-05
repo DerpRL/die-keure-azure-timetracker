@@ -10,6 +10,8 @@ import {
   offlineWorking,
   pastDraft,
   readyDraft,
+  reviewClean,
+  reviewRounded,
   reviewSending,
   reviewWithMatch,
   runningDraft,
@@ -350,6 +352,18 @@ describe('Timesheet · Drafts', () => {
   it('disables the upload while busy', () => {
     renderOffline(offlineReviewing, { app: { ...sampleSlices().app!, busy: true } });
     expect(screen.getByRole('button', { name: 'Upload with overlap warning' })).toBeDisabled();
+  });
+
+  it('says when quarter-hour rounding changes the saved duration', async () => {
+    const { user } = renderOffline({ ...offlineReviewing, review: reviewRounded });
+    expect(screen.getByText('Saved as 1h 15m, rounded to the nearest quarter hour.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Upload draft to 7pace' }));
+    expect(await screen.findByRole('alertdialog')).toHaveAccessibleDescription(/^A 1h 15m entry is created/);
+  });
+
+  it('shows no rounding note when the duration is saved as tracked', () => {
+    renderOffline({ ...offlineReviewing, review: reviewClean });
+    expect(screen.queryByText(/rounded to the nearest quarter hour/)).toBeNull();
   });
 
   it('links an existing entry instead of uploading', async () => {
