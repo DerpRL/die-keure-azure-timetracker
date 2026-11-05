@@ -7,6 +7,7 @@ import { TextField } from '../../../components/Fields';
 import { Select, type PickerOption } from '../../../components/Pickers';
 import { Switch } from '../../../components/Toggles';
 import type { ActivityType, OfflineDraft, OfflineDraftView } from '../../../ipc/contract';
+import { DeleteDraftButton } from '../../../features/offline/DeleteDraft';
 import { toZoned } from '../../../features/ticketContext/format';
 import { useAction } from '../../../state/hooks';
 import styles from './OfflineDrafts.module.css';
@@ -95,10 +96,18 @@ export interface DraftEditorProps {
   working: boolean;
   device: string;
   onClose: () => void;
+  /**
+   * For a draft already saved: how it is named, and what follows its deletion. Adds "Delete
+   * draft…" (or timer) to the footer. Left out when adding past time.
+   */
+  deletion?: { name: string; onDeleted: () => void };
 }
 
-/** Edit a local draft, or add past time (1.14 `OfflineDraftEditor`). Saves with `offline.save`. */
-export function DraftEditor({ draft, activities, working, device, onClose }: DraftEditorProps) {
+/**
+ * Edit a local draft, or add past time (1.14 `OfflineDraftEditor`). Saves with `offline.save`;
+ * a saved draft can also be deleted from here (`offline.remove`, after a confirmation).
+ */
+export function DraftEditor({ draft, activities, working, device, onClose, deletion }: DraftEditorProps) {
   const save = useAction();
   const running = !draft.end && draft.status === 'Local draft';
   const [fields, setFields] = useState<Fields>({
@@ -151,6 +160,20 @@ export function DraftEditor({ draft, activities, working, device, onClose }: Dra
         isDisabled: !ticket.valid || working || (activities.length > 0 && !fields.activity),
         isPending: save.pending,
       }}
+      secondaryActions={
+        deletion ? (
+          <DeleteDraftButton
+            draft={draft}
+            name={deletion.name}
+            size="medium"
+            isDisabled={working || save.pending}
+            onDeleted={() => {
+              onClose();
+              deletion.onDeleted();
+            }}
+          />
+        ) : null
+      }
     >
       <div className={styles.form}>
         <DraftFields fields={fields} activities={activities} onChange={setFields} isDisabled={working} />

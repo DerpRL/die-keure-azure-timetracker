@@ -298,17 +298,15 @@ pub(crate) fn stop(engine: &Engine) -> Result<Value, IpcError> {
     done()
 }
 
-/// Swift `remove(_:)`: never while an upload is unconfirmed.
+/// Swift `remove(_:)`, for any draft: the running local timer, a stopped one, an uploaded one's
+/// local record, and one whose upload is unconfirmed (the UI warns that 7pace may already have
+/// it; deleting here never touches 7pace). Not while a review or upload is in flight.
 pub(crate) fn remove(engine: &Engine, draft_id: Uuid) -> Result<Value, IpcError> {
     let services = engine.services();
     engine.update(|state| {
         let offline = &mut state.controllers.offline;
-        let removable = offline
-            .ledger
-            .drafts
-            .iter()
-            .any(|draft| draft.id == draft_id && draft.status != OfflineDraftStatus::Sending);
-        if offline.working || !removable {
+        let known = offline.ledger.drafts.iter().any(|draft| draft.id == draft_id);
+        if offline.working || !known {
             return;
         }
         let mut next = offline.ledger.clone();

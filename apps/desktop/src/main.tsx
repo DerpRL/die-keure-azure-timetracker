@@ -60,6 +60,21 @@ async function installPreviewEngine(): Promise<void> {
     // Settings → App → "Show onboarding again", and finishing it, like the engine.
     .handle('app.restartOnboarding', (_intent, mock) => mock.patchSlice('app', { onboarding: true }))
     .handle('app.finishOnboarding', (_intent, mock) => mock.patchSlice('app', { onboarding: false, visiblePage: 'settings' }))
+    // Deleting an offline draft (or the running local timer), like the engine's `offline.remove`.
+    .handle('offline.remove', (intent, mock) => {
+      const offline = mock.slices.offline;
+      const draft = offline?.drafts.find((entry) => entry.id === intent.draftId);
+      if (!offline || !draft) return;
+      const drafts = offline.drafts.filter((entry) => entry.id !== intent.draftId);
+      const running = offline.active?.id === intent.draftId;
+      mock.patchSlice('offline', {
+        drafts,
+        active: running ? null : offline.active,
+        readyCount: drafts.filter((entry) => !!entry.end && entry.status !== 'Synced to 7pace').length,
+        review: null,
+      });
+      if (running) mock.patchSlice('tracking', { local: null });
+    })
     // The ticket picker opens and closes like the engine's flow.
     .handle('tracking.openPicker', (_intent, mock) => mock.patchSlice('flow', { surface: 'picker', draft: null }))
     .handle('tracking.closePicker', (_intent, mock) => mock.patchSlice('flow', { surface: 'none', draft: null }))

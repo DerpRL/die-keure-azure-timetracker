@@ -4,13 +4,13 @@ import { Badge } from '../../../components/Badge';
 import { Banner } from '../../../components/Banner';
 import { Button } from '../../../components/Button';
 import { Card, Heading } from '../../../components/Card';
-import { Dialog } from '../../../components/Dialog';
 import { EmptyState, Skeleton } from '../../../components/EmptyState';
 import { OfflineDraftsIcon, PlayIcon, PlusIcon, StopIcon, WarningIcon } from '../../../components/icons';
 import { ProgressBar } from '../../../components/Progress';
 import { Switch } from '../../../components/Toggles';
 import type { OfflineDraft, OfflineDraftView, OfflineSlice, WorkItemsSlice } from '../../../ipc/contract';
 import { ActivityChip, activityColorIndex, ActivityPill, useActivityColors } from '../../../features/activity';
+import { DeleteDraftButton, focusAfterDelete } from '../../../features/offline/DeleteDraft';
 import { useEngineDraft } from '../../../features/ticketContext/drafts';
 import { DeleteLocalTimer } from '../../../features/tracking/DeleteLocalTimer';
 import { deviceName, formatClockTime, parseInstant, secondsBetween } from '../../../features/ticketContext/format';
@@ -111,7 +111,7 @@ function DraftRow({
   disabled,
   canReview,
   onEdit,
-  onRemove,
+  onDeleted,
 }: {
   draft: OfflineDraftView;
   items: WorkItemsSlice | undefined;
@@ -120,7 +120,7 @@ function DraftRow({
   disabled: boolean;
   canReview: boolean;
   onEdit: (draft: OfflineDraft) => void;
-  onRemove: (draft: OfflineDraft) => void;
+  onDeleted: () => void;
 }) {
   const review = useAction();
   const running = isRunning(draft);
@@ -166,18 +166,7 @@ function DraftRow({
             Review
           </Button>
         ) : null}
-        {!sending ? (
-          <Button
-            size="small"
-            variant="plain"
-            className={styles.danger}
-            isDisabled={disabled}
-            onPress={() => onRemove(draft)}
-            aria-label={`Remove, ${title}`}
-          >
-            Remove
-          </Button>
-        ) : null}
+        <DeleteDraftButton draft={draft} name={title} label="Delete…" isDisabled={disabled} onDeleted={onDeleted} />
       </div>
     </li>
   );
@@ -205,10 +194,8 @@ export function DraftsView() {
   const items = useSlice('workItems');
   const reconnect = useAction();
   const showSynced = useAction();
-  const remove = useAction();
   const [editing, setEditing] = useState<OfflineDraft | null>(null);
   const [starting, setStarting] = useState(false);
-  const [removing, setRemoving] = useState<OfflineDraft | null>(null);
   const [visible, setVisible] = useState(DRAFT_PAGE_SIZE);
   const [synced, setSynced] = useEngineDraft(offline?.showSynced ?? false);
   const headingId = useId();
@@ -270,6 +257,9 @@ export function DraftsView() {
   const shown = offline.drafts.slice(0, visible);
   const offlineNow = !!connection && !connection.connected;
   const activityName = (id: string | null | undefined) => (id ? (offline.activities.find((activity) => activity.id === id)?.name ?? null) : null);
+  const editingView = editing ? offline.drafts.find((draft) => draft.id === editing.id) : undefined;
+  // A deleted draft takes its row, and the focused button, with it: continue from the list.
+  const focusList = () => focusAfterDelete(() => document.getElementById(headingId));
   const addPast = canAdd ? () => setEditing(newPastDraft(offline.workspace)) : null;
 
   return (
@@ -289,8 +279,8 @@ export function DraftsView() {
 
       {offline.issue ? <Banner tone="warning">{offline.issue}</Banner> : null}
       {offline.message ? <Banner tone="info">{offline.message}</Banner> : null}
-      {reconnect.error ?? remove.error ?? showSynced.error ? (
-        <Banner tone="error">{(reconnect.error ?? remove.error ?? showSynced.error)?.message}</Banner>
+      {reconnect.error ?? showSynced.error ? (
+        <Banner tone="error">{(reconnect.error ?? showSynced.error)?.message}</Banner>
       ) : null}
       {offline.working ? <ProgressBar label="Checking with 7pace…" isIndeterminate /> : null}
       {offline.review ? (
@@ -299,6 +289,7 @@ export function DraftsView() {
           title={offline.drafts.find((entry) => entry.id === offline.review?.draft.id)?.title ?? 'draft'}
           activities={offline.activities}
           disabled={rowsDisabled || preview}
+          onDeleted={focusList}
         />
       ) : null}
 
@@ -342,7 +333,7 @@ export function DraftsView() {
 
         <Card as="section" padding="none" aria-labelledby={headingId} className={styles.listCard}>
           <div className={styles.listHeader}>
-            <Heading level={2} id={headingId} className={styles.sectionTitle}>
+            <Heading level={2} id={headingId} tabIndex={-1} className={styles.sectionTitle}>
               {`Waiting for review · ${offline.readyCount}`}
             </Heading>
             <Switch
@@ -373,7 +364,7 @@ export function DraftsView() {
                   disabled={rowsDisabled}
                   canReview={configured}
                   onEdit={setEditing}
-                  onRemove={setRemoving}
+                  onDeleted={focusList}
                 />
               ))}
             </ul>
@@ -409,28 +400,9 @@ export function DraftsView() {
           working={offline.working}
           device={device}
           onClose={() => setEditing(null)}
+          deletion={editingView ? { name: draftHeading(editingView, items), onDeleted: focusList } : undefined}
         />
       ) : null}
-      <Dialog
-        isOpen={removing !== null}
-        onOpenChange={(open) => {
-          if (!open) setRemoving(null);
-        }}
-        role="alertdialog"
-        size="small"
-        title="Remove this local record?"
-        description="Entries already in 7pace will stay there."
-        primaryAction={{
-          label: 'Remove local record',
-          variant: 'destructive',
-          isPending: remove.pending,
-          onAction: () => {
-            const target = removing;
-            if (!target) return;
-            void remove.run({ type: 'offline.remove', draftId: target.id }).then(() => setRemoving(null));
-          },
-        }}
-      />
     </>
   );
 }

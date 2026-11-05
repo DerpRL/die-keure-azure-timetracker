@@ -7,7 +7,7 @@ import { unconfiguredConnection } from '../../ipc/fixtures/slices/connection';
 import { dayReviewFailed, dayReviewLoading, dayReviewReviewed, dayReviewToday, dayReviewUnconfigured } from '../../ipc/fixtures/slices/dayReview';
 import { allPrompts, dayReviewPrompts, noPrompts } from '../../ipc/fixtures/slices/flow';
 import { todayLogs } from '../../ipc/fixtures/slices/history';
-import { offlineEmpty } from '../../ipc/fixtures/slices/offline';
+import { offlineEmpty, readyDraft, sendingDraft } from '../../ipc/fixtures/slices/offline';
 import { pausedTracking, sampleHistory, stoppedTracking } from '../../ipc/fixtures/slices/tracking';
 import type { DayReviewSlice, SliceMap } from '../../ipc/contract';
 import { NavigationContext, type Navigation } from '../../layout/NavigationContext';
@@ -140,6 +140,51 @@ describe('Today', () => {
 
     await user.click(within(region('Offline drafts')).getByRole('button', { name: 'Open in Timesheet' }));
     expect(navigate).toHaveBeenCalledWith({ place: 'timesheet', view: 'drafts' });
+  });
+
+  it('deletes an offline draft from Today after confirmation', async () => {
+    const single = { ...offlineEmpty, drafts: [readyDraft], readyCount: 1 };
+    const { engine, user } = renderToday({ offline: single });
+    const drafts = region('Offline drafts');
+    expect(within(drafts).getByText(/^#4821 · .* isn’t in 7pace yet\.$/)).toBeInTheDocument();
+    await user.click(within(drafts).getByRole('button', { name: /^Delete draft, #4821 · Mon \d\d:\d\d – \d\d:\d\d$/ }));
+    let dialog = await screen.findByRole('alertdialog', { name: 'Delete this draft?' });
+    expect(dialog).toHaveAccessibleDescription(/^“#4821 · Mon \d\d:\d\d – \d\d:\d\d” is not uploaded to 7pace\. This can’t be undone\.$/);
+    await expectNoA11yViolations();
+    await user.click(within(dialog).getByRole('button', { name: 'Delete draft' }));
+    expect(engine.dispatched('offline.remove')).toEqual([{ type: 'offline.remove', draftId: readyDraft.id }]);
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+
+    // The previous day's Day check offers it per draft.
+    await user.click(screen.getByRole('button', { name: 'Previous day' }));
+    const check = await screen.findByRole('region', { name: 'Day check' });
+    await waitFor(() => expect(within(check).getByRole('heading', { name: '1 offline draft' })).toBeInTheDocument());
+    await user.click(within(check).getByRole('button', { name: /^Delete, #4821 · Mon/ }));
+    dialog = await screen.findByRole('alertdialog', { name: 'Delete this draft?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Keep draft' }));
+    expect(engine.dispatched('offline.remove')).toHaveLength(1);
+    await user.click(within(check).getByRole('button', { name: /^Delete, #4821 · Mon/ }));
+    dialog = await screen.findByRole('alertdialog', { name: 'Delete this draft?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Delete draft' }));
+    expect(engine.dispatched('offline.remove')).toHaveLength(2);
+    // The deleted draft's button is gone: focus continues from the Day check.
+    await waitFor(() => expect(within(check).getByRole('heading', { level: 2, name: 'Day check' })).toHaveFocus());
+  });
+
+  it('offers Delete on the Offline drafts card only for a single named draft', () => {
+    renderToday();
+    const drafts = region('Offline drafts');
+    expect(within(drafts).getByText('3 drafts aren’t in 7pace yet.')).toBeInTheDocument();
+    expect(within(drafts).queryByRole('button', { name: /^Delete/ })).toBeNull();
+  });
+
+  it('deletes a single unconfirmed upload from Today with a warning', async () => {
+    const { engine, user } = renderToday({ offline: { ...offlineEmpty, drafts: [sendingDraft], readyCount: 1 } });
+    await user.click(within(region('Offline drafts')).getByRole('button', { name: /^Delete draft, #4655/ }));
+    const dialog = await screen.findByRole('alertdialog', { name: 'Delete this unconfirmed draft?' });
+    expect(dialog).toHaveAccessibleDescription(/so 7pace may already have it\. Only the draft on this device is deleted/);
+    await user.click(within(dialog).getByRole('button', { name: 'Delete draft' }));
+    expect(engine.dispatched('offline.remove')).toEqual([{ type: 'offline.remove', draftId: sendingDraft.id }]);
   });
 
   it('asks the engine for today when it still shows another day', async () => {

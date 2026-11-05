@@ -1,0 +1,4 @@
+/* A destructive plain button ("Delete draft…"). */
+.danger:not([data-disabled]) {
+  color: var(--color-danger);
+}

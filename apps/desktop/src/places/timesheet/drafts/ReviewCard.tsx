@@ -5,6 +5,7 @@ import { Card, Heading } from '../../../components/Card';
 import { Dialog } from '../../../components/Dialog';
 import { SuccessIcon, WarningIcon } from '../../../components/icons';
 import type { ActivityType, OfflineReview } from '../../../ipc/contract';
+import { DeleteDraftButton } from '../../../features/offline/DeleteDraft';
 import { formatClockTimeWithSeconds, formatDateTime, formatDayShort, parseInstant, ticketPrefix } from '../../../features/ticketContext/format';
 import { useAction } from '../../../state/hooks';
 import { formatClock, formatShortDuration } from '../../../utils/duration';
@@ -21,10 +22,12 @@ export interface ReviewCardProps {
   title: string;
   activities: readonly ActivityType[];
   disabled: boolean;
+  /** After the reviewed draft was deleted (offered for an unconfirmed upload). */
+  onDeleted?: () => void;
 }
 
 /** The result of `offline.review`: overlaps, matching entries and the upload (1.14 `reviewCard`). */
-export function ReviewCard({ review, title, activities, disabled }: ReviewCardProps) {
+export function ReviewCard({ review, title, activities, disabled, onDeleted }: ReviewCardProps) {
   const upload = useAction();
   const link = useAction();
   const retry = useAction();
@@ -109,6 +112,7 @@ export function ReviewCard({ review, title, activities, disabled }: ReviewCardPr
             <Button isDisabled={disabled} onPress={() => setConfirmRetry(true)}>
               I checked 7pace…
             </Button>
+            <DeleteDraftButton draft={draft} name={title} size="medium" isDisabled={disabled} onDeleted={onDeleted} />
           </div>
         </>
       ) : (

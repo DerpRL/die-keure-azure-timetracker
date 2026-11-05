@@ -8,14 +8,16 @@ export interface HeadingProps {
   level: HeadingLevel;
   id?: string;
   className?: string;
+  /** `-1` lets focus move to the heading, e.g. after the focused control was removed. */
+  tabIndex?: -1;
   children: ReactNode;
 }
 
 /** A heading whose level is chosen by the page outline, not by its looks. */
-export function Heading({ level, id, className, children }: HeadingProps) {
+export function Heading({ level, id, className, tabIndex, children }: HeadingProps) {
   const Tag = `h${level}` as ElementType;
   return (
-    <Tag id={id} className={className}>
+    <Tag id={id} className={className} tabIndex={tabIndex}>
       {children}
     </Tag>
   );

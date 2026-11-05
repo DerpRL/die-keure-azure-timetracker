@@ -13,6 +13,8 @@ import {
   reviewSending,
   reviewWithMatch,
   runningDraft,
+  sendingDraft,
+  syncedDraft,
 } from '../../../ipc/fixtures/slices/offline';
 import { MockEngineError } from '../../../ipc/mockEngine';
 import type { OfflineDraft, OfflineSlice, SliceMap } from '../../../ipc/contract';
@@ -207,22 +209,113 @@ describe('Timesheet · Drafts', () => {
     expect('ticketId' in draft).toBe(false);
   });
 
-  it('removes a draft after confirmation', async () => {
+  it('deletes a stopped draft from the list after confirmation', async () => {
     const { engine, user } = renderOffline(sampleSlices().offline);
-    await user.click(screen.getByRole('button', { name: 'Remove, Interview preparation' }));
-    const dialog = await screen.findByRole('alertdialog', { name: 'Remove this local record?' });
-    expect(dialog).toHaveAccessibleDescription('Entries already in 7pace will stay there.');
-    await user.click(within(dialog).getByRole('button', { name: 'Remove local record' }));
+    const button = screen.getByRole('button', { name: 'Delete, Interview preparation' });
+    expect(button).toHaveTextContent('Delete…');
+    await user.click(button);
+    let dialog = await screen.findByRole('alertdialog', { name: 'Delete this draft?' });
+    expect(dialog).toHaveAccessibleDescription('“Interview preparation” is not uploaded to 7pace. This can’t be undone.');
+    await expectNoA11yViolations();
+    await user.click(within(dialog).getByRole('button', { name: 'Keep draft' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(engine.dispatched('offline.remove')).toEqual([]);
+
+    await user.click(button);
+    dialog = await screen.findByRole('alertdialog', { name: 'Delete this draft?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Delete draft' }));
     expect(engine.dispatched('offline.remove')).toEqual([{ type: 'offline.remove', draftId: pastDraft.id }]);
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    await waitFor(() => expect(politeAnnouncement()).toBe('Draft deleted.'));
+  });
+
+  it('deletes a draft with the keyboard and continues from the list', async () => {
+    const { engine, user } = renderOffline(sampleSlices().offline);
+    engine.handle('offline.remove', (intent, mock) =>
+      mock.patchSlice('offline', { drafts: mock.slices.offline!.drafts.filter((draft) => draft.id !== intent.draftId) }),
+    );
+    screen.getByRole('button', { name: 'Review, Interview preparation' }).focus();
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Delete, Interview preparation' })).toHaveFocus();
+    await user.keyboard('{Enter}');
+    const dialog = await screen.findByRole('alertdialog', { name: 'Delete this draft?' });
+    // The dialog takes focus, so Return deletes nothing by itself: Tab past Keep draft to Delete.
+    expect(dialog).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(engine.dispatched('offline.remove')).toEqual([]);
+    await user.tab();
+    expect(within(dialog).getByRole('button', { name: 'Keep draft' })).toHaveFocus();
+    await user.tab();
+    expect(within(dialog).getByRole('button', { name: 'Delete draft' })).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(engine.dispatched('offline.remove')).toEqual([{ type: 'offline.remove', draftId: pastDraft.id }]);
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Delete, Interview preparation' })).toBeNull());
+    await waitFor(() => expect(screen.getByRole('heading', { level: 2, name: /^Waiting for review/ })).toHaveFocus());
+  });
+
+  it('deletes the running local timer from its row', async () => {
+    const { engine, user } = renderOffline(sampleSlices().offline);
+    await user.click(screen.getByRole('button', { name: 'Delete, #4790 · Invoice PDF shows the wrong VAT number' }));
+    const dialog = await screen.findByRole('alertdialog', { name: 'Delete this local timer?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Delete timer' }));
+    expect(engine.dispatched('offline.remove')).toEqual([{ type: 'offline.remove', draftId: runningDraft.id }]);
+    await waitFor(() => expect(politeAnnouncement()).toBe('Local timer deleted.'));
+  });
+
+  it('deletes only the local record of an uploaded draft', async () => {
+    const { engine, user } = renderOffline(offlineWithSynced);
+    const row = screen.getAllByRole('listitem').find((item) => within(item).queryByText('Synced to 7pace'))!;
+    await user.click(within(row).getByRole('button', { name: /^Delete, #4821/ }));
+    const dialog = await screen.findByRole('alertdialog', { name: 'Delete this local record?' });
+    expect(dialog).toHaveAccessibleDescription(/^Only the copy of “#4821.*” on this device is deleted\. The entry stays in 7pace\.$/);
+    await user.click(within(dialog).getByRole('button', { name: 'Delete record' }));
+    expect(engine.dispatched('offline.remove')).toEqual([{ type: 'offline.remove', draftId: syncedDraft.id }]);
+  });
+
+  it('keeps the confirmation open when deleting fails', async () => {
+    const { engine, user } = renderOffline(sampleSlices().offline);
+    engine.handle('offline.remove', () => {
+      throw new MockEngineError('storage', 'The drafts file could not be saved.');
+    });
+    await user.click(screen.getByRole('button', { name: 'Delete, Interview preparation' }));
+    const dialog = await screen.findByRole('alertdialog', { name: 'Delete this draft?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Delete draft' }));
+    expect(await within(dialog).findByText('The drafts file could not be saved.')).toBeInTheDocument();
+    expect(politeAnnouncement()).not.toBe('Draft deleted.');
+  });
+
+  it('deletes a draft from its editor', async () => {
+    const { engine, user } = renderOffline(sampleSlices().offline);
+    await user.click(screen.getByRole('button', { name: 'Edit, Interview preparation' }));
+    const sheet = await screen.findByRole('dialog', { name: 'Edit offline time' });
+    await user.click(within(sheet).getByRole('button', { name: 'Delete draft, Interview preparation' }));
+    const dialog = await screen.findByRole('alertdialog', { name: 'Delete this draft?' });
+    // Keeping the draft returns to the editor.
+    await user.click(within(dialog).getByRole('button', { name: 'Keep draft' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(screen.getByRole('dialog', { name: 'Edit offline time' })).toBeInTheDocument();
+
+    await user.click(within(sheet).getByRole('button', { name: 'Delete draft, Interview preparation' }));
+    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Delete draft' }));
+    expect(engine.dispatched('offline.remove')).toEqual([{ type: 'offline.remove', draftId: pastDraft.id }]);
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await waitFor(() => expect(screen.getByRole('heading', { level: 2, name: /^Waiting for review/ })).toHaveFocus());
+    expect(engine.dispatched('offline.save')).toEqual([]);
+  });
+
+  it('offers no Delete when adding past time', async () => {
+    const { user } = renderOffline(offlineEmpty);
+    await user.click(screen.getByRole('button', { name: 'Add past time…' }));
+    const sheet = await screen.findByRole('dialog', { name: 'Edit offline time' });
+    expect(within(sheet).queryByRole('button', { name: /^Delete/ })).toBeNull();
   });
 
   it('reviews a draft against 7pace', async () => {
     const { engine, user } = renderOffline(sampleSlices().offline);
     await user.click(screen.getByRole('button', { name: 'Review, #4821 · Checkout: retry failed card payments' }));
     expect(engine.dispatched('offline.review')).toEqual([{ type: 'offline.review', draftId: readyDraft.id }]);
-    // The running timer and drafts awaiting a manual check are not offered for review or removal.
+    // The running timer is not offered for review.
     expect(screen.queryByRole('button', { name: /^Review, #4790/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: /^Remove, #4655/ })).toBeNull();
   });
 
   it('cannot review without a 7pace connection', () => {
@@ -264,6 +357,29 @@ describe('Timesheet · Drafts', () => {
     expect(screen.queryByRole('button', { name: /^Upload/ })).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Link existing entry 8e7d6c5b-4a39-4281-9069-5e4d3c2b1a0f' }));
     expect(engine.dispatched('offline.link')).toEqual([{ type: 'offline.link', logId: '8e7d6c5b-4a39-4281-9069-5e4d3c2b1a0f' }]);
+  });
+
+  it('deletes a draft whose upload is unconfirmed, warning that 7pace may have it', async () => {
+    const { engine, user } = renderOffline(sampleSlices().offline);
+    await user.click(screen.getByRole('button', { name: 'Delete, #4655 · Design system: date picker tokens' }));
+    const dialog = await screen.findByRole('alertdialog', { name: 'Delete this unconfirmed draft?' });
+    expect(dialog).toHaveAccessibleDescription(
+      'The upload of “#4655 · Design system: date picker tokens” wasn’t confirmed, so 7pace may already have it. Only the draft on this device is deleted; check 7pace for the entry. This can’t be undone.',
+    );
+    await expectNoA11yViolations();
+    await user.click(within(dialog).getByRole('button', { name: 'Delete draft' }));
+    expect(engine.dispatched('offline.remove')).toEqual([{ type: 'offline.remove', draftId: sendingDraft.id }]);
+    await waitFor(() => expect(politeAnnouncement()).toBe('Draft deleted.'));
+  });
+
+  it('offers Delete next to the manual check when reviewing an unconfirmed upload', async () => {
+    const { engine, user } = renderOffline({ ...offlineReviewing, review: reviewSending });
+    const review = screen.getByRole('region', { name: /^Review / });
+    await user.click(within(review).getByRole('button', { name: /^Delete draft, #4655/ }));
+    const dialog = await screen.findByRole('alertdialog', { name: 'Delete this unconfirmed draft?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Delete draft' }));
+    expect(engine.dispatched('offline.remove')).toEqual([{ type: 'offline.remove', draftId: sendingDraft.id }]);
+    expect(engine.dispatched('offline.allowRetryAfterManualCheck')).toEqual([]);
   });
 
   it('allows a retry only after a confirmed manual check', async () => {

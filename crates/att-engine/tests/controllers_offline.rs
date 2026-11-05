@@ -66,6 +66,49 @@ async fn a_running_local_timer_can_be_deleted() {
 }
 
 #[tokio::test]
+async fn a_stopped_local_timer_draft_can_be_deleted_and_others_stay() {
+    let h = Harness::new(Vec::new()).await;
+    let kept = past_draft();
+    save(&h, &kept).await.unwrap();
+    h.ok(json!({"type": "offline.startLocal", "ticketId": 6, "comment": "", "activityId": "dev"}))
+        .await;
+    let id = h.slice("offline")["active"]["id"].clone();
+    h.t.clock.advance(1800.0);
+    h.ok(json!({"type": "offline.stopLocal"})).await;
+    assert_eq!(h.slice("offline")["readyCount"], 2);
+
+    h.ok(json!({"type": "offline.remove", "draftId": id})).await;
+    let offline = h.slice("offline");
+    assert!(offline["active"].is_null());
+    assert_eq!(offline["readyCount"], 1);
+    assert_eq!(offline["drafts"].as_array().map(Vec::len), Some(1));
+    assert_eq!(offline["drafts"][0]["id"], json!(kept.id));
+    assert!(offline["issue"].is_null());
+    let stored = ledger(&h);
+    assert_eq!(stored.drafts.len(), 1, "removed from the store");
+    assert_eq!(stored.drafts[0].id, kept.id);
+}
+
+#[tokio::test]
+async fn an_unconfirmed_upload_can_be_deleted_without_touching_7pace() {
+    let h = Harness::new(Vec::new()).await;
+    h.seven_pace.state.lock().unwrap().lose_create_response = true;
+    let draft = reviewed(&h).await;
+    h.ok(json!({"type": "offline.upload"})).await;
+    assert_eq!(ledger(&h).drafts[0].status, OfflineDraftStatus::Sending);
+    assert!(h.slice("offline")["issue"].is_string());
+
+    h.ok(json!({"type": "offline.remove", "draftId": draft.id})).await;
+    let offline = h.slice("offline");
+    assert_eq!(offline["drafts"], json!([]));
+    assert!(offline["review"].is_null());
+    assert!(offline["issue"].is_null());
+    assert!(ledger(&h).drafts.is_empty(), "removed from the store");
+    assert_eq!(h.seven_pace.mutations(), ["create"], "nothing is sent or deleted in 7pace");
+    assert_eq!(h.seven_pace.logs().len(), 1, "the entry 7pace created stays");
+}
+
+#[tokio::test]
 async fn the_local_timer_starts_stops_and_only_one_may_run() {
     let h = Harness::new(Vec::new()).await;
     h.ok(json!({"type": "offline.startLocal", "ticketId": 5, "comment": "", "activityId": "dev"}))
@@ -217,9 +260,8 @@ async fn a_lost_response_is_flagged_never_resent_and_can_be_linked() {
     );
     assert_eq!(ledger(&h).drafts[0].status, OfflineDraftStatus::Sending);
 
-    // Nothing sends it again, and an unconfirmed draft cannot be removed.
+    // Nothing sends it again.
     h.ok(json!({"type": "offline.upload"})).await;
-    h.ok(json!({"type": "offline.remove", "draftId": draft.id})).await;
     assert_eq!(h.seven_pace.mutations(), ["create"]);
     assert_eq!(ledger(&h).drafts.len(), 1);
 

@@ -5,6 +5,7 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Skeleton } from '../../components/EmptyState';
 import { ClockIcon, PauseIcon, StopIcon, SuccessIcon, WarningIcon } from '../../components/icons';
+import { DeleteDraftButton, focusAfterDelete } from '../../features/offline/DeleteDraft';
 import { deviceName } from '../../features/tracking/status';
 import { formatInstant } from '../../features/ticketContext/format';
 import type { DayReviewSlice, OfflineDraftView, ReviewSession } from '../../ipc/contract';
@@ -298,9 +299,13 @@ function formatDayShortish(instant: string): string {
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('en-GB', { weekday: 'short' });
 }
 
-/** "Offline drafts" (2.2 Today): drafts waiting for 7pace, with a way to the Timesheet's Drafts view. */
+/**
+ * "Offline drafts" (2.2 Today): drafts waiting for 7pace, with a way to the Timesheet's Drafts
+ * view. A single draft is named, so it can also be deleted from here.
+ */
 export function OfflineDraftsCard() {
   const offline = useSlice('offline');
+  const app = useSlice('app');
   const navigation = useNavigation();
   const headingId = useId();
   const drafts = pendingDrafts(offline?.drafts);
@@ -319,11 +324,22 @@ export function OfflineDraftsCard() {
       <p className={cx(styles.small, styles.muted)}>
         {drafts.length === 1 ? `${draftLine(drafts[0]!)} isn’t in 7pace yet.` : `${drafts.length} drafts aren’t in 7pace yet.`}
       </p>
-      {navigation?.canNavigate(target) ? (
-        <Button size="small" className={styles.alignStart} onPress={() => navigation.navigate(target)}>
-          Open in Timesheet
-        </Button>
-      ) : null}
+      <div className={styles.buttonRow}>
+        {navigation?.canNavigate(target) ? (
+          <Button size="small" onPress={() => navigation.navigate(target)}>
+            Open in Timesheet
+          </Button>
+        ) : null}
+        {drafts.length === 1 ? (
+          <DeleteDraftButton
+            draft={drafts[0]!}
+            name={draftLine(drafts[0]!)}
+            isDisabled={(offline?.working ?? false) || (app?.busy ?? false)}
+            // The card goes with its last draft: continue from the page.
+            onDeleted={() => focusAfterDelete(() => document.querySelector('main'))}
+          />
+        ) : null}
+      </div>
     </Card>
   );
 }
@@ -376,7 +392,7 @@ export function ReviewCheck({ review, isToday }: { review: LoadedReview; isToday
   return (
     <Card as="section" aria-labelledby={headingId} className={cx(styles.cardStack, styles.reviewCheck)}>
       <div>
-        <h2 id={headingId} className={styles.cardTitle}>
+        <h2 id={headingId} tabIndex={-1} className={styles.cardTitle}>
           Day check
         </h2>
         <p className={styles.caption}>Suggestions, not automatic corrections.</p>
@@ -500,7 +516,16 @@ export function ReviewCheck({ review, isToday }: { review: LoadedReview; isToday
             }
           >
             {drafts.map((draft) => (
-              <p key={draft.id} className={styles.xs}>{`${draftLine(draft)} isn’t in 7pace yet.`}</p>
+              <div key={draft.id} className={styles.draftLine}>
+                <p className={styles.xs}>{`${draftLine(draft)} isn’t in 7pace yet.`}</p>
+                <DeleteDraftButton
+                  draft={draft}
+                  name={draftLine(draft)}
+                  label="Delete…"
+                  isDisabled={(offline?.working ?? false) || busy}
+                  onDeleted={() => focusAfterDelete(() => document.getElementById(headingId))}
+                />
+              </div>
             ))}
           </IssueBox>
         ) : null}
