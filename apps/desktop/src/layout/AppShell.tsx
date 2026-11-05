@@ -1,4 +1,4 @@
-import { useId, useMemo, type ReactNode } from 'react';
+import { useCallback, useId, useMemo, type ReactNode } from 'react';
 import { AppLogo } from '../components/AppLogo';
 import { IconButton } from '../components/Button';
 import { KeyboardShortcut } from '../components/KeyboardShortcut';
@@ -125,6 +125,18 @@ export function AppShell({
   }, [places, isPageVisible, onNavigate]);
   useCommands(commands);
 
+  // The top bar wraps at narrow widths and large UI scales; views' sticky toolbars sit right
+  // under it through `--top-bar-height`.
+  const measureTopBar = useCallback((node: HTMLElement | null) => {
+    const shell = node?.parentElement;
+    if (!node || !shell) return undefined;
+    const update = () => shell.style.setProperty('--top-bar-height', `${node.getBoundingClientRect().height}px`);
+    const observer = new ResizeObserver(update);
+    observer.observe(node);
+    update();
+    return () => observer.disconnect();
+  }, []);
+
   const current = PLACES[route.place];
   const settingsOpen = route.place === 'settings';
   const shortcutAria = (place: PlaceId) => {
@@ -138,7 +150,7 @@ export function AppShell({
       <a href="#main-content" className={styles.skipLink}>
         Skip to content
       </a>
-      <header className={styles.topBar}>
+      <header ref={measureTopBar} className={styles.topBar}>
         <div className={styles.topLeft}>
           <div className={styles.brand}>
             <AppLogo />

@@ -7,6 +7,7 @@ import { SegmentedControl } from '../../components/Segmented';
 import type { StatisticsSlice } from '../../ipc/contract';
 import { PlaceHeader } from '../../layout/Place';
 import { REFRESH_SHORTCUT } from '../../layout/PageHeader';
+import { useStuck } from '../../layout/useStuck';
 import { ActivityFilter, TicketFilter } from './explore/Filters';
 import { calendarDate, rangeTitle } from './explore/format';
 import { isCurrentOrFuture, JUMP_DEBOUNCE_MS, PERIODS, SyncStatus } from './explore/PeriodControls';
@@ -31,6 +32,7 @@ export function InsightsHeader({ slice }: { slice: StatisticsSlice | undefined }
   const refreshing = slice?.loading ?? false;
   const doRefresh = () => void refresh.run({ type: 'statistics.refresh' });
   useRefreshShortcut(doRefresh, { isDisabled: !slice || !configured || refreshing, label: 'Refresh statistics' });
+  const [stickyRef, stuck] = useStuck<HTMLDivElement>();
 
   if (!slice) return <PlaceHeader title="Insights" />;
 
@@ -52,7 +54,7 @@ export function InsightsHeader({ slice }: { slice: StatisticsSlice | undefined }
   const failure = navigate.error ?? refresh.error;
 
   return (
-    <div className={styles.headerStack}>
+    <div ref={stickyRef} className={styles.headerStack} data-stuck={stuck || undefined}>
       <PlaceHeader
         title={rangeTitle(slice.period, slice.range)}
         subtitle={<SyncStatus slice={slice} />}
