@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '../../components/Button';
 import { useAnnounce } from '../../components/Announcer';
-import { Dialog, Sheet } from '../../components/Dialog';
+import { Dialog } from '../../components/Dialog';
 import { TextField } from '../../components/Fields';
 import { MoreIcon } from '../../components/icons';
 import { MenuButton } from '../../components/Menu';
@@ -70,7 +70,7 @@ export function OverlaysSection() {
             <Select label="Activity" defaultSelectedKey="dev" items={ACTIVITIES.map((activity) => ({ id: activity.id, label: activity.name }))} />
             <TextField label="Comment" description="Return starts tracking." />
           </Dialog>
-          <Sheet
+          <Dialog
             isOpen={sheet}
             onOpenChange={setSheet}
             title="Edit time"
@@ -91,7 +91,7 @@ export function OverlaysSection() {
               <TextField label="End" defaultValue="10:30" />
             </Row>
             <Checkbox>Check overlaps</Checkbox>
-          </Sheet>
+          </Dialog>
           <Dialog
             isOpen={confirm}
             onOpenChange={setConfirm}

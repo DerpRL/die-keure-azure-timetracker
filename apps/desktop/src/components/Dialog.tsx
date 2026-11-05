@@ -42,10 +42,10 @@ export interface DialogProps {
   /** Allows closing with a click outside. Off by default, like macOS sheets. */
   isDismissable?: boolean;
   /**
-   * `sheet` attaches to the top edge like a macOS sheet; `dialog` is centred; `drawer` is a
-   * full-height panel on the right (ticket picker, ticket details), with a tinted footer.
+   * `dialog` is centred in the window; `drawer` is a full-height panel on the right (ticket
+   * picker, ticket details), with a tinted footer.
    */
-  presentation?: 'dialog' | 'sheet' | 'drawer';
+  presentation?: 'dialog' | 'drawer';
   size?: 'small' | 'medium' | 'large';
   role?: 'dialog' | 'alertdialog';
   className?: string;
@@ -175,9 +175,4 @@ export function Dialog({
       </Modal>
     </ModalOverlay>
   );
-}
-
-/** A dialog presented as a sheet attached to the window's top edge. */
-export function Sheet(props: Omit<DialogProps, 'presentation'>) {
-  return <Dialog {...props} presentation="sheet" />;
 }

@@ -145,7 +145,6 @@ export function DraftEditor({ draft, activities, working, device, onClose }: Dra
       }}
       title={running ? 'Local timer' : 'Edit offline time'}
       description={`Saved on ${device} until you review and upload.`}
-      presentation="sheet"
       primaryAction={{
         label: running ? 'Save local timer' : 'Save draft',
         onAction: () => void submit(),
@@ -236,7 +235,6 @@ export function StartLocalSheet({ activities, initialTicketId, initialActivityId
       }}
       title="Start local timer"
       description={`Saved on ${device} until you review and upload. This does not change the 7pace timer.`}
-      presentation="sheet"
       primaryAction={{
         label: 'Start local timer',
         onAction: () => void submit(),

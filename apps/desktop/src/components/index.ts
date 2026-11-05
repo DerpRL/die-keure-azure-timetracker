@@ -13,7 +13,7 @@ export {
   type DateRangePickerProps,
   type TimeFieldProps,
 } from './DateFields';
-export { Dialog, Sheet, type DialogAction, type DialogProps } from './Dialog';
+export { Dialog, type DialogAction, type DialogProps } from './Dialog';
 export { EmptyState, LoadingRegion, Skeleton, type EmptyStateProps, type SkeletonProps } from './EmptyState';
 export {
   FieldDescription,

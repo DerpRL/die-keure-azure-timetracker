@@ -316,7 +316,6 @@ export function EditSheet({ editor, items, activities, busy, preview }: EditShee
         onCancel={close}
         title={`${MODE_TITLES[editor.mode]} · recorded time`}
         description={timeEditorTitle(log, items)}
-        presentation="sheet"
         size="large"
         cancelLabel={null}
         primaryAction={{ label: SAVE_LABELS[editor.mode], onAction: () => setConfirming(true), isDisabled: saveDisabled }}

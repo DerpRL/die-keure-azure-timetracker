@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../test/axe';
 import { renderWithProviders } from '../test/render';
 import { Button } from './Button';
-import { Dialog, Sheet } from './Dialog';
+import { Dialog } from './Dialog';
 import { TextField } from './Fields';
 import { ComboBox, PickerItem } from './Pickers';
 
@@ -13,7 +13,7 @@ function EditSheet({ onSave, onCancel, saveDisabled = false }: { onSave: () => v
   return (
     <>
       <Button onPress={() => setOpen(true)}>Edit time</Button>
-      <Sheet
+      <Dialog
         isOpen={open}
         onOpenChange={setOpen}
         title="Edit time"
@@ -33,7 +33,7 @@ function EditSheet({ onSave, onCancel, saveDisabled = false }: { onSave: () => v
         <ComboBox label="Activity" defaultItems={[{ id: 'dev', name: 'Development' }, { id: 'meeting', name: 'Meeting' }]}>
           {(item) => <PickerItem id={item.id}>{item.name}</PickerItem>}
         </ComboBox>
-      </Sheet>
+      </Dialog>
     </>
   );
 }

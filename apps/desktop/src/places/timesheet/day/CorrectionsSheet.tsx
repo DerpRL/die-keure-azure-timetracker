@@ -133,7 +133,6 @@ export function CorrectionsSheet({ day, issues, choices, loading, issue, working
       }}
       title="Gaps & overlaps"
       description={formatDayComplete(day)}
-      presentation="sheet"
       size="large"
       cancelLabel="Done"
       secondaryActions={

@@ -3,7 +3,7 @@ import { announce } from '../../../components/Announcer';
 import { Badge } from '../../../components/Badge';
 import { Banner } from '../../../components/Banner';
 import { Button } from '../../../components/Button';
-import { Sheet } from '../../../components/Dialog';
+import { Dialog } from '../../../components/Dialog';
 import { SearchField } from '../../../components/Fields';
 import { ProgressBar } from '../../../components/Progress';
 import { Checkbox } from '../../../components/Toggles';
@@ -121,7 +121,7 @@ export function ScanSheet({
   };
 
   return (
-    <Sheet
+    <Dialog
       isOpen={isOpen}
       onOpenChange={(open) => {
         if (!open) onClose();
@@ -211,6 +211,6 @@ export function ScanSheet({
           </p>
         ) : null}
       </div>
-    </Sheet>
+    </Dialog>
   );
 }

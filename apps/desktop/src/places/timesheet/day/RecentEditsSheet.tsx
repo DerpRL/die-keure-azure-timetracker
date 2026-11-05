@@ -148,7 +148,6 @@ export function RecentEditsSheet({ isOpen, onClose, changes, requiresReview, jou
       }}
       title="Recent edits"
       description={`Changes made on ${device}, for this 7pace workspace.`}
-      presentation="sheet"
       size="large"
       cancelLabel="Done"
     >
