@@ -10,6 +10,7 @@
 mod debug;
 mod engine_bridge;
 mod native;
+mod navigation;
 pub mod shell;
 mod shortcut;
 mod surfaces;
@@ -45,6 +46,8 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        // Links to other sites open in the browser, never inside the app's windows.
+        .plugin(navigation::plugin())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())

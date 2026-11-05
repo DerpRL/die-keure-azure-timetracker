@@ -1,7 +1,6 @@
 import { useId } from 'react';
-import { ExternalLinkIcon } from '../../components/icons';
 import type { SevenPaceAuthMode } from '../../ipc/contract';
-import { openExternalLink } from './platform';
+import { ExternalLink } from './ExternalLink';
 import styles from './settings.module.css';
 
 /**
@@ -68,19 +67,5 @@ export function SevenPaceInstructions({
 }
 
 function WorkspaceLink({ url }: { url: string }) {
-  const label = url.replace(/^https:\/\//, '').replace(/\/$/, '');
-  return (
-    <a
-      href={url}
-      onClick={(event) => {
-        event.preventDefault();
-        void openExternalLink(url).catch(() => undefined);
-      }}
-      className={styles.inlineLink}
-    >
-      {label}
-      <ExternalLinkIcon />
-      <span className="visually-hidden"> (opens in your browser)</span>
-    </a>
-  );
+  return <ExternalLink href={url}>{url.replace(/^https:\/\//, '').replace(/\/$/, '')}</ExternalLink>;
 }

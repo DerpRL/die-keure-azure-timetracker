@@ -3,12 +3,11 @@ import { useMemo, useState } from 'react';
 import { Button } from '../../components/Button';
 import { DatePicker } from '../../components/DateFields';
 import { NumberField, TextField } from '../../components/Fields';
-import { ExternalLinkIcon } from '../../components/icons';
 import { Select } from '../../components/Pickers';
 import { Checkbox } from '../../components/Toggles';
 import type { TargetExceptionKind } from '../../ipc/contract';
 import { formatShortDuration } from '../../utils/duration';
-import { openExternalLink } from './platform';
+import { ExternalLink } from './ExternalLink';
 import { WorkdayTimes } from './DayReviewSection';
 import { Divider, Hint, InlineIssue, SettingsSection, ToggleRow } from './SettingsSection';
 import { useSettingsForm } from './SettingsForm';
@@ -268,18 +267,9 @@ export function HolidaysSection() {
         or company days off can also be added.
       </Hint>
       <p>
-        <a
-          href={HOLIDAY_RULES_URL}
-          onClick={(event) => {
-            event.preventDefault();
-            void openExternalLink(HOLIDAY_RULES_URL).catch(() => undefined);
-          }}
-          className={styles.calendarLabel}
-        >
+        <ExternalLink href={HOLIDAY_RULES_URL} className={styles.calendarLabel}>
           Belgian public holiday rules
-          <ExternalLinkIcon />
-          <span className="visually-hidden"> (opens in your browser)</span>
-        </a>
+        </ExternalLink>
       </p>
       <Divider />
       <AddException />
