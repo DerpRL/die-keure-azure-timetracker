@@ -20,11 +20,24 @@ function knownItems(mock: MockEngine): WorkItem[] {
   return Object.values(mock.slices.workItems ?? {});
 }
 
-/** Like `choose_activity`: refused while a draft exists. */
-function setDraft(mock: MockEngine, draft: DraftView): void {
+/** How long the engine takes to look a ticket up and prepare its draft, roughly. */
+const PREPARE_MS = 300;
+
+/**
+ * Like `choose_activity`: refused while a draft exists, and busy while the draft is prepared
+ * (the engine looks the ticket up first).
+ */
+function setDraft(mock: MockEngine, draft: DraftView): Promise<null> | undefined {
   const flow = mock.slices.flow;
   if (!flow || flow.draft) return;
-  mock.patchSlice('flow', { draft });
+  mock.patchSlice('app', { busy: true });
+  return new Promise((resolve) =>
+    setTimeout(() => {
+      mock.patchSlice('flow', { draft });
+      mock.patchSlice('app', { busy: false });
+      resolve(null);
+    }, PREPARE_MS),
+  );
 }
 
 function release(flow: FlowSlice): Partial<FlowSlice> {
@@ -40,14 +53,14 @@ export function handlePickerPreview(engine: MockEngine): MockEngine {
     })
     .handle('tracking.chooseTicket', ({ ticketId }, mock) => {
       const item = mock.slices.workItems?.[String(ticketId)] ?? { id: ticketId, title: `Azure ticket #${ticketId}` };
-      setDraft(mock, { ...ticketDraft, id: nextId(), title: item.title, item, allowsNoTicket: mock.slices.flow?.selectedSuggestion != null });
+      return setDraft(mock, { ...ticketDraft, id: nextId(), title: item.title, item, allowsNoTicket: mock.slices.flow?.selectedSuggestion != null });
     })
     .handle('tracking.chooseManual', ({ kind }, mock) => {
-      setDraft(mock, { ...standupDraftFlow.draft!, ...MANUAL_DRAFTS[kind], id: nextId(), manual: kind, startableActivityIds: kind === 'standup' ? ['standup'] : ticketDraft.startableActivityIds });
+      return setDraft(mock, { ...standupDraftFlow.draft!, ...MANUAL_DRAFTS[kind], id: nextId(), manual: kind, startableActivityIds: kind === 'standup' ? ['standup'] : ticketDraft.startableActivityIds });
     })
     .handle('tracking.continueWithoutTicket', (_intent, mock) => {
       const suggestion = mock.slices.flow?.selectedSuggestion;
-      setDraft(mock, { ...ticketDraft, id: nextId(), source: 'branch', item: null, title: suggestion?.title ?? 'No ticket', remark: suggestion?.title ?? null });
+      return setDraft(mock, { ...ticketDraft, id: nextId(), source: 'branch', item: null, title: suggestion?.title ?? 'No ticket', remark: suggestion?.title ?? null });
     })
     .handle('tracking.chooseDifferentWork', (_intent, mock) => {
       if (mock.slices.flow) mock.patchSlice('flow', release(mock.slices.flow));

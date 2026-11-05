@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { GridList, GridListItem, type Key } from 'react-aria-components';
 import { Badge, type Tone } from '../../components/Badge';
 import { IconButton } from '../../components/Button';
@@ -166,6 +166,27 @@ export function pickerRows(
   return rows;
 }
 
+/** A row the user chose whose draft the engine is still preparing. */
+export interface PendingChoice {
+  key: string;
+  /** The primary button's label for it ("Track #4790"), shown while it is prepared. */
+  label: string;
+  /** Work without a ticket takes a comment; tickets and suggestions do not. */
+  commentApplies: boolean;
+}
+
+/** What choosing `row` will offer, before its draft exists. */
+export function pendingChoice(row: PickerRow): PendingChoice {
+  return {
+    key: row.key,
+    label: row.kind === 'ticket' ? `Track #${row.ticketId}` : 'Start tracking',
+    commentApplies: row.kind === 'manual',
+  };
+}
+
+/** How long a choice the engine accepted stays shown before its draft's slice must be in. */
+export const PENDING_GRACE_MS = 1000;
+
 /** The intent that prepares a draft for `row`; `null` for a row that only shows the draft. */
 function chooseIntent(row: PickerRow): Intent | null {
   switch (row.kind) {
@@ -225,14 +246,22 @@ function RowContent({ row }: { row: PickerRow }) {
  * suggestion, `tracking.chooseDifferentWork` otherwise). Both clear the search results, so an
  * active search is sent again.
  */
-export function PickerTickets({ flow }: { flow: FlowSlice }) {
+export interface PickerTicketsProps {
+  flow: FlowSlice;
+  /** The row being prepared, owned by the dialog so its other parts can follow it. */
+  pending: PendingChoice | null;
+  setPending: Dispatch<SetStateAction<PendingChoice | null>>;
+  /** `pending` is still on its way to becoming the draft. */
+  switching: boolean;
+}
+
+export function PickerTickets({ flow, pending, setPending, switching }: PickerTicketsProps) {
   const { busy, connected } = useWriteGuards();
   const tracking = useSlice('tracking');
   const workItems = useSlice('workItems');
   const search = useTicketSearch(flow);
   const choose = useIntents();
   const [filter, setFilter] = useState<Filter>('all');
-  const [pendingKey, setPendingKey] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   // The last results, kept on screen while a new choice has cleared them and the search that
   // follows it has not answered yet.
@@ -245,15 +274,17 @@ export function PickerTickets({ flow }: { flow: FlowSlice }) {
   const typed = query.trim() !== '';
   const { searching, error } = flow.search;
   const results =
-    flow.search.results.length === 0 && choose.isPending() && lastResults.query === flow.search.query
+    flow.search.results.length === 0 && switching && lastResults.query === flow.search.query
       ? lastResults.results
       : flow.search.results;
 
   const runningId = tracking?.running ? tracking.ticketId : null;
   const rows = pickerRows(flow, { query, results, filter, runningId, workItems });
   const draft = flow.draft;
-  const selectedKey = pendingKey ?? draftKey(flow);
-  const disabled = busy || !connected;
+  // The chosen row is selected at once and stays so while its draft is prepared.
+  const selectedKey = switching && pending ? pending.key : draftKey(flow);
+  // The engine is busy preparing that row; only someone else's write locks the list.
+  const disabled = !connected || (busy && !switching);
 
   const onChoose = (row: PickerRow) => {
     if (row.key === draftKey(flow) || choose.inFlight()) return;
@@ -269,8 +300,11 @@ export function PickerTickets({ flow }: { flow: FlowSlice }) {
       if (flow.search.query.trim() !== '') intents.push({ type: 'tracking.search', query: flow.search.query });
     }
     intents.push(intent);
-    setPendingKey(row.key);
-    void choose.run('choose', ...intents).finally(() => setPendingKey(null));
+    const mine = pendingChoice(row);
+    setPending(mine);
+    const clear = () => setPending((current) => (current === mine ? null : current));
+    // On success the draft's slice may arrive just after the reply; give it a moment.
+    void choose.run('choose', ...intents).then((ok) => (ok ? setTimeout(clear, PENDING_GRACE_MS) : clear()));
   };
 
   const showFilter = !typed && flow.quickTickets.length > 0;
@@ -353,7 +387,6 @@ export function PickerTickets({ flow }: { flow: FlowSlice }) {
               id={row.key}
               textValue={row.kind === 'ticket' ? `#${row.ticketId} ${row.title}` : row.title}
               className={cx(styles.row, row.kind !== 'ticket' && styles.rowNoTicket)}
-              data-pending={pendingKey === row.key || undefined}
             >
               <RowContent row={row} />
             </GridListItem>

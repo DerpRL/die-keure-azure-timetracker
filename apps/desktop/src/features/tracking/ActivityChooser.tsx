@@ -1,18 +1,12 @@
-import { useId, useState, type ReactNode } from 'react';
-import { Radio, RadioGroup } from 'react-aria-components';
+import { useState, type ReactNode } from 'react';
 import { Button } from '../../components/Button';
 import { TextField } from '../../components/Fields';
 import { CalendarIcon } from '../../components/icons';
 import { Select } from '../../components/Pickers';
 import { Switch } from '../../components/Toggles';
 import type { ActivityType, DraftView, FlowSlice, ManualTrackingKind } from '../../ipc/contract';
-import { useSlice } from '../../state/hooks';
-import { formatShortDuration } from '../../utils/duration';
-import { ActivitySwatch, activityColorIndex, useActivityColors } from '../activity';
 import { ActionError, useIntents, useWriteGuards, type IntentRunner } from './actions';
 import { ReturnIcon } from './icons';
-import { useTrackingSeconds } from './status';
-import picker from './ticketPicker.module.css';
 import styles from './tracking.module.css';
 
 interface FormState {
@@ -32,6 +26,19 @@ export function allowedActivities(flow: FlowSlice, draft: DraftView): ActivityTy
   return flow.activityTypes.filter((activity) => draft.allowedActivityIds.includes(activity.id));
 }
 
+/**
+ * An activity and comment chosen before or across drafts. The ticket picker keeps them while
+ * the user moves between rows, so switching tickets keeps what was chosen.
+ */
+export interface SharedChoice {
+  /** `null` until the user picks one. */
+  activityId: string | null;
+  /** `null` until the user types. */
+  comment: string | null;
+  setActivityId: (id: string) => void;
+  setComment: (comment: string) => void;
+}
+
 export interface ActivityForm {
   draft: DraftView;
   activities: ActivityType[];
@@ -49,9 +56,14 @@ export interface ActivityForm {
 
 /**
  * The chooser's form draft: the selected activity, the comment and "Use Azure ticket". Starts
- * from the draft's preferred activity and default comment, and resets for a new draft.
+ * from the draft's preferred activity and default comment, and resets for a new draft. With
+ * `shared`, the activity and comment come from the caller and survive a new draft.
  */
-export function useActivityForm(flow: FlowSlice | undefined, draft: DraftView | null): ActivityForm | null {
+export function useActivityForm(
+  flow: FlowSlice | undefined,
+  draft: DraftView | null,
+  shared?: SharedChoice,
+): ActivityForm | null {
   const guards = useWriteGuards();
   const actions = useIntents();
   const [state, setState] = useState<FormState>(() => pristine(draft?.id ?? null));
@@ -60,10 +72,10 @@ export function useActivityForm(flow: FlowSlice | undefined, draft: DraftView | 
   const current = state.draftId === draft.id ? state : pristine(draft.id);
   const activities = allowedActivities(flow, draft);
   const ids = activities.map((activity) => activity.id);
-  const chosen = current.activityId ?? draft.preferredActivityId;
+  const chosen = (shared ? shared.activityId : current.activityId) ?? draft.preferredActivityId;
   // As in 1.14: a choice that is no longer offered falls back to the preferred one, then to none.
   const activityId = ids.includes(chosen) ? chosen : ids.includes(draft.preferredActivityId) ? draft.preferredActivityId : '';
-  const comment = current.comment ?? draft.defaultComment;
+  const comment = (shared ? shared.comment : current.comment) ?? draft.defaultComment;
   const includeTicket = draft.allowsNoTicket ? current.includeTicket : true;
 
   // The engine decides what may start (Swift `canStart`); the local guards only cover the time
@@ -79,9 +91,9 @@ export function useActivityForm(flow: FlowSlice | undefined, draft: DraftView | 
     draft,
     activities,
     activityId,
-    setActivityId: (id) => setState({ ...current, activityId: id }),
+    setActivityId: shared ? shared.setActivityId : (id) => setState({ ...current, activityId: id }),
     comment,
-    setComment: (text) => setState({ ...current, comment: text }),
+    setComment: shared ? shared.setComment : (text) => setState({ ...current, comment: text }),
     includeTicket,
     setIncludeTicket: (include) => setState({ ...current, includeTicket: include }),
     canStart,
@@ -101,13 +113,13 @@ export function useActivityForm(flow: FlowSlice | undefined, draft: DraftView | 
   };
 }
 
-const COMMENT_PLACEHOLDER: Record<ManualTrackingKind, string> = {
+export const COMMENT_PLACEHOLDER: Record<ManualTrackingKind, string> = {
   standup: 'daily standup',
   meeting: 'Meeting',
   activity: 'Defaults to the activity name',
 };
 
-const COMMENT_HINT: Record<ManualTrackingKind, string> = {
+export const COMMENT_HINT: Record<ManualTrackingKind, string> = {
   standup: 'Leave blank to use daily standup.',
   meeting: 'Leave blank to use the meeting or activity name.',
   activity: 'Leave blank to use the meeting or activity name.',
@@ -116,57 +128,8 @@ const COMMENT_HINT: Record<ManualTrackingKind, string> = {
 export interface ActivityChooserProps {
   flow: FlowSlice;
   form: ActivityForm;
-  /**
-   * `picker` is the main window's ticket picker column: the longer 1.14 labels ("Start
-   * tracking"), the activities as a list of rows, and no summary (the ticket list shows the
-   * choice).
-   */
-  variant: 'panel' | 'picker';
-}
-
-/** The picker's activities as rows with their colour (2.2 "15 · Ticket picker"). */
-function ActivityRows({ form, isDisabled }: { form: ActivityForm; isDisabled: boolean }) {
-  const colors = useActivityColors();
-  const labelId = useId();
-  return (
-    <div className={picker.section}>
-      <span id={labelId} className={picker.sectionLabel}>
-        Activity
-      </span>
-      <RadioGroup
-        aria-labelledby={labelId}
-        value={form.activityId || null}
-        onChange={form.setActivityId}
-        isDisabled={isDisabled}
-        className={picker.activities}
-      >
-        {form.activities.map((activity) => (
-          <Radio key={activity.id} value={activity.id} className={picker.activity}>
-            <ActivitySwatch colorIndex={activityColorIndex(colors, activity.id)} className={picker.activityDot} />
-            <span className={picker.activityName}>{activity.name ?? activity.id}</span>
-          </Radio>
-        ))}
-      </RadioGroup>
-    </div>
-  );
-}
-
-/**
- * What pressing the picker's primary button does to the running timer: "Your timer on #4821
- * stops when you press Track #4790 and is saved as 1h 23m." Its own component, so only the
- * picker re-renders with the clock.
- */
-function StartNote({ draft, label }: { draft: DraftView; label: string }) {
-  const tracking = useSlice('tracking');
-  const seconds = useTrackingSeconds(tracking);
-  let note: string;
-  if (draft.resume || draft.source === 'meetingReturn') note = 'Resume starts a new session. Paused time is not logged.';
-  else if (!tracking?.running) note = `The timer starts when you press ${label}.`;
-  else {
-    const current = tracking.ticketId !== null ? `Your timer on #${tracking.ticketId}` : 'Your current timer';
-    note = `${current} stops when you press ${label} and is saved as ${formatShortDuration(seconds)}.`;
-  }
-  return <p className={picker.note}>{note}</p>;
+  /** `sheet` uses the main window's longer 1.14 labels ("Start tracking"). */
+  variant: 'panel' | 'sheet';
 }
 
 /**
@@ -177,18 +140,18 @@ export function ActivityChooser({ flow, form, variant }: ActivityChooserProps) {
   const { busy, running } = useWriteGuards();
   const switching = useIntents();
   const { draft, includeTicket } = form;
-  const inPicker = variant === 'picker';
+  const sheet = variant === 'sheet';
   const item = includeTicket ? draft.item : null;
   const title = includeTicket ? draft.title : (draft.remark ?? draft.title);
   const trackingComment = includeTicket ? draft.commentWithTicket : draft.commentWithoutTicket;
-  const buttonLabel = startLabel(draft, variant, includeTicket);
+  const startLabel = sheet ? 'Start tracking' : 'Start';
   const resuming = draft.resume || draft.source === 'meetingReturn';
 
   let activityField: ReactNode;
   if (flow.loadingActivities) {
     activityField = (
       <p role="status" className={styles.caption}>
-        {inPicker ? 'Loading 7pace activities…' : 'Loading activities…'}
+        {sheet ? 'Loading 7pace activities…' : 'Loading activities…'}
       </p>
     );
   } else if (flow.activityError) {
@@ -204,7 +167,7 @@ export function ActivityChooser({ flow, form, variant }: ActivityChooserProps) {
             isPending={switching.isPending('reload')}
             onPress={() => void switching.run('reload', { type: 'tracking.reloadActivities' })}
           >
-            {inPicker ? 'Reload activity types' : 'Reload activities'}
+            {sheet ? 'Reload activity types' : 'Reload activities'}
           </Button>
         </div>
       </div>
@@ -212,59 +175,43 @@ export function ActivityChooser({ flow, form, variant }: ActivityChooserProps) {
   } else if (flow.activityTypes.length === 0 && flow.activitiesLoaded) {
     activityField = (
       <p className={styles.caption}>
-        {inPicker
+        {sheet
           ? 'No activity types are configured in 7pace. Its workspace default will be used.'
           : '7pace’s workspace default activity will be used.'}
       </p>
     );
-  } else if (form.activities.length > 0 && inPicker) {
-    activityField = <ActivityRows form={form} isDisabled={busy} />;
   } else if (form.activities.length > 0) {
     activityField = (
       <Select
-        label="Activity"
+        label={sheet ? 'Activity type' : 'Activity'}
         placeholder="Choose an activity"
         items={form.activities.map((activity) => ({ id: activity.id, label: activity.name ?? activity.id }))}
         selectedKey={form.activityId || null}
         onSelectionChange={(key) => form.setActivityId(key === null ? '' : String(key))}
         isDisabled={busy}
+        description={sheet ? 'This applies to this session. Your saved default stays the same.' : undefined}
       />
     );
   }
 
-  const context = (
-    <>
-      {draft.source === 'meetingReturn' ? (
-        <p className={styles.caption}>
-          <ReturnIcon className={styles.inlineIcon} /> Return to your previous work
-        </p>
-      ) : null}
-      {draft.meetingTitle ? (
-        <p className={styles.caption}>
-          <CalendarIcon className={styles.inlineIcon} /> {draft.meetingTitle}
-        </p>
-      ) : null}
-    </>
-  );
-
   return (
-    <div className={inPicker ? picker.chooser : styles.flow}>
-      {inPicker ? (
-        // The ticket list shows what was chosen; only what it cannot show is repeated here.
-        <>
-          {context}
-          {!includeTicket && draft.item ? <p className={styles.caption}>No Azure ticket</p> : null}
-          {!draft.manual && trackingComment ? <p className={styles.caption}>Comment: {trackingComment}</p> : null}
-        </>
-      ) : (
-        <div className={styles.draftSummary}>
-          {context}
-          <p className={styles.ticketNumber}>{item ? `#${item.id} · ${item.type ?? 'Work item'}` : 'No Azure ticket'}</p>
-          <p className={styles.draftTitle}>{title}</p>
-          {!draft.manual && trackingComment ? <p className={styles.caption}>Comment: {trackingComment}</p> : null}
-          {item?.teamProject ? <p className={styles.caption}>{item.teamProject}</p> : null}
-        </div>
-      )}
+    <div className={styles.flow}>
+      <div className={styles.draftSummary}>
+        {draft.source === 'meetingReturn' ? (
+          <p className={styles.caption}>
+            <ReturnIcon className={styles.inlineIcon} /> Return to your previous work
+          </p>
+        ) : null}
+        {draft.meetingTitle ? (
+          <p className={styles.caption}>
+            <CalendarIcon className={styles.inlineIcon} /> {draft.meetingTitle}
+          </p>
+        ) : null}
+        <p className={styles.ticketNumber}>{item ? `#${item.id} · ${item.type ?? 'Work item'}` : 'No Azure ticket'}</p>
+        <p className={styles.draftTitle}>{title}</p>
+        {!draft.manual && trackingComment ? <p className={styles.caption}>Comment: {trackingComment}</p> : null}
+        {item?.teamProject ? <p className={styles.caption}>{item.teamProject}</p> : null}
+      </div>
 
       {draft.allowsNoTicket ? (
         <div className={styles.stack}>
@@ -326,25 +273,19 @@ export function ActivityChooser({ flow, form, variant }: ActivityChooserProps) {
           placeholder={COMMENT_PLACEHOLDER[draft.manual]}
           description={COMMENT_HINT[draft.manual]}
           isDisabled={busy}
-          multiline={inPicker}
-          rows={2}
         />
       ) : null}
 
-      {inPicker ? (
-        <StartNote draft={draft} label={buttonLabel} />
-      ) : (
-        <p className={styles.caption}>
-          {resuming
-            ? 'Resume starts a new session. Paused time is not logged.'
-            : running
-              ? `Your current timer continues until you press ${buttonLabel}.`
-              : `The timer starts when you press ${buttonLabel}.`}
-        </p>
-      )}
+      <p className={styles.caption}>
+        {resuming
+          ? 'Resume starts a new session. Paused time is not logged.'
+          : running
+            ? `Your current timer continues until you press ${startLabel}.`
+            : `The timer starts when you press ${startLabel}.`}
+      </p>
       {busy || form.actions.isPending('start') ? (
         <p role="status" className={styles.caption}>
-          {inPicker ? 'Starting tracking…' : 'Starting…'}
+          {sheet ? 'Starting tracking…' : 'Starting…'}
         </p>
       ) : null}
       <ActionError error={form.actions.error ?? switching.error} />

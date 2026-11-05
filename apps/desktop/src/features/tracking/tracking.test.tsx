@@ -23,8 +23,8 @@ import { stoppedTracking } from '../../ipc/fixtures/slices/tracking';
 import { MockEngineError } from '../../ipc/mockEngine';
 import { expectAccessible } from './testHelpers';
 import { renderWithEngine } from '../../test/engine';
-import { TicketPickerSheet } from './TicketPickerSheet';
-import { pickerRows, typeTag } from './TicketPicker';
+import { SLOW_SWITCH_MS, TicketPickerSheet } from './TicketPickerSheet';
+import { PENDING_GRACE_MS, pickerRows, typeTag } from './TicketPicker';
 
 afterEach(() => {
   resetMockIpc();
@@ -44,7 +44,7 @@ describe('TicketPickerSheet', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('opens as one two-column dialog: tickets, ticket-free rows and an empty activity column', async () => {
+  it('opens as one two-column dialog: tickets, ticket-free rows and the activities', async () => {
     renderWithEngine(<TicketPickerSheet />, {
       with: {
         flow: {
@@ -75,7 +75,15 @@ describe('TicketPickerSheet', () => {
     expect(rows[0]).toHaveTextContent('#4821 · tracking now · favorite');
     expect(rows[1]).toHaveTextContent('Bug');
     expect(rows[2]).toHaveTextContent('None');
-    expect(within(dialog).getByText('Choose a ticket, or work without one, to pick its activity.')).toBeInTheDocument();
+    // The activities are there before a ticket is chosen, with the saved default selected.
+    const activities = within(dialog).getByRole('radiogroup', { name: 'Activity' });
+    expect(within(activities).getAllByRole('radio')).toHaveLength(5);
+    expect(within(activities).getByRole('radio', { name: 'Development' })).toBeChecked();
+    expect(within(activities).getByRole('radio', { name: 'Development' })).toBeEnabled();
+    const comment = within(dialog).getByRole('textbox', { name: 'Comment (optional)' });
+    expect(comment).toBeEnabled();
+    expect(comment).toHaveAttribute('placeholder', 'What are you working on?');
+    expect(within(dialog).getByText(/^Your timer on #4821 stops when you press Start tracking and is saved as \d+h \d+m\.$/)).toBeInTheDocument();
     // Nothing is chosen, so nothing can start.
     expect(within(dialog).getByRole('button', { name: 'Start tracking' })).toBeDisabled();
     expect(within(dialog).getByText('Command Return')).toBeInTheDocument();
@@ -185,6 +193,113 @@ describe('TicketPickerSheet', () => {
     );
   });
 
+  it('keeps the activity chosen before a ticket for the ticket’s draft', async () => {
+    const { engine, user } = renderWithEngine(<TicketPickerSheet />, { with: { flow: pickerSearchFlow } });
+    engine.handle('tracking.chooseTicket', (_intent, mock) => mock.setSlice('flow', pickerDraftFlow));
+    await user.click(await screen.findByRole('radio', { name: 'Code review' }));
+    await user.click(screen.getByRole('row', { name: /Invoice PDF shows the wrong VAT number/ }));
+    expect(await screen.findByRole('button', { name: 'Track #4790' })).toBeEnabled();
+    expect(screen.getByRole('radio', { name: 'Code review' })).toBeChecked();
+    // A ticket's session carries no typed comment, and the field says so.
+    const comment = screen.getByRole('textbox', { name: 'Comment (optional)' });
+    expect(comment).toBeDisabled();
+    expect(comment).toHaveAccessibleDescription('Comments apply only to work without a ticket.');
+    await user.click(screen.getByRole('button', { name: 'Track #4790' }));
+    expect(engine.dispatched('tracking.start')[0]).toMatchObject({ activityId: 'review', comment: '' });
+  });
+
+  it('switches rows without the activity column, the choice or the buttons changing in between', async () => {
+    const { engine, user } = renderWithEngine(<TicketPickerSheet />, { with: { flow: pickerDraftFlow } });
+    let finish: () => void = () => {};
+    // Like the engine: letting go clears the draft, then preparing the new one keeps it busy.
+    engine.handle('tracking.chooseDifferentWork', (_intent, mock) => mock.patchSlice('flow', { draft: null }));
+    engine.handle('tracking.chooseTicket', (intent, mock) => {
+      mock.patchSlice('app', { busy: true });
+      return new Promise<null>((resolve) => {
+        finish = () => {
+          const item = { id: intent.ticketId, title: 'Sprint ceremonies', teamProject: 'Webshop', type: 'Task' };
+          mock.patchSlice('flow', { draft: { ...ticketDraft, id: 'next-draft', title: item.title, item } });
+          mock.patchSlice('app', { busy: false });
+          resolve(null);
+        };
+      });
+    });
+    const activities = await screen.findByRole('radiogroup', { name: 'Activity' });
+    await user.click(within(activities).getByRole('radio', { name: 'Code review' }));
+    await user.click(screen.getByRole('row', { name: /Sprint ceremonies/ }));
+
+    // In between: the new row is chosen, everything else stays as it was.
+    await waitFor(() => expect(engine.dispatched('tracking.chooseTicket')).toHaveLength(1));
+    expect(screen.getByRole('row', { name: /Sprint ceremonies/ })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('row', { name: /Invoice PDF/ })).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByRole('radiogroup', { name: 'Activity' })).toBe(activities);
+    expect(within(activities).getByRole('radio', { name: 'Code review' })).toBeChecked();
+    expect(within(activities).getByRole('radio', { name: 'Code review' })).toBeEnabled();
+    expect(screen.getByRole('row', { name: /Daily stand-up/ })).not.toHaveAttribute('aria-disabled');
+    const primary = screen.getByRole('button', { name: 'Track #4777' });
+    expect(primary).toBeEnabled();
+    expect(primary).not.toHaveAttribute('data-pending');
+    expect(screen.queryByText('Starting tracking…')).not.toBeInTheDocument();
+    // Pressing Start meanwhile sends nothing.
+    await user.click(primary);
+    expect(engine.dispatched('tracking.start')).toHaveLength(0);
+
+    act(() => finish());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Track #4777' })).toBeEnabled());
+    expect(screen.getByRole('radiogroup', { name: 'Activity' })).toBe(activities);
+    expect(within(activities).getByRole('radio', { name: 'Code review' })).toBeChecked();
+    await user.click(screen.getByRole('button', { name: 'Track #4777' }));
+    expect(engine.dispatched('tracking.start')).toEqual([
+      { type: 'tracking.start', draftId: 'next-draft', activityId: 'review', comment: '', includeTicket: true },
+    ]);
+  });
+
+  it('shows a spinner only when preparing the new row takes a while', async () => {
+    const { engine, user } = renderWithEngine(<TicketPickerSheet />, { with: { flow: pickerDraftFlow } });
+    engine.handle('tracking.chooseDifferentWork', (_intent, mock) => mock.patchSlice('flow', { draft: null }));
+    engine.handle('tracking.chooseTicket', () => new Promise<null>(() => {}));
+    await user.click(await screen.findByRole('row', { name: /Sprint ceremonies/ }));
+    expect(screen.getByRole('button', { name: 'Track #4777' })).not.toHaveAttribute('data-pending');
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Track #4777' })).toHaveAttribute('data-pending'), {
+      timeout: SLOW_SWITCH_MS + 500,
+    });
+  });
+
+  it('keeps the chosen row selected when the draft arrives just after the engine’s reply', async () => {
+    const { engine, user } = renderWithEngine(<TicketPickerSheet />, { with: { flow: pickerSearchFlow } });
+    // The reply comes first; the draft's slice follows a little later.
+    engine.handle('tracking.chooseTicket', (_intent, mock) => {
+      setTimeout(() => mock.setSlice('flow', pickerDraftFlow), 100);
+    });
+    await user.click(await screen.findByRole('row', { name: /Invoice PDF shows the wrong VAT number/ }));
+    await waitFor(() => expect(engine.dispatched('tracking.chooseTicket')).toHaveLength(1));
+    const row = () => screen.getByRole('row', { name: /Invoice PDF shows the wrong VAT number/ });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(row()).toHaveAttribute('aria-selected', 'true');
+    await screen.findByRole('button', { name: 'Track #4790' });
+    expect(row()).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('lets a refused or silently dropped choice go', async () => {
+    const { engine, user } = renderWithEngine(<TicketPickerSheet />, { with: { flow: pickerSearchFlow } });
+    engine.handle('tracking.chooseTicket', () => {
+      throw new MockEngineError('busy', 'Another change is in progress.');
+    });
+    await user.click(await screen.findByRole('row', { name: /Invoice PDF shows the wrong VAT number/ }));
+    expect(await screen.findByText('Another change is in progress.')).toBeInTheDocument();
+    expect(screen.getByRole('row', { name: /Invoice PDF/ })).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByRole('button', { name: 'Start tracking' })).toBeDisabled();
+
+    // Accepted, but no draft ever comes (the engine dropped it): the choice lets go after a moment.
+    engine.handle('tracking.chooseTicket', () => null);
+    await user.click(screen.getByRole('row', { name: /Sprint ceremonies/ }));
+    expect(screen.getByRole('row', { name: /Sprint ceremonies/ })).toHaveAttribute('aria-selected', 'true');
+    await waitFor(() => expect(screen.getByRole('row', { name: /Sprint ceremonies/ })).toHaveAttribute('aria-selected', 'false'), {
+      timeout: PENDING_GRACE_MS + 500,
+    });
+    expect(screen.getByRole('button', { name: 'Start tracking' })).toBeDisabled();
+  });
+
   it('moves from the search into the list with Down Arrow and chooses with Return', async () => {
     const { engine, user } = renderWithEngine(<TicketPickerSheet />, { with: { flow: pickerSearchFlow } });
     await screen.findByRole('searchbox', { name: 'Search tickets' });
@@ -241,10 +356,12 @@ describe('TicketPickerSheet', () => {
     expect(engine.dispatched('tracking.start')[0]).toMatchObject({ activityId: 'review' });
   });
 
-  it('disables Start and the rows while the engine is busy', async () => {
+  it('disables Start and the rows while another write keeps the engine busy', async () => {
     const { engine, user } = renderWithEngine(<TicketPickerSheet />, { with: { flow: pickerDraftFlow, app: busyApp } });
     expect(await screen.findByRole('button', { name: 'Track #4790' })).toBeDisabled();
-    expect(screen.getByText('Starting tracking…')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Development' })).toBeDisabled();
+    // Busy is not necessarily a start: only this picker's own start says so.
+    expect(screen.queryByText('Starting tracking…')).not.toBeInTheDocument();
     await user.click(screen.getByRole('row', { name: /Sprint ceremonies/ }));
     expect(engine.dispatched('tracking.chooseTicket')).toHaveLength(0);
   });

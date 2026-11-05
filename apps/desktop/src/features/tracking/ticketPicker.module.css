@@ -161,11 +161,6 @@
   box-shadow: inset 0 0 0 0.1875rem var(--color-field-bg);
 }
 
-.row[data-pending] .radio {
-  border-color: var(--color-check-bg);
-  border-style: dashed;
-}
-
 /* Right column */
 
 .side {
