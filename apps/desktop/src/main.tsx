@@ -65,7 +65,22 @@ async function installPreviewEngine(): Promise<void> {
     // Today's day check and reviewing an earlier day: the sample review is Monday's.
     .handle('dayReview.setDay', (intent, mock) =>
       mock.setSlice('dayReview', intent.day === '2026-10-06' ? dayReviewToday : { ...sampleSlices().dayReview!, selectedDay: intent.day }),
-    );
+    )
+    // Timesheet · Day shows the chosen day's sample worklogs and opens an entry in the edit
+    // sheet (from Today's "Your day" or Week's "Selected entry"), like the engine.
+    .handle('timeEditor.setDay', (intent, mock) =>
+      mock.patchSlice('timeEditor', {
+        day: intent.day,
+        logs: (mock.slices.history?.logs ?? []).filter((log) => new Date(log.timestamp).toLocaleDateString('en-CA') === intent.day),
+      }),
+    )
+    .handle('timeEditor.select', (intent, mock) => {
+      const log = mock.slices.history?.logs.find((entry) => entry.id === intent.logId);
+      if (!log) return;
+      const end = new Date(Date.parse(log.timestamp) + log.length * 1000).toISOString();
+      mock.patchSlice('timeEditor', { selected: log, mode: 'edit', start: log.timestamp, end, review: null, plan: null });
+    })
+    .handle('timeEditor.cancel', (_intent, mock) => mock.patchSlice('timeEditor', { selected: null, start: null, end: null, review: null, plan: null }));
 }
 
 const container = document.getElementById('root');

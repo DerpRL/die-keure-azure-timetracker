@@ -9,7 +9,7 @@ import { useNavigation } from '../../layout/NavigationContext';
 import { useAction, useNow, useSlice } from '../../state/hooks';
 import { cx } from '../../utils/cx';
 import { formatShortDuration } from '../../utils/duration';
-import { reviewOverlaps, type LoadedReview } from './DayCheck';
+import { reviewOverlaps, useOpenDayInTimesheet, type LoadedReview } from './DayCheck';
 import { DayTimeline, type TimelineBlock, type TimelineGap } from './DayTimeline';
 import { dayBounds, findOverlaps, formatTime, formatWeekday, sessionName, sessionSeconds } from './model';
 import styles from './today.module.css';
@@ -103,6 +103,19 @@ function CalendarFooter() {
   );
 }
 
+/**
+ * Opens a tracked block's entry in Timesheet · Day, in its edit sheet (as choosing it in
+ * Timesheet · Week does); a locked entry opens its day. Unset when the Day view is hidden.
+ */
+function useOpenEntry(day: string): ((block: TimelineBlock) => void) | undefined {
+  const openDay = useOpenDayInTimesheet();
+  if (!openDay) return undefined;
+  return (block) => {
+    if (!block.entry) return;
+    openDay(day, block.entry.editable ? { entry: block.entry.id } : {});
+  };
+}
+
 function Frame({
   headingId,
   title,
@@ -152,6 +165,7 @@ export function YourDayToday({ today, review }: { today: string; review: DayRevi
   const colors = useActivityColors();
   const now = useNow();
   const { column, ready } = useCalendarColumn(today);
+  const openEntry = useOpenEntry(today);
 
   const { blocks, legend } = useMemo(() => {
     const { start: dayStart, end: dayEnd } = dayBounds(today);
@@ -176,6 +190,7 @@ export function YourDayToday({ today, review }: { today: string; review: DayRevi
         title: titleOf(log.workItemId, log.comment),
         detail: `${formatTime(start)} – ${formatTime(start + seconds * 1000)} · ${formatShortDuration(seconds)}`,
         long: longSeconds > 0 && seconds >= longSeconds,
+        entry: { id: log.id, editable: log.isCanEdit !== false },
       });
       const name = log.activityType?.name;
       if (name && !activities.has(name)) activities.set(name, { id: name, label: name, swatch: seriesColor(colorIndex) });
@@ -226,7 +241,7 @@ export function YourDayToday({ today, review }: { today: string; review: DayRevi
       issue={column && agenda?.issue ? agenda.issue : null}
       footer={ready ? <CalendarFooter /> : null}
     >
-      <DayTimeline day={today} calendar={column} blocks={blocks} gaps={gaps} now={now} />
+      <DayTimeline day={today} calendar={column} blocks={blocks} gaps={gaps} now={now} onOpenEntry={openEntry} />
       {history && !history.loaded && !history.loading ? <p className={cx(styles.caption, styles.dayNote)}>Connect 7pace to see today’s worklogs.</p> : null}
     </Frame>
   );
@@ -246,6 +261,7 @@ export function YourDayReview({
   const agenda = useSlice('agenda');
   const day = review.selectedDay;
   const { column, ready } = useCalendarColumn(day);
+  const openEntry = useOpenEntry(day);
   const overlaps = reviewOverlaps(review);
   const overlapping = new Set(overlaps.flatMap((overlap) => [overlap.first, overlap.second]));
   const blocks: TimelineBlock[] = review.summary.sessions.flatMap((session) => {
@@ -263,6 +279,8 @@ export function YourDayReview({
         running: session.isRunning,
         long: session.isLong,
         overlap: overlapping.has(session.id),
+        // A saved session is its worklog (the engine's id); the running one isn't saved yet.
+        entry: session.isRunning ? undefined : { id: session.id, editable: true },
       },
     ];
   });
@@ -282,7 +300,7 @@ export function YourDayReview({
       issue={column && agenda?.issue ? agenda.issue : null}
       footer={ready ? <CalendarFooter /> : null}
     >
-      <DayTimeline day={day} calendar={column} blocks={blocks} gaps={gaps} />
+      <DayTimeline day={day} calendar={column} blocks={blocks} gaps={gaps} onOpenEntry={openEntry} />
       {blocks.length === 0 ? <p className={cx(styles.caption, styles.dayNote)}>No entries recorded for this day.</p> : null}
     </Frame>
   );

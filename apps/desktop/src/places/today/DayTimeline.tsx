@@ -24,6 +24,11 @@ export interface TimelineBlock {
   long?: boolean;
   /** Outlined in the danger colour (covers the same time as another entry). */
   overlap?: boolean;
+  /**
+   * The saved 7pace worklog behind the block, which opens when the block is pressed. Unset for
+   * the running timer (not an entry yet). `editable: false` when 7pace locks the entry.
+   */
+  entry?: { id: string; editable: boolean };
 }
 
 export interface TimelineGap {
@@ -44,6 +49,8 @@ export interface DayTimelineProps {
   gaps?: readonly TimelineGap[];
   /** The current-time line (today only). */
   now?: number | null;
+  /** Opens a block's entry (Timesheet · Day). Unset: the blocks are not interactive. */
+  onOpenEntry?: (block: TimelineBlock) => void;
 }
 
 interface Range {
@@ -95,22 +102,22 @@ function EventItem({ event, range, lane }: { event: AgendaEventView; range: Rang
   );
 }
 
-function TrackedItem({ block, range, lane }: { block: TimelineBlock; range: Range; lane: { lane: number; lanes: number } | undefined }) {
+function TrackedItem({
+  block,
+  range,
+  lane,
+  onOpen,
+}: {
+  block: TimelineBlock;
+  range: Range;
+  lane: { lane: number; lanes: number } | undefined;
+  onOpen: ((block: TimelineBlock) => void) | undefined;
+}) {
   const short = block.end - block.start < SHORT_MS;
   const style: Vars = { ...position(range, block.start, block.end), ...laneStyle(lane), '--activity-color': seriesColor(block.colorIndex) };
   const flags = [block.running ? 'running' : null, block.long ? 'long entry' : null, block.overlap ? 'overlaps another entry' : null].filter(Boolean);
-  return (
-    <li
-      className={cx(
-        styles.block,
-        styles.tracked,
-        short && styles.short,
-        block.running && styles.running,
-        block.long && styles.long,
-        block.overlap && styles.overlap,
-      )}
-      style={style}
-    >
+  const content = (
+    <>
       {short ? (
         <span className={styles.blockLine}>
           {block.title}
@@ -123,6 +130,35 @@ function TrackedItem({ block, range, lane }: { block: TimelineBlock; range: Rang
         </>
       )}
       {flags.length > 0 ? <span className="visually-hidden">{`, ${flags.join(', ')}`}</span> : null}
+    </>
+  );
+  // Saved entries open like a block in Timesheet · Week; the running timer has no entry yet.
+  const open = onOpen && block.entry ? () => onOpen(block) : null;
+  return (
+    <li
+      className={cx(
+        styles.block,
+        styles.tracked,
+        short && styles.short,
+        block.running && styles.running,
+        block.long && styles.long,
+        block.overlap && styles.overlap,
+        open && styles.openable,
+      )}
+      style={style}
+    >
+      {open ? (
+        <button
+          type="button"
+          className={cx(styles.blockButton, short && styles.short)}
+          aria-label={[`Open ${block.title}`, block.detail, ...flags].join(', ')}
+          onClick={open}
+        >
+          {content}
+        </button>
+      ) : (
+        content
+      )}
     </li>
   );
 }
@@ -130,9 +166,10 @@ function TrackedItem({ block, range, lane }: { block: TimelineBlock; range: Rang
 /**
  * The day on the clock (2.2 "Your day"): an hour gutter, the calendar's events and the tracked
  * time side by side, 64 px per hour. Both columns are lists, so every block is read with its
- * times; possible gaps are hatched and named.
+ * times; possible gaps are hatched and named. With `onOpenEntry`, a saved entry's block is a
+ * button that opens it.
  */
-export function DayTimeline({ day, calendar, blocks, gaps = [], now = null }: DayTimelineProps) {
+export function DayTimeline({ day, calendar, blocks, gaps = [], now = null, onOpenEntry }: DayTimelineProps) {
   const events = calendar && 'events' in calendar ? calendar.events : [];
   const timed = events.filter((event) => !event.allDay);
   const allDay = events.filter((event) => event.allDay);
@@ -143,7 +180,8 @@ export function DayTimeline({ day, calendar, blocks, gaps = [], now = null }: Da
   ]);
   const shownEvents = timed.filter((event) => Date.parse(event.end) > range.from && Date.parse(event.start) < range.to);
   const eventLanes = overlapLanes(shownEvents.map((event) => ({ id: event.id, start: Date.parse(event.start), end: Date.parse(event.end) })));
-  const shownBlocks = blocks.filter((block) => block.end > range.from && block.start < range.to);
+  // In time order, so reading and tabbing follow the clock.
+  const shownBlocks = blocks.filter((block) => block.end > range.from && block.start < range.to).sort((a, b) => a.start - b.start);
   const blockLanes = overlapLanes(shownBlocks);
   const hours: number[] = [];
   for (let time = range.from; time < range.to; time += HOUR_MS) hours.push(time);
@@ -194,7 +232,7 @@ export function DayTimeline({ day, calendar, blocks, gaps = [], now = null }: Da
             </li>
           ))}
           {shownBlocks.map((block) => (
-            <TrackedItem key={block.id} block={block} range={range} lane={blockLanes.get(block.id)} />
+            <TrackedItem key={block.id} block={block} range={range} lane={blockLanes.get(block.id)} onOpen={onOpenEntry} />
           ))}
         </ul>
         {now !== null && now >= range.from && now <= range.to ? (

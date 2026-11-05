@@ -246,6 +246,53 @@ describe('Today overlaps', () => {
   });
 });
 
+describe('Today tracked time', () => {
+  it('opens a saved entry in Timesheet · Day by click or keyboard; the running timer is no button', async () => {
+    const [invoice, standup] = todayLogs;
+    const { engine, user, navigate } = renderToday();
+    const tracked = within(region('Your day')).getByRole('list', { name: 'Tracked time' });
+
+    await user.click(within(tracked).getByRole('button', { name: 'Open #4790 Invoice PDF shows the wrong VAT number, 08:45 – 09:10 · 0h 25m' }));
+    await waitFor(() => expect(engine.dispatched('timeEditor.select')).toEqual([{ type: 'timeEditor.select', logId: invoice!.id }]));
+    expect(engine.dispatched('timeEditor.setDay')).toEqual([{ type: 'timeEditor.setDay', day: '2026-10-06' }]);
+    expect(navigate).toHaveBeenLastCalledWith({ place: 'timesheet', view: 'day' });
+
+    within(tracked).getByRole('button', { name: /^Open #4777/ }).focus();
+    await user.keyboard('{Enter}');
+    await waitFor(() => expect(engine.dispatched('timeEditor.select').at(-1)).toEqual({ type: 'timeEditor.select', logId: standup!.id }));
+
+    // The two saved entries are buttons in time order; the running timer (not an entry yet) is not.
+    expect(within(tracked).getAllByRole('button').map((button) => button.getAttribute('aria-label'))).toEqual([
+      expect.stringMatching(/^Open #4777 .*08:30/),
+      expect.stringMatching(/^Open #4790 .*08:45/),
+    ]);
+    expect(tracked).toHaveTextContent('Running since 08:36');
+    await expectNoA11yViolations();
+  });
+
+  it('opens a locked entry’s day without selecting it, and a reviewed day’s entries', async () => {
+    const [invoice, standup] = todayLogs;
+    const { engine, user, navigate } = renderToday({ history: { ...sampleHistory, todayLogs: [{ ...invoice!, isCanEdit: false }, standup!] } });
+    await user.click(within(region('Your day')).getByRole('button', { name: /^Open #4790/ }));
+    expect(navigate).toHaveBeenLastCalledWith({ place: 'timesheet', view: 'day' });
+    await waitFor(() => expect(engine.dispatched('timeEditor.setDay')).toHaveLength(1));
+    expect(engine.dispatched('timeEditor.select')).toEqual([]);
+
+    await user.click(screen.getByRole('button', { name: 'Previous day' }));
+    const clock = await screen.findByRole('region', { name: 'Monday on the clock' });
+    await user.click(within(clock).getByRole('button', { name: /^Open .*, 09:15 – 12:40 · 3h 25m, long entry$/ }));
+    await waitFor(() => expect(engine.dispatched('timeEditor.select')).toHaveLength(1));
+    expect(engine.dispatched('timeEditor.setDay').at(-1)).toEqual({ type: 'timeEditor.setDay', day: '2026-10-05' });
+  });
+
+  it('leaves the blocks inert when the Day view is hidden', () => {
+    renderToday({}, { hidden: ['timeEditor'] });
+    const tracked = within(region('Your day')).getByRole('list', { name: 'Tracked time' });
+    expect(within(tracked).getByText(/Invoice PDF/)).toBeInTheDocument();
+    expect(within(tracked).queryAllByRole('button')).toEqual([]);
+  });
+});
+
 describe('Today suggestions', () => {
   it('opens the first suggestion and lists the rest with Review', async () => {
     const { user } = renderToday({ prompts: allPrompts });

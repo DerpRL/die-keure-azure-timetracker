@@ -719,6 +719,46 @@
   border: 2px dashed var(--activity-color);
 }
 
+/* A saved entry's block is a button that fills it (opens the entry in Timesheet · Day). */
+.openable {
+  padding: 0;
+}
+
+.openable:hover {
+  background: color-mix(in srgb, var(--activity-color) 30%, var(--color-surface));
+}
+
+.openable:has(> .blockButton:focus-visible) {
+  z-index: 3;
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.blockButton {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0.375rem 0.625rem;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: default;
+}
+
+.blockButton.short {
+  padding-block: 0;
+}
+
+.blockButton:focus-visible {
+  outline: none;
+}
+
 .long {
   outline: 2px solid var(--color-warning);
   outline-offset: -2px;

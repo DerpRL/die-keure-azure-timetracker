@@ -39,19 +39,30 @@ function overlapSeconds(overlaps: readonly Overlap[]): number {
   return overlaps.reduce((sum, overlap) => sum + (overlap.end - overlap.start) / 1000, 0);
 }
 
+export interface OpenDayOptions {
+  /** Show the Gaps & overlaps corrections. */
+  corrections?: boolean;
+  /** Filter the day to a ticket or title. */
+  filter?: string;
+  /** Open this saved worklog in the edit sheet, like choosing it in Timesheet · Week. */
+  entry?: string;
+}
+
 /**
- * Opens the reviewed day in the Timesheet's Day view: with the Gaps & overlaps corrections
- * (`corrections`), or filtered to a ticket. `null` when the Day view is hidden.
+ * Opens a day in the Timesheet's Day view: with the Gaps & overlaps corrections
+ * (`corrections`), filtered to a ticket, or with one of its entries open for editing (`entry`).
+ * `null` when the Day view is hidden.
  */
-export function useOpenDayInTimesheet(): ((day: string, options?: { corrections?: boolean; filter?: string }) => void) | null {
+export function useOpenDayInTimesheet(): ((day: string, options?: OpenDayOptions) => void) | null {
   const navigation = useNavigation();
   const editor = useAction();
   const target = { place: 'timesheet', view: 'day' } as const;
   if (!navigation?.canNavigate(target)) return null;
-  return (day, { corrections = false, filter } = {}) => {
+  return (day, { corrections = false, filter, entry } = {}) => {
     void editor.run({ type: 'timeEditor.setDay', day }).then(() => {
       if (corrections) return editor.run({ type: 'timeEditor.loadCorrections' });
       if (filter !== undefined) return editor.run({ type: 'timeEditor.setFilter', text: filter });
+      if (entry !== undefined) return editor.run({ type: 'timeEditor.select', logId: entry });
       return undefined;
     });
     navigation.navigate(target);
