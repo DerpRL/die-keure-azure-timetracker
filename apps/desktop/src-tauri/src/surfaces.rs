@@ -11,9 +11,11 @@ use std::time::{Duration, Instant};
 
 #[cfg(target_os = "macos")]
 use tauri::LogicalPosition;
+#[cfg(not(target_os = "macos"))]
+use tauri::PhysicalPosition;
 use tauri::{
-    AppHandle, Emitter, Manager, Monitor, PhysicalPosition, WebviewUrl, WebviewWindow,
-    WebviewWindowBuilder, Window, WindowEvent,
+    AppHandle, Emitter, Manager, Monitor, WebviewUrl, WebviewWindow, WebviewWindowBuilder, Window,
+    WindowEvent,
 };
 #[cfg(not(target_os = "macos"))]
 use tauri_plugin_positioner::{Position as Anchor, WindowExt as _};
@@ -312,15 +314,12 @@ fn place_panel_under_status_item(app: &AppHandle, panel: &WebviewWindow) -> Resu
             let Some(monitor) = app.primary_monitor()? else {
                 return Ok(());
             };
-            let scale = monitor.scale_factor();
-            let work = work_area(&monitor);
-            let work = PxRect {
-                x: work.x / scale,
-                y: work.y / scale,
-                w: work.w / scale,
-                h: work.h / scale,
-            };
-            corner_origin(size, work, PANEL_GAP, true)
+            corner_origin(
+                size,
+                in_points(work_area(&monitor), monitor.scale_factor()),
+                PANEL_GAP,
+                true,
+            )
         }
     };
     panel.set_position(LogicalPosition::new(x, y))?;
@@ -388,16 +387,37 @@ fn target_monitor(
 
 /// The mini timer starts in the bottom-right corner of the primary work area (above the
 /// taskbar on Windows, above the Dock on macOS). Its position is not remembered.
+///
+/// On macOS it is placed in logical points, as the panel is: tao converts a physical position
+/// with the scale factor of the screen the new window happens to be on, not the primary
+/// screen's, so with a Retina laptop next to a 1x monitor a physical position put the timer in
+/// the wrong place or outside every screen. Points form one coordinate space across screens.
+/// Windows (per-monitor DPI aware) has one physical space, so physical pixels stay there.
 fn place_mini(app: &AppHandle, mini: &WebviewWindow) -> Result<(), ShellError> {
     let Some(monitor) = app.primary_monitor()? else {
         return Ok(());
     };
     let scale = monitor.scale_factor();
     let work = work_area(&monitor);
-    let size = (MINI_SIZE.0 * scale, MINI_SIZE.1 * scale);
-    let (x, y) = corner_origin(size, work, MINI_MARGIN * scale, false);
-    mini.set_position(PhysicalPosition::new(x.round() as i32, y.round() as i32))?;
+    #[cfg(target_os = "macos")]
+    {
+        let (x, y) = corner_origin(MINI_SIZE, in_points(work, scale), MINI_MARGIN, false);
+        mini.set_position(LogicalPosition::new(x, y))?;
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let size = (MINI_SIZE.0 * scale, MINI_SIZE.1 * scale);
+        let (x, y) = corner_origin(size, work, MINI_MARGIN * scale, false);
+        mini.set_position(PhysicalPosition::new(x.round() as i32, y.round() as i32))?;
+    }
     Ok(())
+}
+
+/// A monitor's work area in logical points: macOS reports each screen in physical pixels of its
+/// own scale factor.
+#[cfg(any(target_os = "macos", test))]
+fn in_points(work: PxRect, scale: f64) -> PxRect {
+    PxRect { x: work.x / scale, y: work.y / scale, w: work.w / scale, h: work.h / scale }
 }
 
 fn work_area(monitor: &Monitor) -> PxRect {
@@ -518,6 +538,18 @@ mod tests {
     fn corner_origin_uses_the_margin_from_both_edges() {
         assert_eq!(corner_origin((260.0, 72.0), WIN_WORK, 16.0, false), (1644.0, 944.0));
         assert_eq!(corner_origin((840.0, 1280.0), MAC_WORK, 12.0, true), (2172.0, 86.0));
+    }
+
+    #[test]
+    fn mini_timer_sits_in_the_primary_corner_in_points() {
+        // The 2x MacBook as primary screen: its corner in points, whatever screen the new
+        // window starts on.
+        let work = in_points(MAC_WORK, 2.0);
+        assert_eq!(work, PxRect { x: 0.0, y: 37.0, w: 1512.0, h: 945.0 });
+        assert_eq!(corner_origin(MINI_SIZE, work, MINI_MARGIN, false), (1236.0, 894.0));
+        // A primary screen left of the origin (negative coordinates) keeps its own corner.
+        let left = in_points(PxRect { x: -3840.0, y: 50.0, w: 3840.0, h: 2110.0 }, 2.0);
+        assert_eq!(corner_origin(MINI_SIZE, left, MINI_MARGIN, false), (-276.0, 992.0));
     }
 
     #[test]
