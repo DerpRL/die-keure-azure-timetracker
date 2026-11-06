@@ -32,11 +32,16 @@ afterEach(() => {
 
 const picker = (flow: FlowSlice) => ({ ...flow, surface: 'picker' as const });
 
+/** The ticket list's choosable rows (not its section headers). */
+const choiceRows = (list: HTMLElement) => within(list).getAllByRole('row').filter((row) => row.hasAttribute('data-key'));
+
 /** The ticket list's rows, by their visible title. */
-const rowTitles = (list: HTMLElement) =>
-  within(list)
-    .getAllByRole('row')
-    .map((row) => row.querySelector('[class*="rowTitle"]')?.textContent);
+const rowTitles = (list: HTMLElement) => choiceRows(list).map((row) => row.querySelector('[class*="rowTitle"]')?.textContent);
+
+/** The quick actions' tiles, by their full (accessible) name. */
+const tileNames = () => choiceRows(screen.getByRole('grid', { name: 'Without a ticket' })).map((row) => row.getAttribute('aria-label'));
+
+const noResultsFlow = picker({ ...pickerSearchFlow, search: { ...pickerSearchFlow.search, query: 'Daddaw', results: [], searching: false, error: null } });
 
 describe('TicketPickerSheet', () => {
   it('stays closed while no picker is open', () => {
@@ -66,15 +71,13 @@ describe('TicketPickerSheet', () => {
     expect(rowTitles(list)).toEqual([
       'Checkout: retry failed card payments',
       'Invoice PDF shows the wrong VAT number',
-      'Work without a ticket',
-      'Meeting without a ticket',
-      'Daily stand-up',
     ]);
-    const rows = within(list).getAllByRole('row');
+    // The ticket-free quick actions are tiles of their own, above the tickets.
+    expect(tileNames()).toEqual(['Work without a ticket', 'Meeting without a ticket', 'Daily stand-up']);
+    const rows = choiceRows(list);
     expect(rows[0]).toHaveTextContent('Story');
     expect(rows[0]).toHaveTextContent('#4821 · tracking now · favorite');
     expect(rows[1]).toHaveTextContent('Bug');
-    expect(rows[2]).toHaveTextContent('None');
     // The activities are there before a ticket is chosen, with the saved default selected.
     const activities = within(dialog).getByRole('radiogroup', { name: 'Activity' });
     expect(within(activities).getAllByRole('radio')).toHaveLength(5);
@@ -300,15 +303,70 @@ describe('TicketPickerSheet', () => {
     expect(screen.getByRole('button', { name: 'Start tracking' })).toBeDisabled();
   });
 
+  it.each([
+    ['no search', pickerSearchFlow, 'Checkout: retry failed card payments'],
+    ['search results', picker(searchResultsFlow), 'Invoice PDF shows the wrong VAT number'],
+    ['no search results', noResultsFlow, null],
+  ])('always shows the three ticket-free tiles above the tickets, with %s', async (_case, flow, firstTicket) => {
+    renderWithEngine(<TicketPickerSheet />, { with: { flow } });
+    const tiles = await screen.findByRole('grid', { name: 'Without a ticket' });
+    expect(tileNames()).toEqual(['Work without a ticket', 'Meeting without a ticket', 'Daily stand-up']);
+    expect(choiceRows(tiles).map((tile) => tile.querySelector('[class*="tileTitle"]')?.textContent)).toEqual(['Work', 'Meeting', 'Daily stand-up']);
+    // The tiles come before the tickets on the page.
+    const tickets = screen.getByRole('grid', { name: 'Tickets' });
+    expect(tiles.compareDocumentPosition(tickets) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    if (firstTicket) expect(rowTitles(tickets)[0]).toBe(firstTicket);
+    else {
+      expect(within(tickets).queryAllByRole('row')).toEqual([]);
+      expect(screen.getByRole('status')).toHaveTextContent('No matching tickets.');
+    }
+    await expectAccessible();
+  });
+
+  it.each([
+    ['Work without a ticket', 'activity'],
+    ['Meeting without a ticket', 'meeting'],
+    ['Daily stand-up', 'standup'],
+  ] as const)('chooses “%s” from its tile', async (title, kind) => {
+    const { engine, user } = renderWithEngine(<TicketPickerSheet />, { with: { flow: pickerSearchFlow } });
+    const tile = await screen.findByRole('row', { name: title });
+    await user.click(tile);
+    expect(engine.dispatched('tracking.chooseManual')).toEqual([{ type: 'tracking.chooseManual', kind }]);
+    expect(tile).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('button', { name: 'Start tracking' })).toBeInTheDocument();
+  });
+
+  it('moves across the tiles with Left and Right Arrow and chooses with Return', async () => {
+    const { engine, user } = renderWithEngine(<TicketPickerSheet />, { with: { flow: noResultsFlow } });
+    await screen.findByRole('searchbox', { name: 'Search tickets' });
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('row', { name: 'Work without a ticket' })).toHaveFocus();
+    await user.keyboard('{ArrowRight}{ArrowRight}');
+    expect(screen.getByRole('row', { name: 'Daily stand-up' })).toHaveFocus();
+    await user.keyboard('{ArrowLeft}');
+    expect(screen.getByRole('row', { name: 'Meeting without a ticket' })).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(engine.dispatched('tracking.chooseManual')).toEqual([{ type: 'tracking.chooseManual', kind: 'meeting' }]);
+    // Up Arrow goes back to the search.
+    await user.keyboard('{ArrowUp}');
+    expect(screen.getByRole('searchbox', { name: 'Search tickets' })).toHaveFocus();
+  });
+
   it('moves from the search into the list with Down Arrow and chooses with Return', async () => {
     const { engine, user } = renderWithEngine(<TicketPickerSheet />, { with: { flow: pickerSearchFlow } });
     await screen.findByRole('searchbox', { name: 'Search tickets' });
     // Return in the search never starts anything.
     await user.keyboard('{Enter}');
     expect(engine.intents.filter((intent) => intent.type.startsWith('tracking.'))).toEqual([]);
+    // First the tiles, then the tickets.
     await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('row', { name: 'Work without a ticket' })).toHaveFocus();
+    await user.keyboard('{ArrowRight}{ArrowDown}');
     expect(screen.getByRole('row', { name: /Checkout: retry failed card payments/ })).toHaveFocus();
-    await user.keyboard('{ArrowDown}{Enter}');
+    // Up Arrow on the first ticket goes back to the tiles.
+    await user.keyboard('{ArrowUp}');
+    expect(screen.getByRole('row', { name: 'Work without a ticket' })).toHaveFocus();
+    await user.keyboard('{ArrowDown}{ArrowDown}{Enter}');
     expect(engine.dispatched('tracking.chooseTicket')).toEqual([{ type: 'tracking.chooseTicket', ticketId: 4790 }]);
   });
 

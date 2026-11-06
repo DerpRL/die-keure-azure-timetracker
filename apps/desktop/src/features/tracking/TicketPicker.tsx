@@ -1,5 +1,5 @@
-import { useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import { GridList, GridListItem, type Key } from 'react-aria-components';
+import { useId, useRef, useState, type Dispatch, type KeyboardEvent, type SetStateAction } from 'react';
+import { GridList, GridListItem, type Key, type Selection } from 'react-aria-components';
 import { Badge, type Tone } from '../../components/Badge';
 import { IconButton } from '../../components/Button';
 import { SearchField } from '../../components/Fields';
@@ -8,7 +8,8 @@ import type { FlowSlice, Intent, ManualTrackingKind, WorkItem } from '../../ipc/
 import { useSlice } from '../../state/hooks';
 import { cx } from '../../utils/cx';
 import { ActionError, useIntents, useWriteGuards } from './actions';
-import { StarIcon } from './icons';
+import type { IconComponent } from '../../components/icons';
+import { MeetingIcon, NoTicketIcon, StandupIcon, StarIcon, WorkIcon } from './icons';
 import { useTicketSearch } from './TicketSearch';
 import styles from './ticketPicker.module.css';
 
@@ -43,10 +44,15 @@ export type PickerRow =
 const ticketKey = (id: number) => `ticket-${id}`;
 
 const NO_TICKET_ROWS: ReadonlyArray<Extract<PickerRow, { kind: 'manual' }>> = [
-  { kind: 'manual', key: 'manual-activity', manual: 'activity', title: 'Work without a ticket', meta: 'Any activity, no ticket number' },
+  { kind: 'manual', key: 'manual-activity', manual: 'activity', title: 'Work without a ticket', meta: 'Any activity' },
   { kind: 'manual', key: 'manual-meeting', manual: 'meeting', title: 'Meeting without a ticket', meta: 'Saved as Meeting' },
   { kind: 'manual', key: 'manual-standup', manual: 'standup', title: 'Daily stand-up', meta: 'Standup activity only' },
 ];
+
+/** Rows for work without an Azure ticket: the quick actions above the tickets. */
+export function isTicketFree(row: PickerRow): boolean {
+  return row.kind === 'manual' || row.kind === 'continue';
+}
 
 /** The row the engine's draft stands for. */
 export function draftKey(flow: FlowSlice): string | null {
@@ -218,6 +224,51 @@ function FavoriteButton({ ticketId, favorite }: { ticketId: number; favorite: bo
   );
 }
 
+function PickerRowItem({ row }: { row: PickerRow }) {
+  return (
+    <GridListItem
+      id={row.key}
+      textValue={row.kind === 'ticket' ? `#${row.ticketId} ${row.title}` : row.title}
+      className={cx(styles.row, row.kind !== 'ticket' && styles.rowNoTicket)}
+    >
+      <RowContent row={row} />
+    </GridListItem>
+  );
+}
+
+/** The quick actions' tiles: short titles under the "Without a ticket" label. */
+const TILES: Record<ManualTrackingKind, { title: string; icon: IconComponent }> = {
+  activity: { title: 'Work', icon: WorkIcon },
+  meeting: { title: 'Meeting', icon: MeetingIcon },
+  standup: { title: 'Daily stand-up', icon: StandupIcon },
+};
+
+function QuickTile({ row }: { row: PickerRow }) {
+  const tile = row.kind === 'manual' ? TILES[row.manual] : { title: row.title, icon: NoTicketIcon };
+  const meta = row.kind === 'ticket' ? `#${row.ticketId}` : row.meta;
+  const Icon = tile.icon;
+  return (
+    // The row's name stays the full title ("Meeting without a ticket") for screen readers.
+    <GridListItem id={row.key} textValue={row.title} className={styles.tile}>
+      <span className={styles.tileHead}>
+        <Icon className={styles.tileIcon} />
+        <span className={styles.radio} aria-hidden="true" />
+      </span>
+      <span className={styles.tileTitle}>{tile.title}</span>
+      <span className={styles.rowMeta}>{meta}</span>
+    </GridListItem>
+  );
+}
+
+/** Focuses the selected row of the list in `container`, or else its first row. */
+function focusRow(container: HTMLElement | null): boolean {
+  const row =
+    container?.querySelector<HTMLElement>('[role="row"][aria-selected="true"]') ??
+    container?.querySelector<HTMLElement>('[role="row"][data-key]');
+  row?.focus();
+  return Boolean(row);
+}
+
 function RowContent({ row }: { row: PickerRow }) {
   const tag = row.kind === 'ticket' ? typeTag(row.type) : { label: 'None', tone: 'neutral' as const };
   const meta = row.kind === 'ticket' ? [`#${row.ticketId}`, ...row.notes].join(' · ') : row.meta;
@@ -237,9 +288,12 @@ function RowContent({ row }: { row: PickerRow }) {
 }
 
 /**
- * The picker's ticket column (2.2 "15 · Ticket picker"): the search, a filter for the quick
- * tickets and one list of rows to choose from, ending with the ticket-free choices. Choosing a
- * row only prepares the engine's draft; the activity column then belongs to it.
+ * The picker's ticket column (2.2 "15 · Ticket picker"): the search, the ticket-free quick
+ * actions as three tiles side by side, then a filter for the quick tickets and the tickets to
+ * choose from, which fill the rest of the column and scroll. The tiles and the tickets are two
+ * lists with one selection: arrow keys move across the tiles, Down Arrow goes on to the tickets
+ * and Up Arrow on the first ticket comes back. Choosing a row only prepares the engine's draft;
+ * the activity column then belongs to it.
  *
  * The engine keeps one draft at a time and refuses a new choice while one exists, so choosing
  * another row first lets go of the current draft (`tracking.chooseSuggestionTicket` keeps a
@@ -263,6 +317,8 @@ export function PickerTickets({ flow, pending, setPending, switching }: PickerTi
   const choose = useIntents();
   const [filter, setFilter] = useState<Filter>('all');
   const listRef = useRef<HTMLDivElement>(null);
+  const tilesRef = useRef<HTMLDivElement>(null);
+  const tilesLabel = useId();
   // The last results, kept on screen while a new choice has cleared them and the search that
   // follows it has not answered yet.
   const [lastResults, setLastResults] = useState<{ query: string; results: WorkItem[] }>({ query: '', results: [] });
@@ -280,11 +336,36 @@ export function PickerTickets({ flow, pending, setPending, switching }: PickerTi
 
   const runningId = tracking?.running ? tracking.ticketId : null;
   const rows = pickerRows(flow, { query, results, filter, runningId, workItems });
+  const ticketList = rows.filter((row) => !isTicketFree(row));
+  const ticketFree = rows.filter(isTicketFree);
   const draft = flow.draft;
   // The chosen row is selected at once and stays so while its draft is prepared.
   const selectedKey = switching && pending ? pending.key : draftKey(flow);
   // The engine is busy preparing that row; only someone else's write locks the list.
   const disabled = !connected || (busy && !switching);
+
+  const onSelectionChange = (keys: Selection) => {
+    if (keys === 'all') return;
+    const [key] = [...keys] as Key[];
+    const row = rows.find((candidate) => candidate.key === key);
+    if (row) onChoose(row);
+  };
+  const selectedIn = (list: PickerRow[]) => (selectedKey && list.some((row) => row.key === selectedKey) ? [selectedKey] : []);
+  const disabledIn = (list: PickerRow[]) => (disabled ? list.map((row) => row.key) : []);
+  // Down Arrow past the tiles goes on to the tickets; Up Arrow from the tiles back to the search.
+  const onTilesKeyDown = (event: KeyboardEvent) => {
+    if (event.defaultPrevented) return;
+    if (event.key === 'ArrowDown' && focusRow(listRef.current)) event.preventDefault();
+    else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      tilesRef.current?.closest('[data-picker-column]')?.querySelector<HTMLElement>(PICKER_SEARCH_SELECTOR)?.focus();
+    }
+  };
+  // Up Arrow on the first ticket goes back to the tiles.
+  const onTicketsKeyDown = (event: KeyboardEvent) => {
+    if (event.defaultPrevented || event.key !== 'ArrowUp') return;
+    if (focusRow(tilesRef.current)) event.preventDefault();
+  };
 
   const onChoose = (row: PickerRow) => {
     if (row.key === draftKey(flow) || choose.inFlight()) return;
@@ -317,7 +398,7 @@ export function PickerTickets({ flow, pending, setPending, switching }: PickerTi
     listStatus = connected ? 'Enter a ticket number or a few words from its title.' : 'Connect your account in Settings first.';
 
   return (
-    <div className={styles.tickets}>
+    <div className={styles.tickets} data-picker-column="">
       <div data-picker-search="" data-return-handled="">
         <SearchField
           label="Search tickets"
@@ -333,12 +414,33 @@ export function PickerTickets({ flow, pending, setPending, switching }: PickerTi
               return;
             }
             event.preventDefault();
-            const row =
-              listRef.current?.querySelector<HTMLElement>('[role="row"][aria-selected="true"]') ??
-              listRef.current?.querySelector<HTMLElement>('[role="row"]');
-            row?.focus();
+            // The selected row, wherever it is, or else the first tile.
+            const selected = listRef.current?.querySelector<HTMLElement>('[role="row"][aria-selected="true"]');
+            if (selected) selected.focus();
+            else focusRow(tilesRef.current);
           }}
         />
+      </div>
+      {/* The wrappers only pass arrow keys the lists leave unhandled on to the next list. */}
+      <div ref={tilesRef} role="presentation" className={styles.quick} data-return-handled="" onKeyDown={onTilesKeyDown}>
+        <span id={tilesLabel} className={styles.sectionLabel}>
+          Without a ticket
+        </span>
+        <GridList
+          aria-labelledby={tilesLabel}
+          items={ticketFree}
+          layout="grid"
+          keyboardNavigationBehavior="tab"
+          selectionMode="single"
+          disallowEmptySelection
+          selectedKeys={selectedIn(ticketFree)}
+          onSelectionChange={onSelectionChange}
+          disabledKeys={disabledIn(ticketFree)}
+          disabledBehavior="selection"
+          className={styles.tiles}
+        >
+          {(row) => <QuickTile row={row} />}
+        </GridList>
       </div>
       {showFilter ? (
         <SegmentedControl<Filter>
@@ -365,32 +467,19 @@ export function PickerTickets({ flow, pending, setPending, switching }: PickerTi
           {results.length === 1 ? '1 ticket found' : `${results.length} tickets found`}
         </p>
       ) : null}
-      <div ref={listRef} className={styles.listScroll} data-return-handled="">
+      <div ref={listRef} role="presentation" className={styles.listArea} data-return-handled="" onKeyDown={onTicketsKeyDown}>
         <GridList
           aria-label="Tickets"
-          items={rows}
+          items={ticketList}
           selectionMode="single"
           disallowEmptySelection
-          selectedKeys={selectedKey ? [selectedKey] : []}
-          onSelectionChange={(keys) => {
-            if (keys === 'all') return;
-            const [key] = [...keys] as Key[];
-            const row = rows.find((candidate) => candidate.key === key);
-            if (row) onChoose(row);
-          }}
-          disabledKeys={disabled ? rows.map((row) => row.key) : []}
+          selectedKeys={selectedIn(ticketList)}
+          onSelectionChange={onSelectionChange}
+          disabledKeys={disabledIn(ticketList)}
           disabledBehavior="selection"
           className={styles.list}
         >
-          {(row) => (
-            <GridListItem
-              id={row.key}
-              textValue={row.kind === 'ticket' ? `#${row.ticketId} ${row.title}` : row.title}
-              className={cx(styles.row, row.kind !== 'ticket' && styles.rowNoTicket)}
-            >
-              <RowContent row={row} />
-            </GridListItem>
-          )}
+          {(row) => <PickerRowItem row={row} />}
         </GridList>
       </div>
       <ActionError error={search.error ?? choose.error} />

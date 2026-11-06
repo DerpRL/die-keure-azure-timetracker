@@ -10,13 +10,19 @@
 
 .columns {
   display: grid;
+  flex: 1 1 auto;
   grid-template-columns: minmax(0, 1fr) minmax(15rem, 17rem);
+  /* Side by side, the dialog keeps to the window and each column scrolls on its own, so a long
+     activity list never pushes the ticket-free choices out of view. */
+  grid-template-rows: minmax(0, 1fr);
   min-height: 0;
 }
 
 @media (max-width: 44rem) {
   .columns {
+    flex: none;
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
   }
 }
 
@@ -27,7 +33,9 @@
   flex-direction: column;
   gap: var(--space-3);
   min-width: 0;
+  min-height: 0;
   padding: var(--space-4) 1.375rem;
+  overflow-y: auto;
 }
 
 .filter {
@@ -51,18 +59,105 @@
   color: var(--color-danger-text);
 }
 
-/* A steady height, so the dialog does not jump while the results change. */
-.listScroll {
-  height: min(27rem, 52vh);
-  margin-inline: -0.25rem;
-  padding: 0.25rem;
-  overflow-y: auto;
+/* "Without a ticket": the quick actions as tiles side by side, above the tickets. */
+.quick {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.tiles {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: var(--space-2);
+  outline: none;
+}
+
+/* On a phone-narrow column the tiles keep to one row; the hint makes way. */
+@media (max-width: 30rem) {
+  .tile {
+    padding-inline: var(--space-2);
+  }
+
+  .tile .rowMeta {
+    display: none;
+  }
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  padding: 0.625rem var(--space-3) 0.625rem;
+  /* A dashed line reads lighter than a solid one, so it takes the stronger control colour. */
+  border: var(--size-border) dashed var(--color-control-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  cursor: default;
+  transition:
+    border-color var(--motion-duration-fast, 120ms) var(--motion-ease-standard),
+    background-color var(--motion-duration-fast, 120ms) var(--motion-ease-standard);
+}
+
+.tile[data-hovered]:not([data-selected], [data-disabled]) {
+  background: var(--color-hover);
+}
+
+.tile[data-selected] {
+  border-style: solid;
+  border-color: var(--color-selected-indicator);
+  background: var(--color-selected-bg);
+  box-shadow: 0 0 0 1px var(--color-selected-indicator);
+}
+
+.tile[data-disabled] {
+  color: var(--color-text-secondary);
+}
+
+.tileHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
+.tileIcon {
+  color: var(--color-text-secondary);
+  font-size: 1.125rem;
+}
+
+.tile[data-selected] .tileIcon {
+  color: var(--color-selected-indicator);
+}
+
+.tileTitle {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight, 1.3);
+  overflow-wrap: anywhere;
+}
+
+/* The tickets fill the rest of the column and scroll. The list's own minimum is all it asks of
+   the dialog, so the dialog does not jump while the results change; the list is laid over it. */
+.listArea {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: min(18rem, 40vh);
 }
 
 .list {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  margin: -0.25rem;
+  padding: 0.25rem;
+  overflow-y: auto;
   outline: none;
 }
 
@@ -102,9 +197,6 @@
   border-style: dashed;
 }
 
-.rowNoTicket[data-selected] {
-  border-style: solid;
-}
 
 .tag {
   justify-content: center;
@@ -155,7 +247,8 @@
   background: var(--color-field-bg);
 }
 
-.row[data-selected] .radio {
+.row[data-selected] .radio,
+.tile[data-selected] .radio {
   border-color: var(--color-check-bg);
   background: var(--color-check-bg);
   box-shadow: inset 0 0 0 0.1875rem var(--color-field-bg);
@@ -168,12 +261,19 @@
   flex-direction: column;
   gap: var(--space-3);
   min-width: 0;
+  min-height: 0;
   padding: var(--space-4) var(--space-5);
+  overflow-y: auto;
   border-inline-start: var(--size-border) solid var(--color-separator);
   background: var(--color-surface-sunken);
 }
 
 @media (max-width: 44rem) {
+  .tickets,
+  .side {
+    overflow-y: visible;
+  }
+
   .side {
     border-inline-start: 0;
     border-top: var(--size-border) solid var(--color-separator);
@@ -276,7 +376,12 @@
     border: 2px solid Highlight;
   }
 
-  .row[data-selected] .radio {
+  .tile[data-selected] {
+    border: 2px solid Highlight;
+  }
+
+  .row[data-selected] .radio,
+  .tile[data-selected] .radio {
     background: Highlight;
   }
 }

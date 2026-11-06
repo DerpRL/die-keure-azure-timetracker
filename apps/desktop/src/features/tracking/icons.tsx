@@ -6,8 +6,10 @@ import type { LucideIcon } from 'lucide-react';
 import {
   ArrowUpRight,
   CalendarClock,
+  CircleDashed,
   ClockAlert,
   GitBranch,
+  Laptop,
   Link,
   Mic,
   MicOff,
@@ -17,6 +19,7 @@ import {
   Star,
   Timer,
   Undo2,
+  Users,
 } from 'lucide-react';
 import type { IconComponent, IconProps } from '../../components/icons';
 
@@ -41,3 +44,6 @@ export const OpenExternalIcon = decorative(ArrowUpRight, 'OpenExternalIcon');
 export const PrivacyIcon = decorative(ShieldCheck, 'PrivacyIcon');
 export const SetupIcon = decorative(Link, 'SetupIcon');
 export const OpenPanelIcon = decorative(PanelTop, 'OpenPanelIcon');
+export const WorkIcon = decorative(Laptop, 'WorkIcon');
+export const StandupIcon = decorative(Users, 'StandupIcon');
+export const NoTicketIcon = decorative(CircleDashed, 'NoTicketIcon');
