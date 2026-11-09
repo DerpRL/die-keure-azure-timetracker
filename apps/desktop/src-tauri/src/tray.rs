@@ -11,6 +11,8 @@ use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Manager, Wry};
 
+use att_core::i18n::{Language, language};
+
 use crate::shell::{SETTINGS_PAGE, ShellError, lock, on_main_thread};
 use crate::surfaces;
 
@@ -54,6 +56,8 @@ pub struct TrayModel {
 struct Applied {
     title: Option<String>,
     tooltip: Option<String>,
+    /// The language the menu was built in; it is built again when the language changes.
+    menu_language: Option<Language>,
     #[cfg(not(target_os = "macos"))]
     icon: Option<(TrayState, u32)>,
 }
@@ -94,6 +98,7 @@ pub fn create(app: &AppHandle) -> Result<(), ShellError> {
     let model = app.state::<TrayModel>();
     let mut applied = lock(&model.applied);
     applied.tooltip = Some(DEFAULT_TOOLTIP.to_string());
+    applied.menu_language = Some(language());
     #[cfg(target_os = "macos")]
     {
         applied.title = Some(INITIAL_TITLE.to_string());
@@ -132,6 +137,10 @@ fn apply(
     let mut applied = lock(&model.applied);
     let title_changed = applied.title != title;
     let tooltip_changed = applied.tooltip.as_deref() != Some(tooltip.as_str());
+    if applied.menu_language != Some(language()) {
+        tray.set_menu(Some(tray_menu(app)?))?;
+        applied.menu_language = Some(language());
+    }
 
     #[cfg(target_os = "macos")]
     {
@@ -198,14 +207,15 @@ fn on_tray_event(app: &AppHandle, event: TrayIconEvent) {
 }
 
 fn tray_menu(app: &AppHandle) -> Result<Menu<Wry>, ShellError> {
+    use crate::nl::tr;
     #[cfg(target_os = "macos")]
-    let (settings, quit) = ("Settings…", "Quit Azure timetracker");
+    let (settings, quit) = (tr("Settings…"), tr("Quit Azure timetracker"));
     #[cfg(not(target_os = "macos"))]
-    let (settings, quit) = ("Settings", "Quit");
+    let (settings, quit) = (tr("Settings"), tr("Quit"));
     Ok(Menu::with_items(
         app,
         &[
-            &MenuItem::with_id(app, MENU_OPEN_OVERVIEW, "Open overview", true, None::<&str>)?,
+            &MenuItem::with_id(app, MENU_OPEN_OVERVIEW, tr("Open overview"), true, None::<&str>)?,
             &MenuItem::with_id(app, MENU_SETTINGS, settings, true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, MENU_QUIT, quit, true, None::<&str>)?,

@@ -1,5 +1,6 @@
 import { lazy, Suspense, type ReactNode } from 'react';
 import { useSlice } from '../../state/hooks';
+import { t } from '../../i18n';
 
 // Only the first run needs it, so it stays out of the main window's initial bundle.
 const OnboardingFlow = lazy(() => import('./OnboardingFlow').then((module) => ({ default: module.OnboardingFlow })));
@@ -13,7 +14,7 @@ export function OnboardingGate({ children }: { children: ReactNode }) {
   const app = useSlice('app');
   if (!app?.onboarding) return <>{children}</>;
   return (
-    <Suspense fallback={<main aria-busy="true" aria-label="Loading setup" />}>
+    <Suspense fallback={<main aria-busy="true" aria-label={t('Loading setup')} />}>
       <OnboardingFlow />
     </Suspense>
   );

@@ -64,10 +64,16 @@ pub(crate) fn os_at_least(major: isize, minor: isize) -> bool {
 
 /// Runs `f` and turns a panic into an error, so a bug never unwinds into Objective-C frames or
 /// kills a long-lived worker thread.
-pub(crate) fn guarded<T>(what: &str, f: impl FnOnce() -> crate::Result<T>) -> crate::Result<T> {
+pub(crate) fn guarded<T>(
+    what: &'static str,
+    f: impl FnOnce() -> crate::Result<T>,
+) -> crate::Result<T> {
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)).unwrap_or_else(|_| {
         tracing::error!(target: "att_platform::macos", "{what} panicked");
-        Err(crate::PlatformError::Failed(format!("{what} failed unexpectedly.")))
+        Err(crate::PlatformError::Failed(crate::nl::trf(
+            "{what} failed unexpectedly.",
+            &[("what", &crate::unsupported::capability_label(what))],
+        )))
     })
 }
 

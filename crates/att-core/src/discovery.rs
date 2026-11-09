@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::{AppError, Result};
 use crate::git::{GitProbe, file_error};
 use crate::model::{HostOs, Repository, last_path_component};
+use crate::nl::tr;
 use crate::text::natural_cmp;
 
 /// Directory extensions treated as packages on macOS, approximating Foundation's
@@ -123,7 +124,7 @@ impl RepositoryDiscovery {
         let root = PathBuf::from(Self::canonical_path(&folder.as_ref().to_string_lossy()));
         let metadata = fs::metadata(&root).map_err(|error| read_error(&root, &error))?;
         if !metadata.is_dir() {
-            return Err(AppError::message("Choose a folder to scan for Git repositories."));
+            return Err(AppError::message(tr("Choose a folder to scan for Git repositories.")));
         }
         let mut scanner = Scanner::default();
         if cancelled() {

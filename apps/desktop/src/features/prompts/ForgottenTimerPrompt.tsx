@@ -3,6 +3,7 @@ import type { ForgottenReminder, ForgottenTicketView } from '../../ipc/contract'
 import { useIntents, useWriteGuards } from '../tracking/actions';
 import { ForgottenIcon } from '../tracking/icons';
 import { PromptCard, promptStyles as styles } from './PromptCard';
+import { t } from '../../i18n';
 
 /**
  * "Working without a timer?" (1.14 `WorkAwarenessPrompts`, forgotten-timer part): pick a ticket
@@ -17,7 +18,7 @@ export function ForgottenTimerPrompt({ reminder, tickets }: { reminder: Forgotte
       kind="forgottenTimer"
       icon={ForgottenIcon}
       tone="warning"
-      title="Working without a timer?"
+      title={t('Working without a timer?')}
       runner={actions}
       actions={
         <>
@@ -28,29 +29,29 @@ export function ForgottenTimerPrompt({ reminder, tickets }: { reminder: Forgotte
             isPending={actions.isPending('choose')}
             onPress={() => void actions.run('choose', { type: 'awareness.chooseForgottenTicket', ticketId: null })}
           >
-            Choose a ticket…
+            {t('Choose a ticket…')}
           </Button>
           <Button
             isPending={actions.isPending('snooze')}
             onPress={() => void actions.run('snooze', { type: 'awareness.deferForgotten', untilTomorrow: false })}
           >
-            Snooze 15 min
+            {t('Snooze 15 min')}
           </Button>
           <Button
             isPending={actions.isPending('ignore')}
             onPress={() => void actions.run('ignore', { type: 'awareness.deferForgotten', untilTomorrow: true })}
           >
-            Ignore today
+            {t('Ignore today')}
           </Button>
         </>
       }
     >
       <p className={styles.text}>
-        {`You’ve been active in selected work apps, including ${reminder.appName}, with no timer running.`}
+        {t('You’ve been active in selected work apps, including {app}, with no timer running.', { app: reminder.appName })}
       </p>
       {tickets.length > 0 ? (
         <>
-          <p className={styles.caption}>Tickets on your watched branches</p>
+          <p className={styles.caption}>{t('Tickets on your watched branches')}</p>
           <div className={styles.ticketChoices}>
             {tickets.slice(0, 4).map((ticket) => (
               <Button
@@ -72,7 +73,7 @@ export function ForgottenTimerPrompt({ reminder, tickets }: { reminder: Forgotte
           </div>
         </>
       ) : null}
-      <p className={styles.caption}>Starting tracks from now. Use the Time editor to review earlier gaps.</p>
+      <p className={styles.caption}>{t('Starting tracks from now. Use the Time editor to review earlier gaps.')}</p>
     </PromptCard>
   );
 }

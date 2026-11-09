@@ -65,8 +65,9 @@ pub(crate) async fn load(engine: &Engine) {
         let from = history.from.unwrap_or(default_from);
         let to = history.to.unwrap_or(default_to);
         if from > to {
-            history.issue =
-                Some("Choose a history end date on or after the start date.".to_string());
+            history.issue = Some(
+                crate::nl::tr("Choose a history end date on or after the start date.").to_string(),
+            );
             return None;
         }
         history.generation += 1;
@@ -97,7 +98,8 @@ pub(crate) async fn load(engine: &Engine) {
             }
             Ok(_) => false,
             Err(error) => {
-                session.history.issue = Some(format!("History: {error}"));
+                session.history.issue =
+                    Some(crate::nl::trf("History: {error}", &[("error", &error)]));
                 false
             }
         }
@@ -200,7 +202,10 @@ pub(crate) fn write_atomically(path: &std::path::Path, text: &str) -> att_core::
     let name = path.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_default();
     let temporary = path.with_file_name(format!(".{name}.{}.tmp", uuid::Uuid::new_v4()));
     let failed = |error: std::io::Error| {
-        AppError::Message(format!("The file “{name}” could not be saved: {error}"))
+        AppError::Message(crate::nl::trf(
+            "The file “{name}” could not be saved: {error}",
+            &[("name", &name), ("error", &error)],
+        ))
     };
     std::fs::write(&temporary, text.as_bytes()).map_err(failed)?;
     std::fs::rename(&temporary, path).map_err(|error| {

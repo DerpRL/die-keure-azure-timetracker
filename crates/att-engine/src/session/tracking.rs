@@ -28,6 +28,7 @@ use crate::clients::Clients;
 use crate::engine::Engine;
 use crate::intent::done;
 use crate::ipc::IpcError;
+use crate::nl::{tr, trf};
 use crate::state::AppState;
 
 use super::view::FlowSurface;
@@ -100,7 +101,8 @@ impl TrackingDraft {
         if let Some(item) = &self.item {
             return item.title.clone();
         }
-        let fallback = || if self.standup { "Daily standup" } else { "Meeting" }.to_string();
+        let fallback =
+            || if self.standup { tr("Daily standup") } else { tr("Meeting") }.to_string();
         self.figma_name
             .clone()
             .or_else(|| self.meeting.as_ref().map(|meeting| meeting.title.clone()))
@@ -192,16 +194,16 @@ async fn round_stopped(
     };
     let service = clients.seven_pace.as_ref();
     match round_stopped_entry(&id, rounding, service, engine.now(), &engine.cal()).await {
-        Ok(Some(_)) => {
-            engine.record("Time rounded", "Saved the stopped entry to the nearest quarter hour")
-        }
+        Ok(Some(_)) => engine
+            .record(tr("Time rounded"), tr("Saved the stopped entry to the nearest quarter hour")),
         Ok(None) => {}
         Err(error) => {
-            let message = format!(
-                "The stopped entry was saved as tracked, not rounded to a quarter hour. {error}"
+            let message = trf(
+                "The stopped entry was saved as tracked, not rounded to a quarter hour. {error}",
+                &[("error", &error)],
             );
             set_error(engine, message.clone());
-            engine.record("Rounding needs attention", message);
+            engine.record_attention(tr("Rounding needs attention"), message);
         }
     }
 }
@@ -393,7 +395,7 @@ pub(crate) async fn choose_manual(engine: &Engine, kind: ManualTrackingKind) {
         return;
     }
     let Some(current) = engine.read(connected_state) else {
-        set_error(engine, "Connect and refresh 7pace before starting a timer.");
+        set_error(engine, tr("Connect and refresh 7pace before starting a timer."));
         return;
     };
     let in_menu_bar = engine.read(|state| state.session.flow.menu_tracking);
@@ -480,13 +482,13 @@ pub(crate) async fn choose_activity(engine: &Engine, choice: Choice) {
         return;
     }
     let Some(current) = engine.read(connected_state) else {
-        set_error(engine, "Connect and refresh 7pace before starting a timer.");
+        set_error(engine, tr("Connect and refresh 7pace before starting a timer."));
         return;
     };
     if let Some(id) = choice.ticket
         && !(1..=i64::from(i32::MAX)).contains(&id)
     {
-        set_error(engine, "Enter a valid Azure ticket number.");
+        set_error(engine, tr("Enter a valid Azure ticket number."));
         return;
     }
     let refuse_idle = engine.read(|state| {
@@ -539,9 +541,9 @@ async fn prepare_draft(
     let file = choice.figma_file.as_deref();
     figma::validate(engine, proposal.as_ref(), file, choice.ticket, Some(&scope))?;
     if choice.change.as_ref().is_some_and(BranchChange::suggests_break) {
-        return Err(AppError::message(
+        return Err(AppError::message(tr(
             "This branch suggests pausing or stopping your current timer.",
-        ));
+        )));
     }
     if let Some(change) = &choice.change {
         branches::validate(engine, change).await?;
@@ -553,7 +555,7 @@ async fn prepare_draft(
     if let Some(resume) = &choice.resume
         && (engine.read(|state| state.session.paused.as_ref() != Some(resume)) || current.running())
     {
-        return Err(AppError::message("This paused session is no longer available."));
+        return Err(AppError::message(tr("This paused session is no longer available.")));
     }
     if let Some(plan) = &choice.meeting_return {
         let now = engine.now();
@@ -563,21 +565,21 @@ async fn prepare_draft(
                 || !plan.is_due(Some(current), &workspace, now)
         });
         if stale {
-            return Err(AppError::message(
+            return Err(AppError::message(tr(
                 "The meeting timer changed. Review your current tracking before returning.",
-            ));
+            )));
         }
     }
     let mut item = None;
     if let Some(id) = choice.ticket {
         let found = if engine.preview() {
-            engine
-                .read(|state| state.session.work_items.get(&id).cloned())
-                .ok_or_else(|| AppError::message("This ticket is not in the isolated preview."))?
+            engine.read(|state| state.session.work_items.get(&id).cloned()).ok_or_else(|| {
+                AppError::message(tr("This ticket is not in the isolated preview."))
+            })?
         } else {
             let clients = engine
                 .clients()
-                .ok_or_else(|| AppError::message("Connect your account in Settings first."))?;
+                .ok_or_else(|| AppError::message(tr("Connect your account in Settings first.")))?;
             lookup(engine, &clients, id).await?
         };
         engine.update(|state| state.session.work_items.insert(id, found.clone()));
@@ -604,9 +606,9 @@ async fn prepare_draft(
         design_activity::selected(&state.session.connection.activity_types).is_none()
     });
     if (proposal.is_some() || file.is_some()) && design_missing {
-        return Err(AppError::message(
+        return Err(AppError::message(tr(
             "The Design activity is missing in 7pace. Add or enable Design before starting from Figma.",
-        ));
+        )));
     }
     let figma_name = match &proposal {
         Some(proposal) => Some(proposal.name.clone()),
@@ -646,7 +648,7 @@ async fn revalidate(engine: &Engine, draft: &TrackingDraft) -> Result<()> {
     if let Some(resume) = &draft.resume
         && engine.read(|state| state.session.paused.as_ref() != Some(resume))
     {
-        return Err(AppError::message("This paused session is no longer available."));
+        return Err(AppError::message(tr("This paused session is no longer available.")));
     }
     if let Some(plan) = &draft.meeting_return {
         let now = engine.now();
@@ -656,7 +658,7 @@ async fn revalidate(engine: &Engine, draft: &TrackingDraft) -> Result<()> {
                 || !plan.is_due(tracking(state), &workspace, now)
         });
         if stale {
-            return Err(AppError::message("This meeting return is no longer available."));
+            return Err(AppError::message(tr("This meeting return is no longer available.")));
         }
     }
     Ok(())
@@ -775,7 +777,7 @@ pub(crate) async fn start(
         return done();
     };
     if !loaded {
-        set_error(engine, "Load the activity types before starting your timer.");
+        set_error(engine, tr("Load the activity types before starting your timer."));
         return done();
     }
     let Some(_busy) = engine.inner.busy.try_acquire() else { return Err(IpcError::busy()) };
@@ -804,7 +806,7 @@ pub(crate) async fn start(
                 flow.menu_tracking = false;
                 flow.selected_meeting = None;
             });
-            engine.record("Tracking needs attention", message);
+            engine.record_attention(tr("Tracking needs attention"), message);
         }
     }
     done()
@@ -830,7 +832,7 @@ async fn run_start(
         types.iter().any(|activity| activity.id == activity_id && matches(activity))
     };
     if draft.is_figma() && !chosen(design_activity::matches) {
-        return Err(AppError::message("Choose Design to start tracking from Figma."));
+        return Err(AppError::message(tr("Choose Design to start tracking from Figma.")));
     }
     figma::validate(
         engine,
@@ -840,7 +842,9 @@ async fn run_start(
         draft.figma_scope.as_deref(),
     )?;
     if draft.standup && !chosen(StandupActivity::matches) {
-        return Err(AppError::message("The Standup activity is required to track daily standup."));
+        return Err(AppError::message(tr(
+            "The Standup activity is required to track daily standup.",
+        )));
     }
     let remark = match draft.manual {
         Some(kind) => Some(kind.remark(comment, types.iter().find(|t| t.id == activity_id))),
@@ -849,9 +853,9 @@ async fn run_start(
     if let Some(session) = &draft.microphone_session {
         microphone::validate_current(engine, session)?;
         if draft.standup && !chosen(StandupActivity::matches) {
-            return Err(AppError::message(
+            return Err(AppError::message(tr(
                 "Choose the Standup activity before starting daily standup tracking.",
-            ));
+            )));
         }
     }
     if let Some(change) = &draft.change {
@@ -864,7 +868,7 @@ async fn run_start(
     if let Some(resume) = &draft.resume
         && engine.read(|state| state.session.paused.as_ref() != Some(resume))
     {
-        return Err(AppError::message("This paused session is no longer available."));
+        return Err(AppError::message(tr("This paused session is no longer available.")));
     }
     let now = engine.now();
     let (previous, previous_return, stale_return) = engine.read(|state| {
@@ -877,7 +881,7 @@ async fn run_start(
         (previous, state.session.meeting_return.clone(), stale)
     });
     if stale_return {
-        return Err(AppError::message("This meeting return is no longer available."));
+        return Err(AppError::message(tr("This meeting return is no longer available.")));
     }
     let previous = previous.ok_or(AppError::RemoteChanged)?;
     let next = att_core::tracking::switch_to(
@@ -954,13 +958,13 @@ fn finish_start(engine: &Engine, draft: &TrackingDraft, started: Started) {
             .iter()
             .find(|type_| Some(&type_.id) == activity.as_ref())
             .and_then(|type_| type_.name.clone())
-            .unwrap_or_else(|| "7pace default".to_string());
+            .unwrap_or_else(|| tr("7pace default").to_string());
         let prefix = ticket.map(|id| format!("#{id} · ")).unwrap_or_default();
         let what = match ticket {
             None => remark.clone().unwrap_or_else(|| draft.title()),
             Some(_) => draft.title(),
         };
-        effects.record("Tracking started", format!("{prefix}{what} · {activity_name}"));
+        effects.record(tr("Tracking started"), format!("{prefix}{what} · {activity_name}"));
     });
     figma::persist_ledger(engine);
     engine.update(|state| state.session.error = state.session.figma.storage_issue.clone());
@@ -999,9 +1003,9 @@ async fn validate_prompt(
     match prompt {
         Prompt::None => Ok(shown.identity()),
         Prompt::Branch(change) => {
-            let change = change
-                .as_ref()
-                .ok_or_else(|| AppError::message("This branch suggestion is no longer active."))?;
+            let change = change.as_ref().ok_or_else(|| {
+                AppError::message(tr("This branch suggestion is no longer active."))
+            })?;
             branches::validate(engine, change).await?;
             Ok(shown.identity())
         }
@@ -1042,7 +1046,7 @@ pub(crate) async fn stop(
                     branches::dismiss_change(state, change.id, effects);
                 }
                 state.session.error = None;
-                effects.record("Tracking stopped", "Stopped the active 7pace timer");
+                effects.record(tr("Tracking stopped"), tr("Stopped the active 7pace timer"));
             });
             let _ = engine.persist();
             round_stopped(engine, &clients, &shown, &stopped).await;
@@ -1092,7 +1096,7 @@ pub(crate) async fn pause(
                 if let Prompt::Branch(Some(change)) = &prompt {
                     branches::dismiss_change(state, change.id, effects);
                 }
-                effects.record("Tracking paused", "No time is logged until you resume");
+                effects.record(tr("Tracking paused"), tr("No time is logged until you resume"));
             });
             let _ = engine.persist();
             round_stopped(engine, &clients, &shown, &stopped).await;

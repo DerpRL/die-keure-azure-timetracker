@@ -1,7 +1,7 @@
 /**
  * Presentation helpers shared by the worklog pages (Time editor, Day review, History, Weekly
- * report, Offline drafts) and the ticket context sheet. English only, en-GB order and the 24-hour
- * clock, as the rest of the app (rewrite plan §8). Nothing here makes a tracking decision: it only
+ * report, Offline drafts) and the ticket context sheet. Dates follow the interface language
+ * (`dateFormat`: en-GB order and the 24-hour clock in English, as the rest of the app, rewrite plan §8). Nothing here makes a tracking decision: it only
  * turns engine values into text.
  */
 import {
@@ -14,22 +14,15 @@ import {
   type CalendarDate,
   type ZonedDateTime,
 } from '@internationalized/date';
+import { dateFormat, t } from '../../i18n';
 import type { HostOs, WorkItemsSlice, WorkLog } from '../../ipc/contract';
 
-const LOCALE = 'en-GB';
-
-const timeFormat = new Intl.DateTimeFormat(LOCALE, { hour: '2-digit', minute: '2-digit' });
-const secondsTimeFormat = new Intl.DateTimeFormat(LOCALE, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-const dateTimeFormat = new Intl.DateTimeFormat(LOCALE, {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-});
-const dayLongFormat = new Intl.DateTimeFormat(LOCALE, { weekday: 'long', day: 'numeric', month: 'long' });
-const dayCompleteFormat = new Intl.DateTimeFormat(LOCALE, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-const dayShortFormat = new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month: 'short', year: 'numeric' });
+const TIME: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' };
+const SECONDS_TIME: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
+const DATE_TIME: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+const DAY_LONG: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long' };
+const DAY_COMPLETE: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+const DAY_SHORT: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
 
 /** An RFC 3339 instant (or a 7pace timestamp without offset, read as local time) as a Date. */
 export function parseInstant(value: string | null | undefined): Date | null {
@@ -51,22 +44,22 @@ export function logEnd(log: WorkLog): Date | null {
 }
 
 /** "09:30". */
-export function formatClockTime(date: Date | null, fallback = 'Unknown'): string {
-  return date ? timeFormat.format(date) : fallback;
+export function formatClockTime(date: Date | null, fallback?: string): string {
+  return date ? dateFormat(TIME).format(date) : (fallback ?? t('Unknown'));
 }
 
 /** "09:30:15". */
-export function formatClockTimeWithSeconds(date: Date | null, fallback = 'Unknown'): string {
-  return date ? secondsTimeFormat.format(date) : fallback;
+export function formatClockTimeWithSeconds(date: Date | null, fallback?: string): string {
+  return date ? dateFormat(SECONDS_TIME).format(date) : (fallback ?? t('Unknown'));
 }
 
 /** "5 Oct 2026, 09:30" (Swift `.abbreviated` date with `.shortened` time). */
-export function formatDateTime(date: Date | null, fallback = 'Unknown'): string {
-  return date ? dateTimeFormat.format(date) : fallback;
+export function formatDateTime(date: Date | null, fallback?: string): string {
+  return date ? dateFormat(DATE_TIME).format(date) : (fallback ?? t('Unknown'));
 }
 
 /** Same as `formatDateTime` for an RFC 3339 string. */
-export function formatInstant(value: string | null | undefined, fallback = 'Unknown'): string {
+export function formatInstant(value: string | null | undefined, fallback?: string): string {
   return formatDateTime(parseInstant(value), fallback);
 }
 
@@ -89,17 +82,17 @@ export function localDayKey(date: Date): string {
 
 /** "Monday 5 October" (Swift `.weekday(.wide).day().month(.wide)`). */
 export function formatDayLong(day: string | Date): string {
-  return dayLongFormat.format(typeof day === 'string' ? dayToDate(day) : day);
+  return dateFormat(DAY_LONG).format(typeof day === 'string' ? dayToDate(day) : day);
 }
 
 /** "Monday, 5 October 2026" (Swift `.complete`). */
 export function formatDayComplete(day: string | Date): string {
-  return dayCompleteFormat.format(typeof day === 'string' ? dayToDate(day) : day);
+  return dateFormat(DAY_COMPLETE).format(typeof day === 'string' ? dayToDate(day) : day);
 }
 
 /** "5 Oct 2026". */
 export function formatDayShort(day: string | Date): string {
-  return dayShortFormat.format(typeof day === 'string' ? dayToDate(day) : day);
+  return dateFormat(DAY_SHORT).format(typeof day === 'string' ? dayToDate(day) : day);
 }
 
 /** Today's local calendar day for date fields. Read at render time, so it follows midnight on the next render. */
@@ -143,8 +136,8 @@ export function logTicket(log: { workItemId?: number | null }): number | null {
 /** `#4821 · Title` (Time editor), "No Azure ticket" without one. */
 export function timeEditorTitle(log: WorkLog, items: WorkItemsSlice | undefined): string {
   const ticket = logTicket(log);
-  if (ticket === null) return 'No Azure ticket';
-  return `#${ticket} · ${items?.[String(ticket)]?.title ?? 'Azure task'}`;
+  if (ticket === null) return t('No Azure ticket');
+  return `#${ticket} · ${items?.[String(ticket)]?.title ?? t('Azure task')}`;
 }
 
 /** The History row title: the ticket title, the comment, "Azure ticket #id" or "Unassigned time". */
@@ -152,7 +145,7 @@ export function historyTitle(log: WorkLog, items: WorkItemsSlice | undefined): s
   const ticket = logTicket(log);
   const title = ticket === null ? undefined : items?.[String(ticket)]?.title;
   const comment = log.comment?.trim();
-  return title ?? (comment || (ticket === null ? 'Unassigned time' : `Azure ticket #${ticket}`));
+  return title ?? (comment || (ticket === null ? t('Unassigned time') : t('Azure ticket #{id}', { id: ticket })));
 }
 
 /** "#4821 · " or an empty string, as a prefix for conflict and draft rows. */
@@ -162,7 +155,7 @@ export function ticketPrefix(ticket: number | null | undefined): string {
 
 /** "this Mac" on macOS, "this computer" elsewhere, for the 1.14 "stays on this Mac" texts. */
 export function deviceName(os: HostOs | undefined): string {
-  return os === 'windows' || os === 'other' ? 'this computer' : 'this Mac';
+  return os === 'windows' || os === 'other' ? t('this computer') : t('this Mac');
 }
 
 /** Sum of worklog lengths in seconds, skipping invalid ones. */

@@ -14,6 +14,7 @@ import {
   type ThemePreference,
 } from '../../theme/preferences';
 import { useSystemAppearance, useTheme } from '../../theme/ThemeProvider';
+import { LANGUAGE_PREFERENCES, t, type LanguagePreference } from '../../i18n';
 import { useImmediateValue } from './FigmaSettings';
 import { osWords } from './labels';
 import { Hint } from './SettingsSection';
@@ -46,16 +47,16 @@ export function AppearancePreview({ preferences }: { preferences: InterfacePrefe
   return (
     <figure className={styles.preview} data-theme={resolved.theme} data-contrast={resolved.contrast} aria-labelledby={captionId}>
       <figcaption id={captionId} className={styles.previewCaption}>
-        Appearance preview
+        {t('Appearance preview')}
       </figcaption>
       <div className={styles.previewCard}>
         <span className={styles.previewPrimary}>
-          <StatusDot tone="running" label="Running" />
-          Example: tracking is active
+          <StatusDot tone="running" label={t('Running')} />
+          {t('Example: tracking is active')}
         </span>
-        <span className={styles.previewSecondary}>Secondary text</span>
+        <span className={styles.previewSecondary}>{t('Secondary text')}</span>
         <span className={styles.previewButton} aria-hidden="true">
-          Start
+          {t('Start')}
         </span>
       </div>
     </figure>
@@ -78,7 +79,7 @@ function ThemeChoice({ value, onChange }: { value: ThemePreference; onChange: (t
   const name = useId();
   return (
     <fieldset className={styles.themeChoices}>
-      <legend className={styles.themeLegend}>Theme</legend>
+      <legend className={styles.themeLegend}>{t('Theme')}</legend>
       {THEME_PREFERENCES.map((theme) => (
         <label key={theme} className={styles.themeCard}>
           <input
@@ -93,48 +94,65 @@ function ThemeChoice({ value, onChange }: { value: ThemePreference; onChange: (t
             {theme !== 'dark' ? <span className={styles.swatchLight} /> : null}
             {theme !== 'light' ? <span className={styles.swatchDark} /> : null}
           </span>
-          <span>{THEME_LABELS[theme]}</span>
+          <span>{t(THEME_LABELS[theme])}</span>
         </label>
       ))}
     </fieldset>
   );
 }
 
-/** Theme, text and control size, and contrast, with their explanations. */
+/** Language names are shown in their own language, so anyone can find theirs. */
+const LANGUAGE_LABELS: Record<LanguagePreference, string> = { system: 'System', en: 'English', nl: 'Nederlands' };
+
+/** The language choices: "System" in the interface language, the languages in their own. */
+export function languageOptions(): Array<{ id: LanguagePreference; label: string }> {
+  return LANGUAGE_PREFERENCES.map((id) => ({ id, label: id === 'system' ? t('System') : LANGUAGE_LABELS[id] }));
+}
+
+/** Theme, text and control size, contrast and language, with their explanations. */
 export function AppearanceForm({ preferences, onChange, os, showPreview = false }: AppearanceFormProps) {
   const words = osWords(os);
   return (
     <>
       <div className={styles.appearanceGroup}>
         <ThemeChoice value={preferences.theme} onChange={(theme) => onChange({ ...preferences, theme })} />
-        <Hint>{`System follows your ${words.device}’s Light, Dark or automatic appearance.`}</Hint>
+        <Hint>{t('System follows your {device}’s Light, Dark or automatic appearance.', { device: words.device })}</Hint>
       </div>
       <div className={styles.segmentPair}>
         <div className={styles.appearanceGroup}>
           <SegmentedControl
-            label="Text and control size"
+            label={t('Text and control size')}
             options={SCALE_PREFERENCES.map((scale) => ({ id: String(scale), label: scaleLabel(scale) }))}
             selectedKey={String(preferences.scale)}
             onSelectionChange={(value) => onChange({ ...preferences, scale: Number(value) as InterfacePreferences['scale'] })}
           />
           <Hint>
-            Text, buttons and charts resize together; views reflow to keep every control within reach.
-            {os === 'macos' ? ' The menu-bar clock stays its normal size.' : ''}
+            {t('Text, buttons and charts resize together; views reflow to keep every control within reach.')}
+            {os === 'macos' ? ` ${t('The menu-bar clock stays its normal size.')}` : ''}
           </Hint>
         </div>
         <div className={styles.appearanceGroup}>
           <SegmentedControl
-            label="Contrast"
-            options={CONTRAST_PREFERENCES.map((id) => ({ id, label: CONTRAST_LABELS[id] }))}
+            label={t('Contrast')}
+            options={CONTRAST_PREFERENCES.map((id) => ({ id, label: t(CONTRAST_LABELS[id]) }))}
             selectedKey={preferences.contrast}
             onSelectionChange={(contrast) => onChange({ ...preferences, contrast })}
           />
           <Hint>
             {os === 'windows'
-              ? 'Increased strengthens text, accents and borders. System follows the contrast setting in Windows Accessibility settings.'
-              : 'Increased strengthens text, accents and borders. System follows Increase contrast in macOS Accessibility settings.'}
+              ? t('Increased strengthens text, accents and borders. System follows the contrast setting in Windows Accessibility settings.')
+              : t('Increased strengthens text, accents and borders. System follows Increase contrast in macOS Accessibility settings.')}
           </Hint>
         </div>
+      </div>
+      <div className={styles.appearanceGroup}>
+        <SegmentedControl
+          label={t('Language')}
+          options={languageOptions()}
+          selectedKey={preferences.language ?? 'system'}
+          onSelectionChange={(language) => onChange({ ...preferences, language })}
+        />
+        <Hint>{t('System follows your {device}’s language: Dutch when it is set to Dutch, otherwise English.', { device: words.device })}</Hint>
       </div>
       {showPreview ? <AppearancePreview preferences={preferences} /> : null}
     </>

@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { formatAxisValue } from './format';
 import styles from './charts.module.css';
 
@@ -32,7 +33,7 @@ export function HeatLegend({
       <span>
         {formatValue(maximum)} {unit}
       </span>
-      {showFuture ? <span className={styles.heatFutureNote}>Dashed outline: future date</span> : null}
+      {showFuture ? <span className={styles.heatFutureNote}>{t('Dashed outline: future date')}</span> : null}
     </div>
   );
 }

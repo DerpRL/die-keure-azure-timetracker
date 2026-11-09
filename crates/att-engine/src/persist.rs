@@ -27,8 +27,9 @@ pub(crate) fn load(services: &Services, state: &mut AppState) {
             }
             Ok(_) => {}
             Err(error) => {
-                state.storage_issue = Some(format!(
-                    "Settings from Azure timetracker 1.x could not be imported: {error}"
+                state.storage_issue = Some(crate::nl::trf(
+                    "Settings from Azure timetracker 1.x could not be imported: {error}",
+                    &[("error", &error)],
                 ));
             }
         }
@@ -37,13 +38,15 @@ pub(crate) fn load(services: &Services, state: &mut AppState) {
         Ok(Some(config)) => {
             state.config = config;
             state.has_saved_settings = true;
+            state.apply_language();
         }
         Ok(None) => {}
         Err(error) => {
             // Swift: keep the original file and stop writing until it is resolved.
             state.can_persist = false;
-            state.storage_issue = Some(format!(
-                "Saved settings could not be read. The original data has been preserved: {error}"
+            state.storage_issue = Some(crate::nl::trf(
+                "Saved settings could not be read. The original data has been preserved: {error}",
+                &[("error", &error)],
             ));
         }
     }
@@ -56,7 +59,9 @@ pub(crate) fn save(services: &Services, state: &AppState) -> Result<(), IpcError
     if !state.can_persist {
         return Err(IpcError::new(
             "storage",
-            "Local settings could not be saved because the saved data could not be read.",
+            crate::nl::tr(
+                "Local settings could not be saved because the saved data could not be read.",
+            ),
         ));
     }
     services.store.put(keys::CONFIGURATION, &state.config)?;

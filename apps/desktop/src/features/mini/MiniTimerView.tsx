@@ -10,6 +10,7 @@ import { OpenPanelIcon } from '../tracking/icons';
 import { togglePanelWindow } from '../tracking/platform';
 import { sessionKey, trackingStatus, useLocalSeconds, useTrackingSeconds } from '../tracking/status';
 import styles from './mini.module.css';
+import { t } from '../../i18n';
 
 /** The status symbol and, for screen readers, its word, before the caption text. */
 function Caption({ status, text, local }: { status: TrackingStatus; text: string; local: boolean }) {
@@ -18,7 +19,7 @@ function Caption({ status, text, local }: { status: TrackingStatus; text: string
   return (
     <span className={styles.caption} title={text}>
       <Icon className={styles.captionIcon} />
-      <span className="visually-hidden">{local ? 'Local tracking: ' : `${info.label}: `}</span>
+      <span className="visually-hidden">{local ? `${t('Local tracking')}: ` : `${t(info.label)}: `}</span>
       <span className={styles.captionText}>{text}</span>
     </span>
   );
@@ -48,15 +49,15 @@ export function MiniTimerView() {
   }, []);
 
   const openPanel = (
-    <IconButton label="Show the Azure timetracker panel" icon={OpenPanelIcon} size="small" tooltip={false} onPress={togglePanelWindow} />
+    <IconButton label={t('Show the Azure timetracker panel')} icon={OpenPanelIcon} size="small" tooltip={false} onPress={togglePanelWindow} />
   );
 
   if (!tracking || !connection) {
     return (
-      <MiniTimerShell actions={openPanel} caption={<span className={styles.caption}>Connecting…</span>}>
+      <MiniTimerShell actions={openPanel} caption={<span className={styles.caption}>{t('Connecting…')}</span>}>
         <div data-tauri-drag-region="deep" className={styles.readout}>
           {/* The clock's place, busy until the engine reports the timer (never a made-up 0). */}
-          <div role="timer" aria-label="Elapsed time" aria-busy="true">
+          <div role="timer" aria-label={t('Elapsed time')} aria-busy="true">
             <Skeleton width="6rem" />
           </div>
         </div>
@@ -73,14 +74,14 @@ export function MiniTimerView() {
     : tracking.running
       ? tracking.title
       : paused
-        ? `Paused · ${paused.title}`
-        : 'No timer running';
+        ? t('Paused · {title}', { title: paused.title })
+        : t('No timer running');
 
   return (
     <MiniTimerShell actions={openPanel} caption={<Caption status={status} text={text} local={local !== null} />}>
       <div data-tauri-drag-region="deep" className={styles.readout}>
         {idle ? (
-          <p className={styles.idle}>No timer running</p>
+          <p className={styles.idle}>{t('No timer running')}</p>
         ) : (
           <TimerDisplay
             seconds={local ? localSeconds : remoteSeconds}
@@ -88,7 +89,7 @@ export function MiniTimerView() {
             sessionId={local ? local.draftId : sessionKey(tracking)}
             size="small"
             showRing={false}
-            label={local ? 'Local timer' : 'Elapsed time'}
+            label={local ? t('Local timer') : t('Elapsed time')}
           />
         )}
       </div>

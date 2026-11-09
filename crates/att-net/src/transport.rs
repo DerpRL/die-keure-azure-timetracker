@@ -17,6 +17,7 @@ use reqwest::{Client, Request};
 use att_core::time::add_secs;
 use att_core::{AppError, Result};
 
+use crate::nl::{tr, trf};
 use crate::{Clock, system_clock};
 
 /// Sent with every request.
@@ -94,7 +95,7 @@ impl HttpTransport {
             builder = builder.no_proxy();
         }
         let client = builder.build().map_err(|_| {
-            AppError::message("Secure connections could not be set up on this computer.")
+            AppError::message(tr("Secure connections could not be set up on this computer."))
         })?;
         Ok(Self {
             client,
@@ -121,7 +122,7 @@ impl HttpTransport {
     pub async fn data(&self, request: Request) -> Result<Vec<u8>> {
         let host = request.url().host_str().unwrap_or_default().to_string();
         if self.https_only && request.url().scheme() != "https" {
-            return Err(AppError::message("Only secure HTTPS connections are allowed."));
+            return Err(AppError::message(tr("Only secure HTTPS connections are allowed.")));
         }
         if let Some(until) = self.blocked(&host) {
             return Err(AppError::RateLimited(until));
@@ -144,11 +145,12 @@ impl HttpTransport {
                 self.lock().insert(host, until);
                 Err(AppError::RateLimited(until))
             }
-            300..=399 => Err(AppError::message(
+            300..=399 => Err(AppError::message(tr(
                 "The server redirected the request. Check the exact workspace URL in Settings.",
-            )),
-            _ => Err(AppError::message(format!(
-                "{host} returned HTTP {status}. Refresh to check the actual timer before trying again."
+            ))),
+            _ => Err(AppError::message(trf(
+                "{host} returned HTTP {status}. Refresh to check the actual timer before trying again.",
+                &[("host", &host), ("status", &status)],
             ))),
         }
     }
@@ -193,12 +195,14 @@ fn transport_error(error: &reqwest::Error, host: &str) -> AppError {
     if error.is_timeout() {
         AppError::Timeout
     } else if error.is_connect() {
-        AppError::Network(format!(
-            "Could not connect to {host}. Check your network connection and try again."
+        AppError::Network(trf(
+            "Could not connect to {host}. Check your network connection and try again.",
+            &[("host", &host)],
         ))
     } else {
-        AppError::Network(format!(
-            "The connection to {host} was interrupted. Refresh to check the actual timer before trying again."
+        AppError::Network(trf(
+            "The connection to {host} was interrupted. Refresh to check the actual timer before trying again.",
+            &[("host", &host)],
         ))
     }
 }

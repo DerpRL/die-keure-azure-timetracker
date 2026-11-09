@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { t } from '../../../i18n';
 import type { EntriesPage, Interval } from '../../../ipc/contract';
 import { ipcErrorKind, useAction } from '../../../state/hooks';
 
@@ -53,7 +54,7 @@ export function useEntriesPage(analysis: string, offset: number | null, limit: n
       if (result.ok && isEntriesPage(result.value)) {
         setLoaded({ request, page: result.value, error: null, errorKind: null });
       } else if (result.ok) {
-        setLoaded({ request, page: null, error: 'The entries could not be loaded.', errorKind: null });
+        setLoaded({ request, page: null, error: t('The entries could not be loaded.'), errorKind: null });
       } else {
         setLoaded({ request, page: null, error: result.error.message, errorKind: ipcErrorKind(result.error) ?? null });
       }

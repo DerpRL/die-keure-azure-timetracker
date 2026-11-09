@@ -4,6 +4,7 @@ import type { TicketCompletionPrompt as CompletionView } from '../../ipc/contrac
 import { useIntents, useWriteGuards } from '../tracking/actions';
 import { flowSurface } from '../tracking/CurrentTracking';
 import { PromptCard, promptStyles as styles, usePromptContext } from './PromptCard';
+import { t } from '../../i18n';
 
 /**
  * "Tracked ticket completed" (1.14 `TicketCompletionView`): the running ticket is done in Azure.
@@ -17,7 +18,7 @@ export function TicketCompletionPrompt({ prompt }: { prompt: CompletionView }) {
     <PromptCard
       kind="ticketCompletion"
       icon={SuccessIcon}
-      title="Tracked ticket completed"
+      title={t('Tracked ticket completed')}
       runner={actions}
       actions={
         <>
@@ -26,14 +27,14 @@ export function TicketCompletionPrompt({ prompt }: { prompt: CompletionView }) {
             isPending={actions.isPending('keep')}
             onPress={() => void actions.run('keep', { type: 'completion.keep' })}
           >
-            Keep tracking
+            {t('Keep tracking')}
           </Button>
           <Button
             isDisabled={busy || preview}
             isPending={actions.isPending('stop')}
             onPress={() => void actions.run('stop', { type: 'completion.stop' })}
           >
-            Stop
+            {t('Stop')}
           </Button>
           <Button
             variant="primary"
@@ -43,13 +44,13 @@ export function TicketCompletionPrompt({ prompt }: { prompt: CompletionView }) {
             // The panel's ticket search there, the main window's picker sheet otherwise.
             onPress={() => void actions.run('switch', { type: 'completion.switch', surface: flowSurface(surface) })}
           >
-            Switch ticket…
+            {t('Switch ticket…')}
           </Button>
         </>
       }
     >
       <p className={styles.strong}>{`#${prompt.ticketId} · ${prompt.title}`}</p>
-      <p className={styles.caption}>{`Azure status: ${prompt.workflowState}. Your timer is still running.`}</p>
+      <p className={styles.caption}>{t('Azure status: {state}. Your timer is still running.', { state: prompt.workflowState })}</p>
     </PromptCard>
   );
 }

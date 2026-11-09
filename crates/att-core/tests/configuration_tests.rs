@@ -105,6 +105,7 @@ fn preferences_and_completion_survive_restart() {
             theme: InterfaceTheme::Dark,
             scale,
             contrast: InterfaceContrast::Increased,
+            ..InterfacePreferences::default()
         };
         let original = Configuration {
             interface: preferences,

@@ -4,6 +4,7 @@ import { useWorkItem } from '../../state/hooks';
 import { useIntents, useWriteGuards } from '../tracking/actions';
 import { CorrectionIcon } from '../tracking/icons';
 import { PromptCard, promptStyles as styles } from './PromptCard';
+import { t } from '../../i18n';
 
 /**
  * 7pace's activity check, time limit or activity timeout (1.14 `TrackingAttentionPrompt`). It
@@ -32,7 +33,7 @@ export function TrackingAttentionPrompt({ attention }: { attention: AttentionVie
               void actions.run('first', attention.stopped ? { type: 'attention.keepStopped' } : { type: 'tracking.stop' })
             }
           >
-            {attention.stopped ? 'Keep stopped' : 'Stop tracking'}
+            {attention.stopped ? t('Keep stopped') : t('Stop tracking')}
           </Button>
           <span className={styles.spacer} />
           <Button
@@ -42,7 +43,7 @@ export function TrackingAttentionPrompt({ attention }: { attention: AttentionVie
             isPending={actions.isPending('continue')}
             onPress={() => void actions.run('continue', { type: 'attention.continue' })}
           >
-            {attention.stopped ? 'Continue…' : 'Continue tracking'}
+            {attention.stopped ? t('Continue…') : t('Continue tracking')}
           </Button>
         </>
       }

@@ -8,6 +8,7 @@ import {
   StoppedIcon,
   type IconComponent,
 } from '../components/icons';
+import { mark, t } from '../i18n';
 import { cx } from '../utils/cx';
 import styles from './status.module.css';
 
@@ -15,7 +16,7 @@ import styles from './status.module.css';
 export type TrackingStatus = 'running' | 'stopped' | 'paused' | 'disconnected' | 'connecting' | 'attention';
 
 export interface TrackingStatusInfo {
-  /** `TrackingIndicator.label`, verbatim. */
+  /** `TrackingIndicator.label`, verbatim, in English (`mark`): show it with `t(info.label)`. */
   label: string;
   icon: IconComponent;
   tone: Tone;
@@ -27,12 +28,12 @@ export interface TrackingStatusInfo {
  * question circle. Each state has its own symbol, so colour is never the only signal.
  */
 export const TRACKING_STATUS: Readonly<Record<TrackingStatus, TrackingStatusInfo>> = {
-  running: { label: 'Tracking', icon: RunningIcon, tone: 'running' },
-  stopped: { label: 'Stopped', icon: StoppedIcon, tone: 'neutral' },
-  paused: { label: 'Paused', icon: PausedIcon, tone: 'paused' },
-  disconnected: { label: 'Disconnected', icon: DisconnectedIcon, tone: 'warning' },
-  connecting: { label: 'Connecting', icon: ConnectingIcon, tone: 'neutral' },
-  attention: { label: 'Check activity', icon: AttentionIcon, tone: 'warning' },
+  running: { label: mark('Tracking'), icon: RunningIcon, tone: 'running' },
+  stopped: { label: mark('Stopped'), icon: StoppedIcon, tone: 'neutral' },
+  paused: { label: mark('Paused'), icon: PausedIcon, tone: 'paused' },
+  disconnected: { label: mark('Disconnected'), icon: DisconnectedIcon, tone: 'warning' },
+  connecting: { label: mark('Connecting'), icon: ConnectingIcon, tone: 'neutral' },
+  attention: { label: mark('Check activity'), icon: AttentionIcon, tone: 'warning' },
 };
 
 /** Statuses whose elapsed time is not confirmed by 7pace (shown still, labelled "Last known"). */
@@ -56,7 +57,7 @@ export function TrackingStatusLabel({ status, label, icon, size = 'small', class
   return (
     <span className={cx(styles.status, styles[info.tone], styles[size], className)}>
       <Icon className={styles.icon} />
-      <span>{label ?? info.label}</span>
+      <span>{label ?? t(info.label)}</span>
     </span>
   );
 }

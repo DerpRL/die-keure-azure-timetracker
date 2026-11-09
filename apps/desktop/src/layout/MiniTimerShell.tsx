@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { t } from '../i18n';
 import styles from './MiniTimerShell.module.css';
 
 export interface MiniTimerShellProps {
@@ -16,7 +17,7 @@ export interface MiniTimerShellProps {
  * Floating always-on-top timer (Windows, where the tray cannot show text). The background is a
  * Tauri drag region so the frameless window can be moved; controls inside stay clickable.
  */
-export function MiniTimerShell({ children, caption, actions, label = 'Mini timer' }: MiniTimerShellProps) {
+export function MiniTimerShell({ children, caption, actions, label = t('Mini timer') }: MiniTimerShellProps) {
   return (
     <div className={styles.mini} data-surface="mini" data-tauri-drag-region="">
       <main aria-label={label} className={styles.body} data-tauri-drag-region="">

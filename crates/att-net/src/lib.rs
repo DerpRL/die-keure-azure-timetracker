@@ -33,6 +33,7 @@
 //! # Ok(()) }
 //! ```
 
+mod nl;
 use std::sync::Arc;
 
 use jiff::Timestamp;

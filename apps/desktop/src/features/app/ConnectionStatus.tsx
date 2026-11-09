@@ -1,6 +1,7 @@
 import { StatusDot, type Tone } from '../../components/Badge';
 import type { ConnectionSlice, Health } from '../../ipc/contract';
 import { useSlice } from '../../state/hooks';
+import { t } from '../../i18n';
 
 const TONES: Record<Health, Tone> = {
   unconfigured: 'neutral',
@@ -20,7 +21,7 @@ export function connectionTone(connection: ConnectionSlice | undefined): Tone {
 /** The page header's connection status (1.14 `ConnectionHealthView`). */
 export function ConnectionStatus() {
   const connection = useSlice('connection');
-  if (!connection) return <StatusDot tone="neutral" label="Connecting…" showLabel />;
+  if (!connection) return <StatusDot tone="neutral" label={t('Connecting…')} showLabel />;
   return (
     <span title={connection.detail ?? undefined}>
       <StatusDot

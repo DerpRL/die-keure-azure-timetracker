@@ -135,13 +135,16 @@ pub fn shell_reveal_data_dir(app: AppHandle) -> Result<(), String> {
     let directory = app
         .try_state::<DataDirectory>()
         .map(|state| state.0.clone())
-        .ok_or_else(|| "The data folder is not known yet.".to_string())?;
+        .ok_or_else(|| crate::nl::tr("The data folder is not known yet.").to_string())?;
     if !directory.is_dir() {
-        return Err(format!("The data folder {} does not exist.", directory.display()));
+        return Err(crate::nl::trf(
+            "The data folder {folder} does not exist.",
+            &[("folder", &directory.display())],
+        ));
     }
-    app.opener()
-        .open_path(directory.to_string_lossy(), None::<&str>)
-        .map_err(|error| format!("The data folder could not be opened: {error}"))
+    app.opener().open_path(directory.to_string_lossy(), None::<&str>).map_err(|error| {
+        crate::nl::trf("The data folder could not be opened: {error}", &[("error", &error)])
+    })
 }
 
 /// Opens the system settings page for `pane`: `notifications`, `calendars`, `microphone` or
@@ -150,9 +153,9 @@ pub fn shell_reveal_data_dir(app: AppHandle) -> Result<(), String> {
 #[tauri::command]
 pub fn shell_open_system_settings(app: AppHandle, pane: String) -> Result<(), String> {
     let url = system_settings_url(&pane, cfg!(windows)).map_err(message)?;
-    app.opener()
-        .open_url(url, None::<&str>)
-        .map_err(|error| format!("System settings could not be opened: {error}"))
+    app.opener().open_url(url, None::<&str>).map_err(|error| {
+        crate::nl::trf("System settings could not be opened: {error}", &[("error", &error)])
+    })
 }
 
 /// The settings URL of `pane` on macOS (`x-apple.systempreferences:`) or Windows (`ms-settings:`).
@@ -199,7 +202,9 @@ impl fmt::Display for ShellError {
             Self::MissingWindow(label) => write!(f, "The {label} window does not exist."),
             Self::MissingTray => f.write_str("The tray icon does not exist."),
             Self::Invalid(text) => f.write_str(text),
-            Self::Interrupted => f.write_str("The app stopped before the change was applied."),
+            Self::Interrupted => {
+                f.write_str(crate::nl::tr("The app stopped before the change was applied."))
+            }
         }
     }
 }

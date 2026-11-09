@@ -5,6 +5,7 @@ import type { WorkLogConflict, WorkLogDraft, WorkLogPlan } from '../../../ipc/co
 import { formatDateTime, logEnd, logStart, parseInstant, ticketPrefix } from '../../../features/ticketContext/format';
 import { cx } from '../../../utils/cx';
 import { formatShortDuration } from '../../../utils/duration';
+import { t } from '../../../i18n';
 import styles from './TimeEditor.module.css';
 
 function draftStart(draft: WorkLogDraft): Date | null {
@@ -73,18 +74,18 @@ export function CorrectionPlanPreview({ plan, headingLevel = 3 }: { plan: WorkLo
     <div className={styles.group}>
       <div>
         <Heading level={headingLevel} className={styles.groupTitle}>
-          Before → after
+          {t('Before → after')}
         </Heading>
-        <p className={styles.caption}>Review every affected interval before applying this correction.</p>
+        <p className={styles.caption}>{t('Review every affected interval before applying this correction.')}</p>
       </div>
       <Heading level={nextLevel} className={styles.subTitle}>
-        {`Before · ${formatShortDuration(beforeTotal)}`}
+        {t('Before · {duration}', { duration: formatShortDuration(beforeTotal) })}
       </Heading>
       <ul role="list" className={styles.previewList}>
         {before.map(({ log, interval }) => (
           <PreviewRow
             key={log.id}
-            label={`${ticketPrefix(log.workItemId)}${log.comment?.trim() || 'Tracked time'}`}
+            label={`${ticketPrefix(log.workItemId)}${log.comment?.trim() || t('Tracked time')}`}
             interval={interval}
             bounds={bounds}
             tone="before"
@@ -92,20 +93,20 @@ export function CorrectionPlanPreview({ plan, headingLevel = 3 }: { plan: WorkLo
         ))}
       </ul>
       <Heading level={nextLevel} className={styles.subTitle}>
-        {`After · ${formatShortDuration(afterTotal)}`}
+        {t('After · {duration}', { duration: formatShortDuration(afterTotal) })}
       </Heading>
       <ul role="list" className={styles.previewList}>
         {after.map(({ draft, interval }, index) => (
           <PreviewRow
             key={`${draft.existingId ?? 'new'}-${index}`}
-            label={`${ticketPrefix(draft.ticketId)}${draft.comment?.trim() || 'Tracked time'}`}
+            label={`${ticketPrefix(draft.ticketId)}${draft.comment?.trim() || t('Tracked time')}`}
             interval={interval}
             bounds={bounds}
             tone="after"
           />
         ))}
       </ul>
-      <p className={styles.caption}>You can undo this correction from Recent edits. Overlap warnings do not block saving.</p>
+      <p className={styles.caption}>{t('You can undo this correction from Recent edits. Overlap warnings do not block saving.')}</p>
     </div>
   );
 }
@@ -117,18 +118,18 @@ export function PlanResult({ plan, headingLevel = 3, children }: { plan: WorkLog
     <div className={styles.group}>
       <div>
         <Heading level={headingLevel} className={styles.groupTitle}>
-          Result
+          {t('Result')}
         </Heading>
-        <p className={styles.caption}>{`Total: ${formatShortDuration(total)}`}</p>
+        <p className={styles.caption}>{t('Total: {duration}', { duration: formatShortDuration(total) })}</p>
       </div>
       <ul role="list" className={styles.resultList}>
         {plan.desired.map((draft, index) => (
           <li key={`${draft.existingId ?? 'new'}-${index}`} className={styles.resultRow}>
             <span className={styles.resultTitle}>
-              {`${draft.ticketId ? `#${draft.ticketId}` : 'No Azure ticket'} · ${formatShortDuration(draft.seconds)}`}
+              {`${draft.ticketId ? `#${draft.ticketId}` : t('No Azure ticket')} · ${formatShortDuration(draft.seconds)}`}
             </span>
             <span>{`${formatDateTime(draftStart(draft))} → ${formatDateTime(draftEnd(draft))}`}</span>
-            <span className={styles.caption}>{`Billable: ${formatShortDuration(draft.billableSeconds)}`}</span>
+            <span className={styles.caption}>{t('Billable: {duration}', { duration: formatShortDuration(draft.billableSeconds) })}</span>
           </li>
         ))}
       </ul>
@@ -153,7 +154,7 @@ export function OverlapNotice({
         <>
           <p className={styles.noticeTitle}>
             <WarningIcon className={styles.warningIcon} />
-            {saved ? 'Saved with overlapping time' : 'Overlapping time'}
+            {saved ? t('Saved with overlapping time') : t('Overlapping time')}
           </p>
           <ul role="list" className={styles.resultList}>
             {conflicts.map((conflict) => (
@@ -161,8 +162,8 @@ export function OverlapNotice({
                 <span className={styles.resultTitle}>{`${ticketPrefix(conflict.ticketId)}${conflict.title}`}</span>
                 <span className={styles.caption}>
                   {`${formatDateTime(parseInstant(conflict.start))} → ${
-                    conflict.active ? 'still running' : formatDateTime(parseInstant(conflict.end))
-                  } · ${formatShortDuration(conflict.overlap)} overlap`}
+                    conflict.active ? t('still running') : formatDateTime(parseInstant(conflict.end))
+                  } · ${t('{duration} overlap', { duration: formatShortDuration(conflict.overlap) })}`}
                 </span>
               </li>
             ))}
@@ -178,9 +179,9 @@ export function OverlapNotice({
       <p className={styles.caption}>
         {saved
           ? conflicts.length === 0
-            ? 'Your changes were saved. Check nearby entries in 7pace if needed.'
-            : 'Your changes were saved. Overlapping entries were kept.'
-          : 'Overlaps are informational and do not block saving.'}
+            ? t('Your changes were saved. Check nearby entries in 7pace if needed.')
+            : t('Your changes were saved. Overlapping entries were kept.')
+          : t('Overlaps are informational and do not block saving.')}
       </p>
     </div>
   );

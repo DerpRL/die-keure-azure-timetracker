@@ -14,6 +14,7 @@ use jiff::{Span, Timestamp, civil::Date};
 use serde::{Deserialize, Serialize};
 
 use crate::model::WorkLog;
+use crate::nl::tr;
 use crate::targets::WorkTargets;
 use crate::text::NonEmpty;
 use crate::time::{Cal, Interval};
@@ -31,13 +32,13 @@ pub enum StatisticsPeriod {
 impl StatisticsPeriod {
     pub const ALL: [Self; 4] = [Self::Day, Self::Week, Self::Month, Self::Year];
 
-    /// The Swift raw value, also the picker label.
+    /// The picker label (the Swift raw value in English).
     pub fn label(&self) -> &'static str {
         match self {
-            Self::Day => "Day",
-            Self::Week => "Week",
-            Self::Month => "Month",
-            Self::Year => "Year",
+            Self::Day => tr("Day"),
+            Self::Week => tr("Week"),
+            Self::Month => tr("Month"),
+            Self::Year => tr("Year"),
         }
     }
 }
@@ -189,6 +190,7 @@ impl ActivityStatistics {
         let mut activities: HashMap<String, StatisticsActivity> = HashMap::new();
         let mut tickets: HashMap<Option<i64>, StatisticsTicket> = HashMap::new();
         let mut omitted = 0;
+        let unnamed = tr("Unnamed activity");
         for log in logs {
             if !seen.insert(log.id.as_str()) {
                 continue;
@@ -212,7 +214,7 @@ impl ActivityStatistics {
             let key = activity_id
                 .map_or_else(|| "unspecified".to_string(), |id| format!("activity:{id}"));
             let name = activity_type.and_then(|a| a.name.non_empty()).unwrap_or(
-                if activity_id.is_none() { "Unspecified activity" } else { "Unnamed activity" },
+                if activity_id.is_none() { tr("Unspecified activity") } else { unnamed },
             );
             let activity = activities.entry(key.clone()).or_insert_with(|| StatisticsActivity {
                 id: key,
@@ -220,7 +222,7 @@ impl ActivityStatistics {
                 seconds: 0.0,
                 sessions: 0,
             });
-            if activity.name == "Unnamed activity" && name != "Unnamed activity" {
+            if activity.name == unnamed && name != unnamed {
                 activity.name = name.to_string();
             }
             activity.seconds += log.length;

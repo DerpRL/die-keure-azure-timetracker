@@ -10,6 +10,7 @@ import { connectionTone } from '../app/ConnectionStatus';
 import { ActionError, useIntents, useWriteGuards } from '../tracking/actions';
 import { openMainPage } from '../tracking/platform';
 import styles from './connection.module.css';
+import { t, tn } from '../../i18n';
 
 function useStamp(): (iso: string) => string {
   const formatter = useDateFormatter({
@@ -35,14 +36,14 @@ export function LocalDraftStatus() {
   if (ready > 0) {
     return (
       <Button variant="plain" size="small" onPress={() => openMainPage('offlineDrafts')}>
-        {`Review ${ready} offline ${ready === 1 ? 'draft' : 'drafts'}`}
+        {tn(ready, 'Review {count} offline draft', 'Review {count} offline drafts')}
       </Button>
     );
   }
   if (connection && connection.health !== 'confirmed') {
     return (
       <Button variant="plain" size="small" onPress={() => openMainPage('offlineDrafts')}>
-        Track locally…
+        {t('Track locally…')}
       </Button>
     );
   }
@@ -70,7 +71,7 @@ export function ConnectionDetails({ headingLevel }: ConnectionDetailsProps) {
   const heading =
     headingLevel !== null ? (
       <Heading level={headingLevel} id={headingId} className={styles.heading}>
-        Connection details
+        {t('Connection details')}
       </Heading>
     ) : null;
 
@@ -79,7 +80,7 @@ export function ConnectionDetails({ headingLevel }: ConnectionDetailsProps) {
       <div className={styles.details} aria-busy="true">
         {heading}
         <span role="status" className="visually-hidden">
-          Loading the connection
+          {t('Loading the connection')}
         </span>
         <Skeleton lines={3} />
       </div>
@@ -96,10 +97,10 @@ export function ConnectionDetails({ headingLevel }: ConnectionDetailsProps) {
           <div className={styles.checks}>
             <StatusDot tone={connectionTone(connection)} label={connection.status} showLabel />
             <span className={styles.caption}>
-              {connection.lastSync ? `Timer checked ${stamp(connection.lastSync)}` : 'The timer has not been checked yet.'}
+              {connection.lastSync ? t('Timer checked {time}', { time: stamp(connection.lastSync) }) : t('The timer has not been checked yet.')}
             </span>
             {connection.worklogSync ? (
-              <span className={styles.caption}>{`Time entries checked ${stamp(connection.worklogSync)}`}</span>
+              <span className={styles.caption}>{t('Time entries checked {time}', { time: stamp(connection.worklogSync) })}</span>
             ) : null}
           </div>
         </div>
@@ -111,19 +112,19 @@ export function ConnectionDetails({ headingLevel }: ConnectionDetailsProps) {
           // 1.14: retry, then check the tracked ticket's completion state now.
           onPress={() => void actions.run('retry', { type: 'connection.recheck' })}
         >
-          Refresh connection
+          {t('Refresh connection')}
         </Button>
       </div>
       {connection.detail ? <p className={styles.caption}>{connection.detail}</p> : null}
       {connection.connectionIssue ? <p className={styles.warning}>{connection.connectionIssue}</p> : null}
-      {connection.azureIssue ? <p className={styles.warning}>{`Azure tickets: ${connection.azureIssue}`}</p> : null}
-      {connection.progressIssue ? <p className={styles.warning}>{`Time totals: ${connection.progressIssue}`}</p> : null}
+      {connection.azureIssue ? <p className={styles.warning}>{t('Azure tickets: {issue}', { issue: connection.azureIssue })}</p> : null}
+      {connection.progressIssue ? <p className={styles.warning}>{t('Time totals: {issue}', { issue: connection.progressIssue })}</p> : null}
       {connection.completionIssue ? (
-        <p className={styles.warning}>{`Ticket completion check: ${connection.completionIssue}`}</p>
+        <p className={styles.warning}>{t('Ticket completion check: {issue}', { issue: connection.completionIssue })}</p>
       ) : null}
       {connection.shortcutIssue ? <p className={styles.warning}>{connection.shortcutIssue}</p> : null}
       {completionReminders && !connection.hasAzurePat ? (
-        <p className={styles.caption}>Add an Azure PAT in Accounts to enable ticket completion reminders.</p>
+        <p className={styles.caption}>{t('Add an Azure PAT in Accounts to enable ticket completion reminders.')}</p>
       ) : null}
       <LocalDraftStatus />
       <ActionError error={actions.error} />

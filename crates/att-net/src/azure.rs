@@ -15,6 +15,7 @@ use att_core::ticket::TicketWorkflowStatus;
 use att_core::ticket_context::TicketContext;
 use att_core::{AppError, Result};
 
+use crate::nl::{tr, trf};
 use crate::transport::HttpTransport;
 use crate::wire;
 
@@ -83,7 +84,7 @@ impl AzureApi {
             self.work_item_url(id, &[("api-version", API_VERSION), ("fields", WORKFLOW_FIELDS)])?;
         let item: Item = wire::decode(&self.get(url).await?)?;
         let incomplete =
-            || AppError::message("Azure returned incomplete ticket status. Try again shortly.");
+            || AppError::message(tr("Azure returned incomplete ticket status. Try again shortly."));
         if item.id != id {
             return Err(incomplete());
         }
@@ -115,9 +116,9 @@ impl AzureApi {
             .find(|candidate| candidate.name.to_lowercase() == wanted)
             .and_then(|candidate| candidate.category.non_empty())
             .ok_or_else(|| {
-                AppError::message(
+                AppError::message(tr(
                     "Azure could not classify this ticket’s workflow state. Try again shortly.",
-                )
+                ))
             })?;
         Ok(TicketWorkflowStatus {
             ticket_id: id,
@@ -125,7 +126,7 @@ impl AzureApi {
                 .fields
                 .get("System.Title")
                 .cloned()
-                .unwrap_or_else(|| format!("Azure ticket #{id}")),
+                .unwrap_or_else(|| trf("Azure ticket #{id}", &[("id", &id)])),
             state: state.to_string(),
             category: category.to_string(),
         })
@@ -138,9 +139,9 @@ impl AzureApi {
             self.work_item_url(id, &[("api-version", API_VERSION), ("$expand", "Relations")])?;
         let context = TicketContext::decode(&self.get(url).await?, self.organization_url.as_str())?;
         if context.id != id {
-            return Err(AppError::message(
+            return Err(AppError::message(tr(
                 "Azure returned a different ticket. Refresh the details.",
-            ));
+            )));
         }
         Ok(context)
     }
@@ -154,7 +155,7 @@ impl AzureApi {
         let field = |key: &str| item.fields.get(key).cloned();
         Ok(WorkItem {
             id: item.id,
-            title: field("System.Title").unwrap_or_else(|| format!("Work item #{id}")),
+            title: field("System.Title").unwrap_or_else(|| trf("Work item #{id}", &[("id", &id)])),
             team_project: field("System.TeamProject"),
             kind: field("System.WorkItemType"),
             work_item_link: Some(self.browser_link(id)?),
@@ -182,7 +183,9 @@ impl AzureApi {
             &[("api-version", API_VERSION)],
         )
         .ok_or_else(|| {
-            AppError::message("Enter the organization name from dev.azure.com/your-organization.")
+            AppError::message(tr(
+                "Enter the organization name from dev.azure.com/your-organization.",
+            ))
         })?;
         #[derive(Serialize)]
         #[serde(rename_all = "camelCase")]
@@ -220,7 +223,7 @@ impl AzureApi {
                 items.push(WorkItem {
                     id: item.id,
                     title: text("System.Title")
-                        .unwrap_or_else(|| format!("Work item #{}", item.id)),
+                        .unwrap_or_else(|| trf("Work item #{id}", &[("id", &item.id)])),
                     team_project: text("System.TeamProject"),
                     kind: text("System.WorkItemType"),
                     work_item_link: Some(self.browser_link(item.id)?),
@@ -253,7 +256,7 @@ impl AzureApi {
                 ("api-version", API_VERSION),
             ],
         )
-        .ok_or_else(|| AppError::message("Enter the Azure DevOps organization name only."))?;
+        .ok_or_else(|| AppError::message(tr("Enter the Azure DevOps organization name only.")))?;
         self.verify(url).await
     }
 
@@ -288,7 +291,9 @@ impl AzureApi {
             query,
         )
         .ok_or_else(|| {
-            AppError::message("Enter the Azure DevOps project name exactly as it appears in Azure.")
+            AppError::message(tr(
+                "Enter the Azure DevOps project name exactly as it appears in Azure.",
+            ))
         })
     }
 
@@ -305,6 +310,6 @@ fn check_ticket(id: i64) -> Result<()> {
     if (1..=i64::from(i32::MAX)).contains(&id) {
         Ok(())
     } else {
-        Err(AppError::message("Enter a valid Azure ticket number."))
+        Err(AppError::message(tr("Enter a valid Azure ticket number.")))
     }
 }

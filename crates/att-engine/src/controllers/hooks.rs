@@ -110,12 +110,13 @@ pub fn clear_synced_offline_drafts(engine: &Engine) -> Result<usize, String> {
     engine.update(|state| {
         let offline = &mut state.controllers.offline;
         if offline.unreadable {
-            return Err(
-                "The saved drafts are unreadable; the original file has been preserved.".into()
-            );
+            return Err(crate::nl::tr(
+                "The saved drafts are unreadable; the original file has been preserved.",
+            )
+            .into());
         }
         if offline.working {
-            return Err("Wait for the offline draft upload to finish.".into());
+            return Err(crate::nl::tr("Wait for the offline draft upload to finish.").into());
         }
         let mut next = offline.ledger.clone();
         next.drafts.retain(|draft| draft.status != OfflineDraftStatus::Synced);

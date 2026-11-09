@@ -9,6 +9,7 @@ use jiff::{Timestamp, civil::Date};
 use serde::Serialize;
 
 use crate::model::WorkLog;
+use crate::nl::{tr, trf};
 use crate::statistics::{ActivityStatistics, DayTable, StatisticsRange, sum};
 use crate::targets::WorkTargets;
 use crate::text::{NonEmpty, duration_text};
@@ -178,19 +179,27 @@ impl WeeklyReport {
         let insights = ContextInsights::calculate(logs, range, cal, now);
         let last_day = cal.add_date_days(cal.date(range.end), -1);
         let mut lines: Vec<String> = vec![
-            format!(
-                "# Weekly status · {} – {}",
-                abbreviated_date(cal.date(range.start)),
-                abbreviated_date(last_day)
+            trf(
+                "# Weekly status · {start} – {end}",
+                &[
+                    ("start", &abbreviated_date(cal.date(range.start))),
+                    ("end", &abbreviated_date(last_day)),
+                ],
             ),
             String::new(),
-            "Draft based on recorded time; add outcomes before sharing.".into(),
+            tr("Draft based on recorded time; add outcomes before sharing.").into(),
             String::new(),
-            "## Time".into(),
-            format!("- Tracked: {}", duration_text::short(data.total_seconds())),
-            format!("- Weekly target: {}", duration_text::short(data.target_seconds())),
+            tr("## Time").into(),
+            trf(
+                "- Tracked: {duration}",
+                &[("duration", &duration_text::short(data.total_seconds()))],
+            ),
+            trf(
+                "- Weekly target: {duration}",
+                &[("duration", &duration_text::short(data.target_seconds()))],
+            ),
             String::new(),
-            "## Worked on".into(),
+            tr("## Worked on").into(),
         ];
         // Comment notes per ticket, deduplicated after escaping and sorted.
         let mut notes: HashMap<Option<i64>, BTreeSet<String>> = HashMap::new();
@@ -207,9 +216,12 @@ impl WeeklyReport {
         for ticket in &data.tickets {
             let title = match ticket.ticket_id {
                 Some(id) => {
-                    format!("#{id} · {}", titles.get(&id).map_or("Azure ticket", String::as_str))
+                    format!(
+                        "#{id} · {}",
+                        titles.get(&id).map_or(tr("Azure ticket"), String::as_str)
+                    )
                 }
-                None => "Work without an Azure ticket".to_string(),
+                None => tr("Work without an Azure ticket").to_string(),
             };
             lines.push(format!("- {} — {}", plain(&title), duration_text::short(ticket.seconds)));
             if let Some(notes) = notes.get(&ticket.ticket_id) {
@@ -217,42 +229,45 @@ impl WeeklyReport {
             }
         }
         if data.tickets.is_empty() {
-            lines.push("- No recorded time in this week.".into());
+            lines.push(tr("- No recorded time in this week.").into());
         }
-        lines.extend([String::new(), "## Activity breakdown".into()]);
+        lines.extend([String::new(), tr("## Activity breakdown").into()]);
         lines.extend(data.activities.iter().map(|activity| {
             format!("- {}: {}", plain(&activity.name), duration_text::short(activity.seconds))
         }));
         lines.extend([
             String::new(),
-            "## Work patterns".into(),
-            format!("- Recorded context switches: {}", insights.switches()),
-            format!(
-                "- Longest continuous recorded block: {}",
-                duration_text::short(insights.longest_block())
+            tr("## Work patterns").into(),
+            trf("- Recorded context switches: {count}", &[("count", &insights.switches())]),
+            trf(
+                "- Longest continuous recorded block: {duration}",
+                &[("duration", &duration_text::short(insights.longest_block()))],
             ),
-            "- Based on worklogs, not a measurement of concentration. Switches after breaks longer than 15 minutes are excluded.".into(),
+            tr("- Based on worklogs, not a measurement of concentration. Switches after breaks longer than 15 minutes are excluded.").into(),
         ]);
         if insights.ambiguous_entries > 0 {
-            lines.push(format!(
-                "- {} invalid or overlapping segments excluded from work-pattern calculations.",
-                insights.ambiguous_entries
+            lines.push(trf(
+                "- {count} invalid or overlapping segments excluded from work-pattern calculations.",
+                &[("count", &insights.ambiguous_entries)],
             ));
         }
         if data.omitted_logs > 0 {
-            lines.push(format!("- {} invalid worklogs omitted from totals.", data.omitted_logs));
+            lines.push(trf(
+                "- {count} invalid worklogs omitted from totals.",
+                &[("count", &data.omitted_logs)],
+            ));
         }
         lines.extend(
             [
                 "",
-                "## Outcomes",
-                "- [Add outcomes]",
+                tr("## Outcomes"),
+                tr("- [Add outcomes]"),
                 "",
-                "## Blockers",
-                "- [Add blockers or none]",
+                tr("## Blockers"),
+                tr("- [Add blockers or none]"),
                 "",
-                "## Next week",
-                "- [Add priorities]",
+                tr("## Next week"),
+                tr("- [Add priorities]"),
                 "",
             ]
             .map(String::from),
@@ -261,9 +276,24 @@ impl WeeklyReport {
     }
 }
 
-/// English `Date.formatted(date: .abbreviated, time: .omitted)`, e.g. `Sep 29, 2026`.
+/// `Date.formatted(date: .abbreviated, time: .omitted)`: `Sep 29, 2026` in English,
+/// `29 sep. 2026` in Dutch.
 fn abbreviated_date(date: Date) -> String {
-    date.strftime("%b %-d, %Y").to_string()
+    let month = match date.month() {
+        1 => tr("Jan"),
+        2 => tr("Feb"),
+        3 => tr("Mar"),
+        4 => tr("Apr"),
+        5 => tr("May"),
+        6 => tr("Jun"),
+        7 => tr("Jul"),
+        8 => tr("Aug"),
+        9 => tr("Sep"),
+        10 => tr("Oct"),
+        11 => tr("Nov"),
+        _ => tr("Dec"),
+    };
+    trf("{month} {day}, {year}", &[("month", &month), ("day", &date.day()), ("year", &date.year())])
 }
 
 /// One line of Markdown-safe text: newlines become spaces and `\ * _ [ ] < >` and backticks are

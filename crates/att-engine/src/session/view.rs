@@ -37,6 +37,7 @@ use att_platform::{CalendarAccess, CalendarInfo, InputOwner};
 
 use crate::controllers::hooks as controllers;
 use crate::engine::Engine;
+use crate::nl::tr;
 use crate::shell::TrayState;
 use crate::state::{AppState, PAGES};
 
@@ -762,17 +763,17 @@ pub fn page_infos(state: &AppState, os: HostOs) -> Vec<PageInfo> {
         .iter()
         .map(|id| {
             let (title, group) = match *id {
-                "overview" => ("Overview", "today"),
-                "dayReview" => ("Day review", "today"),
-                "agenda" => ("Agenda", "today"),
-                "offlineDrafts" => ("Offline drafts", "today"),
-                "statistics" => ("Statistics", "insights"),
-                "weeklyReport" => ("Weekly report", "insights"),
-                "history" => ("History", "insights"),
-                "timeEditor" => ("Time editor", "insights"),
-                "repositories" => ("Repositories", "setup"),
-                "figma" => ("Figma", "setup"),
-                _ => ("Settings", "setup"),
+                "overview" => (tr("Overview"), "today"),
+                "dayReview" => (tr("Day review"), "today"),
+                "agenda" => (tr("Agenda"), "today"),
+                "offlineDrafts" => (tr("Offline drafts"), "today"),
+                "statistics" => (tr("Statistics"), "insights"),
+                "weeklyReport" => (tr("Weekly report"), "insights"),
+                "history" => (tr("History"), "insights"),
+                "timeEditor" => (tr("Time editor"), "insights"),
+                "repositories" => (tr("Repositories"), "setup"),
+                "figma" => (tr("Figma"), "setup"),
+                _ => (tr("Settings"), "setup"),
             };
             let pending = state.session.branches.pending.len();
             PageInfo {
@@ -872,13 +873,13 @@ fn connection_slice(state: &AppState, context: &Context) -> ConnectionSlice {
         ConnectionHealth::Confirmed
         | ConnectionHealth::Connecting
         | ConnectionHealth::Unconfigured => {
-            detail_issue.then(|| "Some details could not refresh".to_string())
+            detail_issue.then(|| tr("Some details could not refresh").to_string())
         }
         _ if tray::shows_local_timer(state, context.now) => Some(
-            "Local tracking continues on this Mac. Reconnect to confirm the 7pace timer."
+            tr("Local tracking continues on this Mac. Reconnect to confirm the 7pace timer.")
                 .to_string(),
         ),
-        _ => Some("Showing the last known timer. Check 7pace before changing it.".to_string()),
+        _ => Some(tr("Showing the last known timer. Check 7pace before changing it.").to_string()),
     };
     ConnectionSlice {
         health: health.into(),
@@ -920,7 +921,7 @@ fn current_title(state: &AppState, tracking: &TrackingState) -> String {
     {
         return item.title.clone();
     }
-    track.map_or_else(|| "Tracking".to_string(), |track| track.title())
+    track.map_or_else(|| tr("Tracking").to_string(), |track| track.title())
 }
 
 fn ticket_url(state: &AppState, ticket: i64) -> Option<String> {
@@ -1006,7 +1007,7 @@ fn tracking_slice(state: &AppState, context: &Context) -> TrackingSlice {
             ticket_id: None,
             title: match &paused {
                 Some(paused) => paused.title.clone(),
-                None => "No timer running".to_string(),
+                None => tr("No timer running").to_string(),
             },
             activity_id: None,
             activity_name: None,
@@ -1063,12 +1064,12 @@ fn draft_view(state: &AppState, draft: &TrackingDraft, context: &Context) -> Dra
     let required_activity = if draft.is_figma()
         && att_core::figma::design_activity::selected(types).is_none()
     {
-        Some("The Design activity is missing in 7pace. Add or enable Design before starting from Figma.".to_string())
+        Some(tr("The Design activity is missing in 7pace. Add or enable Design before starting from Figma.").to_string())
     } else if draft.standup
         && att_core::manual::StandupActivity::selected(types).is_none()
         && loaded
     {
-        Some("The Standup activity is missing in 7pace. Add or enable it before tracking this stand-up.".to_string())
+        Some(tr("The Standup activity is missing in 7pace. Add or enable it before tracking this stand-up.").to_string())
     } else {
         None
     };
@@ -1088,6 +1089,7 @@ fn draft_view(state: &AppState, draft: &TrackingDraft, context: &Context) -> Dra
         .collect();
     let default_comment = match draft.manual {
         Some(ManualTrackingKind::Standup) => att_core::manual::StandupActivity::REMARK.to_string(),
+        // The 7pace comment, as `ManualTrackingKind::remark` writes it: stays English.
         Some(ManualTrackingKind::Meeting) => "Meeting".to_string(),
         _ => String::new(),
     };

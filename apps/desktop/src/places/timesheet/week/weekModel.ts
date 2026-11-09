@@ -3,6 +3,7 @@ import type { OfflineDraftView, TrackingSlice, WorkItemsSlice, WorkLog } from '.
 import { dayToDate, localDayKey, logEnd, logStart, logTicket } from '../../../features/ticketContext/format';
 import { entryOverlaps, type EntryOverlap } from '../day/dayModel';
 import { displayedMinute } from '../../../utils/minutes';
+import { dateFormat, t } from '../../../i18n';
 
 /*
  * The Timesheet's week calendar, derived from the 7pace worklogs of the week (history slice), the
@@ -107,7 +108,7 @@ function matches(block: WeekBlock, query: string): boolean {
 function logTitle(log: WorkLog, items: WorkItemsSlice | undefined): string {
   const ticket = logTicket(log);
   const name = ticket !== null ? items?.[String(ticket)]?.title : undefined;
-  return name || log.comment?.trim() || log.activityType?.name || (ticket !== null ? 'Azure ticket' : 'Work without a ticket');
+  return name || log.comment?.trim() || log.activityType?.name || (ticket !== null ? t('Azure ticket') : t('Work without a ticket'));
 }
 
 /** The gaps between a day's worklogs (from its first start to its last end), at least `minutes` long. */
@@ -294,7 +295,7 @@ export function dayToLookAt(days: readonly WeekDay[], chosen: string | null): We
 
 /** "5 – 9 October 2026", "28 September – 2 October 2026", "29 December 2025 – 2 January 2026". */
 export function formatWeekTitle(first: CalendarDate, last: CalendarDate): string {
-  const month = (date: CalendarDate) => new Date(date.year, date.month - 1, date.day).toLocaleDateString('en-GB', { month: 'long' });
+  const month = (date: CalendarDate) => dateFormat({ month: 'long' }).format(new Date(date.year, date.month - 1, date.day));
   if (first.year !== last.year) return `${first.day} ${month(first)} ${first.year} – ${last.day} ${month(last)} ${last.year}`;
   if (first.month !== last.month) return `${first.day} ${month(first)} – ${last.day} ${month(last)} ${last.year}`;
   return `${first.day} – ${last.day} ${month(last)} ${last.year}`;

@@ -19,6 +19,7 @@ use att_core::{AppError, Result};
 use att_platform::InputOwner;
 
 use crate::engine::Engine;
+use crate::nl::{tr, trf};
 use crate::probes::{PROBE_DEADLINE, blocking};
 use crate::state::AppState;
 
@@ -50,7 +51,9 @@ pub(crate) struct MicrophoneState {
     pub popup_pending: bool,
 }
 
-const OFF: &str = "Microphone meeting suggestions are off";
+fn off() -> String {
+    tr("Microphone meeting suggestions are off").to_string()
+}
 
 impl Default for MicrophoneState {
     fn default() -> Self {
@@ -62,7 +65,7 @@ impl Default for MicrophoneState {
             connected: false,
             checking: false,
             last_confirmed: None,
-            status: OFF.to_string(),
+            status: off(),
             generation: 0,
             monitor: MicrophoneTrackingMonitor::new(),
             pending: Vec::new(),
@@ -103,9 +106,9 @@ pub(crate) fn validate_current(engine: &Engine, session: &MicrophoneSession) -> 
     if engine.read(|state| is_active(state, session, now)) {
         Ok(())
     } else {
-        Err(AppError::message(
+        Err(AppError::message(tr(
             "Microphone use is no longer confirmed. Check meeting detection in Settings or choose tracking manually.",
-        ))
+        )))
     }
 }
 
@@ -138,7 +141,7 @@ pub(crate) fn configure(engine: &Engine) {
         microphone.checking = false;
         if !preferences.enabled {
             microphone.configured = None;
-            microphone.status = OFF.to_string();
+            microphone.status = off();
             effects.sync_microphone();
             return;
         }
@@ -192,10 +195,10 @@ pub(crate) async fn check_now(engine: &Engine) {
                 microphone.connected = true;
                 microphone.last_confirmed = Some(now);
                 microphone.status = if owners.is_empty() {
-                    "Watching microphone status · checked every 2 seconds".to_string()
+                    tr("Watching microphone status · checked every 2 seconds").to_string()
                 } else {
                     let names: Vec<&str> = owners.iter().map(|owner| owner.name.as_str()).collect();
-                    format!("Microphone in use: {}", names.join(", "))
+                    trf("Microphone in use: {apps}", &[("apps", &names.join(", "))])
                 };
                 microphone.owners = owners;
                 microphone.inputs = inputs;
@@ -205,7 +208,7 @@ pub(crate) async fn check_now(engine: &Engine) {
                 microphone.connected = false;
                 microphone.status = match failure {
                     Some(Err(error)) => error.to_string(),
-                    _ => "Microphone status did not respond in time. Retrying automatically."
+                    _ => tr("Microphone status did not respond in time. Retrying automatically.")
                         .to_string(),
                 };
             }
@@ -253,9 +256,9 @@ pub(crate) fn validate_end(engine: &Engine, prompt: &MicrophoneEndPrompt) -> Res
     if current {
         Ok(())
     } else {
-        Err(AppError::message(
+        Err(AppError::message(tr(
             "This microphone reminder is no longer current. Check the active timer before changing it.",
-        ))
+        )))
     }
 }
 

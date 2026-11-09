@@ -20,6 +20,7 @@ import { FullRow, Hint, InlineIssue, IssueRow, SectionFooter, SettingRow, Settin
 import { StatusTiles } from './StatusTiles';
 import { useSettingsForm } from './SettingsForm';
 import { issueFor } from './validation';
+import { mark, t, tn } from '../../i18n';
 import { AzureTokenTest, useAzureTokenTest } from './AzureTokenTest';
 import { SevenPaceInstructions } from './SevenPaceInstructions';
 import styles from './settings.module.css';
@@ -52,7 +53,7 @@ function SecretRow({ title, help, value, onChange, stored, store, emptyPlacehold
           <div className={styles.secretControl}>
             {stored ? (
               <Badge tone="success" icon={CheckIcon}>
-                {`Stored in ${store}`}
+                {t('Stored in {store}', { store })}
               </Badge>
             ) : null}
             <TextField
@@ -63,7 +64,7 @@ function SecretRow({ title, help, value, onChange, stored, store, emptyPlacehold
               autoComplete="off"
               value={value}
               onChange={onChange}
-              placeholder={stored ? 'Paste a new token to replace the stored one' : emptyPlaceholder}
+              placeholder={stored ? t('Paste a new token to replace the stored one') : emptyPlaceholder}
               isDisabled={isDisabled}
               width="full"
               autoFocus={replacing && value === ''}
@@ -88,17 +89,17 @@ function SecretRow({ title, help, value, onChange, stored, store, emptyPlacehold
                   setReplacing(false);
                 }}
               >
-                Keep the stored one
+                {t('Keep the stored one')}
               </Button>
             ) : null}
           </div>
         ) : (
           <>
             <Badge tone="success" icon={CheckIcon}>
-              {`Stored in ${store}`}
+              {t('Stored in {store}', { store })}
             </Badge>
             <Button size="small" onPress={() => setReplacing(true)} isDisabled={isDisabled}>
-              Replace…
+              {t('Replace…')}
             </Button>
           </>
         )
@@ -127,12 +128,12 @@ function PairingCountdown({ expiresAt }: { expiresAt: string }) {
   const left = secondsLeft(expiresAt, now);
   return (
     <>
-      <dt>Valid until</dt>
+      <dt>{t('Valid until')}</dt>
       <dd>
         {formatTime(expiresAt)}
         {' · '}
         {/* Updated every second for sighted users; never announced (no live region). */}
-        <span className={styles.countdown}>{left > 0 ? `${left} ${left === 1 ? 'second' : 'seconds'} left` : 'Expired'}</span>
+        <span className={styles.countdown}>{left > 0 ? tn(left, '{count} second left', '{count} seconds left') : t('Expired')}</span>
       </dd>
     </>
   );
@@ -181,7 +182,7 @@ function PinPairing() {
     <FullRow tone="sunken" className={styles.pairing}>
       <div className={styles.pairingSteps}>
         <SevenPaceInstructions mode="mobilePIN" workspace={null} credentials={words.credentials} open collapsible={false} />
-        {workspace === '' ? <Hint>Enter your 7pace workspace above to pair.</Hint> : null}
+        {workspace === '' ? <Hint>{t('Enter your 7pace workspace above to pair.')}</Hint> : null}
         {status ? (
           <p className={styles.status}>
             {pairing.pairedHost ? <CheckIcon className={styles.statusIcon} /> : null}
@@ -194,7 +195,7 @@ function PinPairing() {
       <div className={styles.pairingActions}>
         {pairing.pin ? (
           <dl className={styles.pinDetails}>
-            <dt>7pace pairing PIN</dt>
+            <dt>{t('7pace pairing PIN')}</dt>
             <dd className={styles.pin}>{pairing.pin}</dd>
             {pairing.expiresAt ? <PairingCountdown expiresAt={pairing.expiresAt} /> : null}
           </dl>
@@ -209,24 +210,24 @@ function PinPairing() {
             isDisabled={!canGenerate}
             isPending={generate.pending}
           >
-            {pairing.busy ? 'Requesting / waiting…' : 'Generate pairing PIN'}
+            {pairing.busy ? t('Requesting / waiting…') : t('Generate pairing PIN')}
           </Button>
           {pairing.pin ? (
             <Button
               onPress={() => {
                 const pin = pairing.pin ?? '';
                 copyText(pin).then(
-                  () => toast.show({ title: 'PIN copied', tone: 'success' }),
-                  () => toast.show({ title: 'The PIN could not be copied', tone: 'error' }),
+                  () => toast.show({ title: t('PIN copied'), tone: 'success' }),
+                  () => toast.show({ title: t('The PIN could not be copied'), tone: 'error' }),
                 );
               }}
             >
-              Copy PIN
+              {t('Copy PIN')}
             </Button>
           ) : null}
           {pairing.busy ? (
             <Button onPress={() => void cancel.run({ type: 'pairing.cancel' })} isPending={cancel.pending}>
-              Cancel pairing
+              {t('Cancel pairing')}
             </Button>
           ) : null}
         </div>
@@ -236,8 +237,8 @@ function PinPairing() {
 }
 
 const AUTH_MODES: ReadonlyArray<{ id: SevenPaceAuthMode; label: string }> = [
-  { id: 'mobilePIN', label: 'Mobile PIN pairing' },
-  { id: 'apiToken', label: 'API token' },
+  { id: 'mobilePIN', label: mark('Mobile PIN pairing') },
+  { id: 'apiToken', label: mark('API token') },
 ];
 
 /** Settings → Azure DevOps & 7pace → Azure DevOps: organization, project and the PAT. */
@@ -249,14 +250,14 @@ export function AzureSection() {
   const tester = useAzureTokenTest();
   const chip = azureChip(settings.hasAzurePat, connection);
   return (
-    <SettingsSection id="azure" subtitle="Used to find tickets, titles and states." actions={<ConnectionChip {...chip} />}>
-      <SettingRow title="Organization" help={<>The name in dev.azure.com/<b>organization</b></>}>
+    <SettingsSection id="azure" subtitle={t('Used to find tickets, titles and states.')} actions={<ConnectionChip {...chip} />}>
+      <SettingRow title={t('Organization')} help={<>{t('The name in dev.azure.com/')}<b>{t('organization')}</b></>}>
         {({ helpId }) => (
           <TextField
-            label="Organization"
+            label={t('Organization')}
             hideLabel
             aria-describedby={helpId}
-            placeholder="your-organization"
+            placeholder={t('your-organization')}
             value={draft.organization}
             onChange={(organization) => update((current) => ({ ...current, organization }))}
             isInvalid={organizationIssue !== undefined}
@@ -270,17 +271,17 @@ export function AzureSection() {
       <SettingRow
         title={
           <>
-            Project <span className={styles.optional}>(optional)</span>
+            {t('Project')} <span className={styles.optional}>{t('(optional)')}</span>
           </>
         }
-        help="Leave empty to search tickets in every project."
+        help={t('Leave empty to search tickets in every project.')}
       >
         {({ helpId }) => (
           <TextField
-            label="Project (optional)"
+            label={t('Project (optional)')}
             hideLabel
             aria-describedby={helpId}
-            placeholder="Project name"
+            placeholder={t('Project name')}
             value={draft.project}
             onChange={(project) => update((current) => ({ ...current, project }))}
             autoComplete="off"
@@ -290,40 +291,41 @@ export function AzureSection() {
         )}
       </SettingRow>
       <SecretRow
-        title="Personal access token"
-        help={settings.hasAzurePat ? 'Needs Work Items (Read). Paste a new one only to replace it.' : 'Needs “Work Items (Read)”. That is enough for ticket lookup.'}
+        title={t('Personal access token')}
+        help={settings.hasAzurePat ? t('Needs Work Items (Read). Paste a new one only to replace it.') : t('Needs “Work Items (Read)”. That is enough for ticket lookup.')}
         value={form.azurePat}
         onChange={form.setAzurePat}
         stored={settings.hasAzurePat}
         store={osWords(os).credentials}
-        emptyPlaceholder="Paste your Azure PAT"
+        emptyPlaceholder={t('Paste your Azure PAT')}
         isDisabled={preview}
         onEnter={() => void tester.run()}
       />
-      {connection?.azureIssue ? <IssueRow tone="warning">{`Azure tickets: ${connection.azureIssue}`}</IssueRow> : null}
+      {connection?.azureIssue ? <IssueRow tone="warning">{t('Azure tickets: {issue}', { issue: connection.azureIssue })}</IssueRow> : null}
       <AzureTokenTest tester={tester} />
     </SettingsSection>
   );
 }
 
 function azureChip(hasAzurePat: boolean, connection: ConnectionSlice | undefined): { tone: Tone; label: string } {
-  if (!hasAzurePat) return { tone: 'neutral', label: 'Not connected yet' };
-  if (connection?.azureIssue) return { tone: 'warning', label: 'Needs attention' };
-  if (connection?.connected) return { tone: 'success', label: 'Connected' };
-  return { tone: 'neutral', label: 'Token stored' };
+  if (!hasAzurePat) return { tone: 'neutral', label: t('Not connected yet') };
+  if (connection?.azureIssue) return { tone: 'warning', label: t('Needs attention') };
+  if (connection?.connected) return { tone: 'success', label: t('Connected') };
+  return { tone: 'neutral', label: t('Token stored') };
 }
 
 function sevenPaceChip(connection: ConnectionSlice | undefined): { tone: Tone; label: string } {
-  if (!connection || connection.health === 'unconfigured') return { tone: 'neutral', label: 'Not connected yet' };
-  if (connection.health === 'confirmed') return { tone: 'success', label: 'Connected' };
+  if (!connection || connection.health === 'unconfigured') return { tone: 'neutral', label: t('Not connected yet') };
+  if (connection.health === 'confirmed') return { tone: 'success', label: t('Connected') };
   return { tone: connectionTone(connection), label: connection.status };
 }
 
 /** "Timer checked 14:59:40 · time entries checked 14:55", or why nothing was checked. */
 function checkedLine(connection: ConnectionSlice | undefined): string {
-  if (!connection?.lastSync) return 'The timer has not been checked yet.';
-  const entries = connection.worklogSync ? ` · time entries checked ${formatTime(connection.worklogSync)}` : '';
-  return `Timer checked ${formatDateTime(connection.lastSync)}${entries}`;
+  if (!connection?.lastSync) return t('The timer has not been checked yet.');
+  const timer = t('Timer checked {time}', { time: formatDateTime(connection.lastSync) });
+  if (!connection.worklogSync) return timer;
+  return `${timer} · ${t('time entries checked {time}', { time: formatTime(connection.worklogSync) })}`;
 }
 
 /** Settings → Azure DevOps & 7pace → 7pace Timetracker: workspace, sign-in and Unpair. */
@@ -340,14 +342,14 @@ export function SevenPaceSection() {
   const [confirming, setConfirming] = useState(false);
   const paired = settings.pairing.pairedHost;
   return (
-    <SettingsSection id="sevenPace" subtitle="Where your time entries are stored." actions={<ConnectionChip {...sevenPaceChip(connection)} />}>
-      <SettingRow title="Workspace URL" help="Without /api at the end.">
+    <SettingsSection id="sevenPace" subtitle={t('Where your time entries are stored.')} actions={<ConnectionChip {...sevenPaceChip(connection)} />}>
+      <SettingRow title={t('Workspace URL')} help={t('Without /api at the end.')}>
         {({ helpId }) => (
           <TextField
-            label="Workspace URL"
+            label={t('Workspace URL')}
             hideLabel
             aria-describedby={helpId}
-            placeholder="https://your-organization.timehub.7pace.com"
+            placeholder={t('https://your-organization.timehub.7pace.com')}
             value={draft.sevenPaceUrl}
             onChange={(sevenPaceUrl) => update((current) => ({ ...current, sevenPaceUrl }))}
             isInvalid={urlIssue !== undefined}
@@ -359,11 +361,11 @@ export function SevenPaceSection() {
           />
         )}
       </SettingRow>
-      <SettingRow title="Sign in with" help="PIN pairing works without an API token.">
+      <SettingRow title={t('Sign in with')} help={t('PIN pairing works without an API token.')}>
         <SegmentedControl
-          label="Sign in with"
+          label={t('Sign in with')}
           hideLabel
-          options={AUTH_MODES}
+          options={AUTH_MODES.map(({ id, label }) => ({ id, label: t(label) }))}
           selectedKey={mode}
           onSelectionChange={(sevenPaceAuthMode) => update((current) => ({ ...current, sevenPaceAuthMode }))}
         />
@@ -383,17 +385,17 @@ export function SevenPaceSection() {
             />
           </FullRow>
           <SecretRow
-            title="API token"
+            title={t('API token')}
             help={
               settings.hasSevenPaceToken
-                ? 'Paste a new one only to replace it.'
-                : `Saved in ${words.credentials} when you save. Or choose Mobile PIN pairing to connect without a token.`
+                ? t('Paste a new one only to replace it.')
+                : t('Saved in {store} when you save. Or choose Mobile PIN pairing to connect without a token.', { store: words.credentials })
             }
             value={form.sevenPaceToken}
             onChange={form.setSevenPaceToken}
             stored={settings.hasSevenPaceToken}
             store={words.credentials}
-            emptyPlaceholder="Paste your 7pace API token"
+            emptyPlaceholder={t('Paste your 7pace API token')}
             isDisabled={preview}
           />
         </>
@@ -404,22 +406,22 @@ export function SevenPaceSection() {
         actions={
           hasCredential ? (
             <Button size="small" variant="plain" className={styles.dangerButton} onPress={() => setConfirming(true)} isDisabled={busy || preview}>
-              {mode === 'mobilePIN' ? 'Unpair' : 'Remove token'}
+              {mode === 'mobilePIN' ? t('Unpair') : t('Remove token')}
             </Button>
           ) : null
         }
       >
-        <span>{[paired && mode === 'mobilePIN' ? `Paired with ${paired}` : null, checkedLine(connection)].filter(Boolean).join(' · ')}</span>
+        <span>{[paired && mode === 'mobilePIN' ? t('Paired with {host}', { host: paired }) : null, checkedLine(connection)].filter(Boolean).join(' · ')}</span>
       </SectionFooter>
       <Dialog
         isOpen={confirming}
         onOpenChange={setConfirming}
         role="alertdialog"
         size="small"
-        title={mode === 'mobilePIN' ? 'Unpair 7pace?' : 'Remove the 7pace API token?'}
-        description={`The 7pace sign-in is removed from ${words.credentials}. Your time entries in 7pace and the rest of your settings stay. Pair again or paste a token to reconnect.`}
+        title={mode === 'mobilePIN' ? t('Unpair 7pace?') : t('Remove the 7pace API token?')}
+        description={t('The 7pace sign-in is removed from {store}. Your time entries in 7pace and the rest of your settings stay. Pair again or paste a token to reconnect.', { store: words.credentials })}
         primaryAction={{
-          label: mode === 'mobilePIN' ? 'Unpair' : 'Remove token',
+          label: mode === 'mobilePIN' ? t('Unpair') : t('Remove token'),
           variant: 'destructive',
           isPending: unpair.pending,
           onAction: () => {
@@ -449,39 +451,39 @@ export function AccountTiles() {
   return (
     <div id={sectionAnchorId('connection')} tabIndex={-1} className={styles.anchorBlock}>
       <StatusTiles
-        label="Connection status"
+        label={t('Connection status')}
         tiles={[
           {
             id: 'azure',
             icon: azure.tone === 'success' ? CheckIcon : WarningIcon,
             tone: tileTone(azure.tone),
-            title: azure.tone === 'success' ? 'Azure DevOps connected' : `Azure DevOps: ${azure.label.toLowerCase()}`,
-            detail: account || 'No organization yet',
+            title: azure.tone === 'success' ? t('Azure DevOps connected') : t('Azure DevOps: {status}', { status: azure.label.toLowerCase() }),
+            detail: account || t('No organization yet'),
           },
           {
             id: 'sevenPace',
             icon: sevenPace.tone === 'success' ? CheckIcon : WarningIcon,
             tone: tileTone(sevenPace.tone),
-            title: sevenPace.tone === 'success' ? '7pace connected' : `7pace: ${sevenPace.label.toLowerCase()}`,
+            title: sevenPace.tone === 'success' ? t('7pace connected') : t('7pace: {status}', { status: sevenPace.label.toLowerCase() }),
             detail:
               draft.sevenPaceAuthMode === 'mobilePIN'
                 ? settings.pairing.pairedHost
-                  ? 'Paired with mobile PIN'
-                  : 'Mobile PIN pairing'
-                : 'API token',
+                  ? t('Paired with mobile PIN')
+                  : t('Mobile PIN pairing')
+                : t('API token'),
           },
           {
             id: 'tokens',
             icon: KeyIcon,
             tone: 'accent',
-            title: `${tokens} ${tokens === 1 ? 'token' : 'tokens'} in ${words.credentials}`,
-            detail: 'Never shown or exported',
+            title: tn(tokens, '{count} token in {store}', '{count} tokens in {store}', { store: words.credentials }),
+            detail: t('Never shown or exported'),
           },
         ]}
       />
       {connection?.detail ? <Hint>{connection.detail}</Hint> : null}
-      {connection?.progressIssue ? <InlineIssue tone="warning">{`Time totals: ${connection.progressIssue}`}</InlineIssue> : null}
-      {draft.completionReminders && !settings.hasAzurePat ? <Hint>Add an Azure PAT to enable ticket completion reminders.</Hint> : null}
+      {connection?.progressIssue ? <InlineIssue tone="warning">{t('Time totals: {issue}', { issue: connection.progressIssue })}</InlineIssue> : null}
+      {draft.completionReminders && !settings.hasAzurePat ? <Hint>{t('Add an Azure PAT to enable ticket completion reminders.')}</Hint> : null}
     </div>
   );
 }
@@ -499,7 +501,7 @@ export function TestConnectionsButton() {
         isDisabled={busy || preview || !connection}
         isPending={retry.pending || (connection?.connecting ?? false)}
       >
-        Test both connections
+        {t('Test both connections')}
       </Button>
       {retry.error ? <InlineIssue>{retry.error.message}</InlineIssue> : null}
     </div>

@@ -16,6 +16,7 @@ import { PlaceBody, PlaceHeader } from '../../layout/Place';
 import { useCommands, useRefreshShortcut } from '../../shortcuts/hooks';
 import { useAction, useSlice } from '../../state/hooks';
 import { formatShortDuration } from '../../utils/duration';
+import { t } from '../../i18n';
 import { OfflineDraftsCard, PreviousDayCard, ReviewCheck, TodayCheck, type LoadedReview } from './DayCheck';
 import { formatDayTitle, sessionSeconds, shiftDay, useActivityIndex } from './model';
 import { TimePerTicket } from './TimePerTicket';
@@ -36,7 +37,7 @@ function DayProgress({ seconds, target, segments }: { seconds: number; target: n
     <div className={styles.progress}>
       <p className={styles.progressText}>
         <b>{formatShortDuration(seconds)}</b>
-        {target > 0 ? <span className={styles.muted}>{` of ${formatShortDuration(target)}`}</span> : null}
+        {target > 0 ? <span className={styles.muted}>{` ${t('of {target}', { target: formatShortDuration(target) })}`}</span> : null}
       </p>
       {target > 0 ? (
         <div className={styles.bar} aria-hidden="true">
@@ -85,11 +86,11 @@ function SetupCard({ onSetUp }: { onSetUp: () => void }) {
     <Card className={styles.setup}>
       <SetupIcon className={styles.setupIcon} />
       <div className={styles.setupText}>
-        <h2 className={styles.cardTitle}>A little setup. A lot less forgotten time.</h2>
-        <p className={styles.caption}>Connect 7pace, add your Azure PAT, and your branches will bring the right ticket to you.</p>
+        <h2 className={styles.cardTitle}>{t('A little setup. A lot less forgotten time.')}</h2>
+        <p className={styles.caption}>{t('Connect 7pace, add your Azure PAT, and your branches will bring the right ticket to you.')}</p>
       </div>
       <Button variant="primary" onPress={onSetUp}>
-        Set up accounts
+        {t('Set up accounts')}
       </Button>
     </Card>
   );
@@ -160,26 +161,26 @@ export default function TodayPlace() {
     else void refresh.run({ type: 'connection.refresh' });
   };
   useRefreshShortcut(doRefresh, {
-    label: reviewing ? 'Refresh review' : 'Refresh',
+    label: reviewing ? t('Refresh review') : t('Refresh'),
     isDisabled: refresh.pending || (reviewing ? !review?.configured : !connection?.hasSevenPaceToken),
   });
   const markAction = useAction();
   useCommands([
-    { id: 'today.previousDay', icon: ChevronLeftIcon, label: 'Previous day', group: 'Actions', keywords: ['day review', 'yesterday'], onAction: () => changeDay(shiftDay(day, -1)) },
+    { id: 'today.previousDay', icon: ChevronLeftIcon, label: t('Previous day'), group: 'Actions', keywords: ['day review', 'yesterday'], onAction: () => changeDay(shiftDay(day, -1)) },
     {
       id: 'today.nextDay',
       icon: ChevronRightIcon,
-      label: 'Next day',
+      label: t('Next day'),
       group: 'Actions',
       keywords: ['day review'],
       isDisabled: !reviewing,
       onAction: () => changeDay(shiftDay(day, 1)),
     },
-    { id: 'today.backToToday', icon: CalendarIcon, label: 'Back to today', group: 'Actions', isDisabled: !reviewing, onAction: () => changeDay(today) },
+    { id: 'today.backToToday', icon: CalendarIcon, label: t('Back to today'), group: 'Actions', isDisabled: !reviewing, onAction: () => changeDay(today) },
     {
       id: 'dayReview.markReviewed',
       icon: CheckIcon,
-      label: reviewing ? 'Mark this day reviewed' : 'Mark day reviewed',
+      label: reviewing ? t('Mark this day reviewed') : t('Mark day reviewed'),
       group: 'Actions',
       keywords: ['day review', 'finish'],
       isDisabled: !reviewVisible || !canMark,
@@ -190,10 +191,10 @@ export default function TodayPlace() {
   ]);
 
   const previousButton = (
-    <IconButton label="Previous day" icon={ChevronLeftIcon} variant="secondary" onPress={() => changeDay(shiftDay(day, -1))} />
+    <IconButton label={t('Previous day')} icon={ChevronLeftIcon} variant="secondary" onPress={() => changeDay(shiftDay(day, -1))} />
   );
   const nextButton = (
-    <IconButton label="Next day" icon={ChevronRightIcon} variant="secondary" isDisabled={!reviewing} onPress={() => changeDay(shiftDay(day, 1))} />
+    <IconButton label={t('Next day')} icon={ChevronRightIcon} variant="secondary" isDisabled={!reviewing} onPress={() => changeDay(shiftDay(day, 1))} />
   );
   const errors = [reviewAction.error, agendaAction.error, refresh.error].filter(Boolean);
   const setup =
@@ -211,7 +212,7 @@ export default function TodayPlace() {
             after={
               <>
                 {nextButton}
-                <Badge tone="accent">Today</Badge>
+                <Badge tone="accent">{t('Today')}</Badge>
               </>
             }
             actions={<TodayProgress />}
@@ -268,11 +269,11 @@ export default function TodayPlace() {
         <EmptyState
           icon={DayReviewIcon}
           headingLevel={2}
-          title="Connect to review your day"
-          description="Your review uses your own 7pace worklogs. Set up your account to get started."
+          title={t('Connect to review your day')}
+          description={t('Your review uses your own 7pace worklogs. Set up your account to get started.')}
           action={
             <Button variant="primary" onPress={() => navigation.navigate({ place: 'settings', view: 'accounts' })}>
-              Open Settings
+              {t('Open Settings')}
             </Button>
           }
         />
@@ -294,10 +295,10 @@ export default function TodayPlace() {
     );
   } else if (review?.issue && !review.loading) {
     content = (
-      <Banner tone="warning" title="Could not refresh worklogs">
+      <Banner tone="warning" title={t('Could not refresh worklogs')}>
         <p>{review.issue}</p>
         <Button size="small" onPress={() => void refresh.run({ type: 'dayReview.refresh' })}>
-          Refresh review
+          {t('Refresh review')}
         </Button>
       </Banner>
     );
@@ -305,7 +306,7 @@ export default function TodayPlace() {
     content = (
       <div aria-busy="true" className={styles.loading}>
         <span role="status" className="visually-hidden">
-          Loading the day’s worklogs…
+          {t('Loading the day’s worklogs…')}
         </span>
         <Skeleton shape="rect" height="6rem" />
         <Skeleton lines={4} />
@@ -326,14 +327,14 @@ export default function TodayPlace() {
               {loaded && !loaded.loading ? (
                 reviewedAt ? (
                   <Badge tone="success" icon={SuccessIcon}>
-                    Reviewed
+                    {t('Reviewed')}
                   </Badge>
                 ) : (
-                  <Badge tone="warning">Not reviewed</Badge>
+                  <Badge tone="warning">{t('Not reviewed')}</Badge>
                 )
               ) : null}
               <Button variant="plain" size="small" onPress={() => changeDay(today)}>
-                Back to today
+                {t('Back to today')}
               </Button>
             </>
           }

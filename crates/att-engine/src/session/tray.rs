@@ -70,9 +70,9 @@ pub fn tray_status(state: &AppState, now: Timestamp) -> TrayStatus {
     let seconds = if seconds.is_finite() { seconds.clamp(0.0, f64::from(i32::MAX)) } else { 0.0 };
     let clock = duration_text::clock(seconds);
     let tooltip = match &local {
-        Some(draft) if local_leads => format!(
-            "Azure timetracker — Local tracking · {} · Not uploaded to 7pace",
-            draft.title()
+        Some(draft) if local_leads => crate::nl::trf(
+            "Azure timetracker — Local tracking · {title} · Not uploaded to 7pace",
+            &[("title", &draft.title())],
         ),
         _ => {
             // The tooltip uses the indicator without the attention override, as 1.14.x did.
@@ -188,6 +188,13 @@ mod tests {
         assert_eq!(
             status.tooltip,
             "Azure timetracker — Local tracking · Offline notes · Not uploaded to 7pace"
+        );
+        let dutch = att_core::i18n::with_language(att_core::i18n::Language::Nl, || {
+            tray_status(&state, now()).tooltip
+        });
+        assert_eq!(
+            dutch,
+            "Azure timetracker — Lokale registratie · Offline notes · Niet geüpload naar 7pace"
         );
     }
 }

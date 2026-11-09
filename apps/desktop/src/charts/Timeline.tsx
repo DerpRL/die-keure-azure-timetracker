@@ -4,6 +4,7 @@ import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'rea
 import { Button } from '../components/Button';
 import type { HeadingLevel } from '../components/Card';
 import { ZoomInIcon } from '../components/icons';
+import { t } from '../i18n';
 import { cx } from '../utils/cx';
 import type { TimeRange } from './ActivityBars';
 import { ChartFrame } from './ChartFrame';
@@ -81,7 +82,7 @@ export function Timeline({
   formatTime: formatClock = formatTime,
   formatTick,
   patterns: patternsProp,
-  emptyMessage = 'No entries in this day. Choose another day or adjust the active filters.',
+  emptyMessage = t('No entries in this day. Choose another day or adjust the active filters.'),
 }: TimelineProps) {
   const increasedContrast = useIncreasedContrast();
   const patterns = patternsProp ?? increasedContrast;
@@ -123,7 +124,7 @@ export function Timeline({
     return [
       entry.label,
       activity,
-      `${formatClock(entry.start)} to ${formatClock(entry.end)}`,
+      t('{start} to {end}', { start: formatClock(entry.start), end: formatClock(entry.end) }),
       formatValue(durationSeconds(entry)),
       entry.detail,
     ]
@@ -167,11 +168,11 @@ export function Timeline({
     <DataTable
       caption={title}
       columns={[
-        { id: 'label', header: 'Entry' },
-        { id: 'activity', header: 'Activity' },
-        { id: 'start', header: 'Start', align: 'end' },
-        { id: 'end', header: 'End', align: 'end' },
-        { id: 'duration', header: 'Duration', align: 'end' },
+        { id: 'label', header: t('Entry') },
+        { id: 'activity', header: t('Activity') },
+        { id: 'start', header: t('Start'), align: 'end' },
+        { id: 'end', header: t('End'), align: 'end' },
+        { id: 'duration', header: t('Duration'), align: 'end' },
       ]}
       rows={entries.map((entry) => ({
         id: entry.id,
@@ -193,19 +194,23 @@ export function Timeline({
         {entries.length > pageSize ? (
           <div className={styles.pager}>
             <Button size="small" onPress={() => setPage(currentPage - 1)} isDisabled={currentPage === 0}>
-              Previous entries
+              {t('Previous entries')}
             </Button>
             <span className={styles.pagerStatus} aria-live="polite">
-              {currentPage * pageSize + 1}–{Math.min(entries.length, (currentPage + 1) * pageSize)} of {entries.length} entries
+              {t('{from}–{to} of {total} entries', {
+                from: currentPage * pageSize + 1,
+                to: Math.min(entries.length, (currentPage + 1) * pageSize),
+                total: entries.length,
+              })}
             </span>
             <Button size="small" onPress={() => setPage(currentPage + 1)} isDisabled={currentPage >= pageCount - 1}>
-              Next entries
+              {t('Next entries')}
             </Button>
           </div>
         ) : null}
         {selected && onZoomToEntry ? (
           <Button size="small" icon={ZoomInIcon} onPress={() => onZoomToEntry(selected)}>
-            Zoom to entry
+            {t('Zoom to entry')}
           </Button>
         ) : null}
       </div>
@@ -238,7 +243,7 @@ export function Timeline({
             <div
               ref={listRef}
               role="listbox"
-              aria-label={`${title}: entries`}
+              aria-label={t('{title}: entries', { title })}
               aria-describedby={instructionsId}
               className={styles.timelineRows}
             >
@@ -302,8 +307,9 @@ export function Timeline({
             ) : null}
           </div>
           <p id={instructionsId} className="visually-hidden">
-            Use the Up and Down Arrow keys to move between entries, Return to select one
-            {onZoomToEntry ? ', plus to zoom to it' : ''}, and Page Up or Page Down to change pages.
+            {onZoomToEntry
+              ? t('Use the Up and Down Arrow keys to move between entries, Return to select one, plus to zoom to it, and Page Up or Page Down to change pages.')
+              : t('Use the Up and Down Arrow keys to move between entries, Return to select one, and Page Up or Page Down to change pages.')}
           </p>
         </div>
       )}

@@ -31,6 +31,7 @@ use objc2_core_audio::{
 use objc2_core_foundation::{CFRetained, CFString};
 
 use super::bundle::{BundleInfo, enclosing_app, read_bundle};
+use crate::nl::{tr, trf};
 use crate::{InputOwner, MicrophoneProbe, PlatformError, Result};
 
 /// `MicrophoneReader.Process`: a HAL process object with input running.
@@ -72,7 +73,7 @@ impl MicrophoneProbe for CoreAudioMicrophone {
     fn sample(&self) -> Result<Vec<InputOwner>> {
         if !self.supported() {
             return Err(PlatformError::Failed(
-                "Microphone app detection requires macOS 14.2 or later.".into(),
+                tr("Microphone app detection requires macOS 14.2 or later.").into(),
             ));
         }
         super::guarded("Microphone detection", || {
@@ -99,8 +100,9 @@ fn check(status: i32) -> Result<()> {
     if status == 0 {
         Ok(())
     } else {
-        Err(PlatformError::Failed(format!(
-            "macOS microphone status is temporarily unavailable ({status}). Retrying automatically."
+        Err(PlatformError::Failed(trf(
+            "macOS microphone status is temporarily unavailable ({status}). Retrying automatically.",
+            &[("status", &status)],
         )))
     }
 }
@@ -254,10 +256,10 @@ pub(crate) fn resolve_owner(
     let path = (!facts.path.is_empty()).then(|| facts.path.clone());
     let id = facts.running_bundle_id.clone().unwrap_or_else(|| facts.hal_bundle_id.clone());
     if id.to_lowercase().starts_with("com.apple.webkit.") {
-        return InputOwner { id, name: "WebKit (browser or web view)".into(), pid, path };
+        return InputOwner { id, name: tr("WebKit (browser or web view)").into(), pid, path };
     }
     let name = facts.running_name.clone().unwrap_or_else(|| {
-        if id.is_empty() { "Unidentified audio app".into() } else { id.clone() }
+        if id.is_empty() { tr("Unidentified audio app").into() } else { id.clone() }
     });
     let id = if id.is_empty() { format!("process:{}", facts.pid) } else { id };
     InputOwner { id, name, pid, path }

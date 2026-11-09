@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize, Serializer};
 
 use crate::insights::{ContextInsights, ContextSegment, context_key};
 use crate::model::WorkLog;
+use crate::nl::{tr, trf};
 use crate::statistics::{DayTable, by_seconds_then_id, sum};
 use crate::targets::WorkTargets;
 use crate::text::{NonEmpty, contains_folded};
@@ -24,8 +25,10 @@ use crate::time::{Cal, Interval, add_secs, diff_secs, secs};
 const NANOS_PER_SECOND: i128 = 1_000_000_000;
 const NANOS_PER_HOUR: i128 = 3_600 * NANOS_PER_SECOND;
 
-/// English `Calendar.shortWeekdaySymbols`, Sunday first.
-const SHORT_WEEKDAYS: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+/// `Calendar.shortWeekdaySymbols` in the interface language, Sunday first.
+fn short_weekdays() -> [&'static str; 7] {
+    [tr("Sun"), tr("Mon"), tr("Tue"), tr("Wed"), tr("Thu"), tr("Fri"), tr("Sat")]
+}
 
 /// Zoom and pan inside the downloaded period.
 pub struct StatisticsZoom;
@@ -77,11 +80,11 @@ pub enum ExplorerResolution {
 impl ExplorerResolution {
     pub fn label(&self) -> &'static str {
         match self {
-            Self::Month => "Monthly",
-            Self::Day => "Daily",
-            Self::Hour => "Hourly",
-            Self::Quarter => "15 minutes",
-            Self::Minute => "5 minutes",
+            Self::Month => tr("Monthly"),
+            Self::Day => tr("Daily"),
+            Self::Hour => tr("Hourly"),
+            Self::Quarter => tr("15 minutes"),
+            Self::Minute => tr("5 minutes"),
         }
     }
 
@@ -172,8 +175,21 @@ pub struct ExplorerRecord {
 }
 
 impl ExplorerRecord {
+    /// The English names of the length bands; [`band_name`](Self::band_name) translates them.
     pub const BAND_NAMES: [&'static str; 5] =
         ["Under 15 min", "15–30 min", "30–60 min", "1–2 hours", "2+ hours"];
+
+    /// The name of length band `band` (an index into [`BAND_NAMES`](Self::BAND_NAMES)) in the
+    /// interface language.
+    pub fn band_name(band: usize) -> &'static str {
+        match band {
+            0 => tr("Under 15 min"),
+            1 => tr("15–30 min"),
+            2 => tr("30–60 min"),
+            3 => tr("1–2 hours"),
+            _ => tr("2+ hours"),
+        }
+    }
 
     pub fn id(&self) -> &str {
         &self.log.id
@@ -181,7 +197,7 @@ impl ExplorerRecord {
 
     pub fn fallback_title(&self) -> String {
         match self.ticket_id {
-            Some(id) => format!("Azure ticket #{id}"),
+            Some(id) => trf("Azure ticket #{id}", &[("id", &id)]),
             None => self.log.comment.non_empty().unwrap_or(&self.activity_name).to_string(),
         }
     }
@@ -359,8 +375,9 @@ impl ExplorerDataset {
                     log.comment.non_empty().unwrap_or("")
                 ),
             };
-            let activity_name =
-                activity_type.and_then(|a| a.name.non_empty()).unwrap_or("Unspecified activity");
+            let activity_name = activity_type
+                .and_then(|a| a.name.non_empty())
+                .unwrap_or(tr("Unspecified activity"));
             records.push(Arc::new(ExplorerRecord {
                 log: log.clone(),
                 start,
@@ -628,10 +645,11 @@ impl ExplorerAnalysis {
                 target += options.targets.daily_seconds_on(days.date(index));
             }
         }
+        let short_weekdays = short_weekdays();
         let weekdays = [2, 3, 4, 5, 6, 7, 1]
             .map(|weekday: usize| ExplorerPattern {
                 id: weekday as i64,
-                label: SHORT_WEEKDAYS[weekday - 1].to_string(),
+                label: short_weekdays[weekday - 1].to_string(),
                 seconds: weekday_seconds[weekday],
                 count: occurrences[weekday],
             })
@@ -647,7 +665,7 @@ impl ExplorerAnalysis {
         let lengths = (0..5)
             .map(|band| ExplorerPattern {
                 id: band as i64,
-                label: ExplorerRecord::BAND_NAMES[band].to_string(),
+                label: ExplorerRecord::band_name(band).to_string(),
                 seconds: band_seconds[band],
                 count: band_counts[band],
             })

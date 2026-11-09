@@ -4,6 +4,8 @@
  * immediately through their own intents are never taken from the draft.
  */
 import type { Configuration } from '../../ipc/contract';
+import { mark, t } from '../../i18n';
+import { weekdayName } from './targets';
 
 /**
  * Applied immediately (appearance, Figma, interruptions, quiet hours, onboarding) or owned by
@@ -108,34 +110,32 @@ export function hasDraftChanges(draft: Configuration, stored: Configuration): bo
 
 /** What each draft field is called in the save bar ("2 unsaved changes · Friday target, Workday"). */
 const FIELD_NAMES: Partial<Record<keyof Configuration, string>> = {
-  organization: 'Azure organization',
-  project: 'Azure project',
-  sevenPaceUrl: '7pace workspace',
-  sevenPaceAuthMode: '7pace sign-in',
-  branchPattern: 'Ticket number pattern',
-  autoStartWhenIdle: 'Activity on branch change',
-  notificationsEnabled: 'Notifications',
-  watchEnabled: 'Git branch watching',
-  calendarEnabled: 'Calendar on Today',
-  selectedCalendarIds: 'Calendars',
-  activityTypeId: 'Default activity',
-  pollSeconds: 'Timer status interval',
-  microphone: 'Call detection',
-  meetings: 'Calendar meetings',
-  completionReminders: 'Ticket closed reminders',
-  automaticUpdateChecks: 'Automatic update checks',
-  quickSwitchEnabled: 'Quick switch',
-  quickSwitchShortcut: 'Quick switch shortcut',
-  awareness: 'Time awareness',
-  cadences: 'Sync intervals',
-  hiddenPages: 'Features',
-  miniTimer: 'Mini timer',
-  roundToQuarterHours: 'Quarter-hour rounding',
-  resumeAfterMeetings: 'Resume after meetings',
-  menuBarTimer: 'Menu-bar timer',
+  organization: mark('Azure organization'),
+  project: mark('Azure project'),
+  sevenPaceUrl: mark('7pace workspace'),
+  sevenPaceAuthMode: mark('7pace sign-in'),
+  branchPattern: mark('Ticket number pattern'),
+  autoStartWhenIdle: mark('Activity on branch change'),
+  notificationsEnabled: mark('Notifications'),
+  watchEnabled: mark('Git branch watching'),
+  calendarEnabled: mark('Calendar on Today'),
+  selectedCalendarIds: mark('Calendars'),
+  activityTypeId: mark('Default activity'),
+  pollSeconds: mark('Timer status interval'),
+  microphone: mark('Call detection'),
+  meetings: mark('Calendar meetings'),
+  completionReminders: mark('Ticket closed reminders'),
+  automaticUpdateChecks: mark('Automatic update checks'),
+  quickSwitchEnabled: mark('Quick switch'),
+  quickSwitchShortcut: mark('Quick switch shortcut'),
+  awareness: mark('Time awareness'),
+  cadences: mark('Sync intervals'),
+  hiddenPages: mark('Features'),
+  miniTimer: mark('Mini timer'),
+  roundToQuarterHours: mark('Quarter-hour rounding'),
+  resumeAfterMeetings: mark('Resume after meetings'),
+  menuBarTimer: mark('Menu-bar timer'),
 };
-
-const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 /**
  * The names of the settings the draft changes, in Settings order, for the save bar. Fields
@@ -154,17 +154,18 @@ export function draftChanges(draft: Configuration, stored: Configuration): strin
       const days = mine.targets.minutesByWeekday;
       // Monday first, like the weekly target grid.
       for (const index of [1, 2, 3, 4, 5, 6, 0]) {
-        if (days[index] !== theirs.targets.minutesByWeekday[index]) add(`${DAY_NAMES[index]} target`);
+        if (days[index] !== theirs.targets.minutesByWeekday[index]) add(t('{day} target', { day: weekdayName(index + 1) }));
       }
-      if (mine.targets.belgianHolidaysEnabled !== theirs.targets.belgianHolidaysEnabled) add('Public holidays');
-      if (!deepEqual(mine.targets.dateExceptions ?? [], theirs.targets.dateExceptions ?? [])) add('Days off & exceptions');
+      if (mine.targets.belgianHolidaysEnabled !== theirs.targets.belgianHolidaysEnabled) add(t('Public holidays'));
+      if (!deepEqual(mine.targets.dateExceptions ?? [], theirs.targets.dateExceptions ?? [])) add(t('Days off & exceptions'));
     } else if (key === 'dayReview') {
       const { startMinute, finishMinute, ...rest } = mine.dayReview;
       const { startMinute: savedStart, finishMinute: savedFinish, ...savedRest } = theirs.dayReview;
-      if (startMinute !== savedStart || finishMinute !== savedFinish) add('Workday');
-      if (!deepEqual(rest, savedRest)) add('Day review');
+      if (startMinute !== savedStart || finishMinute !== savedFinish) add(t('Workday'));
+      if (!deepEqual(rest, savedRest)) add(t('Day review'));
     } else {
-      add(FIELD_NAMES[key as keyof Configuration] ?? String(key));
+      const name = FIELD_NAMES[key as keyof Configuration];
+      add(name ? t(name) : String(key));
     }
   }
   return names;

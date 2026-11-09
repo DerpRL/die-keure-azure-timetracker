@@ -1,30 +1,29 @@
+import { dateFormat, numberFormat, t } from '../i18n';
 import { formatShortDuration } from '../utils/duration';
 
-/** English-only fixed formats (rewrite plan §8); 24-hour clock and day-month order (en-GB). */
-const LOCALE = 'en-GB';
-
-const timeFormat = new Intl.DateTimeFormat(LOCALE, { hour: '2-digit', minute: '2-digit' });
-const dayMonthFormat = new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month: 'short' });
-const dateTimeFormat = new Intl.DateTimeFormat(LOCALE, {
+/** Fixed formats in the interface locale: 24-hour clock and day-month order (en-GB or nl-BE). */
+const TIME: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' };
+const DAY_MONTH: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' };
+const DATE_TIME: Intl.DateTimeFormatOptions = {
   weekday: 'short',
   day: 'numeric',
   month: 'short',
   hour: '2-digit',
   minute: '2-digit',
-});
+};
 
 export const defaultFormatValue = (seconds: number): string => formatShortDuration(seconds);
 
 export function formatTime(date: Date): string {
-  return timeFormat.format(date);
+  return dateFormat(TIME).format(date);
 }
 
 export function formatDayMonth(date: Date): string {
-  return dayMonthFormat.format(date);
+  return dateFormat(DAY_MONTH).format(date);
 }
 
 export function formatDateTime(date: Date): string {
-  return dateTimeFormat.format(date);
+  return dateFormat(DATE_TIME).format(date);
 }
 
 /** Axis ticks: times for windows up to 36 h (as in 1.14), dates beyond. */
@@ -33,9 +32,10 @@ export function defaultTickFormatter(domain: { start: Date; end: Date }): (date:
   return span <= 36 * 3600 * 1000 ? formatTime : formatDayMonth;
 }
 
-/** "5h" / "30m" for value axes. */
+/** "5h" / "30m" for value axes (Dutch "5u" / "30m"). */
 export function formatAxisValue(seconds: number, unit: 'hours' | 'minutes'): string {
-  if (unit === 'minutes') return `${Math.round(seconds / 60)}m`;
+  if (unit === 'minutes') return t('{minutes}m', { minutes: Math.round(seconds / 60) });
   const hours = seconds / 3600;
-  return `${Number.isInteger(hours) ? hours : hours.toFixed(1)}h`;
+  const digits = Number.isInteger(hours) ? 0 : 1;
+  return t('{hours}h', { hours: numberFormat({ minimumFractionDigits: digits, maximumFractionDigits: digits, useGrouping: false }).format(hours) });
 }

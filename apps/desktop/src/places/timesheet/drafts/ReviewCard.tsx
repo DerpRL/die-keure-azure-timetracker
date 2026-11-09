@@ -9,11 +9,12 @@ import { DeleteDraftButton } from '../../../features/offline/DeleteDraft';
 import { formatClockTimeWithSeconds, formatDateTime, formatDayShort, parseInstant, ticketPrefix } from '../../../features/ticketContext/format';
 import { useAction } from '../../../state/hooks';
 import { formatClock, formatShortDuration } from '../../../utils/duration';
+import { t } from '../../../i18n';
 import styles from './OfflineDrafts.module.css';
 
 function preciseTime(value: string | null | undefined): string {
   const date = parseInstant(value);
-  return date ? `${formatDayShort(date)}, ${formatClockTimeWithSeconds(date)}` : 'Running';
+  return date ? `${formatDayShort(date)}, ${formatClockTimeWithSeconds(date)}` : t('Running');
 }
 
 export interface ReviewCardProps {
@@ -42,41 +43,41 @@ export function ReviewCard({ review, title, activities, disabled, onDeleted }: R
   // Settings → Reminders → Timer defaults can round saved time to quarter hours.
   const rounded = Math.abs(proposal.seconds - seconds) >= 1;
   const clean = conflicts.length === 0 && !overlapIssue;
-  const uploadLabel = clean ? 'Upload draft to 7pace' : 'Upload with overlap warning';
+  const uploadLabel = clean ? t('Upload draft to 7pace') : t('Upload with overlap warning');
   const sending = draft.status === 'Check 7pace before retrying';
   const failure = upload.error ?? link.error ?? retry.error ?? null;
 
   return (
     <Card as="section" aria-labelledby={headingId} className={styles.review}>
       <Heading level={2} id={headingId} className={styles.sectionTitle}>
-        {`Review ${title}`}
+        {t('Review {title}', { title })}
       </Heading>
-      <p className={styles.caption}>Uploads belong to your currently signed-in 7pace account.</p>
-      <p>{`Activity: ${activity ?? 'Choose an activity by editing this draft'}`}</p>
+      <p className={styles.caption}>{t('Uploads belong to your currently signed-in 7pace account.')}</p>
+      <p>{t('Activity: {activity}', { activity: activity ?? t('Choose an activity by editing this draft') })}</p>
       <p className={styles.mono}>{`${preciseTime(draft.start)} → ${preciseTime(draft.end)}`}</p>
-      <p>{`${draft.billable ? 'Billable' : 'Non-billable'} · ${formatClock(seconds)}`}</p>
-      {rounded ? <p className={styles.caption}>{`Saved as ${formatShortDuration(proposal.seconds)}, rounded to the nearest quarter hour.`}</p> : null}
+      <p>{`${draft.billable ? t('Billable') : t('Non-billable')} · ${formatClock(seconds)}`}</p>
+      {rounded ? <p className={styles.caption}>{t('Saved as {duration}, rounded to the nearest quarter hour.', { duration: formatShortDuration(proposal.seconds) })}</p> : null}
       {draft.comment ? <p className={styles.caption}>{draft.comment}</p> : null}
 
       <div role="status" className={styles.reviewResult}>
         {overlapIssue ? (
           <p className={styles.warningLine}>
             <WarningIcon className={styles.warningIcon} />
-            {`Overlap check incomplete: ${overlapIssue}`}
+            {t('Overlap check incomplete: {issue}', { issue: overlapIssue })}
           </p>
         ) : null}
         {conflicts.length > 0 ? (
           <>
             <p className={styles.warningLine}>
               <WarningIcon className={styles.warningIcon} />
-              Overlapping time · uploading is still allowed
+              {t('Overlapping time · uploading is still allowed')}
             </p>
             <ul role="list" className={styles.conflicts}>
               {conflicts.map((conflict) => (
                 <li key={conflict.id}>
                   {`${ticketPrefix(conflict.ticketId)}${conflict.title} · ${formatDateTime(parseInstant(conflict.start))} → ${formatDateTime(
                     parseInstant(conflict.end),
-                  )} · ${formatShortDuration(conflict.overlap)}${conflict.active ? ' · timer running' : ''}`}
+                  )} · ${formatShortDuration(conflict.overlap)}${conflict.active ? ` · ${t('timer running')}` : ''}`}
                 </li>
               ))}
             </ul>
@@ -84,14 +85,14 @@ export function ReviewCard({ review, title, activities, disabled, onDeleted }: R
         ) : !overlapIssue ? (
           <p className={styles.successLine}>
             <SuccessIcon className={styles.successIcon} />
-            No overlapping entries found
+            {t('No overlapping entries found')}
           </p>
         ) : null}
       </div>
 
       {matches.length > 0 ? (
         <>
-          <p>Matching entries already exist. Link the correct entry to resolve this draft without adding more time.</p>
+          <p>{t('Matching entries already exist. Link the correct entry to resolve this draft without adding more time.')}</p>
           <div className={styles.actions}>
             {matches.map((log) => (
               <Button
@@ -100,7 +101,7 @@ export function ReviewCard({ review, title, activities, disabled, onDeleted }: R
                 isPending={link.pending}
                 onPress={() => void link.run({ type: 'offline.link', logId: log.id })}
               >
-                {`Link existing entry ${log.id}`}
+                {t('Link existing entry {id}', { id: log.id })}
               </Button>
             ))}
           </div>
@@ -109,11 +110,11 @@ export function ReviewCard({ review, title, activities, disabled, onDeleted }: R
         <>
           <p className={styles.warningLine}>
             <WarningIcon className={styles.warningIcon} />
-            The previous upload may have reached 7pace. No matching entry was found. Check 7pace manually before allowing a retry.
+            {t('The previous upload may have reached 7pace. No matching entry was found. Check 7pace manually before allowing a retry.')}
           </p>
           <div className={styles.actions}>
             <Button isDisabled={disabled} onPress={() => setConfirmRetry(true)}>
-              I checked 7pace…
+              {t('I checked 7pace…')}
             </Button>
             <DeleteDraftButton draft={draft} name={title} size="medium" isDisabled={disabled} onDeleted={onDeleted} />
           </div>
@@ -132,10 +133,17 @@ export function ReviewCard({ review, title, activities, disabled, onDeleted }: R
         onOpenChange={setConfirmUpload}
         role="alertdialog"
         size="small"
-        title="Upload this draft to 7pace?"
-        description={`A ${formatShortDuration(proposal.seconds)} entry is created in your 7pace account${
-          draft.ticketId ? ` for #${draft.ticketId}` : ''
-        }. If the upload is interrupted, the draft stays locked until you check 7pace.`}
+        title={t('Upload this draft to 7pace?')}
+        description={
+          draft.ticketId
+            ? t('A {duration} entry is created in your 7pace account for #{ticket}. If the upload is interrupted, the draft stays locked until you check 7pace.', {
+                duration: formatShortDuration(proposal.seconds),
+                ticket: draft.ticketId,
+              })
+            : t('A {duration} entry is created in your 7pace account. If the upload is interrupted, the draft stays locked until you check 7pace.', {
+                duration: formatShortDuration(proposal.seconds),
+              })
+        }
         primaryAction={{
           label: uploadLabel,
           isDisabled: disabled,
@@ -150,10 +158,10 @@ export function ReviewCard({ review, title, activities, disabled, onDeleted }: R
         onOpenChange={setConfirmRetry}
         role="alertdialog"
         size="small"
-        title="Allow another review?"
-        description="Only unlock this draft after checking 7pace and confirming that the upload did not create an entry."
+        title={t('Allow another review?')}
+        description={t('Only unlock this draft after checking 7pace and confirming that the upload did not create an entry.')}
         primaryAction={{
-          label: 'I checked 7pace — allow another review',
+          label: t('I checked 7pace — allow another review'),
           isDisabled: disabled,
           isPending: retry.pending,
           onAction: () => {

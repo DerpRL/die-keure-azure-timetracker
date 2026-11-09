@@ -3,6 +3,7 @@ import { ArrowRightIcon, DayReviewIcon } from '../../components/icons';
 import type { DayReviewPromptView } from '../../ipc/contract';
 import { useIntents, useWriteGuards } from '../tracking/actions';
 import { PromptCard, promptStyles as styles } from './PromptCard';
+import { t } from '../../i18n';
 
 /** "Review your day" (1.14 `DayReviewPrompt`): open the review, snooze it, or mark the day reviewed. */
 export function DayReviewPrompt({ view }: { view: DayReviewPromptView }) {
@@ -12,7 +13,7 @@ export function DayReviewPrompt({ view }: { view: DayReviewPromptView }) {
     <PromptCard
       kind="dayReview"
       icon={DayReviewIcon}
-      title="Review your day"
+      title={t('Review your day')}
       runner={actions}
       actions={
         <>
@@ -21,14 +22,14 @@ export function DayReviewPrompt({ view }: { view: DayReviewPromptView }) {
             isPending={actions.isPending('snooze')}
             onPress={() => void actions.run('snooze', { type: 'dayReview.snooze' })}
           >
-            Snooze 30 min
+            {t('Snooze 30 min')}
           </Button>
           <Button
             variant="plain"
             isPending={actions.isPending('reviewed')}
             onPress={() => void actions.run('reviewed', { type: 'dayReview.markReviewed', day: view.day })}
           >
-            Mark day reviewed
+            {t('Mark day reviewed')}
           </Button>
           <span className={styles.spacer} />
           <Button
@@ -38,13 +39,13 @@ export function DayReviewPrompt({ view }: { view: DayReviewPromptView }) {
             isPending={actions.isPending('open')}
             onPress={() => void actions.run('open', { type: 'dayReview.open' })}
           >
-            Open review
+            {t('Open review')}
           </Button>
         </>
       }
     >
-      <p className={styles.caption}>Check your time entries and current timer before finishing.</p>
-      {running ? <p className={styles.caption}>Marking the day reviewed will leave this timer running.</p> : null}
+      <p className={styles.caption}>{t('Check your time entries and current timer before finishing.')}</p>
+      {running ? <p className={styles.caption}>{t('Marking the day reviewed will leave this timer running.')}</p> : null}
     </PromptCard>
   );
 }

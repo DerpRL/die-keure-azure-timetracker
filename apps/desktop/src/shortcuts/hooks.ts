@@ -1,4 +1,5 @@
 import { createContext, useContext, useId, useLayoutEffect, useRef, useSyncExternalStore } from 'react';
+import { t } from '../i18n';
 import type { CommandStore, Command } from './store';
 import { RefreshIcon, SaveIcon } from '../components/icons';
 
@@ -90,7 +91,7 @@ export interface ShortcutHookOptions {
 }
 
 /** ⌘S / Ctrl+S, including while typing in a field (Settings → Save changes). */
-export function useSaveShortcut(onSave: () => void, { isDisabled, label = 'Save changes' }: ShortcutHookOptions = {}): void {
+export function useSaveShortcut(onSave: () => void, { isDisabled, label = t('Save changes') }: ShortcutHookOptions = {}): void {
   useCommand({
     id: 'app.save',
     icon: SaveIcon,
@@ -104,7 +105,7 @@ export function useSaveShortcut(onSave: () => void, { isDisabled, label = 'Save 
 }
 
 /** ⌘R / Ctrl+R; also stops the web view from reloading the page. */
-export function useRefreshShortcut(onRefresh: () => void, { isDisabled, label = 'Refresh' }: ShortcutHookOptions = {}): void {
+export function useRefreshShortcut(onRefresh: () => void, { isDisabled, label = t('Refresh') }: ShortcutHookOptions = {}): void {
   useCommand({
     id: 'app.refresh',
     icon: RefreshIcon,

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { mark, t } from '../i18n';
 import { CommandPalette } from './CommandPalette';
 import { ShortcutContext, useCommands } from './hooks';
 import { ShortcutCheatSheet, type ShortcutInfo } from './ShortcutCheatSheet';
@@ -10,10 +11,10 @@ import { KeyboardIcon } from '../components/icons';
 export const PALETTE_SHORTCUT: KeyCombo = { key: 'k', mod: true };
 export const CHEAT_SHEET_SHORTCUT: KeyCombo = { key: '?' };
 
-/** Keys that are not commands but belong in the cheat sheet. */
+/** Keys that are not commands but belong in the cheat sheet; the cheat sheet translates the labels. */
 export const DEFAULT_SHORTCUT_INFO: readonly ShortcutInfo[] = [
-  { label: 'Cancel or close a dialog', shortcut: { key: 'Escape' }, group: 'General' },
-  { label: 'Confirm the default action in a dialog', shortcut: { key: 'Enter' }, group: 'General' },
+  { label: mark('Cancel or close a dialog'), shortcut: { key: 'Escape' }, group: 'General' },
+  { label: mark('Confirm the default action in a dialog'), shortcut: { key: 'Enter' }, group: 'General' },
 ];
 
 function inDialog(target: EventTarget | null): boolean {
@@ -88,7 +89,7 @@ function BuiltInCommands({ onPalette, onCheatSheet }: { onPalette: () => void; o
   useCommands([
     {
       id: 'app.commandPalette',
-      label: 'Show command palette',
+      label: t('Show command palette'),
       group: 'General',
       shortcut: PALETTE_SHORTCUT,
       allowInInputs: true,
@@ -98,7 +99,7 @@ function BuiltInCommands({ onPalette, onCheatSheet }: { onPalette: () => void; o
     {
       id: 'app.keyboardShortcuts',
       icon: KeyboardIcon,
-      label: 'Show keyboard shortcuts',
+      label: t('Show keyboard shortcuts'),
       group: 'General',
       keywords: ['help', 'keys', 'cheat sheet'],
       shortcut: CHEAT_SHEET_SHORTCUT,

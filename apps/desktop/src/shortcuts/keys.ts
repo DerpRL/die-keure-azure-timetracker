@@ -1,3 +1,4 @@
+import { mark, t, tc } from '../i18n';
 import type { Platform } from './platform';
 
 /**
@@ -23,7 +24,7 @@ const MAC_KEY_GLYPHS: Record<string, string> = {
   ArrowDown: '↓',
   ArrowLeft: '←',
   ArrowRight: '→',
-  ' ': 'Space',
+  ' ': mark('Space'),
 };
 
 const OTHER_KEY_NAMES: Record<string, string> = {
@@ -36,32 +37,38 @@ const OTHER_KEY_NAMES: Record<string, string> = {
   ArrowDown: '↓',
   ArrowLeft: '←',
   ArrowRight: '→',
-  ' ': 'Space',
+  ' ': mark('Space'),
 };
 
+/** Spoken names of keyboard keys; like the key caps, they stay English. */
 const SPOKEN_KEYS: Record<string, string> = {
   Enter: 'Return',
   Escape: 'Escape',
   Backspace: 'Backspace',
   Delete: 'Delete',
   Tab: 'Tab',
-  ArrowUp: 'Up Arrow',
-  ArrowDown: 'Down Arrow',
-  ArrowLeft: 'Left Arrow',
-  ArrowRight: 'Right Arrow',
-  ' ': 'Space',
-  '?': 'Question mark',
-  ',': 'Comma',
-  '.': 'Period',
-  '/': 'Slash',
-  '+': 'Plus',
-  '-': 'Minus',
+};
+
+/** Spoken names of arrows, Space and symbols, translated where the combo is formatted. */
+const SPOKEN_SYMBOLS: Record<string, string> = {
+  ArrowUp: mark('Up Arrow'),
+  ArrowDown: mark('Down Arrow'),
+  ArrowLeft: mark('Left Arrow'),
+  ArrowRight: mark('Right Arrow'),
+  ' ': mark('Space'),
+  '?': mark('Question mark'),
+  ',': mark('Comma'),
+  '.': mark('Period'),
+  '/': mark('Slash'),
+  '+': mark('Plus'),
+  '-': mark('Minus'),
 };
 
 const ARIA_KEYS: Record<string, string> = { ' ': 'Space', '+': 'Plus' };
 
 function keyLabel(key: string, platform: Platform): string {
   const table = platform === 'macos' ? MAC_KEY_GLYPHS : OTHER_KEY_NAMES;
+  if (key === ' ') return t(table[key]!);
   return table[key] ?? (key.length === 1 ? key.toUpperCase() : key);
 }
 
@@ -122,7 +129,8 @@ export function formatKeyCombo(combo: KeyCombo, platform: Platform): FormattedKe
   }
   const label = keyLabel(combo.key, platform);
   parts.push(label);
-  spoken.push(SPOKEN_KEYS[combo.key] ?? label);
+  const symbol = SPOKEN_SYMBOLS[combo.key];
+  spoken.push(symbol ? tc('key', symbol) : (SPOKEN_KEYS[combo.key] ?? label));
   aria.push(ARIA_KEYS[combo.key] ?? (combo.key.length === 1 ? combo.key.toUpperCase() : combo.key));
   return {
     parts,

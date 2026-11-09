@@ -4,6 +4,7 @@
 
 use reqwest::Url;
 
+use crate::nl::tr;
 use att_core::ticket_context::UriParts;
 use att_core::{AppError, Result};
 
@@ -18,9 +19,9 @@ impl Endpoint {
     /// port other than 443 and any path except `/`.
     pub fn seven_pace(text: &str) -> Result<Url> {
         let invalid = || {
-            AppError::message(
+            AppError::message(tr(
                 "Use your 7pace workspace URL: https://your-organization.timehub.7pace.com",
-            )
+            ))
         };
         let text = text.trim();
         // Validate the text as written (RFC 3986, like URLComponents), not a repaired parse.
@@ -57,7 +58,9 @@ impl Endpoint {
     /// `^[A-Za-z0-9][A-Za-z0-9_-]*$` after trimming.
     pub fn azure(organization: &str) -> Result<Url> {
         let invalid = || {
-            AppError::message("Enter the organization name from dev.azure.com/your-organization.")
+            AppError::message(tr(
+                "Enter the organization name from dev.azure.com/your-organization.",
+            ))
         };
         let organization = organization.trim();
         let mut chars = organization.chars();

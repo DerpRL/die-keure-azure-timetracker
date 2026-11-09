@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 use crate::microphone::windows_executable;
 use crate::model::{HostOs, TrackingState};
+use crate::nl::tr;
 use crate::text::NonEmpty;
 use crate::time::{Cal, add_secs, diff_secs, wire_date};
 
@@ -251,7 +252,7 @@ impl IdleMonitor {
             }
             let (boundary, reason) = match o.unavailable_since {
                 Some(since) if locked => (since, o.reason),
-                _ => (add_secs(o.now, -o.idle_seconds), "No keyboard or mouse activity"),
+                _ => (add_secs(o.now, -o.idle_seconds), tr("No keyboard or mouse activity")),
             };
             // The absence cannot start before the timer did.
             self.away = Some(IdlePeriod::new(session.clone(), session.start.max(boundary), reason));

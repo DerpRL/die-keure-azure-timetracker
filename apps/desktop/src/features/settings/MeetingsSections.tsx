@@ -25,6 +25,7 @@ import {
 import { useSettingsForm } from './SettingsForm';
 import { activityOptions, DEFAULT_ACTIVITY_KEY } from './TrackingSection';
 import { issueFor } from './validation';
+import { t } from '../../i18n';
 import styles from './settings.module.css';
 
 /**
@@ -53,12 +54,12 @@ export function CalendarSwitches({ calendars, variant = 'rows' }: { calendars: r
   if (calendars.length === 0) {
     return (
       <FullRow>
-        <Hint>{`No calendars were found on this ${osWords(os).device}.`}</Hint>
+        <Hint>{t('No calendars were found on this {device}.', { device: osWords(os).device })}</Hint>
       </FullRow>
     );
   }
   return (
-    <ul role="list" aria-label="Calendars" className={variant === 'rows' ? styles.rowList : styles.calendarList}>
+    <ul role="list" aria-label={t('Calendars')} className={variant === 'rows' ? styles.rowList : styles.calendarList}>
       {calendars.map((calendar) => {
         const shown = calendarShown(draft.selectedCalendarIds, calendar.id);
         return (
@@ -87,15 +88,15 @@ export function CalendarAccess({ children }: { children?: ReactNode }) {
   const agenda = useSlice('agenda');
   const enable = useAction();
   return (
-    <LoadingRegion label="Loading calendars" isLoading={agenda === undefined} placeholder={<Skeleton lines={3} />}>
+    <LoadingRegion label={t('Loading calendars')} isLoading={agenda === undefined} placeholder={<Skeleton lines={3} />}>
       {agenda ? (
         agenda.access === 'authorized' ? (
           children
         ) : (
-          <SettingRow title="Calendar access" help={calendarAccessText(agenda.access)}>
+          <SettingRow title={t('Calendar access')} help={calendarAccessText(agenda.access)}>
             {agenda.access !== 'unsupported' ? (
               <Button size="small" onPress={() => void enable.run({ type: 'settings.enableCalendar' })} isDisabled={preview} isPending={enable.pending}>
-                Allow calendar access…
+                {t('Allow calendar access…')}
               </Button>
             ) : null}
           </SettingRow>
@@ -121,7 +122,7 @@ export function SystemSettingsButton({ pane }: { pane: SystemSettingsPane }) {
           openSystemSettings(pane).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : String(reason)));
         }}
       >
-        {os === 'windows' ? 'Open Windows Settings' : 'Open System Settings'}
+        {os === 'windows' ? t('Open Windows Settings') : t('Open System Settings')}
       </Button>
       {error ? <InlineIssue>{error}</InlineIssue> : null}
     </>
@@ -133,21 +134,21 @@ export function CalendarSection() {
   const { draft, update, os } = useSettingsForm();
   const words = osWords(os);
   return (
-    <SettingsSection id="calendar" title="Access">
+    <SettingsSection id="calendar" title={t('Access')}>
       <CalendarAccess>
         <SettingRow
-          title="Calendar access"
-          help={os === 'windows' ? 'Uses the calendars on this PC.' : 'Uses the calendars in macOS Calendar, including Exchange.'}
+          title={t('Calendar access')}
+          help={os === 'windows' ? t('Uses the calendars on this PC.') : t('Uses the calendars in macOS Calendar, including Exchange.')}
         >
           <Badge tone="success" icon={CheckIcon}>
-            Allowed
+            {t('Allowed')}
           </Badge>
           <SystemSettingsButton pane="calendars" />
         </SettingRow>
       </CalendarAccess>
       <ToggleRow
-        title="Show events on Today"
-        help={`Next to your time blocks, in a lighter style. Events stay on this ${words.device}.`}
+        title={t('Show events on Today')}
+        help={t('Next to your time blocks, in a lighter style. Events stay on this {device}.', { device: words.device })}
         isSelected={draft.calendarEnabled}
         onChange={(calendarEnabled) => update((current) => ({ ...current, calendarEnabled }))}
       />
@@ -165,13 +166,13 @@ export function CalendarListSection() {
   return (
     <SettingsSection
       id="calendarList"
-      subtitle="Choose which ones show on Today and count as meetings."
-      actions={calendars.length > 0 ? <span className={styles.listMeta}>{`${shown} of ${calendars.length} shown`}</span> : null}
+      subtitle={t('Choose which ones show on Today and count as meetings.')}
+      actions={calendars.length > 0 ? <span className={styles.listMeta}>{t('{count} of {total} shown', { count: shown, total: calendars.length })}</span> : null}
     >
       <CalendarSwitches calendars={calendars} />
       <SectionFooter>
         <LockIcon />
-        <span>{`Events never leave this ${osWords(os).device}. Every calendar is shown until you turn one off.`}</span>
+        <span>{t('Events never leave this {device}. Every calendar is shown until you turn one off.', { device: osWords(os).device })}</span>
       </SectionFooter>
     </SettingsSection>
   );
@@ -188,29 +189,29 @@ export function MeetingSuggestionsSection() {
   return (
     <SettingsSection
       id="meetings"
-      subtitle="Uses the calendars you chose under Calendars."
+      subtitle={t('Uses the calendars you chose under Calendars.')}
       actions={
         <Button size="small" variant="plain" onPress={() => goTo('calendarList')}>
-          Choose calendars
+          {t('Choose calendars')}
         </Button>
       }
     >
       <ToggleRow
-        title="Suggest tracking when a meeting starts"
-        help="Asks first. All-day, declined, canceled and free events are skipped."
+        title={t('Suggest tracking when a meeting starts')}
+        help={t('Asks first. All-day, declined, canceled and free events are skipped.')}
         isSelected={meetings.enabled}
         onChange={(enabled) => update((current) => ({ ...current, meetings: { ...current.meetings, enabled } }))}
       />
       {!calendarReady ? (
-        <IssueRow tone="warning">Turn on the calendar and allow access under Sources → Calendars to receive meeting suggestions.</IssueRow>
+        <IssueRow tone="warning">{t('Turn on the calendar and allow access under Sources → Calendars to receive meeting suggestions.')}</IssueRow>
       ) : null}
-      <SettingRow title="Activity" help="The 7pace activity for meeting time. You can change it before starting.">
+      <SettingRow title={t('Activity')} help={t('The 7pace activity for meeting time. You can change it before starting.')}>
         {({ helpId }) => (
           <Select
-            label="Meeting activity"
+            label={t('Meeting activity')}
             hideLabel
             aria-describedby={helpId}
-            items={activityOptions(flow?.activityTypes ?? [], 'Suggest Stand-up or Overleg / Meeting', meetings.activityTypeId)}
+            items={activityOptions(flow?.activityTypes ?? [], t('Suggest Stand-up or Overleg / Meeting'), meetings.activityTypeId)}
             selectedKey={meetings.activityTypeId === '' ? DEFAULT_ACTIVITY_KEY : meetings.activityTypeId}
             onSelectionChange={(key) =>
               update((current) => ({
@@ -223,15 +224,15 @@ export function MeetingSuggestionsSection() {
         )}
       </SettingRow>
       <SettingRow
-        title="Default ticket"
-        help="Used when the meeting does not mention a ticket. Put #33984 or an Azure work-item link in a meeting to use that ticket instead."
+        title={t('Default ticket')}
+        help={t('Used when the meeting does not mention a ticket. Put #33984 or an Azure work-item link in a meeting to use that ticket instead.')}
       >
         {({ helpId }) => (
           <TextField
-            label="Default meeting ticket"
+            label={t('Default meeting ticket')}
             hideLabel
             aria-describedby={helpId}
-            placeholder="Ask for each meeting"
+            placeholder={t('Ask for each meeting')}
             value={meetings.defaultTicket}
             onChange={(defaultTicket) => update((current) => ({ ...current, meetings: { ...current.meetings, defaultTicket } }))}
             isInvalid={ticketIssue !== undefined}
@@ -243,8 +244,8 @@ export function MeetingSuggestionsSection() {
         )}
       </SettingRow>
       <ToggleRow
-        title="Resume the previous ticket afterwards"
-        help="When a meeting timer ends, offer to continue what you tracked before."
+        title={t('Resume the previous ticket afterwards')}
+        help={t('When a meeting timer ends, offer to continue what you tracked before.')}
         isSelected={draft.resumeAfterMeetings}
         onChange={(resumeAfterMeetings) => update((current) => ({ ...current, resumeAfterMeetings }))}
       />
@@ -259,27 +260,27 @@ function MicrophoneDiagnostics({ apps }: { apps: readonly MicrophoneApp[] }) {
   const available = diagnostics.supported && (app?.features.microphone ?? true);
   const watching = settings.configuration.microphone.enabled;
   let status: string;
-  if (!available) status = 'Microphone detection is not available on this system.';
-  else if (!watching) status = 'Microphone meeting suggestions are off';
-  else status = diagnostics.status ?? 'Waiting for the first microphone check…';
+  if (!available) status = t('Microphone detection is not available on this system.');
+  else if (!watching) status = t('Microphone meeting suggestions are off');
+  else status = diagnostics.status ?? t('Waiting for the first microphone check…');
   return (
-    <SettingsGroup title="Diagnostics">
+    <SettingsGroup title={t('Diagnostics')}>
       <SettingRow
         title={status}
-        help={diagnostics.checkedAt ? `Checked ${formatTime(diagnostics.checkedAt)}` : undefined}
+        help={diagnostics.checkedAt ? t('Checked {time}', { time: formatTime(diagnostics.checkedAt) }) : undefined}
         below={
           <>
             {diagnostics.issue ? <InlineIssue tone="warning">{diagnostics.issue}</InlineIssue> : null}
             {check.error ? <InlineIssue tone="warning">{check.error.message}</InlineIssue> : null}
             {diagnostics.owners.length > 0 ? (
-              <ul role="list" aria-label="Apps using the microphone" className={styles.list}>
+              <ul role="list" aria-label={t('Apps using the microphone')} className={styles.list}>
                 {diagnostics.owners.map((owner) => (
                   <li key={owner.id} className={styles.listItem}>
                     <span className={styles.listText}>
                       <span>{owner.name}</span>
                       <span className={styles.listMeta}>{owner.id}</span>
                     </span>
-                    <span className={styles.listMeta}>{owner.category && apps.includes(owner.category) ? 'Selected' : 'Ignored'}</span>
+                    <span className={styles.listMeta}>{owner.category && apps.includes(owner.category) ? t('Selected') : t('Ignored')}</span>
                   </li>
                 ))}
               </ul>
@@ -293,7 +294,7 @@ function MicrophoneDiagnostics({ apps }: { apps: readonly MicrophoneApp[] }) {
           isDisabled={!available || !watching}
           isPending={check.pending}
         >
-          {check.pending ? 'Checking…' : 'Check now'}
+          {check.pending ? t('Checking…') : t('Check now')}
         </Button>
       </SettingRow>
     </SettingsGroup>
@@ -314,15 +315,15 @@ export function MicrophoneSection() {
     });
   const disabled = !preferences.enabled || unavailable;
   return (
-    <SettingsSection id="microphone" subtitle="For quick calls that are not in your calendar.">
+    <SettingsSection id="microphone" subtitle={t('For quick calls that are not in your calendar.')}>
       <ToggleRow
-        title="Suggest tracking when a call app uses the microphone"
-        help="Only the app name is read. Audio is never recorded or analysed. Suggestions appear after 4 seconds of input use."
+        title={t('Suggest tracking when a call app uses the microphone')}
+        help={t('Only the app name is read. Audio is never recorded or analysed. Suggestions appear after 4 seconds of input use.')}
         isSelected={preferences.enabled}
         isDisabled={unavailable}
         onChange={(enabled) => update((current) => ({ ...current, microphone: { ...current.microphone, enabled } }))}
       />
-      <ul role="list" aria-label="Apps to watch" className={styles.rowList}>
+      <ul role="list" aria-label={t('Apps to watch')} className={styles.rowList}>
         {MICROPHONE_APPS.map((entry) => (
           <li key={entry} className={styles.checkRow}>
             <Checkbox isSelected={preferences.apps.includes(entry)} isDisabled={disabled} onChange={(on) => toggleApp(entry, on)}>
@@ -334,18 +335,19 @@ export function MicrophoneSection() {
       <FullRow>
         <Hint>
           {os === 'windows'
-            ? 'Google Meet and other browser calls appear as Chrome, Edge, Firefox, etc. Some appear as Microsoft Edge WebView2. '
-            : 'Google Meet and other browser calls appear as Chrome, Safari, Edge, etc. Some appear as WebKit (browser or web view). '}
-          Microphone use cannot identify a meeting by itself; dictation and recordings can also trigger a suggestion. After 60 seconds
-          without microphone use, the app offers to pause or stop tracking. The timer only changes when you confirm.
+            ? t('Google Meet and other browser calls appear as Chrome, Edge, Firefox, etc. Some appear as Microsoft Edge WebView2.')
+            : t('Google Meet and other browser calls appear as Chrome, Safari, Edge, etc. Some appear as WebKit (browser or web view).')}{' '}
+          {t(
+            'Microphone use cannot identify a meeting by itself; dictation and recordings can also trigger a suggestion. After 60 seconds without microphone use, the app offers to pause or stop tracking. The timer only changes when you confirm.',
+          )}
         </Hint>
       </FullRow>
       <MicrophoneDiagnostics apps={preferences.apps} />
       <SectionFooter actions={os === 'windows' && !unavailable ? <SystemSettingsButton pane="microphone" /> : null}>
         <span>
           {os === 'windows'
-            ? 'Reads which apps use the microphone from Windows privacy settings only.'
-            : 'Requires macOS 14.2 or later. Reads local audio status only; macOS shows an orange dot while any app listens.'}
+            ? t('Reads which apps use the microphone from Windows privacy settings only.')
+            : t('Requires macOS 14.2 or later. Reads local audio status only; macOS shows an orange dot while any app listens.')}
         </span>
       </SectionFooter>
     </SettingsSection>

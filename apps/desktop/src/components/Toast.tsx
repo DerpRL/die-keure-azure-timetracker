@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { mergeProps, useFocusWithin, useHover } from 'react-aria';
+import { t } from '../i18n';
 import { cx } from '../utils/cx';
 import { announce } from './Announcer';
 import { Button, IconButton } from './Button';
@@ -85,7 +86,7 @@ function ToastItem({ toast, onDismiss }: { toast: ToastRecord; onDismiss: (id: n
           </div>
         ) : null}
       </div>
-      <IconButton label="Dismiss notification" icon={CloseIcon} size="small" tooltip={false} onPress={() => onDismiss(toast.id)} />
+      <IconButton label={t('Dismiss notification')} icon={CloseIcon} size="small" tooltip={false} onPress={() => onDismiss(toast.id)} />
     </li>
   );
 }
@@ -117,7 +118,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={api}>
       {children}
-      <section aria-label="Notifications" className={cx(styles.region, toasts.length === 0 && styles.empty)}>
+      <section aria-label={t('Notifications')} className={cx(styles.region, toasts.length === 0 && styles.empty)}>
         {toasts.length > 0 ? (
           <ol className={styles.list}>
             {toasts.map((toast) => (

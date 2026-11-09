@@ -5,18 +5,15 @@ import { secondsBetween } from '../../features/ticketContext/format';
 import type { ReviewSession, WorkItemsSlice } from '../../ipc/contract';
 import { useSlice } from '../../state/hooks';
 import { displayedMinute, spansMinute } from '../../utils/minutes';
+import { dateFormat } from '../../i18n';
 
 export const HOUR_MS = 3_600_000;
 
-const TIME = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' });
-const DAY_TITLE = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
-const WEEKDAY = new Intl.DateTimeFormat('en-GB', { weekday: 'long' });
-const DAY_SHORT = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 
 /** "09:30" in the local time zone; empty for an unreadable instant. */
 export function formatTime(instant: string | number): string {
   const time = typeof instant === 'number' ? instant : Date.parse(instant);
-  return Number.isNaN(time) ? '' : TIME.format(time);
+  return Number.isNaN(time) ? '' : dateFormat({ hour: '2-digit', minute: '2-digit' }).format(time);
 }
 
 /** The local date of a `YYYY-MM-DD` day, at midnight. */
@@ -26,17 +23,22 @@ export function dayDate(day: string): Date {
 
 /** "Tuesday 6 October" (the view's title). */
 export function formatDayTitle(day: string): string {
-  return DAY_TITLE.format(dayDate(day));
+  return capitalize(dateFormat({ weekday: 'long', day: 'numeric', month: 'long' }).format(dayDate(day)));
 }
 
-/** "Monday" ("Monday isn’t reviewed", "Mark Monday reviewed"). */
+/** "Monday" ("Monday isn’t reviewed", "Mark Monday reviewed"); lowercase in Dutch. */
 export function formatWeekday(day: string): string {
-  return WEEKDAY.format(dayDate(day));
+  return dateFormat({ weekday: 'long' }).format(dayDate(day));
+}
+
+/** Text that starts a heading or sentence with a weekday: Dutch weekday names are lowercase. */
+export function capitalize(text: string): string {
+  return text.charAt(0).toLocaleUpperCase() + text.slice(1);
 }
 
 /** "Mon 5 Oct". */
 export function formatDayShort(day: string): string {
-  return DAY_SHORT.format(dayDate(day));
+  return dateFormat({ weekday: 'short', day: 'numeric', month: 'short' }).format(dayDate(day));
 }
 
 export function shiftDay(day: string, amount: number): string {
@@ -205,8 +207,4 @@ export function ticketRows(sessions: readonly ReviewSession[], items: WorkItemsS
       ...row,
       activity: [...perActivity.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? row.activity,
     }));
-}
-
-export function plural(count: number, one: string, many: string): string {
-  return `${count} ${count === 1 ? one : many}`;
 }

@@ -17,6 +17,8 @@ import type { SettingsView } from '../../../layout/navigation';
 import { useSlice } from '../../../state/hooks';
 import { RepositoriesPanel, WatchSwitch } from '../git';
 import { CalendarSourceIcon, FigmaSourceIcon, GitIcon } from '../icons';
+import { t, tn } from '../../../i18n';
+import { figmaLabel } from '../figma/model';
 import styles from '../settings.module.css';
 
 interface SourceCardProps {
@@ -54,8 +56,8 @@ function SourceCard({ icon, title, description, actions, flush = false, children
 /** A card's "Manage" link to the source's own view. */
 function ManageButton({ onPress, label }: { onPress: () => void; label: string }) {
   return (
-    <Button size="small" trailingIcon={ChevronRightIcon} onPress={onPress} aria-label={`Manage ${label}`}>
-      Manage
+    <Button size="small" trailingIcon={ChevronRightIcon} onPress={onPress} aria-label={t('Manage {source}', { source: label })}>
+      {t('Manage')}
     </Button>
   );
 }
@@ -70,25 +72,25 @@ function FigmaCard({ onOpen }: { onOpen: () => void }) {
     <SourceCard
       icon={<FigmaSourceIcon />}
       title="Figma"
-      description="Suggests Design tracking for linked files."
+      description={t('Suggests Design tracking for linked files.')}
       actions={
         <>
           <ManageButton onPress={onOpen} label="Figma" />
-          <Switch aria-label="Observe Figma files" isSelected={preferences.enabled} onChange={(enabled) => apply({ ...preferences, enabled })}>
+          <Switch aria-label={t('Observe Figma files')} isSelected={preferences.enabled} onChange={(enabled) => apply({ ...preferences, enabled })}>
             {null}
           </Switch>
         </>
       }
     >
       <div className={styles.sourceRow}>
-        <span className={styles.sourceMeta}>{`${linked} linked ${linked === 1 ? 'file' : 'files'} · reads only file names and window titles`}</span>
+        <span className={styles.sourceMeta}>{tn(linked, '{count} linked file · reads only file names and window titles', '{count} linked files · reads only file names and window titles')}</span>
         {preferences.enabled && active ? (
           <span className={styles.activeRow}>
-            <span className={styles.activeName}>{`Active: ${active}`}</span>
+            <span className={styles.activeName}>{t('Active: {file}', { file: active })}</span>
             {activeFile?.ticketId != null ? <TicketLink ticketId={activeFile.ticketId} compact /> : null}
           </span>
         ) : (
-          <Badge tone="neutral">{preferences.enabled ? (figma?.label ?? 'Waiting for Figma') : 'Observation is off'}</Badge>
+          <Badge tone="neutral">{preferences.enabled ? (figma ? figmaLabel(figma) : t('Waiting for Figma')) : t('Observation is off')}</Badge>
         )}
       </div>
       {error ? (
@@ -108,13 +110,13 @@ function CalendarsCard({ onOpen }: { onOpen: () => void }) {
   return (
     <SourceCard
       icon={<CalendarSourceIcon />}
-      title="Calendars"
-      description="Shows events on Today and suggests Meeting tracking."
+      title={t('Calendars')}
+      description={t('Shows events on Today and suggests Meeting tracking.')}
       actions={
         <>
-          <ManageButton onPress={onOpen} label="Calendars" />
+          <ManageButton onPress={onOpen} label={t('Calendars')} />
           <Switch
-            aria-label="Show my calendar on Today"
+            aria-label={t('Show my calendar on Today')}
             isSelected={draft.calendarEnabled}
             onChange={(calendarEnabled) => update((current) => ({ ...current, calendarEnabled }))}
           >
@@ -125,12 +127,12 @@ function CalendarsCard({ onOpen }: { onOpen: () => void }) {
     >
       <div className={styles.sourceRow}>
         {!draft.calendarEnabled ? (
-          <span className={styles.sourceMeta}>The calendar is off.</span>
+          <span className={styles.sourceMeta}>{t('The calendar is off.')}</span>
         ) : agenda?.access !== 'authorized' ? (
-          <span className={styles.sourceMeta}>{agenda ? calendarAccessText(agenda.access) : 'Loading calendars…'}</span>
+          <span className={styles.sourceMeta}>{agenda ? calendarAccessText(agenda.access) : t('Loading calendars…')}</span>
         ) : (
           <>
-            <ul role="list" aria-label="Calendars shown" className={styles.swatches}>
+            <ul role="list" aria-label={t('Calendars shown')} className={styles.swatches}>
               {shown.map((calendar) => (
                 <li key={calendar.id}>
                   <span aria-hidden="true" className={styles.swatch} style={calendar.color ? { background: calendar.color } : undefined} />
@@ -138,7 +140,7 @@ function CalendarsCard({ onOpen }: { onOpen: () => void }) {
                 </li>
               ))}
             </ul>
-            <span className={styles.sourceMeta}>{`${shown.length} of ${calendars.length}`}</span>
+            <span className={styles.sourceMeta}>{t('{count} of {total}', { count: shown.length, total: calendars.length })}</span>
           </>
         )}
       </div>
@@ -153,13 +155,13 @@ function CallsCard({ onOpen }: { onOpen: () => void }) {
   return (
     <SourceCard
       icon={<MicrophoneIcon />}
-      title="Calls"
-      description="Suggests Meeting tracking during calls without a calendar event."
+      title={t('Calls')}
+      description={t('Suggests Meeting tracking during calls without a calendar event.')}
       actions={
         <>
-          <ManageButton onPress={onOpen} label="Calls" />
+          <ManageButton onPress={onOpen} label={t('Calls')} />
           <Switch
-            aria-label="Suggest tracking when a call app uses the microphone"
+            aria-label={t('Suggest tracking when a call app uses the microphone')}
             isSelected={microphone.enabled}
             isDisabled={unavailable}
             onChange={(enabled) => update((current) => ({ ...current, microphone: { ...current.microphone, enabled } }))}
@@ -172,8 +174,8 @@ function CallsCard({ onOpen }: { onOpen: () => void }) {
       <div className={styles.sourceRow}>
         <span className={styles.sourceMeta}>
           {unavailable
-            ? 'Not available on this system.'
-            : `${microphone.apps.map(microphoneAppLabel).join(', ') || 'No apps chosen'} · audio is never recorded`}
+            ? t('Not available on this system.')
+            : t('{apps} · audio is never recorded', { apps: microphone.apps.map(microphoneAppLabel).join(', ') || t('No apps chosen') })}
         </span>
       </div>
     </SourceCard>
@@ -201,8 +203,8 @@ export function SourcesView() {
       id: 'git',
       icon: GitIcon,
       tone: repositories?.watching ? 'success' : 'neutral',
-      title: `Git · ${repositories?.watching ? 'watching' : 'paused'}`,
-      detail: `${repositoryCount} ${repositoryCount === 1 ? 'repository' : 'repositories'}`,
+      title: repositories?.watching ? t('Git · watching') : t('Git · paused'),
+      detail: tn(repositoryCount, '{count} repository', '{count} repositories'),
     },
     ...(figmaShown
       ? [
@@ -210,8 +212,8 @@ export function SourcesView() {
             id: 'figma',
             icon: FigmaSourceIcon,
             tone: figmaPreferences.enabled ? 'success' : 'neutral',
-            title: `Figma · ${figmaPreferences.enabled ? (figma?.currentFile ? 'observing' : 'waiting') : 'off'}`,
-            detail: figmaPreferences.enabled ? (figma?.label ?? '') : 'Observation is off',
+            title: figmaPreferences.enabled ? (figma?.currentFile ? t('Figma · observing') : t('Figma · waiting')) : t('Figma · off'),
+            detail: figmaPreferences.enabled ? (figma ? figmaLabel(figma) : '') : t('Observation is off'),
           } satisfies StatusTile,
         ]
       : []),
@@ -221,8 +223,11 @@ export function SourcesView() {
             id: 'calendars',
             icon: CalendarSourceIcon,
             tone: draft.calendarEnabled && agenda?.access === 'authorized' ? 'success' : 'neutral',
-            title: `Calendars · ${draft.calendarEnabled ? 'on' : 'off'}`,
-            detail: calendarList.length > 0 ? `${shownCalendars} of ${calendarList.length} calendars` : 'No calendars yet',
+            title: draft.calendarEnabled ? t('Calendars · on') : t('Calendars · off'),
+            detail:
+              calendarList.length > 0
+                ? t('{count} of {total} calendars', { count: shownCalendars, total: calendarList.length })
+                : t('No calendars yet'),
           } satisfies StatusTile,
         ]
       : []),
@@ -230,21 +235,21 @@ export function SourcesView() {
       id: 'calls',
       icon: MicrophoneIcon,
       tone: draft.microphone.enabled ? 'success' : 'neutral',
-      title: `Calls · ${draft.microphone.enabled ? 'on' : 'off'}`,
-      detail: `${draft.microphone.apps.length} call ${draft.microphone.apps.length === 1 ? 'app' : 'apps'}`,
+      title: draft.microphone.enabled ? t('Calls · on') : t('Calls · off'),
+      detail: tn(draft.microphone.apps.length, '{count} call app', '{count} call apps'),
     },
   ];
   return (
     <>
-      <StatusTiles label="Sources status" tiles={tiles} />
+      <StatusTiles label={t('Sources status')} tiles={tiles} />
       <SourceCard
         icon={<GitIcon />}
-        title="Git repositories"
-        description="Suggests the ticket of the branch you switch to."
+        title={t('Git repositories')}
+        description={t('Suggests the ticket of the branch you switch to.')}
         actions={
           <>
-            <ManageButton onPress={open('git')} label="Git repositories" />
-            <WatchSwitch label="Watch Git repositories" compact />
+            <ManageButton onPress={open('git')} label={t('Git repositories')} />
+            <WatchSwitch label={t('Watch Git repositories')} compact />
           </>
         }
         flush

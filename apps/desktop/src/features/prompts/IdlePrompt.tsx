@@ -4,6 +4,7 @@ import { formatShortDuration } from '../../utils/duration';
 import { useIntents, useWriteGuards } from '../tracking/actions';
 import { IdleIcon } from '../tracking/icons';
 import { PromptCard, promptStyles as styles, useTimeOfDay } from './PromptCard';
+import { t } from '../../i18n';
 
 function idleSeconds(idle: IdlePeriod): number {
   const start = Date.parse(idle.start);
@@ -24,7 +25,7 @@ export function IdlePrompt({ idle }: { idle: IdlePeriod }) {
       kind="idle"
       icon={IdleIcon}
       tone="warning"
-      title="Review time away"
+      title={t('Review time away')}
       runner={actions}
       actions={
         <>
@@ -33,7 +34,7 @@ export function IdlePrompt({ idle }: { idle: IdlePeriod }) {
             isPending={actions.isPending('keep')}
             onPress={() => void actions.run('keep', { type: 'awareness.keepIdle' })}
           >
-            Keep time
+            {t('Keep time')}
           </Button>
           <Button
             variant="primary"
@@ -42,7 +43,7 @@ export function IdlePrompt({ idle }: { idle: IdlePeriod }) {
             isPending={actions.isPending('review')}
             onPress={() => void actions.run('review', { type: 'awareness.reviewIdle', promptId: idle.id })}
           >
-            Pause & review…
+            {t('Pause & review…')}
           </Button>
         </>
       }
@@ -51,8 +52,7 @@ export function IdlePrompt({ idle }: { idle: IdlePeriod }) {
       <p className={styles.text}>{`${idle.reason} · ${formatShortDuration(idleSeconds(idle))}`}</p>
       <p className={styles.time}>{`${time(idle.start)} – ${time(idle.end ?? idle.start)}`}</p>
       <p className={styles.caption}>
-        Keep the recorded time, or pause now and preview removing or separating this interval. Nothing is edited until
-        you save.
+        {t('Keep the recorded time, or pause now and preview removing or separating this interval. Nothing is edited until you save.')}
       </p>
     </PromptCard>
   );
@@ -69,7 +69,7 @@ export function IdleCorrectionPrompt() {
     <PromptCard
       kind="idleCorrection"
       icon={IdleIcon}
-      title="Saved idle-time review"
+      title={t('Saved idle-time review')}
       runner={actions}
       actions={
         <>
@@ -80,20 +80,20 @@ export function IdleCorrectionPrompt() {
             isPending={actions.isPending('open')}
             onPress={() => void actions.run('open', { type: 'awareness.openCorrection' })}
           >
-            Open correction preview…
+            {t('Open correction preview…')}
           </Button>
           <Button
             isDisabled={busy}
             isPending={actions.isPending('discard')}
             onPress={() => void actions.run('discard', { type: 'awareness.discardCorrection' })}
           >
-            Keep recorded time
+            {t('Keep recorded time')}
           </Button>
         </>
       }
     >
       <p className={styles.caption}>
-        Review the detected interval before changing recorded time. Your timer may already be paused.
+        {t('Review the detected interval before changing recorded time. Your timer may already be paused.')}
       </p>
     </PromptCard>
   );

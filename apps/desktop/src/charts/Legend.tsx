@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import styles from './charts.module.css';
 import { SeriesSwatch } from './palette';
 
@@ -10,7 +11,7 @@ export interface LegendItem {
 }
 
 /** Series key in the same order as the stack, so position is a third signal after colour and pattern. */
-export function Legend({ items, patterns = true, label = 'Legend' }: { items: readonly LegendItem[]; patterns?: boolean; label?: string }) {
+export function Legend({ items, patterns = true, label = t('Legend') }: { items: readonly LegendItem[]; patterns?: boolean; label?: string }) {
   if (items.length === 0) return null;
   return (
     <ul role="list" aria-label={label} className={styles.legend}>

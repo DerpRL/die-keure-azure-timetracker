@@ -1,6 +1,7 @@
 import { useId } from 'react';
 import type { SevenPaceAuthMode } from '../../ipc/contract';
 import { ExternalLink } from './ExternalLink';
+import { t } from '../../i18n';
 import styles from './settings.module.css';
 
 /**
@@ -26,22 +27,22 @@ export function SevenPaceInstructions({
   collapsible?: boolean;
 }) {
   const titleId = useId();
-  const title = mode === 'mobilePIN' ? 'How to get a pairing PIN approved' : 'How to get a 7pace API token';
+  const title = mode === 'mobilePIN' ? t('How to get a pairing PIN approved') : t('How to get a 7pace API token');
   const steps = (
       <ol aria-labelledby={titleId} className={styles.steps}>
         {mode === 'mobilePIN' ? (
           <>
-            <li>Check the workspace URL above, then choose Generate pairing PIN.</li>
+            <li>{t('Check the workspace URL above, then choose Generate pairing PIN.')}</li>
             <li>
-              In Azure DevOps, open 7pace Timetracker and go to <strong>Apps → Pair Mobile App</strong>.
+              {t('In Azure DevOps, open 7pace Timetracker and go to')} <strong>Apps → Pair Mobile App</strong>.
             </li>
-            <li>Enter the PIN there within one minute. It expires after that; generate a new one if it does.</li>
-            <li>When this card says “Paired with …”, save your settings to use the connection.</li>
+            <li>{t('Enter the PIN there within one minute. It expires after that; generate a new one if it does.')}</li>
+            <li>{t('When this card says “Paired with …”, save your settings to use the connection.')}</li>
           </>
         ) : (
           <>
             <li>
-              Open 7pace Timetracker
+              {t('Open 7pace Timetracker')}
               {workspace ? (
                 <>
                   {' ('}
@@ -49,10 +50,10 @@ export function SevenPaceInstructions({
                   {')'}
                 </>
               ) : null}{' '}
-              and go to <strong>Settings → Reporting & API</strong>.
+              {t('and go to')} <strong>Settings → Reporting & API</strong>.
             </li>
-            <li>Create a token there and copy it.</li>
-            <li>{`Paste it in API token below. It is kept in ${credentials} once your settings are saved.`}</li>
+            <li>{t('Create a token there and copy it.')}</li>
+            <li>{t('Paste it in API token below. It is kept in {store} once your settings are saved.', { store: credentials })}</li>
           </>
         )}
       </ol>
@@ -60,7 +61,7 @@ export function SevenPaceInstructions({
   const workspaceLine =
     mode === 'mobilePIN' && workspace ? (
       <p className={styles.hint}>
-        Your workspace: <WorkspaceLink url={workspace} />
+        {t('Your workspace:')} <WorkspaceLink url={workspace} />
       </p>
     ) : null;
   if (!collapsible) {

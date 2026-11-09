@@ -7,6 +7,7 @@ import { seriesColor } from '../../charts/palette';
 import { PromptContext } from '../../features/prompts/PromptCard';
 import { usePromptAnnouncements, usePromptItems, type PromptItem } from '../../features/prompts/PromptList';
 import styles from './today.module.css';
+import { t } from '../../i18n';
 
 /** Collapsed suggestions shown before "Show all". */
 const COLLAPSED_LIMIT = 3;
@@ -41,7 +42,7 @@ export function Suggestions() {
       <Card as="section" padding="none" aria-labelledby={headingId} className={styles.flush}>
         <div className={styles.flushHead}>
           <h2 id={headingId} className={styles.cardTitle}>
-            Suggestions
+            {t('Suggestions')}
           </h2>
         </div>
         <div className={styles.flushBody} aria-busy="true">
@@ -59,25 +60,25 @@ export function Suggestions() {
     <Card as="section" padding="none" aria-labelledby={headingId} className={styles.flush}>
       <div className={styles.flushHead}>
         <h2 id={headingId} className={styles.cardTitle}>
-          Suggestions
+          {t('Suggestions')}
         </h2>
-        {items.length > 0 ? <Badge tone="warning">{`${items.length} waiting`}</Badge> : null}
+        {items.length > 0 ? <Badge tone="warning">{t('{count} waiting', { count: items.length })}</Badge> : null}
       </div>
       {open ? (
         <div className={styles.openSuggestion}>
           <PromptContext.Provider value={COMPACT_MAIN}>{open.element}</PromptContext.Provider>
         </div>
       ) : (
-        <p className={styles.emptyLine}>Nothing waiting. Branch, Figma and meeting suggestions appear here.</p>
+        <p className={styles.emptyLine}>{t('Nothing waiting. Branch, Figma and meeting suggestions appear here.')}</p>
       )}
       {shown.length > 0 ? (
-        <ul role="list" aria-label="More suggestions" className={styles.rows}>
+        <ul role="list" aria-label={t('More suggestions')} className={styles.rows}>
           {shown.map((item) => (
             <li key={item.key} className={styles.suggestionRow}>
               <span className={styles.kindSwatch} style={{ '--kind-color': kindColor(item.key) } as CSSProperties} aria-hidden="true" />
               <span className={styles.ellipsis}>{item.label}</span>
-              <Button size="small" aria-label={`Review: ${item.label}`} onPress={() => setChosen(item.key)}>
-                Review
+              <Button size="small" aria-label={t('Review: {label}', { label: item.label })} onPress={() => setChosen(item.key)}>
+                {t('Review')}
               </Button>
             </li>
           ))}
@@ -86,7 +87,7 @@ export function Suggestions() {
       {rest.length > COLLAPSED_LIMIT ? (
         <div className={styles.rowsFoot}>
           <Button variant="plain" size="small" onPress={() => setShowAll((value) => !value)}>
-            {showAll ? 'Show fewer' : `Show all ${items.length}`}
+            {showAll ? t('Show fewer') : t('Show all {count}', { count: items.length })}
           </Button>
         </div>
       ) : null}

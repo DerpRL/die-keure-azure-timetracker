@@ -6,10 +6,11 @@ import { ZoomInIcon } from '../../../components/icons';
 import { SegmentedControl } from '../../../components/Segmented';
 import { ActivityBars, type ActivityBucket, type TimeRange } from '../../../charts/ActivityBars';
 import { DataTable } from '../../../charts/DataTable';
+import { mark, t, tn } from '../../../i18n';
 import type { AnalysisView, ExplorerBucket, Interval, StatisticsSlice } from '../../../ipc/contract';
 import { useAction } from '../../../state/hooks';
 import { EntriesList } from './EntriesList';
-import { bucketLabel, bucketLongLabel, date, duration, instant, percent, plural, seconds } from './format';
+import { bucketLabel, bucketLongLabel, date, duration, instant, percent, resolutionLabel, seconds } from './format';
 import { HeatmapsView } from './HeatmapsView';
 import { activitySeries, MIN_WINDOW_SECONDS } from './model';
 import { ProgressView } from './ProgressView';
@@ -21,10 +22,10 @@ export type TimeChart = 'activity' | 'heatmaps' | 'timeline' | 'progress';
 
 /** The 1.14 chart picker, in its order. */
 const CHARTS: ReadonlyArray<{ id: TimeChart; label: string }> = [
-  { id: 'activity', label: 'Activity chart' },
-  { id: 'heatmaps', label: 'Heatmaps' },
-  { id: 'timeline', label: 'Timeline' },
-  { id: 'progress', label: 'Progress' },
+  { id: 'activity', label: mark('Activity chart') },
+  { id: 'heatmaps', label: mark('Heatmaps') },
+  { id: 'timeline', label: mark('Timeline') },
+  { id: 'progress', label: mark('Progress') },
 ];
 
 export interface TimeSectionProps {
@@ -85,18 +86,24 @@ export function TimeSection({ slice, analysis, analysisKey, colors, chart, onCha
         <div ref={chartRef} className={styles.chartCard}>
           <div className={styles.chartToolbar}>
             <div className={styles.chartPicker}>
-              <SegmentedControl label="Chart type" hideLabel options={CHARTS} selectedKey={chart} onSelectionChange={onChartChange} />
-              <Badge tone="neutral" accessibleLabel={`Resolution: ${analysis.resolution}`}>
-                {analysis.resolution}
+              <SegmentedControl
+                label={t('Chart type')}
+                hideLabel
+                options={CHARTS.map((option) => ({ ...option, label: t(option.label) }))}
+                selectedKey={chart}
+                onSelectionChange={onChartChange}
+              />
+              <Badge tone="neutral" accessibleLabel={t('Resolution: {resolution}', { resolution: resolutionLabel(analysis.resolution) })}>
+                {resolutionLabel(analysis.resolution)}
               </Badge>
             </div>
             <ZoomControls slice={slice} />
           </div>
           {chart === 'activity' ? (
             <ActivityBars
-              title="Where your time went"
+              title={t('Where your time went')}
               headingLevel={2}
-              description="Click a bar to inspect it. Drag across the chart to zoom into a range."
+              description={t('Click a bar to inspect it. Drag across the chart to zoom into a range.')}
               series={series}
               buckets={buckets}
               selectedId={selectedId}
@@ -104,7 +111,7 @@ export function TimeSection({ slice, analysis, analysisKey, colors, chart, onCha
               onZoom={zoomTo}
               onZoomOut={slice.isZoomed ? () => void scale.run({ type: 'statistics.scale', factor: 2 }) : undefined}
               valueUnit={minutes ? 'minutes' : 'hours'}
-              emptyMessage="No recorded time in this window."
+              emptyMessage={t('No recorded time in this window.')}
             />
           ) : chart === 'heatmaps' ? (
             <HeatmapsView slice={slice} analysis={analysis} onOpenTimeline={onOpenTimeline} />
@@ -135,8 +142,8 @@ export function TimeSection({ slice, analysis, analysisKey, colors, chart, onCha
         />
       ) : (
         <EntriesList
-          title="Entries in this window"
-          detail="Select a chart bar or timeline entry to inspect its recorded time."
+          title={t('Entries in this window')}
+          detail={t('Select a chart bar or timeline entry to inspect its recorded time.')}
           analysis={analysis}
           analysisKey={analysisKey}
           colors={colors}
@@ -170,7 +177,7 @@ function BucketEntries({ bucket, slice, analysis, analysisKey, colors, series, o
   return (
     <EntriesList
       title={`${label} · ${duration(total)}`}
-      detail="Matching entries below show only their time inside this interval."
+      detail={t('Matching entries below show only their time inside this interval.')}
       analysis={analysis}
       analysisKey={analysisKey}
       colors={colors}
@@ -178,20 +185,20 @@ function BucketEntries({ bucket, slice, analysis, analysisKey, colors, series, o
       actions={
         <div className={styles.buttonRow}>
           <Button size="small" icon={ZoomInIcon} isDisabled={tooSmall} onPress={() => onZoom({ start, end })}>
-            Zoom into selection
+            {t('Zoom into selection')}
           </Button>
           <Button size="small" variant="plain" onPress={onClear}>
-            Clear
+            {t('Clear')}
           </Button>
         </div>
       }
     >
       <DataTable
-        caption={`Recorded time by activity, ${label}`}
+        caption={t('Recorded time by activity, {interval}', { interval: label })}
         columns={[
-          { id: 'activity', header: 'Activity' },
-          { id: 'time', header: 'Recorded', align: 'end' },
-          { id: 'share', header: 'Share', align: 'end' },
+          { id: 'activity', header: t('Activity') },
+          { id: 'time', header: t('Recorded'), align: 'end' },
+          { id: 'share', header: t('Share'), align: 'end' },
         ]}
         rows={bucket.segments.map((segment) => ({
           id: segment.activityId,
@@ -201,7 +208,7 @@ function BucketEntries({ bucket, slice, analysis, analysisKey, colors, series, o
             share: percent(segment.top - segment.bottom, total),
           },
         }))}
-        emptyMessage="No recorded time in this interval."
+        emptyMessage={t('No recorded time in this interval.')}
       />
     </EntriesList>
   );
@@ -213,23 +220,23 @@ function Coverage({ analysis }: { analysis: AnalysisView }) {
   return (
     <dl className={styles.coverage}>
       <div>
-        <dt>Covered clock time</dt>
+        <dt>{t('Covered clock time')}</dt>
         <dd>{duration(analysis.covered)}</dd>
       </div>
       <div>
-        <dt>Overlapping time</dt>
+        <dt>{t('Overlapping time')}</dt>
         <dd>{duration(overlap)}</dd>
       </div>
       <div>
-        <dt>Billable time</dt>
+        <dt>{t('Billable time')}</dt>
         <dd>
           {analysis.billableKnownCount > 0 ? (
             <>
               {duration(analysis.billable)}
-              <span className={styles.coverageNote}>{` · supplied for ${analysis.billableKnownCount} of ${plural(analysis.count, 'entry', 'entries')}`}</span>
+              <span className={styles.coverageNote}>{` · ${tn(analysis.count, 'supplied for {known} of {count} entry', 'supplied for {known} of {count} entries', { known: analysis.billableKnownCount })}`}</span>
             </>
           ) : (
-            <span className={styles.coverageNote}>Not supplied by 7pace</span>
+            <span className={styles.coverageNote}>{t('Not supplied by 7pace')}</span>
           )}
         </dd>
       </div>

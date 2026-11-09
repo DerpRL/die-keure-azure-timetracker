@@ -11,7 +11,8 @@ import { cx } from '../../utils/cx';
 import { formatShortDuration } from '../../utils/duration';
 import { reviewOverlaps, useOpenDayInTimesheet, type LoadedReview } from './DayCheck';
 import { DayTimeline, type TimelineBlock, type TimelineGap } from './DayTimeline';
-import { dayBounds, findOverlaps, formatTime, formatWeekday, sessionName, sessionSeconds } from './model';
+import { capitalize, dayBounds, findOverlaps, formatTime, formatWeekday, sessionName, sessionSeconds } from './model';
+import { t } from '../../i18n';
 import styles from './today.module.css';
 
 type Swatch = CSSProperties & Record<`--${string}`, string>;
@@ -26,7 +27,7 @@ interface LegendItem {
 function Legend({ items }: { items: readonly LegendItem[] }) {
   if (items.length === 0) return null;
   return (
-    <ul role="list" aria-label="Legend" className={styles.legend}>
+    <ul role="list" aria-label={t('Legend')} className={styles.legend}>
       {items.map((item) => (
         <li key={item.id} className={styles.legendItem}>
           <span
@@ -47,11 +48,12 @@ function CalendarNotice({ agenda }: { agenda: AgendaSlice }) {
   const enable = useAction();
   const text =
     agenda.access === 'denied'
-      ? 'Calendar access is off. Allow it in System Settings → Privacy & Security → Calendars.'
+      ? t('Calendar access is off. Allow it in System Settings → Privacy & Security → Calendars.')
       : agenda.access === 'restricted'
-        ? 'This Mac doesn’t allow apps to read calendars. Ask your administrator.'
-        : 'See your meetings next to your time. Events are only read.';
-  const label = agenda.access === 'denied' ? 'Check access again' : agenda.access === 'authorized' ? 'Connect calendar' : 'Allow calendar access';
+        ? t('This Mac doesn’t allow apps to read calendars. Ask your administrator.')
+        : t('See your meetings next to your time. Events are only read.');
+  const label =
+    agenda.access === 'denied' ? t('Check access again') : agenda.access === 'authorized' ? t('Connect calendar') : t('Allow calendar access');
   return (
     <div className={styles.calendarNotice}>
       <p className={styles.xs}>{text}</p>
@@ -60,7 +62,7 @@ function CalendarNotice({ agenda }: { agenda: AgendaSlice }) {
           {label}
         </Button>
       ) : null}
-      {preview && agenda.access !== 'restricted' ? <p className={styles.xs}>Preview mode: calendar access is turned off.</p> : null}
+      {preview && agenda.access !== 'restricted' ? <p className={styles.xs}>{t('Preview mode: calendar access is turned off.')}</p> : null}
       {enable.error ? (
         <p role="alert" className={styles.xs}>
           {enable.error.message}
@@ -87,11 +89,11 @@ function CalendarFooter() {
   return (
     <div className={styles.cardFoot}>
       <Button size="small" variant="plain" isPending={open.pending} onPress={() => void open.run({ type: 'agenda.openCalendar' })}>
-        Open Calendar
+        {t('Open Calendar')}
       </Button>
       {navigation?.canNavigate(target) ? (
         <Button size="small" variant="plain" onPress={() => navigation.navigate(target)}>
-          Choose calendars
+          {t('Choose calendars')}
         </Button>
       ) : null}
       {open.error ? (
@@ -141,7 +143,7 @@ function Frame({
       </div>
       {issue ? (
         <div className={styles.dayIssue}>
-          <Banner tone="warning" title="The calendar could not be read" live="off">
+          <Banner tone="warning" title={t('The calendar could not be read')} live="off">
             {issue}
           </Banner>
         </div>
@@ -173,7 +175,7 @@ export function YourDayToday({ today, review }: { today: string; review: DayRevi
     const titleOf = (ticketId: number | null | undefined, fallback: string | null | undefined) => {
       const title = ticketId != null ? workItems?.[String(ticketId)]?.title : undefined;
       if (ticketId != null) return title ? `#${ticketId} ${title}` : `#${ticketId}`;
-      return fallback?.trim() || 'Unassigned time';
+      return fallback?.trim() || t('Unassigned time');
     };
     const result: TimelineBlock[] = [];
     const activities = new Map<string, LegendItem>();
@@ -205,7 +207,7 @@ export function YourDayToday({ today, review }: { today: string; review: DayRevi
         end: Math.max(now, start),
         colorIndex,
         title: tracking.ticketId != null ? `#${tracking.ticketId} ${tracking.title}` : tracking.title,
-        detail: `Running since ${formatTime(start)}`,
+        detail: t('Running since {time}', { time: formatTime(start) }),
         running: true,
       });
       if (tracking.activityName && !activities.has(tracking.activityName)) {
@@ -228,21 +230,21 @@ export function YourDayToday({ today, review }: { today: string; review: DayRevi
       : [];
   const fullLegend: LegendItem[] = [
     ...legend,
-    ...(ready ? [{ id: 'event', label: 'Calendar event', swatch: 'event' as const }] : []),
-    ...(gaps.length > 0 ? [{ id: 'gap', label: 'Possible gap', swatch: 'gap' as const }] : []),
-    ...(blocks.some((block) => block.overlap) ? [{ id: 'overlap', label: 'Overlap', swatch: 'overlap' as const }] : []),
+    ...(ready ? [{ id: 'event', label: t('Calendar event'), swatch: 'event' as const }] : []),
+    ...(gaps.length > 0 ? [{ id: 'gap', label: t('Possible gap'), swatch: 'gap' as const }] : []),
+    ...(blocks.some((block) => block.overlap) ? [{ id: 'overlap', label: t('Overlap'), swatch: 'overlap' as const }] : []),
   ];
 
   return (
     <Frame
       headingId={headingId}
-      title="Your day"
+      title={t('Your day')}
       legend={fullLegend}
       issue={column && agenda?.issue ? agenda.issue : null}
       footer={ready ? <CalendarFooter /> : null}
     >
       <DayTimeline day={today} calendar={column} blocks={blocks} gaps={gaps} now={now} onOpenEntry={openEntry} />
-      {history && !history.loaded && !history.loading ? <p className={cx(styles.caption, styles.dayNote)}>Connect 7pace to see today’s worklogs.</p> : null}
+      {history && !history.loaded && !history.loading ? <p className={cx(styles.caption, styles.dayNote)}>{t('Connect 7pace to see today’s worklogs.')}</p> : null}
     </Frame>
   );
 }
@@ -288,20 +290,20 @@ export function YourDayReview({
     ? []
     : review.summary.gaps.map((gap) => ({ start: Date.parse(gap.start), end: Date.parse(gap.end) }));
   const legend: LegendItem[] = [
-    { id: 'gap', label: 'Possible gap', swatch: 'gap' },
-    { id: 'overlap', label: 'Overlap', swatch: 'overlap' },
-    { id: 'long', label: 'Long entry', swatch: 'long' },
+    { id: 'gap', label: t('Possible gap'), swatch: 'gap' },
+    { id: 'overlap', label: t('Overlap'), swatch: 'overlap' },
+    { id: 'long', label: t('Long entry'), swatch: 'long' },
   ];
   return (
     <Frame
       headingId={headingId}
-      title={`${formatWeekday(day)} on the clock`}
+      title={capitalize(t('{weekday} on the clock', { weekday: formatWeekday(day) }))}
       legend={legend}
       issue={column && agenda?.issue ? agenda.issue : null}
       footer={ready ? <CalendarFooter /> : null}
     >
       <DayTimeline day={day} calendar={column} blocks={blocks} gaps={gaps} onOpenEntry={openEntry} />
-      {blocks.length === 0 ? <p className={cx(styles.caption, styles.dayNote)}>No entries recorded for this day.</p> : null}
+      {blocks.length === 0 ? <p className={cx(styles.caption, styles.dayNote)}>{t('No entries recorded for this day.')}</p> : null}
     </Frame>
   );
 }
@@ -312,7 +314,7 @@ export function YourDayCalendarOnly({ day }: { day: string }) {
   const agenda = useSlice('agenda');
   const { column, ready } = useCalendarColumn(day);
   return (
-    <Frame headingId={headingId} title={`${formatWeekday(day)}`} legend={[]} issue={column && agenda?.issue ? agenda.issue : null} footer={ready ? <CalendarFooter /> : null}>
+    <Frame headingId={headingId} title={capitalize(formatWeekday(day))} legend={[]} issue={column && agenda?.issue ? agenda.issue : null} footer={ready ? <CalendarFooter /> : null}>
       <DayTimeline day={day} calendar={column} blocks={[]} />
     </Frame>
   );

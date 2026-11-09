@@ -14,6 +14,7 @@ import type { ActivityType, Interval, TimeEditMode, TimeEditorSlice, WorkLog, Wo
 import { useEngineDraft } from '../../../features/ticketContext/drafts';
 import { formatDateTime, logStart, parseInstant, timeEditorTitle, toZoned } from '../../../features/ticketContext/format';
 import { useAction } from '../../../state/hooks';
+import { t } from '../../../i18n';
 import { CONFIRM_TITLES, MODE_TITLES, SAVE_LABELS } from './labels';
 import { CorrectionPlanPreview, OverlapNotice, PlanResult } from './PlanPreview';
 import styles from './TimeEditor.module.css';
@@ -24,9 +25,9 @@ const DEFAULT_ACTIVITY = '__default__';
 function activityOptions(activities: readonly ActivityType[], original: ActivityType | null | undefined, defaultLabel: string): PickerOption[] {
   const options: PickerOption[] = [{ id: DEFAULT_ACTIVITY, label: defaultLabel }];
   if (original?.id && !activities.some((activity) => activity.id === original.id)) {
-    options.push({ id: original.id, label: original.name ?? 'Original activity' });
+    options.push({ id: original.id, label: original.name ?? t('Original activity') });
   }
-  for (const activity of activities) options.push({ id: activity.id, label: activity.name ?? 'Activity' });
+  for (const activity of activities) options.push({ id: activity.id, label: activity.name ?? t('Activity') });
   return options;
 }
 
@@ -61,7 +62,7 @@ export function EditTimes({
   return (
     <div className={styles.fieldRow}>
       <DatePicker
-        label="Start"
+        label={t('Start')}
         value={startValue}
         onChange={(value) => {
           setStartValue(value);
@@ -73,7 +74,7 @@ export function EditTimes({
         isDisabled={isDisabled}
       />
       <DatePicker
-        label="End"
+        label={t('End')}
         value={endValue}
         onChange={(value) => {
           setEndValue(value);
@@ -120,7 +121,7 @@ function SecondEntryFields({
     <>
       {showSplitAt ? (
         <DatePicker
-          label="Split at"
+          label={t('Split at')}
           value={at}
           onChange={(value) => {
             setAt(value);
@@ -150,7 +151,7 @@ function SecondEntryFields({
         isDisabled={isDisabled}
       />
       <Select
-        label="Activity"
+        label={t('Activity')}
         items={activityOptions(activities, original, labels.defaultActivity)}
         selectedKey={entry.activityId || DEFAULT_ACTIVITY}
         onSelectionChange={(key) => update({ activityId: key === DEFAULT_ACTIVITY || key === null ? '' : String(key) })}
@@ -178,15 +179,15 @@ function IdleSection({
     <div className={styles.group}>
       <div>
         <Heading level={3} className={styles.groupTitle}>
-          Idle interval
+          {t('Idle interval')}
         </Heading>
         <p className={styles.caption}>{`${formatDateTime(parseInstant(interval.start))} → ${formatDateTime(parseInstant(interval.end))}`}</p>
       </div>
       <SegmentedControl
-        label="How to handle idle time"
+        label={t('How to handle idle time')}
         options={[
-          { id: 'remove', label: 'Remove idle time' },
-          { id: 'separate', label: 'Separate into its own entry' },
+          { id: 'remove', label: t('Remove idle time') },
+          { id: 'separate', label: t('Separate into its own entry') },
         ]}
         selectedKey={separate ? 'separate' : 'remove'}
         onSelectionChange={(key) => {
@@ -196,7 +197,7 @@ function IdleSection({
         }}
         isDisabled={isDisabled}
       />
-      <p className={styles.caption}>Work before and after the interval stays recorded. The timer is paused; resume it when you are ready.</p>
+      <p className={styles.caption}>{t('Work before and after the interval stays recorded. The timer is paused; resume it when you are ready.')}</p>
       {separate ? (
         <SecondEntryFields
           initial={{
@@ -210,9 +211,9 @@ function IdleSection({
           isDisabled={isDisabled}
           showSplitAt={false}
           labels={{
-            ticket: 'Ticket number (optional)',
-            comment: 'Comment for the separate entry',
-            defaultActivity: '7pace default',
+            ticket: t('Ticket number (optional)'),
+            comment: t('Comment for the separate entry'),
+            defaultActivity: t('7pace default'),
           }}
           onChange={({ ticket, comment, activityId }) =>
             void split.run({ type: 'timeEditor.setSecondEntry', ticket, comment, activityId })
@@ -259,10 +260,10 @@ export function SaveConfirmation({
       onOpenChange={onOpenChange}
       role="alertdialog"
       size="small"
-      title={CONFIRM_TITLES[mode]}
-      description="The entries are read from 7pace again first, and nothing is written if they changed on the server. You can undo the result from Recent edits."
-      cancelLabel="Keep editing"
-      primaryAction={{ label: SAVE_LABELS[mode], onAction: onConfirm, isPending, isDisabled }}
+      title={t(CONFIRM_TITLES[mode])}
+      description={t('The entries are read from 7pace again first, and nothing is written if they changed on the server. You can undo the result from Recent edits.')}
+      cancelLabel={t('Keep editing')}
+      primaryAction={{ label: t(SAVE_LABELS[mode]), onAction: onConfirm, isPending, isDisabled }}
     />
   );
 }
@@ -314,15 +315,15 @@ export function EditSheet({ editor, items, activities, busy, preview }: EditShee
         isOpen
         onOpenChange={() => {}}
         onCancel={close}
-        title={`${MODE_TITLES[editor.mode]} · recorded time`}
+        title={t('{mode} · recorded time', { mode: t(MODE_TITLES[editor.mode]) })}
         description={timeEditorTitle(log, items)}
         size="large"
         cancelLabel={null}
-        primaryAction={{ label: SAVE_LABELS[editor.mode], onAction: () => setConfirming(true), isDisabled: saveDisabled }}
+        primaryAction={{ label: t(SAVE_LABELS[editor.mode]), onAction: () => setConfirming(true), isDisabled: saveDisabled }}
         secondaryActions={
           <>
             <Button onPress={close} isDisabled={editor.working || busy}>
-              Cancel edit
+              {t('Cancel edit')}
             </Button>
             {editor.needsReload ? (
               <Button
@@ -330,7 +331,7 @@ export function EditSheet({ editor, items, activities, busy, preview }: EditShee
                 isDisabled={editor.working || busy}
                 onPress={() => void reload.run({ type: 'timeEditor.select', logId: log.id })}
               >
-                Reload entry
+                {t('Reload entry')}
               </Button>
             ) : null}
             <Button
@@ -338,7 +339,7 @@ export function EditSheet({ editor, items, activities, busy, preview }: EditShee
               isDisabled={busy || editor.working || editor.needsReload || !!editor.validationIssue}
               onPress={() => void check.run({ type: 'timeEditor.checkOverlaps' })}
             >
-              Check overlaps
+              {t('Check overlaps')}
             </Button>
           </>
         }
@@ -346,10 +347,10 @@ export function EditSheet({ editor, items, activities, busy, preview }: EditShee
         <div className={styles.sheetBody}>
           {editor.mode === 'edit' || editor.mode === 'split' ? (
             <SegmentedControl
-              label="Operation"
+              label={t('Operation')}
               options={[
-                { id: 'edit', label: 'Edit time' },
-                { id: 'split', label: 'Split entry' },
+                { id: 'edit', label: t('Edit time') },
+                { id: 'split', label: t('Split entry') },
               ]}
               selectedKey={operation === 'split' ? 'split' : 'edit'}
               onSelectionChange={(key) => {
@@ -389,17 +390,17 @@ export function EditSheet({ editor, items, activities, busy, preview }: EditShee
                 isDisabled={locked}
                 showSplitAt
                 labels={{
-                  ticket: 'Ticket',
-                  ticketPlaceholder: 'Azure ticket number (optional)',
-                  comment: 'Comment',
-                  defaultActivity: 'Default activity',
+                  ticket: t('Ticket'),
+                  ticketPlaceholder: t('Azure ticket number (optional)'),
+                  comment: t('Comment'),
+                  defaultActivity: t('Default activity'),
                 }}
                 intro={
                   <div>
                     <Heading level={3} className={styles.groupTitle}>
-                      Second entry
+                      {t('Second entry')}
                     </Heading>
-                    <p className={styles.caption}>The first part keeps its original ticket and activity.</p>
+                    <p className={styles.caption}>{t('The first part keeps its original ticket and activity.')}</p>
                   </div>
                 }
                 onChange={(entry) => void split.run({ type: 'timeEditor.setSplit', ...entry })}
@@ -413,14 +414,14 @@ export function EditSheet({ editor, items, activities, busy, preview }: EditShee
               <PlanResult plan={editor.plan}>
                 {editor.mode === 'merge' ? (
                   <p className={styles.caption}>
-                    The first entry is extended and the other selected entries are removed. Total recorded and billable time stay the
-                    same.
+                    {t('The first entry is extended and the other selected entries are removed. Total recorded and billable time stay the same.')}
                   </p>
                 ) : null}
                 {editor.mode === 'undo' ? (
                   <p className={styles.caption}>
-                    Restores the previous values after checking for newer changes. Removed entries are recreated with new IDs; their
-                    original server audit timestamps cannot be restored.
+                    {t(
+                      'Restores the previous values after checking for newer changes. Removed entries are recreated with new IDs; their original server audit timestamps cannot be restored.',
+                    )}
                   </p>
                 ) : null}
               </PlanResult>
@@ -436,7 +437,7 @@ export function EditSheet({ editor, items, activities, busy, preview }: EditShee
               editor.review.conflicts.length === 0 && !editor.review.overlapIssue ? (
                 <p className={styles.success}>
                   <SuccessIcon className={styles.successIcon} />
-                  No overlapping entries found
+                  {t('No overlapping entries found')}
                 </p>
               ) : (
                 <OverlapNotice conflicts={editor.review.conflicts} issue={editor.review.overlapIssue} />
@@ -447,11 +448,11 @@ export function EditSheet({ editor, items, activities, busy, preview }: EditShee
           </div>
 
           <p className={styles.caption}>
-            Overlaps are checked again when saving. Check overlaps is optional and also includes entries from other dates.
+            {t('Overlaps are checked again when saving. Check overlaps is optional and also includes entries from other dates.')}
           </p>
           {editor.requiresReview ? (
             <Banner tone="warning" live="off">
-              An earlier change needs review. Open Recent edits before making another change.
+              {t('An earlier change needs review. Open Recent edits before making another change.')}
             </Banner>
           ) : null}
           {editor.journalIssue ? (
@@ -460,7 +461,7 @@ export function EditSheet({ editor, items, activities, busy, preview }: EditShee
             </Banner>
           ) : null}
           {issue ? <Banner tone="error">{issue}</Banner> : null}
-          {editor.working || busy ? <ProgressBar label="Checking 7pace…" isIndeterminate /> : null}
+          {editor.working || busy ? <ProgressBar label={t('Checking 7pace…')} isIndeterminate /> : null}
         </div>
       </Dialog>
 

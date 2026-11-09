@@ -5,6 +5,7 @@
  * it.
  */
 import { isTauri } from '../../ipc';
+import { mark, t } from '../../i18n';
 import { showMain } from '../../ipc/shell';
 import type { PageId, SettingsView } from '../../layout/navigation';
 
@@ -53,6 +54,7 @@ export type SettingsSectionId =
 
 export interface SettingsSectionDefinition {
   id: SettingsSectionId;
+  /** English (`mark`): show with `t`, or use `sectionTitle`. */
   title: string;
   view: SettingsView;
   /** Hidden when the calendar module does not exist on this OS (Windows at launch). */
@@ -62,61 +64,61 @@ export interface SettingsSectionDefinition {
 }
 
 export const SETTINGS_SECTIONS: readonly SettingsSectionDefinition[] = [
-  { id: 'azure', title: 'Azure DevOps', view: 'accounts', keywords: ['organization', 'project', 'personal access token', 'pat'] },
-  { id: 'sevenPace', title: '7pace Timetracker', view: 'accounts', keywords: ['workspace', 'url', 'api token', 'pin', 'pairing', 'unpair', 'sign in'] },
-  { id: 'connection', title: 'Connection', view: 'accounts', keywords: ['refresh', 'status', 'connected', 'test'] },
-  { id: 'targets', title: 'Weekly target', view: 'schedule', keywords: ['daily target', 'hours', 'minutes', 'presets', 'week'] },
-  { id: 'workday', title: 'Workday', view: 'schedule', keywords: ['starts', 'ends', 'working hours'] },
-  { id: 'holidays', title: 'Public holidays', view: 'schedule', keywords: ['belgium', 'belgian', 'holiday'] },
-  { id: 'exceptions', title: 'Days off & exceptions', view: 'schedule', keywords: ['leave', 'half day', 'vacation', 'custom target', 'replacement'] },
-  { id: 'meetings', title: 'Calendar meetings', view: 'meetings', needsCalendar: true, keywords: ['default ticket', 'activity', 'resume', 'calendar'] },
-  { id: 'microphone', title: 'Calls without a calendar event', view: 'meetings', keywords: ['microphone', 'teams', 'zoom', 'slack', 'calls'] },
-  { id: 'tracking', title: 'Timer defaults', view: 'reminders', keywords: ['activity', 'ticket closed', 'completion', 'round', 'rounding', 'quarter hour', '15 minutes'] },
-  { id: 'awareness', title: 'Time awareness', view: 'reminders', keywords: ['idle', 'away', 'locked', 'lock', 'forgotten timer', 'inactivity'] },
-  { id: 'workApps', title: 'Work applications', view: 'reminders', keywords: ['apps', 'forgotten timer'] },
-  { id: 'dayReview', title: 'Day review', view: 'reminders', keywords: ['day check', 'gaps', 'long entries', 'review days'] },
-  { id: 'notifications', title: 'Notifications & quiet hours', view: 'notifications', keywords: ['banners', 'quiet hours', 'do not disturb'] },
-  { id: 'prompts', title: 'Prompts', view: 'notifications', keywords: ['interruptions', 'open panel', 'notify', 'focus'] },
-  { id: 'repositories', title: 'Watched repositories', view: 'git', keywords: ['git', 'branches', 'watch'] },
-  { id: 'branchRules', title: 'Branch rules', view: 'git', keywords: ['ticket number pattern', 'regular expression', 'branch'] },
-  { id: 'figma', title: 'Figma Desktop', view: 'figma', keywords: ['design', 'linked files', 'context history'] },
-  { id: 'calendar', title: 'Calendar access', view: 'calendars', needsCalendar: true, keywords: ['events', 'show on today', 'permission'] },
-  { id: 'calendarList', title: 'Calendars', view: 'calendars', needsCalendar: true, keywords: ['exchange', 'icloud', 'which calendars'] },
-  { id: 'appearance', title: 'Appearance', view: 'appearance', keywords: ['theme', 'dark', 'light', 'size', 'contrast', 'scale'] },
-  { id: 'app', title: 'Menu bar & windows', view: 'appearance', keywords: ['open at login', 'launch', 'mini timer', 'menu bar', 'tray'] },
-  { id: 'shortcuts', title: 'Shortcuts', view: 'appearance', keywords: ['keyboard', 'quick switch', 'command palette'] },
-  { id: 'features', title: 'Features', view: 'features', keywords: ['privacy', 'permissions', 'modules', 'pages'] },
-  { id: 'updates', title: 'Updates', view: 'advanced', keywords: ['version', 'check for updates', 'github'] },
-  { id: 'advanced', title: 'Sync intervals', view: 'advanced', keywords: ['polling', 'refresh', 'intervals', 'cadences'] },
-  { id: 'data', title: 'Data on this device', view: 'advanced', keywords: ['folder', 'diagnostics', 'log', 'onboarding'] },
-  { id: 'reset', title: 'Reset', view: 'advanced', keywords: ['reset local data', 'clear'] },
-  { id: 'about', title: 'About', view: 'about', keywords: ['version', 'help', 'release notes', 'report an issue', 'diagnostic info'] },
+  { id: 'azure', title: 'Azure DevOps', view: 'accounts', keywords: [mark('organization'), mark('project'), mark('personal access token'), 'pat'] },
+  { id: 'sevenPace', title: '7pace Timetracker', view: 'accounts', keywords: [mark('workspace'), 'url', mark('api token'), 'pin', mark('pairing'), mark('unpair'), mark('sign in')] },
+  { id: 'connection', title: mark('Connection'), view: 'accounts', keywords: [mark('refresh'), mark('status'), mark('connected'), mark('test')] },
+  { id: 'targets', title: mark('Weekly target'), view: 'schedule', keywords: [mark('daily target'), mark('hours'), mark('minutes'), mark('presets'), mark('week')] },
+  { id: 'workday', title: mark('Workday'), view: 'schedule', keywords: [mark('starts'), mark('ends'), mark('working hours')] },
+  { id: 'holidays', title: mark('Public holidays'), view: 'schedule', keywords: [mark('belgium'), mark('belgian'), mark('holiday')] },
+  { id: 'exceptions', title: mark('Days off & exceptions'), view: 'schedule', keywords: [mark('leave'), mark('half day'), mark('vacation'), mark('custom target'), mark('replacement')] },
+  { id: 'meetings', title: mark('Calendar meetings'), view: 'meetings', needsCalendar: true, keywords: [mark('default ticket'), mark('activity'), mark('resume'), mark('calendar')] },
+  { id: 'microphone', title: mark('Calls without a calendar event'), view: 'meetings', keywords: [mark('microphone'), 'teams', 'zoom', 'slack', mark('calls')] },
+  { id: 'tracking', title: mark('Timer defaults'), view: 'reminders', keywords: [mark('activity'), mark('ticket closed'), mark('completion'), mark('round'), mark('rounding'), mark('quarter hour'), mark('15 minutes')] },
+  { id: 'awareness', title: mark('Time awareness'), view: 'reminders', keywords: [mark('idle'), mark('away'), mark('locked'), mark('lock'), mark('forgotten timer'), mark('inactivity')] },
+  { id: 'workApps', title: mark('Work applications'), view: 'reminders', keywords: [mark('apps'), mark('forgotten timer')] },
+  { id: 'dayReview', title: mark('Day review'), view: 'reminders', keywords: [mark('day check'), mark('gaps'), mark('long entries'), mark('review days')] },
+  { id: 'notifications', title: mark('Notifications & quiet hours'), view: 'notifications', keywords: [mark('banners'), mark('quiet hours'), mark('do not disturb')] },
+  { id: 'prompts', title: mark('Prompts'), view: 'notifications', keywords: [mark('interruptions'), mark('open panel'), mark('notify'), mark('focus')] },
+  { id: 'repositories', title: mark('Watched repositories'), view: 'git', keywords: ['git', mark('branches'), mark('watch')] },
+  { id: 'branchRules', title: mark('Branch rules'), view: 'git', keywords: [mark('ticket number pattern'), mark('regular expression'), mark('branch')] },
+  { id: 'figma', title: 'Figma Desktop', view: 'figma', keywords: [mark('design'), mark('linked files'), mark('context history')] },
+  { id: 'calendar', title: mark('Calendar access'), view: 'calendars', needsCalendar: true, keywords: [mark('events'), mark('show on today'), mark('permission')] },
+  { id: 'calendarList', title: mark('Calendars'), view: 'calendars', needsCalendar: true, keywords: ['exchange', 'icloud', mark('which calendars')] },
+  { id: 'appearance', title: mark('Appearance'), view: 'appearance', keywords: [mark('theme'), mark('dark'), mark('light'), mark('size'), mark('contrast'), mark('scale')] },
+  { id: 'app', title: mark('Menu bar & windows'), view: 'appearance', keywords: [mark('open at login'), mark('launch'), mark('mini timer'), mark('menu bar'), mark('tray')] },
+  { id: 'shortcuts', title: mark('Shortcuts'), view: 'appearance', keywords: [mark('keyboard'), mark('quick switch'), mark('command palette')] },
+  { id: 'features', title: mark('Features'), view: 'features', keywords: [mark('privacy'), mark('permissions'), mark('modules'), mark('pages')] },
+  { id: 'updates', title: mark('Updates'), view: 'advanced', keywords: [mark('version'), mark('check for updates'), 'github'] },
+  { id: 'advanced', title: mark('Sync intervals'), view: 'advanced', keywords: [mark('polling'), mark('refresh'), mark('intervals'), mark('cadences')] },
+  { id: 'data', title: mark('Data on this device'), view: 'advanced', keywords: [mark('folder'), mark('diagnostics'), mark('log'), mark('onboarding')] },
+  { id: 'reset', title: mark('Reset'), view: 'advanced', keywords: [mark('reset local data'), mark('clear')] },
+  { id: 'about', title: mark('About'), view: 'about', keywords: [mark('version'), mark('help'), mark('release notes'), mark('report an issue'), mark('diagnostic info')] },
 ];
 
-/** The heading and lead line of each Settings view (the menu names some of them shorter). */
+/** The heading and lead line of each Settings view (the menu names some of them shorter). English (`mark`): show with `t`. */
 export const VIEW_INTROS: Readonly<Record<SettingsView, { title: string; lead: string }>> = {
-  accounts: { title: 'Azure DevOps & 7pace', lead: 'Azure DevOps provides ticket details. 7pace Timetracker stores your time.' },
+  accounts: { title: mark('Azure DevOps & 7pace'), lead: mark('Azure DevOps provides ticket details. 7pace Timetracker stores your time.') },
   schedule: {
-    title: 'Schedule & holidays',
-    lead: 'Your hours are used for progress, the day review and Insights. Nothing here changes 7pace.',
+    title: mark('Schedule & holidays'),
+    lead: mark('Your hours are used for progress, the day review and Insights. Nothing here changes 7pace.'),
   },
-  meetings: { title: 'Meetings', lead: 'Suggests Meeting tracking when a meeting starts. Your timer never switches on its own.' },
-  reminders: { title: 'Reminders', lead: 'Gentle nudges so your timesheet stays complete.' },
-  notifications: { title: 'Notifications', lead: 'Choose how each prompt reaches you.' },
-  sources: { title: 'Sources', lead: 'Sources suggest what to track. Nothing changes in 7pace until you confirm.' },
+  meetings: { title: mark('Meetings'), lead: mark('Suggests Meeting tracking when a meeting starts. Your timer never switches on its own.') },
+  reminders: { title: mark('Reminders'), lead: mark('Gentle nudges so your timesheet stays complete.') },
+  notifications: { title: mark('Notifications'), lead: mark('Choose how each prompt reaches you.') },
+  sources: { title: mark('Sources'), lead: mark('Sources suggest what to track. Nothing changes in 7pace until you confirm.') },
   git: {
-    title: 'Git repositories',
-    lead: 'Switching branch suggests that branch’s ticket. Nothing changes in 7pace until you confirm.',
+    title: mark('Git repositories'),
+    lead: mark('Switching branch suggests that branch’s ticket. Nothing changes in 7pace until you confirm.'),
   },
   figma: {
     title: 'Figma',
-    lead: 'Suggests Design tracking while you work in Figma Desktop. Reads only file names and window titles.',
+    lead: mark('Suggests Design tracking while you work in Figma Desktop. Reads only file names and window titles.'),
   },
-  calendars: { title: 'Calendars', lead: 'Events show on Today. A meeting that starts can suggest Meeting tracking.' },
-  appearance: { title: 'Appearance & shortcuts', lead: 'How the app looks and how you reach it.' },
-  features: { title: 'Features & privacy', lead: 'Turn features on or off. Each one tells you what it reads.' },
-  advanced: { title: 'Updates & advanced', lead: 'Updates, sync timing and data on this device.' },
-  about: { title: 'About', lead: 'Version, connections and what happens with your data.' },
+  calendars: { title: mark('Calendars'), lead: mark('Events show on Today. A meeting that starts can suggest Meeting tracking.') },
+  appearance: { title: mark('Appearance & shortcuts'), lead: mark('How the app looks and how you reach it.') },
+  features: { title: mark('Features & privacy'), lead: mark('Turn features on or off. Each one tells you what it reads.') },
+  advanced: { title: mark('Updates & advanced'), lead: mark('Updates, sync timing and data on this device.') },
+  about: { title: mark('About'), lead: mark('Version, connections and what happens with your data.') },
 };
 
 export const DEFAULT_SECTION: SettingsSectionId = 'azure';
@@ -128,10 +130,13 @@ export const DEFAULT_SECTION: SettingsSectionId = 'azure';
 export function searchSections(query: string, sections: readonly SettingsSectionDefinition[]): SettingsSectionDefinition[] {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean);
   if (words.length === 0) return [];
+  // English and the interface language both match, so "pat" and "token" work in Dutch too.
+  const both = (text: string) => [text, t(text)];
   const haystack = (section: SettingsSectionDefinition) =>
-    [section.title, VIEW_INTROS[section.view].title, ...(section.keywords ?? [])].join(' ').toLowerCase();
+    [...both(section.title), ...both(VIEW_INTROS[section.view].title), ...(section.keywords ?? []).flatMap(both)].join(' ').toLowerCase();
   const matches = sections.filter((section) => words.every((word) => haystack(section).includes(word)));
-  const inTitle = (section: SettingsSectionDefinition) => words.every((word) => section.title.toLowerCase().includes(word));
+  const inTitle = (section: SettingsSectionDefinition) =>
+    words.every((word) => both(section.title).some((title) => title.toLowerCase().includes(word)));
   return [...matches.filter(inTitle), ...matches.filter((section) => !inTitle(section))];
 }
 
@@ -143,8 +148,9 @@ export function viewOf(section: SettingsSectionId): SettingsView {
   return definition(section).view;
 }
 
+/** The section's title in the interface language. */
 export function sectionTitle(section: SettingsSectionId): string {
-  return definition(section).title;
+  return t(definition(section).title);
 }
 
 /** The DOM id of a section's anchor. */

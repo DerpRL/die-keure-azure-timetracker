@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { t } from '../../i18n';
 import { readLaunchAtLogin, writeLaunchAtLogin } from './platform';
 
 export interface LaunchAtLogin {
@@ -30,7 +31,7 @@ export function useLaunchAtLogin(): LaunchAtLogin {
       },
       (caught: unknown) => {
         if (!active) return;
-        setError(`Launch at login: ${caught instanceof Error ? caught.message : String(caught)}`);
+        setError(t('Launch at login: {error}', { error: caught instanceof Error ? caught.message : String(caught) }));
         setPending(false);
       },
     );
@@ -48,7 +49,7 @@ export function useLaunchAtLogin(): LaunchAtLogin {
         setPending(false);
       },
       (caught: unknown) => {
-        setError(`Launch at login: ${caught instanceof Error ? caught.message : String(caught)}`);
+        setError(t('Launch at login: {error}', { error: caught instanceof Error ? caught.message : String(caught) }));
         setPending(false);
       },
     );

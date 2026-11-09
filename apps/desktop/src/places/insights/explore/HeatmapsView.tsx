@@ -2,11 +2,12 @@ import { useMemo } from 'react';
 import { Section } from '../../../components/Card';
 import { CalendarHeatmap, type HeatmapDay } from '../../../charts/CalendarHeatmap';
 import { HourHeatmap, type HourHeatmapCell, type HourHeatmapRow } from '../../../charts/HourHeatmap';
+import { t, tn } from '../../../i18n';
 import type { AnalysisView, ExplorerVisuals, Interval, StatisticsSlice } from '../../../ipc/contract';
-import { duration, fullDateLabel, localDay, longDayTimeLabel, plural, timeLabel, timeZoneLabel, weekdayDayMonthLabel } from './format';
+import { duration, fullDateLabel, localDay, longDayTimeLabel, timeLabel, timeZoneLabel, weekdayDayMonthLabel } from './format';
 import styles from './Statistics.module.css';
 
-const TITLE = 'Your work at a glance';
+const TITLE = () => t('Your work at a glance');
 
 export interface HeatmapsViewProps {
   slice: StatisticsSlice;
@@ -23,8 +24,8 @@ export function HeatmapsView({ slice, analysis, onOpenTimeline }: HeatmapsViewPr
   const visuals = slice.visuals;
   if (!visuals) {
     return (
-      <Section title={TITLE} variant="plain" className={styles.heatmaps}>
-        <p className={styles.secondary}>The heatmaps appear once this window’s worklogs are analysed.</p>
+      <Section title={TITLE()} variant="plain" className={styles.heatmaps}>
+        <p className={styles.secondary}>{t('The heatmaps appear once this window’s worklogs are analysed.')}</p>
       </Section>
     );
   }
@@ -45,7 +46,9 @@ function Heatmaps({ visuals, showTargets, onOpenTimeline }: HeatmapsProps) {
         value: day.seconds,
         label: fullDateLabel(day.date),
         shortLabel: weekdayDayMonthLabel(day.date),
-        detail: `${plural(day.entries, 'entry', 'entries')}${showTargets ? ` · target ${duration(day.target)}` : ''}`,
+        detail: showTargets
+          ? tn(day.entries, '{count} entry · target {target}', '{count} entries · target {target}', { target: duration(day.target) })
+          : tn(day.entries, '{count} entry', '{count} entries'),
         future: day.future,
       })),
     [visuals.days, showTargets],
@@ -74,13 +77,13 @@ function Heatmaps({ visuals, showTargets, onOpenTimeline }: HeatmapsProps) {
   const hourly = visuals.hours.length > 0;
 
   return (
-    <Section title={TITLE} variant="plain" className={styles.heatmaps}>
+    <Section title={TITLE()} variant="plain" className={styles.heatmaps}>
       <div className={styles.heatmapStack}>
         {calendar ? (
           <CalendarHeatmap
-            title="Calendar heatmap"
+            title={t('Calendar heatmap')}
             headingLevel={3}
-            description="Each cell is a day. Select one to open its task timeline. Empty days remain visible."
+            description={t('Each cell is a day. Select one to open its task timeline. Empty days remain visible.')}
             days={days}
             onSelectDay={(selected) => {
               const day = visuals.days.find((item) => localDay(item.date) === selected);
@@ -90,9 +93,9 @@ function Heatmaps({ visuals, showTargets, onOpenTimeline }: HeatmapsProps) {
         ) : null}
         {hourly ? (
           <HourHeatmap
-            title="Hourly heatmap"
+            title={t('Hourly heatmap')}
             headingLevel={3}
-            description="Select an hour to zoom into its timeline. Repeated daylight-saving hours have separate cells."
+            description={t('Select an hour to zoom into its timeline. Repeated daylight-saving hours have separate cells.')}
             rows={hours.rows}
             cells={hours.cells}
             onSelectCell={(cell) => {
@@ -101,7 +104,7 @@ function Heatmaps({ visuals, showTargets, onOpenTimeline }: HeatmapsProps) {
             }}
           />
         ) : null}
-        {!calendar && !hourly ? <p className={styles.secondary}>No days in this window.</p> : null}
+        {!calendar && !hourly ? <p className={styles.secondary}>{t('No days in this window.')}</p> : null}
       </div>
     </Section>
   );

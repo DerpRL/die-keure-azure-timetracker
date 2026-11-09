@@ -17,6 +17,7 @@ use crate::controllers::hooks as controllers;
 use crate::engine::Engine;
 use crate::intent::done;
 use crate::ipc::IpcError;
+use crate::nl::{tr, trf};
 
 use super::{busy, connection};
 
@@ -79,7 +80,11 @@ pub(crate) fn begin(engine: &Engine, workspace: String) {
         if let Err(error) = run(&engine, &workspace, generation).await
             && current(&engine, generation)
         {
-            set_status(&engine, generation, format!("Could not pair with 7pace. {error}"));
+            set_status(
+                &engine,
+                generation,
+                trf("Could not pair with 7pace. {error}", &[("error", &error)]),
+            );
         }
         engine.update(|state| {
             let pairing = &mut state.session.pairing;
@@ -96,7 +101,7 @@ async fn run(engine: &Engine, workspace: &str, generation: u64) -> att_core::Res
     let base = Endpoint::seven_pace(workspace)?;
     let host = base.host_str().unwrap_or_default().to_string();
     let client = engine.services().clients.pairing(workspace)?;
-    set_status(engine, generation, "Requesting a PIN…");
+    set_status(engine, generation, tr("Requesting a PIN…"));
     let deadline = tokio::time::Instant::now() + Duration::from_secs(PIN_SECONDS);
     let expires_at = add_secs(engine.now(), PIN_SECONDS as f64);
     let code = client.create_pin().await?;
@@ -107,8 +112,9 @@ async fn run(engine: &Engine, workspace: &str, generation: u64) -> att_core::Res
         let pairing = &mut state.session.pairing;
         pairing.pin = Some(code.pin.clone());
         pairing.expires_at = Some(expires_at);
-        pairing.status =
-            Some("Enter this PIN in 7pace → Apps → Pair Mobile App. Waiting for approval…".into());
+        pairing.status = Some(
+            tr("Enter this PIN in 7pace → Apps → Pair Mobile App. Waiting for approval…").into(),
+        );
     });
     while tokio::time::Instant::now() < deadline {
         tokio::time::sleep(POLL).await;
@@ -138,8 +144,9 @@ async fn run(engine: &Engine, workspace: &str, generation: u64) -> att_core::Res
                     let pairing = &mut state.session.pairing;
                     if pairing.generation == generation {
                         pairing.paired_host = Some(host.clone());
-                        pairing.status = Some(format!(
-                            "Paired with {host}. Save changes to use this connection."
+                        pairing.status = Some(trf(
+                            "Paired with {host}. Save changes to use this connection.",
+                            &[("host", &host)],
                         ));
                     }
                 });
@@ -150,7 +157,7 @@ async fn run(engine: &Engine, workspace: &str, generation: u64) -> att_core::Res
     set_status(
         engine,
         generation,
-        "The PIN expired. Request a new PIN and enter it within one minute.",
+        tr("The PIN expired. Request a new PIN and enter it within one minute."),
     );
     Ok(())
 }
@@ -185,7 +192,10 @@ pub(crate) async fn unpair(engine: &Engine) -> Result<Value, IpcError> {
         .map_err(|error| {
             IpcError::new(
                 "message",
-                format!("Keychain could not remove the 7pace credential ({error})."),
+                trf(
+                    "Keychain could not remove the 7pace credential ({error}).",
+                    &[("error", &error)],
+                ),
             )
         })?;
     }
@@ -195,6 +205,6 @@ pub(crate) async fn unpair(engine: &Engine) -> Result<Value, IpcError> {
         return Err(IpcError::busy());
     }
     engine.update(|state| state.session.connection.has_azure_pat = has_azure_pat);
-    engine.record("Unpaired from 7pace", host.unwrap_or_default());
+    engine.record(tr("Unpaired from 7pace"), host.unwrap_or_default());
     done()
 }

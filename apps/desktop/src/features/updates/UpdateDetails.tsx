@@ -18,6 +18,7 @@ import {
 } from './model';
 import { useUpdateActions } from './useUpdateStatus';
 import styles from './updates.module.css';
+import { t } from '../../i18n';
 
 export interface UpdateDetailsProps {
   status: UpdateStatus;
@@ -58,10 +59,10 @@ export function UpdateDetails({ status, headingLevel = 3, announceChecks = true 
     <div className={styles.details}>
       <p className={styles.installed}>
         <SuccessIcon />
-        {installedVersion ? `Installed version ${installedVersion}` : 'Installed version unknown'}
+        {installedVersion ? t('Installed version {version}', { version: installedVersion }) : t('Installed version unknown')}
       </p>
       {status.phase === 'ready' && status.error ? (
-        <Banner tone="warning" title="Installation needs attention" live="off">
+        <Banner tone="warning" title={t('Installation needs attention')} live="off">
           {status.error}
         </Banner>
       ) : (
@@ -70,17 +71,17 @@ export function UpdateDetails({ status, headingLevel = 3, announceChecks = true 
           <span>{status.message}</span>
         </p>
       )}
-      {checked ? <p className={styles.meta}>Last checked: {checked}</p> : null}
+      {checked ? <p className={styles.meta}>{t('Last checked: {time}', { time: checked })}</p> : null}
       {status.version ? (
         <div className={styles.release}>
           <Heading level={headingLevel} className={styles.releaseTitle}>
-            Version {status.version}
+            {t('Version {version}', { version: status.version })}
           </Heading>
-          {published ? <p className={styles.meta}>Published {published}</p> : null}
+          {published ? <p className={styles.meta}>{t('Published {date}', { date: published })}</p> : null}
           {status.notes ? <p className={styles.notes}>{status.notes}</p> : null}
           {status.phase === 'downloading' ? (
             <ProgressBar
-              label="Update download"
+              label={t('Update download')}
               value={percent ?? 0}
               isIndeterminate={percent === null}
               valueLabel={percent === null ? downloadText(status) : `${percent}% · ${downloadText(status)}`}
@@ -88,7 +89,7 @@ export function UpdateDetails({ status, headingLevel = 3, announceChecks = true 
             />
           ) : null}
           {action === 'download' || action === 'restart' || action === 'retry' ? (
-            <p className={styles.hint}>Restarting keeps your 7pace timer running. Save any open edits first.</p>
+            <p className={styles.hint}>{t('Restarting keeps your 7pace timer running. Save any open edits first.')}</p>
           ) : null}
         </div>
       ) : null}
@@ -98,7 +99,7 @@ export function UpdateDetails({ status, headingLevel = 3, announceChecks = true 
           isDisabled={!canCheck(status) || actions.pending === 'install'}
           isPending={actions.pending === 'check' || status.phase === 'checking'}
         >
-          Check for updates
+          {t('Check for updates')}
         </Button>
         {action ? (
           <Button
@@ -107,14 +108,15 @@ export function UpdateDetails({ status, headingLevel = 3, announceChecks = true 
             isDisabled={restartBlocked || actions.pending === 'check'}
             isPending={actions.pending === 'install'}
           >
-            {ACTION_LABELS[action]}
+            {t(ACTION_LABELS[action])}
           </Button>
         ) : null}
         <Button variant="plain" trailingIcon={ExternalLinkIcon} onPress={openDownloads}>
-          Download installer on GitHub<span className="visually-hidden"> (opens in your browser)</span>
+          {t('Download installer on GitHub')}
+          <span className="visually-hidden">{` ${t('(opens in your browser)')}`}</span>
         </Button>
       </div>
-      {restartBlocked ? <p className={styles.hint}>Waiting for the current operation to finish…</p> : null}
+      {restartBlocked ? <p className={styles.hint}>{t('Waiting for the current operation to finish…')}</p> : null}
       {actions.error ? (
         <p role="alert" className={styles.error}>
           {actions.error}
@@ -126,8 +128,7 @@ export function UpdateDetails({ status, headingLevel = 3, announceChecks = true 
         </p>
       ) : null}
       <p className={styles.hint}>
-        Downloads are verified with the app’s release key. Operating system security and account permission prompts may
-        still appear.
+        {t('Downloads are verified with the app’s release key. Operating system security and account permission prompts may still appear.')}
       </p>
     </div>
   );

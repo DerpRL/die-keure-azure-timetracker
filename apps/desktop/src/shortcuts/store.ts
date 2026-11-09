@@ -1,4 +1,5 @@
 import type { IconComponent } from '../components/icons';
+import { mark } from '../i18n';
 import type { KeyCombo } from './keys';
 
 /**
@@ -40,14 +41,14 @@ interface CommandFields {
 export type CommandGroup = 'Tickets' | 'Pages' | 'Tracking' | 'Actions' | 'General';
 /** Cheat sheet order. */
 export const COMMAND_GROUP_ORDER: readonly CommandGroup[] = ['Pages', 'Tracking', 'Actions', 'General', 'Tickets'];
-/** Command palette order and headings (2.2 layout: Tickets, actions, then "Go to"). */
+/** Command palette order and headings (2.2 layout: Tickets, actions, then "Go to"); translate with `t`. */
 export const PALETTE_GROUP_ORDER: readonly CommandGroup[] = ['Tickets', 'Tracking', 'Actions', 'Pages', 'General'];
 export const PALETTE_GROUP_TITLES: Readonly<Record<CommandGroup, string>> = {
-  Tickets: 'Tickets',
-  Tracking: 'Tracking',
-  Actions: 'Actions',
-  Pages: 'Go to',
-  General: 'General',
+  Tickets: mark('Tickets'),
+  Tracking: mark('Tracking'),
+  Actions: mark('Actions'),
+  Pages: mark('Go to'),
+  General: mark('General'),
 };
 
 interface Entry {

@@ -1168,3 +1168,30 @@ mod decoding_tests {
         assert_eq!(wire_date::parse("not a date", None), None);
     }
 }
+
+/// Engine text in Dutch: errors, labels and the branch-pattern tester follow the interface
+/// language, and English stays the source.
+mod dutch_tests {
+    use att_core::AppError;
+    use att_core::git::BranchTicket;
+    use att_core::i18n::{Language, with_language};
+    use att_core::indicator::TrackingIndicator;
+
+    #[test]
+    fn messages_and_labels_follow_the_interface_language() {
+        with_language(Language::Nl, || {
+            assert_eq!(
+                AppError::Authentication("Azure DevOps".into()).to_string(),
+                "Aanmelden mislukt. Controleer het token voor Azure DevOps in Instellingen; \
+                 het is misschien verlopen of ingetrokken."
+            );
+            assert_eq!(BranchTicket::tester_result("feature/33984-x", "([0-9]+)"), "Ticket #33984");
+            assert_eq!(
+                BranchTicket::tester_result("feature/no-ticket", "([0-9]+)"),
+                "Geen uniek ticket gevonden"
+            );
+            assert_eq!(TrackingIndicator::Paused.label(), "Gepauzeerd");
+        });
+        assert_eq!(TrackingIndicator::Paused.label(), "Paused");
+    }
+}

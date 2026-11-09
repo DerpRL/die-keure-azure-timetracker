@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import { useReducedMotion } from '../theme/ThemeProvider';
+import { t } from '../i18n';
 import { cx } from '../utils/cx';
 import { formatClock, formatPercent, formatSpokenDuration } from '../utils/duration';
 import { ProgressRing } from './ProgressRing';
@@ -49,10 +50,13 @@ export function progressDescription(
   detail?: string,
 ): string {
   if (detail) return detail;
-  if (!(target > 0)) return 'No daily target today';
+  if (!(target > 0)) return t('No daily target today');
   const fraction = targetFraction(todaySeconds, target);
-  if (fraction === null) return 'Daily total unavailable';
-  return `${totalsConfirmed ? 'Today · ' : 'Last known · '}${formatPercent(fraction)} of daily target`;
+  if (fraction === null) return t('Daily total unavailable');
+  const percent = formatPercent(fraction);
+  return totalsConfirmed
+    ? t('Today · {percent} of daily target', { percent })
+    : t('Last known · {percent} of daily target', { percent });
 }
 
 /**
@@ -71,7 +75,7 @@ export function TimerDisplay({
   size = 'medium',
   showRing = true,
   indicator = 'ring',
-  label = 'Elapsed time',
+  label = t('Elapsed time'),
   className,
 }: TimerDisplayProps) {
   const reducedMotion = useReducedMotion();
@@ -103,7 +107,7 @@ export function TimerDisplay({
           status={status}
           fraction={fraction}
           stale={!totalsConfirmed}
-          label={`${info.label}. ${description}`}
+          label={`${t(info.label)}. ${description}`}
           reducedMotion={reducedMotion}
         />
       ) : null}
@@ -113,8 +117,9 @@ export function TimerDisplay({
             {label}
           </span>
           <span className="visually-hidden">
-            {formatSpokenDuration(safeSeconds)}
-            {unconfirmed ? ', last known' : ''}
+            {unconfirmed
+              ? t('{duration}, last known', { duration: formatSpokenDuration(safeSeconds) })
+              : formatSpokenDuration(safeSeconds)}
           </span>
           {/* The template fixes width and baseline; the rolling digits sit on top of it. */}
           <span className={styles.template} aria-hidden="true">
@@ -133,7 +138,7 @@ export function TimerDisplay({
           <div className={styles.barBlock}>
             <div
               role="img"
-              aria-label={`${info.label}. ${description}`}
+              aria-label={`${t(info.label)}. ${description}`}
               className={cx(styles.bar, !totalsConfirmed && styles.barStale)}
             >
               <span className={styles.barFill} style={{ width: `${Math.round((fraction ?? 0) * 100)}%` }} />

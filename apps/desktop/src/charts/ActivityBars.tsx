@@ -5,6 +5,7 @@ import { stack } from 'd3-shape';
 import { useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import { useFocusVisible } from 'react-aria';
 import type { HeadingLevel } from '../components/Card';
+import { t } from '../i18n';
 import { cx } from '../utils/cx';
 import { ChartFrame } from './ChartFrame';
 import { ChartTooltip } from './ChartTooltip';
@@ -85,7 +86,7 @@ export function ActivityBars({
   patterns: patternsProp,
   actions,
   height = '17rem',
-  emptyMessage = 'No recorded time in this window.',
+  emptyMessage = t('No recorded time in this window.'),
 }: ActivityBarsProps) {
   const increasedContrast = useIncreasedContrast();
   const patterns = patternsProp ?? increasedContrast;
@@ -141,7 +142,8 @@ export function ActivityBars({
       .map((entry) => ({ entry, value: bucket.values[entry.id] ?? 0 }))
       .filter(({ value }) => value > 0)
       .map(({ entry, value }) => `${entry.name} ${formatValue(value)}`);
-    return `${bucket.longLabel ?? bucket.label}: ${formatValue(totals[index] ?? 0)} recorded${parts.length ? `. ${parts.join(', ')}` : ''}`;
+    const summary = t('{label}: {value} recorded', { label: bucket.longLabel ?? bucket.label, value: formatValue(totals[index] ?? 0) });
+    return parts.length ? `${summary}. ${parts.join(', ')}` : summary;
   };
 
   const plotX = (event: PointerEvent<SVGSVGElement>) => {
@@ -236,10 +238,10 @@ export function ActivityBars({
   const dragging = drag !== null && Math.abs(drag.currentX - drag.startX) >= DRAG_THRESHOLD;
 
   const instructions = [
-    'Use the Left and Right Arrow keys to move between intervals',
-    onSelect ? 'Return to select one' : null,
-    onZoom ? 'plus to zoom into it' : null,
-    onZoomOut ? 'minus to zoom out' : null,
+    t('Use the Left and Right Arrow keys to move between intervals'),
+    onSelect ? t('Return to select one') : null,
+    onZoom ? t('plus to zoom into it') : null,
+    onZoomOut ? t('minus to zoom out') : null,
   ]
     .filter(Boolean)
     .join(', ');
@@ -248,9 +250,9 @@ export function ActivityBars({
     <DataTable
       caption={title}
       columns={[
-        { id: 'interval', header: 'Interval' },
+        { id: 'interval', header: t('Interval') },
         ...series.map((entry) => ({ id: entry.id, header: entry.name, align: 'end' as const })),
-        { id: 'total', header: 'Total', align: 'end' },
+        { id: 'total', header: t('Total'), align: 'end' },
       ]}
       rows={buckets.map((bucket, index) => ({
         id: bucket.id,
@@ -279,7 +281,7 @@ export function ActivityBars({
             width={size.width}
             height={size.height}
             role="group"
-            aria-label={`${title}, stacked bar chart`}
+            aria-label={t('{title}, stacked bar chart', { title })}
             className={cx(styles.svg, onZoom && styles.zoomable)}
             onPointerMove={onPointerMove}
             onPointerDown={onPointerDown}
@@ -309,7 +311,7 @@ export function ActivityBars({
                   className={styles.selectionBand}
                 />
               ) : null}
-              <g role="listbox" aria-label={`${title}: intervals`} aria-orientation="horizontal" aria-describedby={instructionsId}>
+              <g role="listbox" aria-label={t('{title}: intervals', { title })} aria-orientation="horizontal" aria-describedby={instructionsId}>
                 {buckets.map((bucket, index) => {
                   const left = x(bucket.id) ?? 0;
                   const selected = bucket.id === selectedId;
@@ -441,7 +443,7 @@ export function ActivityBars({
             containerWidth={size.width}
             title={inspectedBucket.longLabel ?? inspectedBucket.label}
             lines={[
-              `${formatValue(totals[inspected] ?? 0)} recorded`,
+              t('{value} recorded', { value: formatValue(totals[inspected] ?? 0) }),
               ...series
                 .filter((entry) => (inspectedBucket.values[entry.id] ?? 0) > 0)
                 .map((entry) => `${entry.name}: ${formatValue(inspectedBucket.values[entry.id] ?? 0)}`),

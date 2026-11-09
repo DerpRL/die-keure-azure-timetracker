@@ -7,6 +7,7 @@ import type { OfflineDraftView } from '../../ipc/contract';
 import { useAction } from '../../state/hooks';
 import { cx } from '../../utils/cx';
 import styles from './offline.module.css';
+import { mark, t } from '../../i18n';
 
 type DraftKind = 'timer' | 'record' | 'unconfirmed' | 'draft';
 
@@ -16,30 +17,58 @@ function kindOf(draft: Pick<OfflineDraftView, 'status' | 'end'>): DraftKind {
   return draft.end ? 'draft' : 'timer';
 }
 
-const WORDING: Record<DraftKind, { title: string; action: string; cancel: string; done: string }> = {
-  timer: { title: 'Delete this local timer?', action: 'Delete timer', cancel: 'Keep timer', done: 'Local timer deleted.' },
-  record: { title: 'Delete this local record?', action: 'Delete record', cancel: 'Keep record', done: 'Local record deleted.' },
-  unconfirmed: { title: 'Delete this unconfirmed draft?', action: 'Delete draft', cancel: 'Keep draft', done: 'Draft deleted.' },
-  draft: { title: 'Delete this draft?', action: 'Delete draft', cancel: 'Keep draft', done: 'Draft deleted.' },
+/** English (`mark`), translated where shown. */
+const WORDING: Record<DraftKind, { title: string; action: string; opens: string; cancel: string; done: string }> = {
+  timer: {
+    title: mark('Delete this local timer?'),
+    action: mark('Delete timer'),
+    opens: mark('Delete timer…'),
+    cancel: mark('Keep timer'),
+    done: mark('Local timer deleted.'),
+  },
+  record: {
+    title: mark('Delete this local record?'),
+    action: mark('Delete record'),
+    opens: mark('Delete record…'),
+    cancel: mark('Keep record'),
+    done: mark('Local record deleted.'),
+  },
+  unconfirmed: {
+    title: mark('Delete this unconfirmed draft?'),
+    action: mark('Delete draft'),
+    opens: mark('Delete draft…'),
+    cancel: mark('Keep draft'),
+    done: mark('Draft deleted.'),
+  },
+  draft: {
+    title: mark('Delete this draft?'),
+    action: mark('Delete draft'),
+    opens: mark('Delete draft…'),
+    cancel: mark('Keep draft'),
+    done: mark('Draft deleted.'),
+  },
 };
 
 function description(kind: DraftKind, name: string): string {
   switch (kind) {
     case 'timer':
-      return `“${name}” is not saved and not uploaded to 7pace. This can’t be undone.`;
+      return t('“{name}” is not saved and not uploaded to 7pace. This can’t be undone.', { name });
     case 'record':
-      return `Only the copy of “${name}” on this device is deleted. The entry stays in 7pace.`;
+      return t('Only the copy of “{name}” on this device is deleted. The entry stays in 7pace.', { name });
     case 'unconfirmed':
       // The upload's outcome is unknown: 7pace may have the entry. Deleting never touches 7pace.
-      return `The upload of “${name}” wasn’t confirmed, so 7pace may already have it. Only the draft on this device is deleted; check 7pace for the entry. This can’t be undone.`;
+      return t(
+        'The upload of “{name}” wasn’t confirmed, so 7pace may already have it. Only the draft on this device is deleted; check 7pace for the entry. This can’t be undone.',
+        { name },
+      );
     case 'draft':
-      return `“${name}” is not uploaded to 7pace. This can’t be undone.`;
+      return t('“{name}” is not uploaded to 7pace. This can’t be undone.', { name });
   }
 }
 
 /** The button label that opens the confirmation: "Delete timer…", "Delete draft…". */
 export function deleteDraftLabel(draft: Pick<OfflineDraftView, 'status' | 'end'>): string {
-  return `${WORDING[kindOf(draft)].action}…`;
+  return t(WORDING[kindOf(draft)].opens);
 }
 
 /**
@@ -85,11 +114,11 @@ export function DeleteDraftDialog({ draft, name, onClose, onDeleted }: DeleteDra
       }}
       role="alertdialog"
       size="small"
-      title={wording.title}
+      title={t(wording.title)}
       description={description(kind, name)}
-      cancelLabel={wording.cancel}
+      cancelLabel={t(wording.cancel)}
       primaryAction={{
-        label: wording.action,
+        label: t(wording.action),
         variant: 'destructive',
         isPending: remove.pending,
         onAction: () => {
@@ -97,7 +126,7 @@ export function DeleteDraftDialog({ draft, name, onClose, onDeleted }: DeleteDra
           void remove.run({ type: 'offline.remove', draftId: draft.id }).then((result) => {
             if (!result.ok) return;
             onClose();
-            announce(wording.done);
+            announce(t(wording.done));
             onDeleted?.();
           });
         },

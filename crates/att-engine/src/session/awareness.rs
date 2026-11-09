@@ -25,6 +25,7 @@ use crate::controllers::hooks as controllers;
 use crate::engine::Engine;
 use crate::intent::done;
 use crate::ipc::IpcError;
+use crate::nl::{tr, trf};
 use crate::probes::{PROBE_DEADLINE, blocking};
 use crate::state::AppState;
 
@@ -62,11 +63,11 @@ impl AwarenessState {
     /// Swift `reason`, with an OS-neutral wording outside macOS.
     pub fn reason(&self, os: Option<HostOs>) -> &'static str {
         if self.unavailable.contains_key("lock") {
-            "Screen locked"
+            tr("Screen locked")
         } else if os == Some(HostOs::Macos) || os.is_none() {
-            "Mac asleep or session inactive"
+            tr("Mac asleep or session inactive")
         } else {
-            "Computer asleep or session inactive"
+            tr("Computer asleep or session inactive")
         }
     }
 }
@@ -197,7 +198,7 @@ pub(crate) fn check(engine: &Engine, now: Timestamp) {
             let app = awareness.foreground.as_ref();
             let watched = preferences.watches(app.map(|app| app.id.as_str()));
             let name =
-                app.and_then(|app| app.name.non_empty()).unwrap_or("your work app").to_string();
+                app.and_then(|app| app.name.non_empty()).unwrap_or(tr("your work app")).to_string();
             let deferral = awareness.ledger.deferral.clone();
             awareness.forgotten.observe(
                 now,
@@ -331,9 +332,9 @@ pub(crate) async fn review_idle_time(
     let result = if durable {
         att_core::tracking::stop(&prompt.session.identity, clients.seven_pace.as_ref()).await
     } else {
-        Err(AppError::message(
+        Err(AppError::message(tr(
             "The idle review could not be saved locally. Your timer has not been stopped.",
-        ))
+        )))
     };
     match result {
         Ok(stopped) => {
@@ -345,8 +346,10 @@ pub(crate) async fn review_idle_time(
             progress::load(engine).await;
         }
         Err(error) => {
-            let message =
-                format!("{error} Check the timer before continuing; no correction was applied.");
+            let message = trf(
+                "{error} Check the timer before continuing; no correction was applied.",
+                &[("error", &error)],
+            );
             reconcile_after_error(engine, &clients, message).await;
         }
     }

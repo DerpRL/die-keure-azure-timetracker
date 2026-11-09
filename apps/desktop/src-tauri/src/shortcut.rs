@@ -157,7 +157,10 @@ fn quick_switch(app: &AppHandle) {
 fn parse(text: &str) -> Result<Accelerator, String> {
     let text = text.trim();
     let shortcut: Shortcut = text.parse().map_err(|_| {
-        format!("“{text}” is not a valid shortcut. Use modifiers and one key, for example {DEFAULT_ACCELERATOR}.")
+        crate::nl::trf(
+            "“{text}” is not a valid shortcut. Use modifiers and one key, for example {example}.",
+            &[("text", &text), ("example", &DEFAULT_ACCELERATOR)],
+        )
     })?;
     // F1–F24 may stand alone; any other key needs a modifier besides Shift.
     let key = shortcut.key.to_string();
@@ -165,23 +168,36 @@ fn parse(text: &str) -> Result<Accelerator, String> {
     let has_command_modifier =
         shortcut.mods.intersects(Modifiers::CONTROL | Modifiers::ALT | Modifiers::SUPER);
     if !function_key && !has_command_modifier {
-        return Err(format!(
-            "{} would capture normal typing. Add Control, {} or {}.",
-            label(&shortcut),
-            if cfg!(target_os = "macos") { "Option" } else { "Alt" },
-            if cfg!(target_os = "macos") { "Command" } else { "the Windows key" },
-        ));
+        let shortcut = label(&shortcut);
+        return Err(if cfg!(target_os = "macos") {
+            crate::nl::trf(
+                "{shortcut} would capture normal typing. Add Control, Option or Command.",
+                &[("shortcut", &shortcut)],
+            )
+        } else {
+            crate::nl::trf(
+                "{shortcut} would capture normal typing. Add Control, Alt or the Windows key.",
+                &[("shortcut", &shortcut)],
+            )
+        });
     }
     Ok(Accelerator { text: text.to_string(), shortcut })
 }
 
 /// 1.x: "⌃⌥T is unavailable or already used by another app. Use Switch ticket in the menu bar."
 fn unavailable(shortcut: &Shortcut) -> String {
-    let place = if cfg!(target_os = "macos") { "in the menu bar" } else { "from the tray icon" };
-    format!(
-        "{} is unavailable or already used by another app. Use Switch ticket {place}.",
-        label(shortcut)
-    )
+    let shortcut = label(shortcut);
+    if cfg!(target_os = "macos") {
+        crate::nl::trf(
+            "{shortcut} is unavailable or already used by another app. Use Switch ticket in the menu bar.",
+            &[("shortcut", &shortcut)],
+        )
+    } else {
+        crate::nl::trf(
+            "{shortcut} is unavailable or already used by another app. Use Switch ticket from the tray icon.",
+            &[("shortcut", &shortcut)],
+        )
+    }
 }
 
 /// "⌃⌥⇧⌘T" on macOS (Apple's modifier order), "Ctrl+Alt+Shift+Win+T" elsewhere.

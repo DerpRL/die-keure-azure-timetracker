@@ -7,6 +7,7 @@ import { usePageTitleId } from '../../layout/pageTitle';
 import { isViewVisible, PLACES, SETTINGS_GROUPS, type PageVisibility, type SettingsView } from '../../layout/navigation';
 import { useSlice } from '../../state/hooks';
 import { cx } from '../../utils/cx';
+import { t, tn } from '../../i18n';
 import styles from './settings.module.css';
 
 export interface SettingsNavProps {
@@ -26,15 +27,15 @@ function SearchResults({ query, sections, onFind }: { query: string; sections: r
   return (
     <div className={styles.group}>
       <p role="status" className={styles.groupTitle}>
-        {results.length === 0 ? 'No settings match' : `${results.length} ${results.length === 1 ? 'result' : 'results'}`}
+        {results.length === 0 ? t('No settings match') : tn(results.length, '{count} result', '{count} results')}
       </p>
       {results.length > 0 ? (
-        <ul role="list" aria-label="Search results" className={styles.list}>
+        <ul role="list" aria-label={t('Search results')} className={styles.list}>
           {results.map((section) => (
             <li key={section.id}>
               <button type="button" className={cx(styles.item, styles.result)} onClick={() => onFind(section.id)}>
-                <span className={styles.itemLabel}>{section.title}</span>
-                <span className={styles.resultView}>{VIEW_INTROS[section.view].title}</span>
+                <span className={styles.itemLabel}>{t(section.title)}</span>
+                <span className={styles.resultView}>{t(VIEW_INTROS[section.view].title)}</span>
               </button>
             </li>
           ))}
@@ -58,13 +59,13 @@ export function SettingsNav({ current, isPageVisible, onSelect, issueCounts = {}
   return (
     <nav aria-labelledby={titleId} className={styles.nav}>
       <h1 id={titleId} className={styles.navTitle}>
-        Settings
+        {t('Settings')}
       </h1>
       {sections && onFind ? (
         <SearchField
-          label="Search settings"
+          label={t('Search settings')}
           hideLabel
-          placeholder="Search settings"
+          placeholder={t('Search settings')}
           value={query}
           onChange={setQuery}
           onSubmit={() => {
@@ -85,7 +86,7 @@ export function SettingsNav({ current, isPageVisible, onSelect, issueCounts = {}
           return (
             <div key={group.id} className={styles.group}>
               <h2 id={headingId} className={styles.groupTitle}>
-                {group.title}
+                {t(group.title)}
               </h2>
               <ul role="list" aria-labelledby={headingId} className={styles.list}>
                 {items.map((view) => {
@@ -100,21 +101,21 @@ export function SettingsNav({ current, isPageVisible, onSelect, issueCounts = {}
                         // "Reminders, 1 problem" or "…, connected": the visible label stays first (WCAG 2.5.3).
                         aria-label={
                           count > 0
-                            ? `${view.title}, ${count} ${count === 1 ? 'problem' : 'problems'}`
+                            ? tn(count, '{view}, {count} problem', '{view}, {count} problems', { view: t(view.title) })
                             : view.id === 'accounts' && connection?.connected
-                              ? `${view.title}, connected`
+                              ? t('{view}, connected', { view: t(view.title) })
                               : undefined
                         }
                         onClick={() => onSelect(view.id as SettingsView)}
                       >
-                        <span className={styles.itemLabel}>{view.title}</span>
+                        <span className={styles.itemLabel}>{t(view.title)}</span>
                         {count > 0 ? (
                           <Badge tone="danger" icon={ErrorIcon}>
                             {count}
                           </Badge>
                         ) : view.id === 'accounts' && connection?.connected ? (
                           <span aria-hidden="true">
-                            <StatusDot tone="success" label="connected" />
+                            <StatusDot tone="success" label={t('connected')} />
                           </span>
                         ) : null}
                       </button>

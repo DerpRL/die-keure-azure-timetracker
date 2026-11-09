@@ -11,7 +11,7 @@ use att_core::offline::OfflineLedger;
 use att_core::worklog::ops::{WorkLogChange, WorkLogChangeStatus};
 use att_store::{StoreError, keys};
 
-use super::time_editor::INTERRUPTED_DETAIL;
+use super::time_editor::interrupted_detail;
 use super::weekly;
 use crate::ipc::IpcError;
 use crate::services::Services;
@@ -33,8 +33,9 @@ pub(crate) fn load(services: &Services, state: &mut AppState) {
             Ok(None) => {}
             Err(error) => {
                 controllers.offline.unreadable = true;
-                controllers.offline.issue = Some(format!(
-                    "Local drafts could not be read. The file has been preserved: {error}"
+                controllers.offline.issue = Some(crate::nl::trf(
+                    "Local drafts could not be read. The file has been preserved: {error}",
+                    &[("error", &error)],
                 ));
             }
         }
@@ -47,7 +48,7 @@ pub(crate) fn load(services: &Services, state: &mut AppState) {
             let mut interrupted = false;
             for change in changes.iter_mut().filter(|c| c.status == WorkLogChangeStatus::Applying) {
                 change.status = WorkLogChangeStatus::NeedsReview;
-                change.detail = INTERRUPTED_DETAIL.into();
+                change.detail = interrupted_detail().into();
                 interrupted = true;
             }
             editor.changes = changes;
@@ -56,7 +57,10 @@ pub(crate) fn load(services: &Services, state: &mut AppState) {
         Ok(None) => {}
         Err(error) => {
             editor.journal_unreadable = true;
-            editor.journal_issue = Some(format!("Edit history could not be read. {error}"));
+            editor.journal_issue = Some(crate::nl::trf(
+                "Edit history could not be read. {error}",
+                &[("error", &error)],
+            ));
         }
     }
 }

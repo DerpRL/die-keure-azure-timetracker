@@ -366,7 +366,9 @@ pub(crate) async fn load(engine: &Engine, force: bool) {
             let parse_cal = cal.clone();
             tokio::task::spawn_blocking(move || ExplorerDataset::new(&logs, &parse_cal))
                 .await
-                .map_err(|_| AppError::message("The downloaded worklogs could not be read."))
+                .map_err(|_| {
+                    AppError::message(crate::nl::tr("The downloaded worklogs could not be read."))
+                })
         }
         Err(error) => Err(error),
     };

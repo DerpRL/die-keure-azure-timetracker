@@ -11,6 +11,7 @@ import {
 } from 'react';
 import { useFocusVisible } from 'react-aria';
 import type { HeadingLevel } from '../components/Card';
+import { t } from '../i18n';
 import { cx } from '../utils/cx';
 import { ChartFrame } from './ChartFrame';
 import { ChartTooltip } from './ChartTooltip';
@@ -183,9 +184,9 @@ export function HourHeatmap({
     <DataTable
       caption={title}
       columns={[
-        { id: 'day', header: 'Day' },
-        { id: 'hour', header: 'Hour' },
-        { id: 'value', header: 'Recorded', align: 'end' },
+        { id: 'day', header: t('Day') },
+        { id: 'hour', header: t('Hour') },
+        { id: 'value', header: t('Recorded'), align: 'end' },
       ]}
       rows={rows.flatMap((row, rowIndex) =>
         (model.byRow[rowIndex] ?? []).map((cell) => ({
@@ -204,7 +205,7 @@ export function HourHeatmap({
       headingLevel={headingLevel}
       description={description}
       table={table}
-      legend={<HeatLegend maximum={maximum} unit="per cell" formatValue={formatValue} />}
+      legend={<HeatLegend maximum={maximum} unit={t('per cell')} formatValue={formatValue} />}
     >
       <div className={styles.heatContainer}>
         <div
@@ -269,8 +270,8 @@ export function HourHeatmap({
           />
         ) : null}
         <p id={instructionsId} className="visually-hidden">
-          Use Left and Right Arrow to move between hours and Up and Down Arrow to move between days.
-          {onSelectCell ? ' Press Return to zoom to the hour.' : ''}
+          {t('Use Left and Right Arrow to move between hours and Up and Down Arrow to move between days.')}
+          {onSelectCell ? ` ${t('Press Return to zoom to the hour.')}` : ''}
         </p>
       </div>
     </ChartFrame>

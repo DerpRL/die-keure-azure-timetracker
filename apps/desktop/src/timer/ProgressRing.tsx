@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { IconComponent } from '../components/icons';
 import { ClockIcon, ConnectingIcon, PauseIcon, PlayIcon, StopIcon } from '../components/icons';
+import { t } from '../i18n';
 import { cx } from '../utils/cx';
 import type { TrackingStatus } from './status';
 import styles from './TimerDisplay.module.css';
@@ -38,7 +39,7 @@ export function ProgressRing({ status, fraction, stale, label, reducedMotion }: 
   const percent = fraction === null ? 0 : Math.round(Math.min(1, Math.max(0, fraction)) * 1000) / 10;
 
   return (
-    <span role="img" aria-label={`Tracking clock. ${label}`} className={cx(styles.ring, styles[`status-${status}`])}>
+    <span role="img" aria-label={t('Tracking clock. {label}', { label })} className={cx(styles.ring, styles[`status-${status}`])}>
       <svg viewBox="0 0 64 64" className={styles.ringSvg} aria-hidden="true">
         <circle cx={32} cy={32} r={29} className={styles.ringTrack} />
         {fraction !== null && percent > 0 ? (

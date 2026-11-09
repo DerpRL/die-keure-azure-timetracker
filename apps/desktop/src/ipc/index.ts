@@ -12,6 +12,7 @@
  */
 import { invoke as tauriInvoke } from '@tauri-apps/api/core';
 import { listen as tauriListen } from '@tauri-apps/api/event';
+import { t } from '../i18n';
 import { createMockIpc, type MockIpc } from './mock';
 
 export { createMockIpc, type MockIpc, type MockCommandHandler } from './mock';
@@ -57,9 +58,9 @@ function describe(payload: unknown): string {
     return payload.message;
   }
   try {
-    return JSON.stringify(payload) ?? 'Unknown IPC error';
+    return JSON.stringify(payload) ?? t('Unknown IPC error');
   } catch {
-    return 'Unknown IPC error';
+    return t('Unknown IPC error');
   }
 }
 

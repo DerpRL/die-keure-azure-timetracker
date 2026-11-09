@@ -4,6 +4,7 @@ import { Button, IconButton } from '../../../components/Button';
 import { DatePicker } from '../../../components/DateFields';
 import { ArrowLeftIcon, ArrowRightIcon } from '../../../components/icons';
 import { Popover, PopoverTrigger } from '../../../components/Popover';
+import { t } from '../../../i18n';
 import type { StatisticsSlice } from '../../../ipc/contract';
 import { useAction } from '../../../state/hooks';
 import { instant, seconds } from './format';
@@ -31,20 +32,20 @@ export function ZoomControls({ slice }: { slice: StatisticsSlice }) {
   const { run } = zoom;
   return (
     <div className={styles.zoomBar}>
-      <div role="group" aria-label="Zoom" className={styles.zoomButtons}>
+      <div role="group" aria-label={t('Zoom')} className={styles.zoomButtons}>
         <Button size="small" isDisabled={slice.zoomDepth === 0} onPress={() => void run({ type: 'statistics.back' })}>
-          Back
+          {t('Back')}
         </Button>
         <Button size="small" isDisabled={!canZoomIn(slice)} onPress={() => void run({ type: 'statistics.scale', factor: 0.5 })}>
-          Zoom in
+          {t('Zoom in')}
         </Button>
         <Button size="small" isDisabled={!slice.isZoomed} onPress={() => void run({ type: 'statistics.scale', factor: 2 })}>
-          Zoom out
+          {t('Zoom out')}
         </Button>
         <IconButton
           size="small"
           variant="secondary"
-          label="Pan earlier"
+          label={t('Pan earlier')}
           icon={ArrowLeftIcon}
           isDisabled={!canPanEarlier(slice)}
           onPress={() => void run({ type: 'statistics.pan', direction: -1 })}
@@ -52,7 +53,7 @@ export function ZoomControls({ slice }: { slice: StatisticsSlice }) {
         <IconButton
           size="small"
           variant="secondary"
-          label="Pan later"
+          label={t('Pan later')}
           icon={ArrowRightIcon}
           isDisabled={!canPanLater(slice)}
           onPress={() => void run({ type: 'statistics.pan', direction: 1 })}
@@ -60,9 +61,9 @@ export function ZoomControls({ slice }: { slice: StatisticsSlice }) {
       </div>
       <PopoverTrigger>
         <Button size="small">
-          Choose range…
+          {t('Choose range…')}
         </Button>
-        <Popover title="Zoom to a time range" width="large" placement="bottom end">
+        <Popover title={t('Zoom to a time range')} width="large" placement="bottom end">
           {(close) => <RangeForm slice={slice} onDone={close} />}
         </Popover>
       </PopoverTrigger>
@@ -92,13 +93,13 @@ function RangeForm({ slice, onDone }: { slice: StatisticsSlice; onDone: () => vo
         onDone();
       }}
     >
-      <DatePicker<ZonedDateTime> label="From" granularity="minute" hideTimeZone shouldForceLeadingZeros value={from} onChange={setFrom} minValue={min} maxValue={max} />
-      <DatePicker<ZonedDateTime> label="To" granularity="minute" hideTimeZone shouldForceLeadingZeros value={to} onChange={setTo} minValue={min} maxValue={max} />
-      <p className={styles.secondary}>Minimum window: 15 minutes. Ranges stay inside the selected period.</p>
+      <DatePicker<ZonedDateTime> label={t('From')} granularity="minute" hideTimeZone shouldForceLeadingZeros value={from} onChange={setFrom} minValue={min} maxValue={max} />
+      <DatePicker<ZonedDateTime> label={t('To')} granularity="minute" hideTimeZone shouldForceLeadingZeros value={to} onChange={setTo} minValue={min} maxValue={max} />
+      <p className={styles.secondary}>{t('Minimum window: 15 minutes. Ranges stay inside the selected period.')}</p>
       <div className={styles.formActions}>
-        <Button onPress={onDone}>Cancel</Button>
+        <Button onPress={onDone}>{t('Cancel')}</Button>
         <Button type="submit" variant="primary" isDisabled={!valid}>
-          Apply range
+          {t('Apply range')}
         </Button>
       </div>
     </form>

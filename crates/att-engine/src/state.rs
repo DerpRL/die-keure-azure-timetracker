@@ -44,9 +44,17 @@ pub struct AppState {
     pub audit: Vec<AuditEntry>,
     pub session: SessionState,
     pub controllers: ControllerState,
+    /// The system language a window reported (`app.setSystemLanguage`), for the `system`
+    /// interface language. English until a window reports.
+    pub system_language: att_core::i18n::Language,
 }
 
 impl AppState {
+    /// Builds text in the language the saved preference and the system language choose.
+    pub(crate) fn apply_language(&self) {
+        att_core::i18n::set_language(self.config.interface.language.resolve(self.system_language));
+    }
+
     /// Every page whose content is on screen: `visible_page` first, then `visible_also`.
     pub fn visible_pages(&self) -> Vec<String> {
         self.visible_page.iter().chain(self.visible_also.iter()).cloned().collect()

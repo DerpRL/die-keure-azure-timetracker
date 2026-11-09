@@ -468,3 +468,79 @@ async fn the_filter_matches_ticket_numbers_and_comments() {
     h.ok(json!({"type": "timeEditor.cancel"})).await;
     assert!(h.slice("timeEditor")["selected"].is_null());
 }
+
+#[tokio::test]
+async fn a_new_entry_is_journalled_created_once_and_undo_removes_it() {
+    let h = editor().await;
+    // 06:00–06:45 local (04:00Z–04:45Z) on the shown day, before A starts.
+    let created = h
+        .ok(json!({"type": "timeEditor.create", "start": "2026-10-06T04:00:00Z", "end": "2026-10-06T04:45:00Z",
+            "ticketId": 7, "comment": "", "activityId": "dev", "billable": true}))
+        .await;
+    let id = created["id"].as_str().unwrap().to_string();
+    assert_eq!(h.seven_pace.mutations(), ["create"]);
+    let at_write = journals_at_writes(&h);
+    assert_eq!(at_write[0][0].status, WorkLogChangeStatus::Applying, "journalled before the write");
+    let change = journal(&h).remove(0);
+    assert_eq!((change.title.as_str(), change.status), ("Add time", WorkLogChangeStatus::Complete));
+    assert!(change.before.is_empty());
+    assert_eq!(change.after[0].id, id);
+    let log = &h.seven_pace.logs()[&id];
+    assert_eq!((log.length, log.work_item_id), (2700.0, Some(7)));
+    assert_eq!(
+        h.slice("timeEditor")["message"],
+        "Add time confirmed by 7pace. You can undo this from Recent edits."
+    );
+
+    h.ok(json!({"type": "timeEditor.beginUndo", "changeId": change.id})).await;
+    assert_eq!(h.slice("timeEditor")["plan"]["title"], "Undo add time");
+    h.ok(json!({"type": "timeEditor.save"})).await;
+    assert_eq!(h.seven_pace.mutations()[1..], [format!("delete {id}")]);
+    assert!(!h.seven_pace.logs().contains_key(&id));
+    let stored = journal(&h);
+    assert_eq!(
+        stored.iter().find(|c| c.id == change.id).unwrap().status,
+        WorkLogChangeStatus::Undone
+    );
+
+    // Undoing the undo creates the entry again, with a new id.
+    let undo = stored.iter().find(|c| c.undo_of == Some(change.id)).unwrap().clone();
+    h.ok(json!({"type": "timeEditor.beginUndo", "changeId": undo.id})).await;
+    h.ok(json!({"type": "timeEditor.save"})).await;
+    assert_eq!(h.seven_pace.mutations()[2..], ["create"]);
+    let logs = h.seven_pace.logs();
+    assert_eq!(logs.len(), 4);
+    assert!(logs.values().any(|log| log.work_item_id == Some(7) && log.length == 2700.0));
+}
+
+#[tokio::test]
+async fn a_new_entry_needs_a_ticket_or_a_comment_and_no_future_time() {
+    let h = editor().await;
+    let missing = h
+        .dispatch(json!({"type": "timeEditor.create", "start": "2026-10-06T04:00:00Z", "end": "2026-10-06T04:30:00Z",
+            "ticketId": null, "comment": " ", "activityId": null, "billable": false}))
+        .await
+        .unwrap_err();
+    assert_eq!(missing.message, "Choose a valid ticket or add a comment for ticket-free time.");
+    let future = h
+        .dispatch(json!({"type": "timeEditor.create", "start": "2026-10-06T07:30:00Z", "end": "2026-10-06T08:30:00Z",
+            "ticketId": 7, "comment": "", "activityId": null, "billable": false}))
+        .await
+        .unwrap_err();
+    assert_eq!(future.message, "Choose valid times with no time in the future.");
+    assert!(h.seven_pace.mutations().is_empty());
+    assert!(journal(&h).is_empty(), "nothing is journalled for a refused entry");
+    assert_eq!(h.slice("timeEditor")["working"], false);
+}
+
+#[tokio::test]
+async fn a_new_entry_reports_overlaps_without_blocking() {
+    let h = editor().await;
+    // 09:30–10:00 local overlaps A (09:00–10:00 local).
+    h.ok(json!({"type": "timeEditor.create", "start": "2026-10-06T05:30:00Z", "end": "2026-10-06T06:00:00Z",
+        "ticketId": null, "comment": "Support call", "activityId": null, "billable": false}))
+        .await;
+    assert_eq!(h.seven_pace.mutations(), ["create"]);
+    let conflicts = h.slice("timeEditor")["savedConflicts"].clone();
+    assert_eq!(ids(&conflicts), [A]);
+}

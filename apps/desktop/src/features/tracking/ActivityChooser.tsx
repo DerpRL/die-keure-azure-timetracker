@@ -8,6 +8,7 @@ import type { ActivityType, DraftView, FlowSlice, ManualTrackingKind } from '../
 import { ActionError, useIntents, useWriteGuards, type IntentRunner } from './actions';
 import { ReturnIcon } from './icons';
 import styles from './tracking.module.css';
+import { mark, t } from '../../i18n';
 
 interface FormState {
   draftId: string | null;
@@ -114,15 +115,15 @@ export function useActivityForm(
 }
 
 export const COMMENT_PLACEHOLDER: Record<ManualTrackingKind, string> = {
-  standup: 'daily standup',
-  meeting: 'Meeting',
-  activity: 'Defaults to the activity name',
+  standup: mark('daily standup'),
+  meeting: mark('Meeting'),
+  activity: mark('Defaults to the activity name'),
 };
 
 export const COMMENT_HINT: Record<ManualTrackingKind, string> = {
-  standup: 'Leave blank to use daily standup.',
-  meeting: 'Leave blank to use the meeting or activity name.',
-  activity: 'Leave blank to use the meeting or activity name.',
+  standup: mark('Leave blank to use daily standup.'),
+  meeting: mark('Leave blank to use the meeting or activity name.'),
+  activity: mark('Leave blank to use the meeting or activity name.'),
 };
 
 export interface ActivityChooserProps {
@@ -144,14 +145,14 @@ export function ActivityChooser({ flow, form, variant }: ActivityChooserProps) {
   const item = includeTicket ? draft.item : null;
   const title = includeTicket ? draft.title : (draft.remark ?? draft.title);
   const trackingComment = includeTicket ? draft.commentWithTicket : draft.commentWithoutTicket;
-  const startLabel = sheet ? 'Start tracking' : 'Start';
+  const startLabel = sheet ? t('Start tracking') : t('Start');
   const resuming = draft.resume || draft.source === 'meetingReturn';
 
   let activityField: ReactNode;
   if (flow.loadingActivities) {
     activityField = (
       <p role="status" className={styles.caption}>
-        {sheet ? 'Loading 7pace activities…' : 'Loading activities…'}
+        {sheet ? t('Loading 7pace activities…') : t('Loading activities…')}
       </p>
     );
   } else if (flow.activityError) {
@@ -167,7 +168,7 @@ export function ActivityChooser({ flow, form, variant }: ActivityChooserProps) {
             isPending={switching.isPending('reload')}
             onPress={() => void switching.run('reload', { type: 'tracking.reloadActivities' })}
           >
-            {sheet ? 'Reload activity types' : 'Reload activities'}
+            {sheet ? t('Reload activity types') : t('Reload activities')}
           </Button>
         </div>
       </div>
@@ -176,20 +177,20 @@ export function ActivityChooser({ flow, form, variant }: ActivityChooserProps) {
     activityField = (
       <p className={styles.caption}>
         {sheet
-          ? 'No activity types are configured in 7pace. Its workspace default will be used.'
-          : '7pace’s workspace default activity will be used.'}
+          ? t('No activity types are configured in 7pace. Its workspace default will be used.')
+          : t('7pace’s workspace default activity will be used.')}
       </p>
     );
   } else if (form.activities.length > 0) {
     activityField = (
       <Select
-        label={sheet ? 'Activity type' : 'Activity'}
-        placeholder="Choose an activity"
+        label={sheet ? t('Activity type') : t('Activity')}
+        placeholder={t('Choose an activity')}
         items={form.activities.map((activity) => ({ id: activity.id, label: activity.name ?? activity.id }))}
         selectedKey={form.activityId || null}
         onSelectionChange={(key) => form.setActivityId(key === null ? '' : String(key))}
         isDisabled={busy}
-        description={sheet ? 'This applies to this session. Your saved default stays the same.' : undefined}
+        description={sheet ? t('This applies to this session. Your saved default stays the same.') : undefined}
       />
     );
   }
@@ -199,7 +200,7 @@ export function ActivityChooser({ flow, form, variant }: ActivityChooserProps) {
       <div className={styles.draftSummary}>
         {draft.source === 'meetingReturn' ? (
           <p className={styles.caption}>
-            <ReturnIcon className={styles.inlineIcon} /> Return to your previous work
+            <ReturnIcon className={styles.inlineIcon} /> {t('Return to your previous work')}
           </p>
         ) : null}
         {draft.meetingTitle ? (
@@ -207,9 +208,9 @@ export function ActivityChooser({ flow, form, variant }: ActivityChooserProps) {
             <CalendarIcon className={styles.inlineIcon} /> {draft.meetingTitle}
           </p>
         ) : null}
-        <p className={styles.ticketNumber}>{item ? `#${item.id} · ${item.type ?? 'Work item'}` : 'No Azure ticket'}</p>
+        <p className={styles.ticketNumber}>{item ? `#${item.id} · ${item.type ?? t('Work item')}` : t('No Azure ticket')}</p>
         <p className={styles.draftTitle}>{title}</p>
-        {!draft.manual && trackingComment ? <p className={styles.caption}>Comment: {trackingComment}</p> : null}
+        {!draft.manual && trackingComment ? <p className={styles.caption}>{t('Comment: {comment}', { comment: trackingComment })}</p> : null}
         {item?.teamProject ? <p className={styles.caption}>{item.teamProject}</p> : null}
       </div>
 
@@ -220,9 +221,9 @@ export function ActivityChooser({ flow, form, variant }: ActivityChooserProps) {
               isSelected={includeTicket}
               onChange={form.setIncludeTicket}
               isDisabled={busy}
-              description="Optional. Turn off to track only the activity and comment."
+              description={t('Optional. Turn off to track only the activity and comment.')}
             >
-              {`Use Azure ticket #${draft.item.id}`}
+              {t('Use Azure ticket #{id}', { id: draft.item.id })}
             </Switch>
           ) : null}
           {draft.canChooseTicket ? (
@@ -234,7 +235,7 @@ export function ActivityChooser({ flow, form, variant }: ActivityChooserProps) {
                 isPending={switching.isPending('another')}
                 onPress={() => void switching.run('another', { type: 'tracking.chooseSuggestionTicket', draftId: draft.id })}
               >
-                {draft.item ? 'Choose another ticket…' : 'Choose a ticket instead…'}
+                {draft.item ? t('Choose another ticket…') : t('Choose a ticket instead…')}
               </Button>
             </div>
           ) : null}
@@ -258,34 +259,34 @@ export function ActivityChooser({ flow, form, variant }: ActivityChooserProps) {
               isPending={switching.isPending('different')}
               onPress={() => void switching.run('different', { type: 'tracking.chooseDifferentWork' })}
             >
-              Choose different work…
+              {t('Choose different work…')}
             </Button>
           </div>
-          <p className={styles.caption}>The Figma file name is saved as the 7pace comment.</p>
+          <p className={styles.caption}>{t('The Figma file name is saved as the 7pace comment.')}</p>
         </div>
       ) : null}
 
       {draft.manual ? (
         <TextField
-          label="Comment (optional)"
+          label={t('Comment (optional)')}
           value={form.comment}
           onChange={form.setComment}
-          placeholder={COMMENT_PLACEHOLDER[draft.manual]}
-          description={COMMENT_HINT[draft.manual]}
+          placeholder={t(COMMENT_PLACEHOLDER[draft.manual])}
+          description={t(COMMENT_HINT[draft.manual])}
           isDisabled={busy}
         />
       ) : null}
 
       <p className={styles.caption}>
         {resuming
-          ? 'Resume starts a new session. Paused time is not logged.'
+          ? t('Resume starts a new session. Paused time is not logged.')
           : running
-            ? `Your current timer continues until you press ${startLabel}.`
-            : `The timer starts when you press ${startLabel}.`}
+            ? t('Your current timer continues until you press {button}.', { button: startLabel })
+            : t('The timer starts when you press {button}.', { button: startLabel })}
       </p>
       {busy || form.actions.isPending('start') ? (
         <p role="status" className={styles.caption}>
-          {sheet ? 'Starting tracking…' : 'Starting…'}
+          {sheet ? t('Starting tracking…') : t('Starting…')}
         </p>
       ) : null}
       <ActionError error={form.actions.error ?? switching.error} />
@@ -302,8 +303,8 @@ export function ActivityChooser({ flow, form, variant }: ActivityChooserProps) {
 export function startLabel(draft: DraftView, variant: 'panel' | 'picker', includeTicket = true): string {
   const resume = draft.resume || draft.source === 'meetingReturn';
   if (variant === 'picker') {
-    if (resume) return 'Resume tracking';
-    return includeTicket && draft.item ? `Track #${draft.item.id}` : 'Start tracking';
+    if (resume) return t('Resume tracking');
+    return includeTicket && draft.item ? t('Track #{id}', { id: draft.item.id }) : t('Start tracking');
   }
-  return resume ? 'Resume' : 'Start';
+  return resume ? t('Resume') : t('Start');
 }

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { t } from '../i18n';
 import { cx } from '../utils/cx';
 import { IconButton } from './Button';
 import { CloseIcon, ErrorIcon, InfoIcon, SuccessIcon, WarningIcon, type IconComponent } from './icons';
@@ -37,7 +38,7 @@ export function Banner({
   children,
   actions,
   onDismiss,
-  dismissLabel = 'Dismiss',
+  dismissLabel = t('Dismiss'),
   live,
   className,
 }: BannerProps) {

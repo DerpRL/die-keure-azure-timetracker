@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { t } from '../i18n';
 import { cx } from '../utils/cx';
 import styles from './charts.module.css';
 
@@ -23,7 +24,7 @@ export interface DataTableProps {
 }
 
 /** Static data table: the accessible twin of every chart. */
-export function DataTable({ caption, columns, rows, rowHeader = true, emptyMessage = 'No data' }: DataTableProps) {
+export function DataTable({ caption, columns, rows, rowHeader = true, emptyMessage = t('No data') }: DataTableProps) {
   return (
     <table className={styles.dataTable}>
       <caption className={styles.dataCaption}>{caption}</caption>

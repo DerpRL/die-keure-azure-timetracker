@@ -22,6 +22,7 @@ use att_core::{AppError, Result};
 
 use crate::auth::Authorizer;
 use crate::endpoint::Endpoint;
+use crate::nl::tr;
 use crate::transport::HttpTransport;
 use crate::wire;
 use crate::{Clock, system_clock};
@@ -115,9 +116,9 @@ impl SevenPaceOAuth {
     pub async fn create_pin(&self) -> Result<SevenPacePin> {
         let pin: SevenPacePin = self.pin_request("create", None).await?;
         if pin.pin.is_empty() || pin.secret.is_empty() {
-            return Err(AppError::message(
+            return Err(AppError::message(tr(
                 "7pace returned an incomplete pairing code. Request a new PIN.",
-            ));
+            )));
         }
         Ok(pin)
     }
@@ -133,9 +134,9 @@ impl SevenPaceOAuth {
             "validated" => Ok(SevenPacePinStatus::Validated),
             "validating" => Ok(SevenPacePinStatus::Waiting),
             "wrongorexpired" | "invalid" => Ok(SevenPacePinStatus::Expired),
-            _ => Err(AppError::message(
+            _ => Err(AppError::message(tr(
                 "7pace returned an unknown pairing status. Request a new PIN.",
-            )),
+            ))),
         }
     }
 
@@ -169,7 +170,9 @@ impl SevenPaceOAuth {
             return Ok(wrapped.data);
         }
         serde_json::from_slice(&data).map_err(|_| {
-            AppError::message("7pace returned an unreadable pairing response. Request a new PIN.")
+            AppError::message(tr(
+                "7pace returned an unreadable pairing response. Request a new PIN.",
+            ))
         })
     }
 
@@ -192,7 +195,9 @@ impl SevenPaceOAuth {
 }
 
 fn invalid_workspace() -> AppError {
-    AppError::message("Use your 7pace workspace URL: https://your-organization.timehub.7pace.com")
+    AppError::message(tr(
+        "Use your 7pace workspace URL: https://your-organization.timehub.7pace.com",
+    ))
 }
 
 /// Tolerant token parsing (Swift used `JSONSerialization`): `expires_in` as a number or numeric
@@ -203,7 +208,9 @@ fn parse_tokens(
     now: Timestamp,
 ) -> Result<SevenPaceTokens> {
     let incomplete = || {
-        AppError::message("7pace returned incomplete sign-in credentials. Pair again in Settings.")
+        AppError::message(tr(
+            "7pace returned incomplete sign-in credentials. Pair again in Settings.",
+        ))
     };
     let Ok(Value::Object(response)) = serde_json::from_slice::<Value>(data) else {
         return Err(incomplete());
@@ -343,7 +350,7 @@ impl SevenPaceTokenProvider {
             Ok(Some(Err(error))) => Err(error),
             // The renewal task ended without a result (runtime shutdown or a panic in `persist`).
             Ok(None) | Err(_) => {
-                Err(AppError::message("The 7pace sign-in could not be renewed. Try again."))
+                Err(AppError::message(tr("The 7pace sign-in could not be renewed. Try again.")))
             }
         }
     }

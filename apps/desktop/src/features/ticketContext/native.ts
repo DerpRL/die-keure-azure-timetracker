@@ -7,6 +7,7 @@
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { save, type DialogFilter } from '@tauri-apps/plugin-dialog';
 import { openUrl } from '@tauri-apps/plugin-opener';
+import { t } from '../../i18n';
 import { isTauri } from '../../ipc';
 
 export interface SavePathOptions {
@@ -52,7 +53,7 @@ export function isOpenableUrl(url: string): boolean {
 
 /** Opens an https (or figma) URL in the default browser or app. Other schemes are refused. */
 export async function openExternalUrl(url: string): Promise<void> {
-  if (!isOpenableUrl(url)) throw new Error('Only https links can be opened.');
+  if (!isOpenableUrl(url)) throw new Error(t('Only https links can be opened.'));
   try {
     await openUrl(url);
   } catch (error) {

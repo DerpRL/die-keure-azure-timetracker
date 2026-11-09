@@ -4,12 +4,13 @@ import { Button, IconButton } from '../../components/Button';
 import { DatePicker } from '../../components/DateFields';
 import { ChevronLeftIcon, ChevronRightIcon, RefreshIcon } from '../../components/icons';
 import { SegmentedControl } from '../../components/Segmented';
+import { t } from '../../i18n';
 import type { StatisticsSlice } from '../../ipc/contract';
 import { PlaceHeader } from '../../layout/Place';
 import { REFRESH_SHORTCUT } from '../../layout/PageHeader';
 import { useStuck } from '../../layout/useStuck';
 import { ActivityFilter, TicketFilter } from './explore/Filters';
-import { calendarDate, rangeTitle } from './explore/format';
+import { calendarDate, currentPeriodLabel, rangeTitle } from './explore/format';
 import { isCurrentOrFuture, JUMP_DEBOUNCE_MS, PERIODS, SyncStatus } from './explore/PeriodControls';
 import { useRefreshShortcut } from '../../shortcuts/hooks';
 import { useAction } from '../../state/hooks';
@@ -31,10 +32,10 @@ export function InsightsHeader({ slice }: { slice: StatisticsSlice | undefined }
   const configured = slice?.configured ?? false;
   const refreshing = slice?.loading ?? false;
   const doRefresh = () => void refresh.run({ type: 'statistics.refresh' });
-  useRefreshShortcut(doRefresh, { isDisabled: !slice || !configured || refreshing, label: 'Refresh statistics' });
+  useRefreshShortcut(doRefresh, { isDisabled: !slice || !configured || refreshing, label: t('Refresh statistics') });
   const [stickyRef, stuck] = useStuck<HTMLDivElement>();
 
-  if (!slice) return <PlaceHeader title="Insights" />;
+  if (!slice) return <PlaceHeader title={t('Insights')} />;
 
   // The picker is a draft: it shows the typed day until the range moves elsewhere (Previous,
   // Next, Current), then the first day of the engine's range.
@@ -61,13 +62,13 @@ export function InsightsHeader({ slice }: { slice: StatisticsSlice | undefined }
         before={
           <div className={styles.stepper}>
             <IconButton
-              label="Previous period"
+              label={t('Previous period')}
               icon={ChevronLeftIcon}
               variant="secondary"
               onPress={() => void run({ type: 'statistics.move', amount: -1 })}
             />
             <IconButton
-              label="Next period"
+              label={t('Next period')}
               icon={ChevronRightIcon}
               variant="secondary"
               isDisabled={atLatest}
@@ -78,16 +79,16 @@ export function InsightsHeader({ slice }: { slice: StatisticsSlice | undefined }
         after={
           atLatest ? null : (
             <Button size="small" variant="plain" onPress={() => void run({ type: 'statistics.current' })}>
-              {`Current ${slice.period}`}
+              {currentPeriodLabel(slice.period)}
             </Button>
           )
         }
         actions={
           <>
             <SegmentedControl
-              label="Period"
+              label={t('Period')}
               hideLabel
-              options={PERIODS}
+              options={PERIODS.map((option) => ({ ...option, label: t(option.label) }))}
               selectedKey={slice.period}
               onSelectionChange={(period) => void run({ type: 'statistics.setPeriod', period })}
             />
@@ -97,9 +98,9 @@ export function InsightsHeader({ slice }: { slice: StatisticsSlice | undefined }
                 <TicketFilter slice={slice} hideLabel className={styles.headerPicker} />
               </>
             ) : null}
-            <DatePicker<CalendarDate> label="Jump to" hideLabel className={styles.jumpTo} value={shown} maxValue={now} onChange={jumpTo} />
+            <DatePicker<CalendarDate> label={t('Jump to')} hideLabel className={styles.jumpTo} value={shown} maxValue={now} onChange={jumpTo} />
             <IconButton
-              label="Refresh statistics"
+              label={t('Refresh statistics')}
               icon={RefreshIcon}
               variant="secondary"
               shortcut={REFRESH_SHORTCUT}

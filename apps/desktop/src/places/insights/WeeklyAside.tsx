@@ -8,6 +8,7 @@ import { TextField } from '../../components/Fields';
 import { SegmentedControl } from '../../components/Segmented';
 import { ActivitySwatch, activityColorIndex, useActivityColors } from '../../features/activity';
 import { deviceName } from '../../features/ticketContext/format';
+import { mark, t } from '../../i18n';
 import type { WeeklySlice } from '../../ipc/contract';
 import { duration, rangeTitle } from './explore/format';
 import { useSlice } from '../../state/hooks';
@@ -17,13 +18,13 @@ import type { WeeklyReport } from './useWeeklyReport';
 type Mode = 'preview' | 'edit';
 
 const MODES: ReadonlyArray<{ id: Mode; label: string }> = [
-  { id: 'preview', label: 'Preview' },
-  { id: 'edit', label: 'Edit' },
+  { id: 'preview', label: mark('Preview') },
+  { id: 'edit', label: mark('Edit') },
 ];
 
 /** The draft still has placeholders to fill in, or is empty. */
 export function needsOutcomes(draft: string): boolean {
-  return draft.trim() === '' || /\[ADD[^\]]*\]/i.test(draft);
+  return draft.trim() === '' || /\[(?:ADD|VUL)\b[^\]]*\]/i.test(draft);
 }
 
 /**
@@ -44,42 +45,46 @@ export function WeeklyAside({ report, statisticsRange }: { report: WeeklyReport;
       <div className={styles.asideHead}>
         <div className={styles.asideTitleBlock}>
           <h2 id={headingId} className={styles.cardTitle}>
-            Weekly report
+            {t('Weekly report')}
           </h2>
-          {otherWeek && week ? <p className={styles.asideRange}>{`Week of ${week}`}</p> : null}
+          {otherWeek && week ? <p className={styles.asideRange}>{t('Week of {week}', { week })}</p> : null}
         </div>
-        <SegmentedControl label="Report view" hideLabel size="small" options={MODES} selectedKey={mode} onSelectionChange={setMode} />
+        <SegmentedControl
+          label={t('Report view')}
+          hideLabel
+          size="small"
+          options={MODES.map((option) => ({ ...option, label: t(option.label) }))} selectedKey={mode} onSelectionChange={setMode} />
       </div>
       <div className={styles.asideBody}>
         {!weekly ? (
           <div aria-busy="true">
             <span role="status" className="visually-hidden">
-              Loading the weekly report
+              {t('Loading the weekly report')}
             </span>
             <Skeleton lines={4} />
           </div>
         ) : (
           <>
             <Badge tone="neutral" className={styles.alignStart}>
-              {weekly.hasDraft || !empty ? `Draft · saved on ${deviceName(app?.os)}` : 'No draft yet'}
+              {weekly.hasDraft || !empty ? t('Draft · saved on {device}', { device: deviceName(app?.os) }) : t('No draft yet')}
             </Badge>
             <ReportProblems weekly={weekly} report={report} />
             {mode === 'preview' ? (
               <WeekBasis weekly={weekly} />
             ) : (
               <TextField
-                label="Editable weekly status report"
+                label={t('Editable weekly status report')}
                 multiline
                 rows={14}
                 value={draft}
                 onChange={report.edit}
-                placeholder="Generate a draft, or write your update here."
-                description={weekly.message ?? 'Edits are saved locally as you type.'}
+                placeholder={t('Generate a draft, or write your update here.')}
+                description={weekly.message ?? t('Edits are saved locally as you type.')}
                 className={styles.asideEditor}
               />
             )}
             {mode === 'preview' && needsOutcomes(draft) && weekly.hasData ? (
-              <p className={styles.hint}>Add outcomes before sharing. The draft only lists recorded time.</p>
+              <p className={styles.hint}>{t('Add outcomes before sharing. The draft only lists recorded time.')}</p>
             ) : null}
           </>
         )}
@@ -91,11 +96,11 @@ export function WeeklyAside({ report, statisticsRange }: { report: WeeklyReport;
           isPending={report.generating}
           onPress={() => void report.generate()}
         >
-          {empty ? 'Generate' : 'Regenerate'}
+          {empty ? t('Generate') : t('Regenerate')}
         </Button>
         <div className={styles.buttonRow}>
           <Button size="small" isDisabled={empty} onPress={() => void report.copy()}>
-            Copy
+            {t('Copy')}
           </Button>
           <Button
             size="small"
@@ -104,7 +109,7 @@ export function WeeklyAside({ report, statisticsRange }: { report: WeeklyReport;
             isPending={report.exporting}
             onPress={() => void report.exportMarkdown()}
           >
-            Export Markdown
+            {t('Export Markdown')}
           </Button>
         </div>
       </div>
@@ -119,14 +124,14 @@ export function ReportProblems({ weekly, report }: { weekly: WeeklySlice; report
     <>
       {weekly.issue ? <Banner tone="warning">{weekly.issue}</Banner> : null}
       {weekly.storageIssue ? (
-        <Banner tone="warning" title="Draft not saved">
+        <Banner tone="warning" title={t('Draft not saved')}>
           {weekly.storageIssue}
         </Banner>
       ) : null}
       {report.failure ? <Banner tone="error">{report.failure.message}</Banner> : null}
-      {!weekly.configured && !app?.preview ? <p className={styles.muted}>Connect to 7pace in Settings to generate a draft.</p> : null}
+      {!weekly.configured && !app?.preview ? <p className={styles.muted}>{t('Connect to 7pace in Settings to generate a draft.')}</p> : null}
       {!weekly.hasData && !weekly.loading && !weekly.issue && weekly.configured ? (
-        <p className={styles.muted}>Refresh the week’s time to generate a draft.</p>
+        <p className={styles.muted}>{t('Refresh the week’s time to generate a draft.')}</p>
       ) : null}
     </>
   );
@@ -139,38 +144,38 @@ function WeekBasis({ weekly }: { weekly: WeeklySlice }) {
   if (!summary) {
     return weekly.loading ? (
       <p role="status" className={styles.muted}>
-        Loading the week’s time…
+        {t('Loading the week’s time…')}
       </p>
     ) : null;
   }
   return (
     <div className={styles.basis}>
       <div className={styles.basisGroup}>
-        <h3 className={styles.basisTitle}>Time</h3>
+        <h3 className={styles.basisTitle}>{t('Time')}</h3>
         <p className={styles.muted}>
           {summary.targetSeconds > 0
-            ? `${duration(summary.totalSeconds)} tracked · target ${duration(summary.targetSeconds)}`
-            : `${duration(summary.totalSeconds)} tracked`}
+            ? t('{time} tracked · target {target}', { time: duration(summary.totalSeconds), target: duration(summary.targetSeconds) })
+            : t('{time} tracked', { time: duration(summary.totalSeconds) })}
         </p>
       </div>
       <div className={styles.basisGroup}>
-        <h3 className={styles.basisTitle}>Worked on</h3>
+        <h3 className={styles.basisTitle}>{t('Worked on')}</h3>
         {summary.tickets.length > 0 ? (
-          <ul role="list" aria-label="Time per ticket" className={styles.basisTickets}>
+          <ul role="list" aria-label={t('Time per ticket')} className={styles.basisTickets}>
             {summary.tickets.map((ticket) => (
               <li key={`${ticket.ticketId ?? 'none'}-${ticket.title ?? ''}`} className={styles.basisTicket}>
                 <ActivitySwatch colorIndex={activityColorIndex(colors, ticket.activityId)} />
                 <span>
                   {ticket.ticketId !== null
-                    ? `#${ticket.ticketId} ${ticket.title ?? 'Azure ticket'}`
-                    : `${ticket.title ?? 'Work without an Azure ticket'} · no ticket`}
+                    ? `#${ticket.ticketId} ${ticket.title ?? t('Azure ticket')}`
+                    : t('{title} · no ticket', { title: ticket.title ?? t('Work without an Azure ticket') })}
                 </span>
                 <span className={styles.basisTime}>{duration(ticket.seconds)}</span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className={styles.muted}>No recorded time in this week yet.</p>
+          <p className={styles.muted}>{t('No recorded time in this week yet.')}</p>
         )}
       </div>
     </div>

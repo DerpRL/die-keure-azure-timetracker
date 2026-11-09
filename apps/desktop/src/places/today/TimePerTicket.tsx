@@ -6,7 +6,8 @@ import { TicketLink } from '../../features/ticketContext/TicketLink';
 import type { ReviewSession, WorkItemsSlice } from '../../ipc/contract';
 import { formatShortDuration } from '../../utils/duration';
 import { useOpenDayInTimesheet } from './DayCheck';
-import { plural, ticketRows } from './model';
+import { ticketRows } from './model';
+import { t, tn } from '../../i18n';
 import styles from './today.module.css';
 
 /** "Time per ticket" of a reviewed day, most time first, with the way to edit its entries. */
@@ -29,14 +30,16 @@ export function TimePerTicket({
     <Card as="section" padding="none" aria-labelledby={headingId} className={styles.flush}>
       <div className={styles.flushHeadStacked}>
         <h2 id={headingId} className={styles.cardTitle}>
-          Time per ticket
+          {t('Time per ticket')}
         </h2>
         <p className={styles.caption}>
-          {sessions.length === 0 ? 'No entries recorded for this day.' : `${plural(sessions.length, 'entry', 'entries')} · ${plural(tickets, 'ticket', 'tickets')}`}
+          {sessions.length === 0
+            ? t('No entries recorded for this day.')
+            : `${tn(sessions.length, '{count} entry', '{count} entries')} · ${tn(tickets, '{count} ticket', '{count} tickets')}`}
         </p>
       </div>
       {rows.length > 0 ? (
-        <ul role="list" aria-label="Time per ticket" className={styles.rows}>
+        <ul role="list" aria-label={t('Time per ticket')} className={styles.rows}>
           {rows.map((row) => (
             <li key={row.id} className={styles.ticketRow}>
               <ActivitySwatch colorIndex={colorOf(row.activity)} />
@@ -51,7 +54,7 @@ export function TimePerTicket({
       {openDay ? (
         <div className={styles.rowsFootPadded}>
           <Button size="small" fullWidth onPress={() => openDay(day)}>
-            Edit entries in Timesheet
+            {t('Edit entries in Timesheet')}
           </Button>
         </div>
       ) : null}

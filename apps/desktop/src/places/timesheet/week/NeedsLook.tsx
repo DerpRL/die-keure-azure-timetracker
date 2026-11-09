@@ -6,11 +6,17 @@ import { Card } from '../../../components/Card';
 import { dayToDate, formatClockTime } from '../../../features/ticketContext/format';
 import { useAction, useSlice } from '../../../state/hooks';
 import { formatShortDuration } from '../../../utils/duration';
+import { dateFormat, t, tn } from '../../../i18n';
 import type { WeekBlock, WeekDay } from './weekModel';
 import styles from './week.module.css';
 
 function clock(time: number): string {
   return formatClockTime(new Date(time));
+}
+
+/** A sentence that starts with a weekday: Dutch weekday names are lowercase. */
+function capitalize(text: string): string {
+  return text.charAt(0).toLocaleUpperCase() + text.slice(1);
 }
 
 function label(block: WeekBlock): string {
@@ -34,7 +40,7 @@ export function NeedsLook({ day, onFix, onOpenDrafts, onSelect }: NeedsLookProps
   const review = useSlice('dayReview');
   const mark = useAction();
   const headingId = useId();
-  const weekday = dayToDate(day.key).toLocaleDateString('en-GB', { weekday: 'long' });
+  const weekday = dateFormat({ weekday: 'long' }).format(dayToDate(day.key));
   const reviewed = review?.selectedDay === day.key && !!review.record?.reviewedAt;
   const byId = new Map(day.blocks.map((block) => [block.id, block]));
   const gapSeconds = day.gaps.reduce((sum, gap) => sum + (gap.end - gap.start) / 1000, 0);
@@ -43,7 +49,7 @@ export function NeedsLook({ day, onFix, onOpenDrafts, onSelect }: NeedsLookProps
   return (
     <Card as="section" aria-labelledby={headingId} className={styles.card}>
       <h2 id={headingId} className={styles.cardTitle}>
-        {`${weekday} needs a look`}
+        {capitalize(t('{weekday} needs a look', { weekday }))}
       </h2>
       <ul role="list" className={styles.lookList}>
         {day.overlaps.map((overlap) => {
@@ -52,12 +58,12 @@ export function NeedsLook({ day, onFix, onOpenDrafts, onSelect }: NeedsLookProps
           return (
             <li key={`${overlap.earlierId}-${overlap.laterId}`} className={styles.lookItem}>
               <span>
-                <span className={styles.bad}>Overlap</span>
+                <span className={styles.bad}>{t('Overlap')}</span>
                 {` ${clock(overlap.start)} – ${clock(overlap.end)}`}
-                {earlier && later ? ` · ${label(earlier)} and ${label(later)}` : null}
+                {earlier && later ? ` · ${t('{earlier} and {later}', { earlier: label(earlier), later: label(later) })}` : null}
               </span>
-              <Button size="small" onPress={onFix} aria-label={`Fix overlap at ${clock(overlap.start)}`}>
-                Fix
+              <Button size="small" onPress={onFix} aria-label={t('Fix overlap at {time}', { time: clock(overlap.start) })}>
+                {t('Fix')}
               </Button>
             </li>
           );
@@ -65,45 +71,45 @@ export function NeedsLook({ day, onFix, onOpenDrafts, onSelect }: NeedsLookProps
         {day.gaps.length > 0 ? (
           <li className={styles.lookItem}>
             <span>
-              <span className={styles.strong}>{day.gaps.length === 1 ? '1 gap' : `${day.gaps.length} gaps`}</span>
-              {` · ${formatShortDuration(gapSeconds)} without an entry`}
+              <span className={styles.strong}>{tn(day.gaps.length, '{count} gap', '{count} gaps')}</span>
+              {` · ${t('{duration} without an entry', { duration: formatShortDuration(gapSeconds) })}`}
             </span>
-            <Button size="small" onPress={onFix} aria-label="Fill gaps">
-              Fill
+            <Button size="small" onPress={onFix} aria-label={t('Fill gaps')}>
+              {t('Fill')}
             </Button>
           </li>
         ) : null}
         {day.longEntries.map((block) => (
           <li key={`long-${block.id}`} className={styles.lookItem}>
             <span>
-              <span className={styles.strong}>Long entry</span>
+              <span className={styles.strong}>{t('Long entry')}</span>
               {` · ${label(block)} ${clock(block.start)} – ${clock(block.end)}`}
             </span>
-            <Button size="small" onPress={() => onSelect(block)} aria-label={`Check long entry ${label(block)}`}>
-              Check
+            <Button size="small" onPress={() => onSelect(block)} aria-label={t('Check long entry {title}', { title: label(block) })}>
+              {t('Check')}
             </Button>
           </li>
         ))}
         {day.drafts.length > 0 ? (
           <li className={styles.lookItem}>
             <span>
-              <span className={styles.accentText}>{day.drafts.length === 1 ? '1 draft' : `${day.drafts.length} drafts`}</span>
+              <span className={styles.accentText}>{tn(day.drafts.length, '{count} draft', '{count} drafts')}</span>
               {day.drafts.length === 1
-                ? ` · ${clock(day.drafts[0]!.start)} – ${clock(day.drafts[0]!.end)} not uploaded`
-                : ` · ${formatShortDuration(draftSeconds)} not uploaded`}
+                ? ` · ${t('{start} – {end} not uploaded', { start: clock(day.drafts[0]!.start), end: clock(day.drafts[0]!.end) })}`
+                : ` · ${t('{duration} not uploaded', { duration: formatShortDuration(draftSeconds) })}`}
             </span>
-            <Button size="small" variant="primary" onPress={onOpenDrafts} aria-label="Review drafts">
-              Review
+            <Button size="small" variant="primary" onPress={onOpenDrafts} aria-label={t('Review drafts')}>
+              {t('Review')}
             </Button>
           </li>
         ) : null}
       </ul>
       {!day.isToday && !day.isFuture ? (
         reviewed ? (
-          <Badge tone="success">{`${weekday} reviewed`}</Badge>
+          <Badge tone="success">{capitalize(t('{weekday} reviewed', { weekday }))}</Badge>
         ) : (
           <Button fullWidth isPending={mark.pending} onPress={() => void mark.run({ type: 'dayReview.markReviewed', day: day.key })}>
-            {`Mark ${weekday} reviewed`}
+            {t('Mark {weekday} reviewed', { weekday })}
           </Button>
         )
       ) : null}

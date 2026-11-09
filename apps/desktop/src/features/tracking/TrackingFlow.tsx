@@ -9,6 +9,7 @@ import { ActionError, useIntents, useWriteGuards } from './actions';
 import { ActivityChooser, startLabel, useActivityForm } from './ActivityChooser';
 import { ManualChoices, QuickTickets, SuggestionWithoutTicket, TicketSearchField } from './TicketSearch';
 import styles from './tracking.module.css';
+import { t } from '../../i18n';
 
 export interface TicketStepProps {
   flow: FlowSlice;
@@ -36,13 +37,13 @@ export function TicketStep({ flow, headingLevel, autoFocus = false }: TicketStep
           size="compact"
           icon={SearchIcon}
           headingLevel={headingLevel}
-          title="One ticket at a time"
+          title={t('One ticket at a time')}
           description={
-            connected ? 'Enter a ticket number or a few words from its title.' : 'Connect your account in Settings first.'
+            connected ? t('Enter a ticket number or a few words from its title.') : t('Connect your account in Settings first.')
           }
         />
       ) : null}
-      <p className={styles.caption}>Next, choose the activity before starting.</p>
+      <p className={styles.caption}>{t('Next, choose the activity before starting.')}</p>
     </div>
   );
 }
@@ -83,7 +84,7 @@ export function PanelTrackingFlow({ flow }: { flow: FlowSlice }) {
       isPending={cancel.isPending()}
       onPress={() => void cancel.run('cancel', { type: 'tracking.cancelPanel' })}
     >
-      Cancel
+      {t('Cancel')}
     </Button>
   );
 
@@ -91,7 +92,7 @@ export function PanelTrackingFlow({ flow }: { flow: FlowSlice }) {
     return (
       <section aria-labelledby={headingId} className={styles.flow} data-tracking-flow="">
         <Heading level={2} id={headingId} className={styles.flowHeading}>
-          Choose an activity
+          {t('Choose an activity')}
         </Heading>
         <ActivityChooser flow={flow} form={form} variant="panel" />
         <div className={styles.actions}>
@@ -117,16 +118,16 @@ export function PanelTrackingFlow({ flow }: { flow: FlowSlice }) {
     <section aria-labelledby={headingId} className={styles.flow} data-tracking-flow="">
       <div className={styles.flowHeader}>
         <Heading level={2} id={headingId} className={styles.flowHeading}>
-          Quick switch
+          {t('Quick switch')}
         </Heading>
         {shortcut ? (
           <span className={styles.caption}>
-            <span className="visually-hidden">Shortcut </span>
+            <span className="visually-hidden">{`${t('Shortcut')} `}</span>
             {shortcut}
           </span>
         ) : null}
       </div>
-      {flow.selectedSuggestion ? <p className={styles.caption}>For {flow.selectedSuggestion.title}</p> : null}
+      {flow.selectedSuggestion ? <p className={styles.caption}>{t('For {title}', { title: flow.selectedSuggestion.title })}</p> : null}
       <TicketStep flow={flow} headingLevel={3} autoFocus />
       <div className={styles.actions}>{cancelButton}</div>
       <ActionError error={cancel.error} />

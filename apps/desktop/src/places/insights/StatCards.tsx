@@ -1,7 +1,8 @@
 import { Button } from '../../components/Button';
+import { t, tn } from '../../i18n';
 import type { AnalysisView, StatisticsSlice } from '../../ipc/contract';
 import { FilterChips } from './explore/Filters';
-import { duration, percent, plural, windowTitle } from './explore/format';
+import { duration, percent, windowTitle } from './explore/format';
 import { isFilterActive } from './explore/model';
 import { useAction } from '../../state/hooks';
 import styles from './insights.module.css';
@@ -17,28 +18,28 @@ export function statsOf(slice: StatisticsSlice, analysis: AnalysisView): Stat[] 
   const targeted = slice.targetComparable && analysis.target > 0;
   return [
     {
-      title: 'Recorded',
+      title: t('Recorded'),
       value: duration(analysis.total),
       note: targeted
-        ? `${percent(analysis.total, analysis.target)} of ${duration(analysis.target)} target`
-        : `${plural(analysis.count, 'entry', 'entries')} · ${plural(analysis.trackedDays, 'tracked day')}`,
+        ? t('{percent} of {target} target', { percent: percent(analysis.total, analysis.target), target: duration(analysis.target) })
+        : `${tn(analysis.count, '{count} entry', '{count} entries')} · ${tn(analysis.trackedDays, '{count} tracked day', '{count} tracked days')}`,
     },
-    { title: 'Tickets', value: String(analysis.tasks.length), note: 'incl. work without a ticket' },
-    { title: 'Typical entry', value: duration(analysis.median), note: 'median' },
+    { title: t('Tickets'), value: String(analysis.tasks.length), note: t('incl. work without a ticket') },
+    { title: t('Typical entry'), value: duration(analysis.median), note: t('median') },
     analysis.billableKnownCount > 0
       ? {
-          title: 'Billable',
+          title: t('Billable'),
           value: duration(analysis.billable),
-          note: `${analysis.billableKnownCount} of ${plural(analysis.count, 'entry', 'entries')}`,
+          note: tn(analysis.count, '{known} of {count} entry', '{known} of {count} entries', { known: analysis.billableKnownCount }),
         }
-      : { title: 'Billable', value: '–', note: 'Not supplied by 7pace' },
+      : { title: t('Billable'), value: '–', note: t('Not supplied by 7pace') },
   ];
 }
 
 /** The stat cards row (2.2 "S3 · Insights"): Recorded, Tickets, Typical entry, Billable. */
 export function StatCards({ slice, analysis }: { slice: StatisticsSlice; analysis: AnalysisView }) {
   return (
-    <ul role="list" aria-label="Totals" className={styles.stats}>
+    <ul role="list" aria-label={t('Totals')} className={styles.stats}>
       {statsOf(slice, analysis).map((stat) => (
         <li key={stat.title} className={styles.stat}>
           <span className={styles.statTitle}>{stat.title}</span>
@@ -59,18 +60,18 @@ export function ScopeLine({ slice }: { slice: StatisticsSlice }) {
   const filtered = isFilterActive(slice.filter);
   if (!slice.isZoomed && !filtered) return null;
   return (
-    <section aria-label="Scope" className={styles.scope}>
+    <section aria-label={t('Scope')} className={styles.scope}>
       {slice.isZoomed ? (
         <div className={styles.scopeRow}>
           <p className={styles.scopeTitle} aria-live="polite" aria-atomic="true">
-            {`Selected window · ${windowTitle(slice.window)}`}
+            {t('Selected window · {window}', { window: windowTitle(slice.window) })}
           </p>
           <Button size="small" onPress={() => void reset.run({ type: 'statistics.resetZoom' })}>
-            Reset zoom
+            {t('Reset zoom')}
           </Button>
         </div>
       ) : null}
-      {filtered ? <p className={styles.scopeNote}>All totals and charts use your active filters.</p> : null}
+      {filtered ? <p className={styles.scopeNote}>{t('All totals and charts use your active filters.')}</p> : null}
       <FilterChips slice={slice} />
     </section>
   );

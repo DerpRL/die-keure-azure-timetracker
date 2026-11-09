@@ -7,22 +7,30 @@ import { FEATURES, pageShown, setPageShown, type FeatureDefinition, type Feature
 import { IssueRow, SectionFooter, SettingRow, SettingsGroup, SettingsSection, ToggleRow } from './SettingsSection';
 import { useSettingsForm } from './SettingsForm';
 import { useLaunchAtLogin, type LaunchAtLogin } from './useLaunchAtLogin';
+import { mark, t } from '../../i18n';
 import styles from './settings.module.css';
 
 const GROUPS: readonly FeatureGroup[] = ['Tracking', 'Meetings', 'Views', 'App'];
 
+const GROUP_LABELS: Record<FeatureGroup, string> = {
+  Tracking: mark('Tracking'),
+  Meetings: mark('Meetings'),
+  Views: mark('Views'),
+  App: mark('App'),
+};
+
 const GROUP_DESCRIPTIONS: Record<FeatureGroup, string> = {
-  Tracking: 'Suggestions and reminders while you work.',
-  Meetings: 'Meeting suggestions from your calendar and microphone.',
-  Views: 'Hide views you do not use. Today and Settings are always available.',
-  App: 'How the app runs on this device.',
+  Tracking: mark('Suggestions and reminders while you work.'),
+  Meetings: mark('Meeting suggestions from your calendar and microphone.'),
+  Views: mark('Hide views you do not use. Today and Settings are always available.'),
+  App: mark('How the app runs on this device.'),
 };
 
 /** The permission a module needs, as a chip ("Accessibility"), or nothing when it needs none. */
 function permissionChip(feature: FeatureDefinition, os: HostOs): ReactNode {
   const permission = feature.permission(os);
   if (permission === 'None') return null;
-  return <Badge tone="neutral">{permission}</Badge>;
+  return <Badge tone="neutral">{t(permission)}</Badge>;
 }
 
 /** The privacy line and the permission chip, under a feature's description. */
@@ -41,8 +49,8 @@ function FigmaFeature({ feature }: { feature: FeatureDefinition }) {
   return (
     <>
       <ToggleRow
-        title={feature.title}
-        help="Applies right away."
+        title={t(feature.title)}
+        help={t('Applies right away.')}
         extra={facts(feature, os)}
         isSelected={figma.preferences.enabled}
         onChange={(enabled) => figma.apply({ ...figma.preferences, enabled })}
@@ -57,8 +65,8 @@ function LaunchFeature({ feature, launch }: { feature: FeatureDefinition; launch
   return (
     <>
       <ToggleRow
-        title={feature.title}
-        help={launch.available ? 'Applies right away.' : 'Available in the desktop app.'}
+        title={t(feature.title)}
+        help={launch.available ? t('Applies right away.') : t('Available in the desktop app.')}
         extra={facts(feature, os)}
         isSelected={launch.enabled ?? false}
         isDisabled={!launch.available || launch.pending}
@@ -77,8 +85,8 @@ function FeatureRow({ feature, launch }: { feature: FeatureDefinition; launch: L
     case 'field':
       return (
         <ToggleRow
-          title={feature.title}
-          help={unavailable ? 'Not available on this system.' : undefined}
+          title={t(feature.title)}
+          help={unavailable ? t('Not available on this system.') : undefined}
           extra={facts(feature, os)}
           isSelected={binding.get(draft)}
           isDisabled={unavailable}
@@ -88,8 +96,8 @@ function FeatureRow({ feature, launch }: { feature: FeatureDefinition; launch: L
     case 'page':
       return (
         <ToggleRow
-          title={feature.title}
-          help={binding.where}
+          title={t(feature.title)}
+          help={t(binding.where)}
           extra={facts(feature, os)}
           isSelected={pageShown(draft, binding.page)}
           onChange={(on) => update((current) => setPageShown(current, binding.page, on))}
@@ -101,8 +109,8 @@ function FeatureRow({ feature, launch }: { feature: FeatureDefinition; launch: L
       return <LaunchFeature feature={feature} launch={launch} />;
     case 'info':
       return (
-        <SettingRow title={feature.title} help={binding.text} below={<p className={styles.rowExtra}>{facts(feature, os)}</p>}>
-          <Badge tone="neutral">Always on</Badge>
+        <SettingRow title={t(feature.title)} help={t(binding.text)} below={<p className={styles.rowExtra}>{facts(feature, os)}</p>}>
+          <Badge tone="neutral">{t('Always on')}</Badge>
         </SettingRow>
       );
   }
@@ -115,12 +123,12 @@ export function FeaturesSection() {
   const calendar = app?.features.calendar ?? true;
   const visible = FEATURES.filter((feature) => !feature.needsCalendar || calendar);
   return (
-    <SettingsSection id="features" subtitle="Saved with Save changes, except Figma and Launch at login, which apply right away.">
+    <SettingsSection id="features" subtitle={t('Saved with Save changes, except Figma and Launch at login, which apply right away.')}>
       {GROUPS.map((group) => {
         const rows = visible.filter((feature) => feature.group === group);
         if (rows.length === 0) return null;
         return (
-          <SettingsGroup key={group} title={group} description={GROUP_DESCRIPTIONS[group]}>
+          <SettingsGroup key={group} title={t(GROUP_LABELS[group])} description={t(GROUP_DESCRIPTIONS[group])}>
             {rows.map((feature) => (
               <FeatureRow key={feature.id} feature={feature} launch={launch} />
             ))}
@@ -130,11 +138,11 @@ export function FeaturesSection() {
       <SectionFooter
         actions={
           <Button size="small" variant="plain" onPress={() => goTo('about')}>
-            What is stored where
+            {t('What is stored where')}
           </Button>
         }
       >
-        Nothing is sent anywhere except to Azure DevOps and 7pace.
+        {t('Nothing is sent anywhere except to Azure DevOps and 7pace.')}
       </SectionFooter>
     </SettingsSection>
   );

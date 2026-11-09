@@ -3,6 +3,7 @@ import { Button } from '../../../components/Button';
 import { SearchField } from '../../../components/Fields';
 import { CloseIcon } from '../../../components/icons';
 import { ComboBox, PickerItem, Select } from '../../../components/Pickers';
+import { t } from '../../../i18n';
 import type { ExplorerFilter, StatisticsSlice } from '../../../ipc/contract';
 import { useAction } from '../../../state/hooks';
 import { cx } from '../../../utils/cx';
@@ -70,9 +71,9 @@ export function SearchFilter({ slice, hideLabel = false, className }: FilterProp
   return (
     <div className={cx(styles.searchField, className)}>
       <SearchField
-        label="Search"
+        label={t('Search')}
         hideLabel={hideLabel}
-        placeholder="Search ticket, title or comment"
+        placeholder={t('Search ticket, title or comment')}
         value={draft}
         onChange={(value) => setSearch((state) => ({ ...state, draft: value }))}
       />
@@ -86,16 +87,16 @@ export function ActivityFilter({ slice, hideLabel = false, className }: FilterPr
   const update = useAction();
   const { filter } = slice;
   const activities = [
-    { id: ALL_ACTIVITIES, label: 'All activities' },
+    { id: ALL_ACTIVITIES, label: t('All activities') },
     ...slice.availableActivities.map((activity) => ({ id: activity.id, label: activity.name })),
     ...(filter.activityId !== null && !slice.availableActivities.some((activity) => activity.id === filter.activityId)
-      ? [{ id: filter.activityId, label: 'Selected activity (no entries)' }]
+      ? [{ id: filter.activityId, label: t('Selected activity (no entries)') }]
       : []),
   ];
   return (
     <div className={cx(styles.activityField, className)}>
       <Select
-        label="Activity"
+        label={t('Activity')}
         hideLabel={hideLabel}
         width="auto"
         items={activities}
@@ -119,13 +120,13 @@ export function TicketFilter({ slice, hideLabel = false, className }: FilterProp
   return (
     <div className={cx(styles.activityField, className)}>
       <ComboBox
-        label="Ticket"
+        label={t('Ticket')}
         hideLabel={hideLabel}
         width="auto"
-        placeholder="All tickets"
+        placeholder={t('All tickets')}
         defaultItems={tasks}
         selectedKey={filter.taskId}
-        emptyMessage="No ticket in this period matches"
+        emptyMessage={t('No ticket in this period matches')}
         onSelectionChange={(key) => {
           const taskId = key === null ? null : String(key);
           if (taskId !== filter.taskId) void update.run({ type: 'statistics.setFilter', filter: { ...filter, taskId } });
@@ -153,14 +154,14 @@ export function FilterChips({ slice }: { slice: StatisticsSlice }) {
   return (
     <div className={styles.chipRow}>
       {chips.length > 0 ? (
-        <ul role="list" aria-label="Active filters" className={styles.chips}>
+        <ul role="list" aria-label={t('Active filters')} className={styles.chips}>
           {chips.map((chip) => (
             <li key={chip.id}>
               <Button
                 size="small"
                 trailingIcon={CloseIcon}
                 className={styles.chip}
-                aria-label={`${chip.label}, remove filter`}
+                aria-label={t('{filter}, remove filter', { filter: chip.label })}
                 onPress={() => send(chip.without)}
               >
                 {chip.label}
@@ -170,7 +171,7 @@ export function FilterChips({ slice }: { slice: StatisticsSlice }) {
         </ul>
       ) : null}
       <Button size="small" variant="plain" className={styles.clearFilters} onPress={() => void run({ type: 'statistics.clearFilters' })}>
-        Clear filters
+        {t('Clear filters')}
       </Button>
       <FilterError message={update.error?.message} />
     </div>

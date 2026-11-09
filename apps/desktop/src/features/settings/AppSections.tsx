@@ -29,7 +29,7 @@ import { chooseSavePath } from '../ticketContext/native';
 import { openDownloadsPage } from '../updates/api';
 import { ACTION_LABELS, canCheck, downloadPercent, downloadText, formatDate, formatDateTime, updateAction } from '../updates/model';
 import { useUpdateActions, useUpdateStatus } from '../updates/useUpdateStatus';
-import { useInterfacePreferences } from './AppearanceForm';
+import { languageOptions, useInterfacePreferences } from './AppearanceForm';
 import { osWords } from './labels';
 import { SAVE_SHORTCUT } from './SaveBar';
 import {
@@ -47,6 +47,7 @@ import { useSettingsForm } from './SettingsForm';
 import { PollSelect, QuickSwitch } from './TrackingSection';
 import { useLaunchAtLogin } from './useLaunchAtLogin';
 import { CADENCE_BOUNDS, issueFor } from './validation';
+import { mark, numberFormat, t } from '../../i18n';
 import styles from './settings.module.css';
 
 /** Settings → Appearance & shortcuts → Appearance: theme, size and contrast, applied right away. */
@@ -60,33 +61,33 @@ export function AppearanceSection() {
       id="appearance"
       actions={
         <>
-          <Badge tone="neutral">Applies right away</Badge>
+          <Badge tone="neutral">{t('Applies right away')}</Badge>
           <Button
             size="small"
             variant="plain"
             onPress={() => apply({ ...DEFAULT_INTERFACE_PREFERENCES })}
             isDisabled={preferencesEqual(preferences, DEFAULT_INTERFACE_PREFERENCES)}
           >
-            Reset
+            {t('Reset')}
           </Button>
         </>
       }
     >
-      <SettingRow title="Theme" help={`System follows your ${words.device}’s Light, Dark or automatic appearance.`}>
+      <SettingRow title={t('Theme')} help={t('System follows your {device}’s Light, Dark or automatic appearance.', { device: words.device })}>
         <SegmentedControl
-          label="Theme"
+          label={t('Theme')}
           hideLabel
-          options={THEME_PREFERENCES.map((theme) => ({ id: theme, label: THEME_LABELS[theme] }))}
+          options={THEME_PREFERENCES.map((theme) => ({ id: theme, label: t(THEME_LABELS[theme]) }))}
           selectedKey={preferences.theme}
           onSelectionChange={(theme) => set({ theme })}
         />
       </SettingRow>
       <SettingRow
-        title="Text and control size"
-        help={`Text, buttons and charts resize together.${os === 'macos' ? ' The menu-bar clock stays its normal size.' : ''}`}
+        title={t('Text and control size')}
+        help={os === 'macos' ? `${t('Text, buttons and charts resize together.')} ${t('The menu-bar clock stays its normal size.')}` : t('Text, buttons and charts resize together.')}
       >
         <SegmentedControl
-          label="Text and control size"
+          label={t('Text and control size')}
           hideLabel
           options={SCALE_PREFERENCES.map((scale) => ({ id: String(scale), label: scaleLabel(scale) }))}
           selectedKey={String(preferences.scale)}
@@ -94,19 +95,31 @@ export function AppearanceSection() {
         />
       </SettingRow>
       <SettingRow
-        title="Contrast"
+        title={t('Contrast')}
         help={
           os === 'windows'
-            ? 'Increased adds stronger borders and darker secondary text. System follows Windows contrast settings.'
-            : 'Increased adds stronger borders and darker secondary text. System follows Increase contrast in macOS.'
+            ? t('Increased adds stronger borders and darker secondary text. System follows Windows contrast settings.')
+            : t('Increased adds stronger borders and darker secondary text. System follows Increase contrast in macOS.')
         }
       >
         <SegmentedControl
-          label="Contrast"
+          label={t('Contrast')}
           hideLabel
-          options={CONTRAST_PREFERENCES.map((id) => ({ id, label: CONTRAST_LABELS[id] }))}
+          options={CONTRAST_PREFERENCES.map((id) => ({ id, label: t(CONTRAST_LABELS[id]) }))}
           selectedKey={preferences.contrast}
           onSelectionChange={(contrast) => set({ contrast })}
+        />
+      </SettingRow>
+      <SettingRow
+        title={t('Language')}
+        help={t('System follows your {device}’s language: Dutch when it is set to Dutch, otherwise English.', { device: words.device })}
+      >
+        <SegmentedControl
+          label={t('Language')}
+          hideLabel
+          options={languageOptions()}
+          selectedKey={preferences.language ?? 'system'}
+          onSelectionChange={(language) => set({ language })}
         />
       </SettingRow>
       {error ? <IssueRow>{error.message}</IssueRow> : null}
@@ -120,10 +133,10 @@ export function AppSection() {
   const launch = useLaunchAtLogin();
   const words = osWords(os);
   return (
-    <SettingsSection id="app" title={os === 'windows' ? 'Notification area & windows' : 'Menu bar & windows'}>
+    <SettingsSection id="app" title={os === 'windows' ? t('Notification area & windows') : t('Menu bar & windows')}>
       <ToggleRow
-        title="Open at login"
-        help={launch.available ? `Starts in the ${words.trayPlace}, without a window. Applies right away.` : 'Available in the desktop app.'}
+        title={t('Open at login')}
+        help={launch.available ? t('Starts in the {place}, without a window. Applies right away.', { place: words.trayPlace }) : t('Available in the desktop app.')}
         isSelected={launch.enabled ?? false}
         isDisabled={!launch.available || launch.pending}
         onChange={launch.set}
@@ -131,34 +144,34 @@ export function AppSection() {
       {launch.error ? <IssueRow>{launch.error}</IssueRow> : null}
       {os === 'macos' ? (
         <ToggleRow
-          title="Show the timer in the menu bar"
-          help="Shows “1:23:45” next to the icon while tracking. Off shows the icon only."
+          title={t('Show the timer in the menu bar')}
+          help={t('Shows “1:23:45” next to the icon while tracking. Off shows the icon only.')}
           isSelected={draft.menuBarTimer}
           onChange={(menuBarTimer) => update((current) => ({ ...current, menuBarTimer }))}
         />
       ) : null}
       <ToggleRow
-        title="Floating mini timer"
+        title={t('Floating mini timer')}
         help={
           os === 'windows'
-            ? 'A small timer that stays on top of other windows, because the notification area shows no clock.'
-            : 'A small timer that stays on top of other windows.'
+            ? t('A small timer that stays on top of other windows, because the notification area shows no clock.')
+            : t('A small timer that stays on top of other windows.')
         }
         isSelected={draft.miniTimer}
         onChange={(miniTimer) => update((current) => ({ ...current, miniTimer }))}
       />
-      <HintRow>{`The app stays in the ${words.trayPlace} when its window closes. Quitting leaves the 7pace timer running.`}</HintRow>
+      <HintRow>{t('The app stays in the {place} when its window closes. Quitting leaves the 7pace timer running.', { place: words.trayPlace })}</HintRow>
     </SettingsSection>
   );
 }
 
 /** Shortcuts that work while the app window is open, as listed in the design. */
 const APP_SHORTCUTS: ReadonlyArray<{ label: string; shortcut: KeyCombo }> = [
-  { label: 'Track a ticket', shortcut: { key: 'n', mod: true } },
-  { label: 'Review today', shortcut: { key: 'd', mod: true, shift: true } },
-  { label: 'Save changes', shortcut: SAVE_SHORTCUT },
-  { label: 'Today · Timesheet · Insights', shortcut: { key: '1–3', mod: true } },
-  { label: 'Settings', shortcut: SETTINGS_SHORTCUT },
+  { label: mark('Track a ticket'), shortcut: { key: 'n', mod: true } },
+  { label: mark('Review today'), shortcut: { key: 'd', mod: true, shift: true } },
+  { label: mark('Save changes'), shortcut: SAVE_SHORTCUT },
+  { label: mark('Today · Timesheet · Insights'), shortcut: { key: '1–3', mod: true } },
+  { label: mark('Settings'), shortcut: SETTINGS_SHORTCUT },
 ];
 
 /** Settings → Appearance & shortcuts → Shortcuts: quick switch, the palette and the in-app keys. */
@@ -170,20 +183,20 @@ export function ShortcutsSection() {
       actions={
         shortcuts ? (
           <Button size="small" variant="plain" icon={KeyboardIcon} onPress={shortcuts.openCheatSheet}>
-            All shortcuts
+            {t('All shortcuts')}
           </Button>
         ) : null
       }
     >
       <QuickSwitch />
-      <SettingRow title="Command palette" help="Search tickets, entries and actions.">
+      <SettingRow title={t('Command palette')} help={t('Search tickets, entries and actions.')}>
         <KeyboardShortcut shortcut={PALETTE_SHORTCUT} variant="standalone" />
       </SettingRow>
-      <SettingsGroup title="In the app window">
-        <ul role="list" aria-label="Shortcuts in the app window" className={styles.rowList}>
+      <SettingsGroup title={t('In the app window')}>
+        <ul role="list" aria-label={t('Shortcuts in the app window')} className={styles.rowList}>
           {APP_SHORTCUTS.map((entry) => (
             <li key={entry.label} className={styles.listRow}>
-              <span>{entry.label}</span>
+              <span>{t(entry.label)}</span>
               <KeyboardShortcut shortcut={entry.shortcut} variant="standalone" />
             </li>
           ))}
@@ -209,20 +222,20 @@ export function UpdatesSection() {
   const published = formatDate(status?.date ?? null);
   const chip = !status ? null : failed ? (
     <Badge tone="warning" icon={WarningIcon}>
-      Check failed
+      {t('Check failed')}
     </Badge>
   ) : status.version ? (
-    <Badge tone="accent">{`${status.version} available`}</Badge>
+    <Badge tone="accent">{t('{version} available', { version: status.version })}</Badge>
   ) : status.enabled && status.checkedAt ? (
     <Badge tone="success" icon={CheckIcon}>
-      Up to date
+      {t('Up to date')}
     </Badge>
   ) : null;
   return (
     <SettingsSection id="updates">
       <SettingRow
-        title={installed ? `Version ${installed}` : 'Azure timetracker'}
-        help={[status?.message, checked ? `Last checked ${checked}` : null].filter(Boolean).join(' · ') || undefined}
+        title={installed ? t('Version {version}', { version: installed }) : 'Azure timetracker'}
+        help={[status?.message, checked ? t('Last checked {time}', { time: checked }) : null].filter(Boolean).join(' · ') || undefined}
       >
         {chip}
         <Button
@@ -236,17 +249,17 @@ export function UpdatesSection() {
           isDisabled={!canCheck(status) || actions.pending === 'install'}
           isPending={actions.pending === 'check' || status?.phase === 'checking'}
         >
-          Check now
+          {t('Check now')}
         </Button>
       </SettingRow>
       {status?.version ? (
         <FullRow className={styles.release}>
-          <p className={styles.rowTitle}>{`Version ${status.version}`}</p>
-          {published ? <Hint>{`Published ${published}`}</Hint> : null}
+          <p className={styles.rowTitle}>{t('Version {version}', { version: status.version })}</p>
+          {published ? <Hint>{t('Published {date}', { date: published })}</Hint> : null}
           {status.notes ? <p className={styles.releaseNotes}>{status.notes}</p> : null}
           {status.phase === 'downloading' && status ? (
             <ProgressBar
-              label="Update download"
+              label={t('Update download')}
               value={percent ?? 0}
               isIndeterminate={percent === null}
               valueLabel={percent === null ? downloadText(status) : `${percent}% · ${downloadText(status)}`}
@@ -261,25 +274,25 @@ export function UpdatesSection() {
                 isDisabled={(action === 'restart' && busy) || actions.pending === 'check'}
                 isPending={actions.pending === 'install'}
               >
-                {ACTION_LABELS[action]}
+                {t(ACTION_LABELS[action])}
               </Button>
-              <Hint>Restarting keeps your 7pace timer running. Save any open edits first.</Hint>
+              <Hint>{t('Restarting keeps your 7pace timer running. Save any open edits first.')}</Hint>
             </div>
           ) : null}
         </FullRow>
       ) : null}
       {status?.phase === 'ready' && status.error ? <IssueRow tone="warning">{status.error}</IssueRow> : null}
-      {error && !status ? <IssueRow tone="warning">{`Update status is unavailable: ${error}`}</IssueRow> : null}
+      {error && !status ? <IssueRow tone="warning">{t('Update status is unavailable: {error}', { error })}</IssueRow> : null}
       {actions.error ? <IssueRow>{actions.error}</IssueRow> : null}
       <ToggleRow
-        title="Check for updates automatically"
-        help="Checks at startup and regularly after that. You choose when to download and restart."
+        title={t('Check for updates automatically')}
+        help={t('Checks at startup and regularly after that. You choose when to download and restart.')}
         isSelected={draft.automaticUpdateChecks}
         onChange={(automaticUpdateChecks) => update((current) => ({ ...current, automaticUpdateChecks }))}
       />
       <SettingRow
-        title="Download manually"
-        help="Every release is also on GitHub. Downloads are verified with the app’s release key."
+        title={t('Download manually')}
+        help={t('Every release is also on GitHub. Downloads are verified with the app’s release key.')}
         below={linkError ? <InlineIssue>{linkError}</InlineIssue> : null}
       >
         <Button
@@ -291,7 +304,8 @@ export function UpdatesSection() {
             openDownloadsPage().catch((reason: unknown) => setLinkError(reason instanceof Error ? reason.message : String(reason)));
           }}
         >
-          Open GitHub releases<span className="visually-hidden"> (opens in your browser)</span>
+          {t('Open GitHub releases')}
+          <span className="visually-hidden"> {t('(opens in your browser)')}</span>
         </Button>
       </SettingRow>
     </SettingsSection>
@@ -306,10 +320,10 @@ interface CadenceField {
 }
 
 const CADENCES: readonly CadenceField[] = [
-  { key: 'probeSeconds', label: 'Local checks', description: 'Git branches, presence, microphone and Figma.' },
-  { key: 'calendarSeconds', label: 'Calendar', description: 'Reading calendar events.', needsCalendar: true },
-  { key: 'progressSeconds', label: 'Time totals', description: 'Today’s and this week’s totals from 7pace.' },
-  { key: 'updateCheckSeconds', label: 'Update checks', description: 'Checking the update feed, when automatic checks are on.' },
+  { key: 'probeSeconds', label: mark('Local checks'), description: mark('Git branches, presence, microphone and Figma.') },
+  { key: 'calendarSeconds', label: mark('Calendar'), description: mark('Reading calendar events.'), needsCalendar: true },
+  { key: 'progressSeconds', label: mark('Time totals'), description: mark('Today’s and this week’s totals from 7pace.') },
+  { key: 'updateCheckSeconds', label: mark('Update checks'), description: mark('Checking the update feed, when automatic checks are on.') },
 ];
 
 /** `Cadences::default()`. */
@@ -317,8 +331,8 @@ const DEFAULT_CADENCES: Cadences = { probeSeconds: 2, calendarSeconds: 30, progr
 
 /** "1–10 s", "60–3,600 s": the allowed range next to an interval. */
 function rangeText(min: number, max: number): string {
-  const format = new Intl.NumberFormat('en-GB');
-  return `${format.format(min)}–${format.format(max)} s`;
+  const format = numberFormat();
+  return t('{min}–{max} s', { min: format.format(min), max: format.format(max) });
 }
 
 /** Settings → Updates & advanced → Sync intervals: how often the app checks things. */
@@ -331,7 +345,7 @@ export function SyncIntervalsSection() {
   return (
     <SettingsSection
       id="advanced"
-      subtitle="Shorter is fresher but sends more requests and uses a little more energy."
+      subtitle={t('Shorter is fresher but sends more requests and uses a little more energy.')}
       actions={
         <Button
           size="small"
@@ -339,7 +353,7 @@ export function SyncIntervalsSection() {
           isDisabled={isDefault}
           onPress={() => update((current) => ({ ...current, cadences: { ...DEFAULT_CADENCES } }))}
         >
-          Restore defaults
+          {t('Restore defaults')}
         </Button>
       }
     >
@@ -349,15 +363,15 @@ export function SyncIntervalsSection() {
         const value = cadences[field.key];
         const invalid = !Number.isInteger(value) || value < bounds.min || value > bounds.max;
         return (
-          <SettingRow key={field.key} title={field.label} help={field.description}>
+          <SettingRow key={field.key} title={t(field.label)} help={t(field.description)}>
             {({ helpId }) => (
               <>
                 <span className={styles.rangeHint}>{rangeText(bounds.min, bounds.max)}</span>
                 <NumberField
-                  label={field.label}
+                  label={t(field.label)}
                   hideLabel
                   aria-describedby={helpId}
-                  unit="s"
+                  unit={t('s')}
                   minValue={bounds.min}
                   maxValue={bounds.max}
                   value={value}
@@ -400,8 +414,8 @@ export function DataSection() {
     try {
       path = await chooseSavePath({
         defaultPath: 'azure-timetracker-diagnostics.txt',
-        filters: [{ name: 'Text', extensions: ['txt'] }],
-        title: 'Save diagnostics',
+        filters: [{ name: t('Text'), extensions: ['txt'] }],
+        title: t('Save diagnostics'),
       });
     } catch (reason) {
       setDialogError(reason instanceof Error ? reason.message : String(reason));
@@ -413,11 +427,11 @@ export function DataSection() {
   return (
     <SettingsSection
       id="data"
-      title={`Data on this ${words.device}`}
-      subtitle={`Review status, drafts and suggestion history. Tokens are in ${words.credentials}.`}
+      title={t('Data on this {device}', { device: words.device })}
+      subtitle={t('Review status, drafts and suggestion history. Tokens are in {store}.', { store: words.credentials })}
     >
-      <SettingRow title="Stored in" below={revealError ? <InlineIssue>{revealError}</InlineIssue> : null}>
-        {folder ? <code className={styles.code}>{displayPath(folder)}</code> : <span className={styles.muted}>Not available in preview</span>}
+      <SettingRow title={t('Stored in')} below={revealError ? <InlineIssue>{revealError}</InlineIssue> : null}>
+        {folder ? <code className={styles.code}>{displayPath(folder)}</code> : <span className={styles.muted}>{t('Not available in preview')}</span>}
         <Button
           size="small"
           isDisabled={!folder}
@@ -426,32 +440,32 @@ export function DataSection() {
             revealDataDirectory().catch((reason: unknown) => setRevealError(reason instanceof Error ? reason.message : String(reason)));
           }}
         >
-          {os === 'windows' ? 'Show in Explorer' : 'Show in Finder'}
+          {os === 'windows' ? t('Show in Explorer') : t('Show in Finder')}
         </Button>
       </SettingRow>
       <SettingRow
-        title="Diagnostics"
-        help="A text file with the version, connection status and the app’s activity log. Never tokens."
+        title={t('Diagnostics')}
+        help={t('A text file with the version, connection status and the app’s activity log. Never tokens.')}
         below={
           diagnostics.error || dialogError ? (
             <InlineIssue>{diagnostics.error?.message ?? dialogError}</InlineIssue>
           ) : saved ? (
-            <p className={styles.success}>{`Saved to ${displayPath(saved)}`}</p>
+            <p className={styles.success}>{t('Saved to {path}', { path: displayPath(saved) })}</p>
           ) : null
         }
       >
         <Button size="small" onPress={() => void saveLog()} isPending={diagnostics.pending}>
-          Save log…
+          {t('Save log…')}
         </Button>
       </SettingRow>
       <SettingRow
-        title="Onboarding"
+        title={t('Onboarding')}
         help={
           preview
-            ? 'Not available in preview mode.'
+            ? t('Not available in preview mode.')
             : dirty
-              ? 'Save or revert your changes first: the onboarding replaces this window until you finish it.'
-              : 'Walk through the setup steps again. Your settings, accounts and any running timer stay.'
+              ? t('Save or revert your changes first: the onboarding replaces this window until you finish it.')
+              : t('Walk through the setup steps again. Your settings, accounts and any running timer stay.')
         }
         below={onboarding.error ? <InlineIssue>{onboarding.error.message}</InlineIssue> : null}
       >
@@ -461,7 +475,7 @@ export function DataSection() {
           isPending={onboarding.pending}
           onPress={() => void onboarding.run({ type: 'app.restartOnboarding' })}
         >
-          Show onboarding again
+          {t('Show onboarding again')}
         </Button>
       </SettingRow>
     </SettingsSection>
@@ -477,12 +491,15 @@ export function ResetSection() {
   return (
     <SettingsSection id="reset" tone="danger">
       <SettingRow
-        title="Reset local data"
-        help={`Removes day review status, Figma context history and drafts already sent to 7pace from this ${words.device}. Unsent drafts, settings and tokens stay; 7pace and Azure DevOps are not changed.`}
+        title={t('Reset local data')}
+        help={t(
+          'Removes day review status, Figma context history and drafts already sent to 7pace from this {device}. Unsent drafts, settings and tokens stay; 7pace and Azure DevOps are not changed.',
+          { device: words.device },
+        )}
         below={reset.error ? <InlineIssue>{reset.error.message}</InlineIssue> : null}
       >
         <Button size="small" onPress={() => setConfirming(true)} isDisabled={preview || busy}>
-          Reset…
+          {t('Reset…')}
         </Button>
       </SettingRow>
       <Dialog
@@ -490,10 +507,13 @@ export function ResetSection() {
         onOpenChange={setConfirming}
         role="alertdialog"
         size="small"
-        title="Reset local data?"
-        description={`Day review status, Figma context history and sent drafts are removed from this ${words.device}. Unsent drafts, your settings and tokens stay. This cannot be undone.`}
+        title={t('Reset local data?')}
+        description={t(
+          'Day review status, Figma context history and sent drafts are removed from this {device}. Unsent drafts, your settings and tokens stay. This cannot be undone.',
+          { device: words.device },
+        )}
         primaryAction={{
-          label: 'Reset local data',
+          label: t('Reset local data'),
           variant: 'destructive',
           isPending: reset.pending,
           onAction: () => {

@@ -16,6 +16,7 @@ use att_core::model::Repository;
 use att_core::{AppError, Result};
 
 use crate::engine::Engine;
+use crate::nl::{tr, trf};
 use crate::probes::{PROBE_DEADLINE, blocking};
 use crate::state::AppState;
 
@@ -173,7 +174,10 @@ fn apply_reading(
         tracking::cancel_menu_tracking(state);
     }
     let Some(branch) = change.new.branch.clone() else {
-        effects.record("Detached HEAD", format!("{}: tracking unchanged", repo.name()));
+        effects.record(
+            tr("Detached HEAD"),
+            trf("{repository}: tracking unchanged", &[("repository", &repo.name())]),
+        );
         return None;
     };
     let ticket = pattern.and_then(|pattern| pattern.extract(&branch).ok().flatten());
@@ -186,7 +190,7 @@ fn apply_reading(
     }
     let event = BranchChange::new(repo, &branch, old.branch.as_deref(), ticket, now);
     state.session.branches.pending.push(event.clone());
-    effects.record("Branch changed", format!("{} → {}", repo.name(), branch));
+    effects.record(tr("Branch changed"), format!("{} → {}", repo.name(), branch));
     effects.announce(PromptKind::Branch, Some(announce::branch(&event, is_running)));
     if let Some(ticket) = ticket {
         effects.title(ticket);
@@ -216,7 +220,7 @@ pub(crate) fn keep(engine: &Engine, id: Uuid) {
         };
         dismiss_change(state, id, effects);
         effects.record(
-            "Kept current tracking",
+            tr("Kept current tracking"),
             format!("{} · {}", change.repository_name, change.branch),
         );
     });
@@ -258,16 +262,16 @@ pub(crate) async fn validate(engine: &Engine, change: &BranchChange) -> Result<(
         repository.filter(|_| pending && state.config.watch_enabled)
     });
     let Some(repository) = repository else {
-        return Err(AppError::message("This branch suggestion is no longer active."));
+        return Err(AppError::message(tr("This branch suggestion is no longer active.")));
     };
     let snapshot = blocking(PROBE_DEADLINE, move || GitProbe::read(&repository.path))
         .await
-        .unwrap_or_else(|| Err(AppError::message("Git HEAD is temporarily unreadable.")))?;
+        .unwrap_or_else(|| Err(AppError::message(tr("Git HEAD is temporarily unreadable."))))?;
     if snapshot.branch.as_deref() != Some(change.branch.as_str()) {
         update_with(engine, |state, effects| dismiss_change(state, change.id, effects));
-        return Err(AppError::message(
+        return Err(AppError::message(tr(
             "This repository changed branches again. Review the latest suggestion.",
-        ));
+        )));
     }
     Ok(())
 }

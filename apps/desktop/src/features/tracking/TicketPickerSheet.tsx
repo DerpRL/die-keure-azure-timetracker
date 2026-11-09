@@ -14,6 +14,7 @@ import { TicketCommands } from './TicketCommands';
 import { draftKey, PickerTickets, type PendingChoice } from './TicketPicker';
 import { TrackingCommands } from './TrackingCommands';
 import styles from './ticketPicker.module.css';
+import { t } from '../../i18n';
 
 /** ⌘Return / Ctrl+Return starts from anywhere in the picker, as the footer hint says. */
 const START_SHORTCUT: KeyCombo = { key: 'Enter', mod: true };
@@ -109,19 +110,19 @@ export function TicketPickerSheet() {
   const replacing = running !== null && running.ticketId !== null;
 
   // 2.2 "S6 · Ticket picker": while a timer runs, the picker says what is running.
-  const title = replacing ? 'Switch ticket' : 'Choose a ticket';
-  const unchanged = 'Nothing changes in 7pace until you confirm.';
+  const title = replacing ? t('Switch ticket') : t('Choose a ticket');
+  const unchanged = t('Nothing changes in 7pace until you confirm.');
   const description = suggestion ? (
-    `For ${suggestion.title}. ${unchanged}`
+    `${t('For {title}.', { title: suggestion.title })} ${unchanged}`
   ) : replacing ? (
     <>
-      Now tracking <strong>#{running.ticketId}</strong> · {formatClock(seconds)}. {unchanged}
+      {t('Now tracking')} <strong>#{running.ticketId}</strong> · {formatClock(seconds)}. {unchanged}
     </>
   ) : (
-    `Search Azure tickets by number or title. ${unchanged}`
+    `${t('Search Azure tickets by number or title.')} ${unchanged}`
   );
 
-  let label = 'Start tracking';
+  let label = t('Start tracking');
   if (switching && pending) label = pending.label;
   else if (draft && form) label = startLabel(draft, 'picker', form.includeTicket);
   const commentApplies = switching && pending ? pending.commentApplies : draft ? draft.manual !== null : true;
@@ -144,7 +145,7 @@ export function TicketPickerSheet() {
         secondaryActions={
           <span className={styles.hint}>
             <KeyboardShortcut shortcut={START_SHORTCUT} />
-            <span>Start tracking</span>
+            <span>{t('Start tracking')}</span>
           </span>
         }
         primaryAction={{

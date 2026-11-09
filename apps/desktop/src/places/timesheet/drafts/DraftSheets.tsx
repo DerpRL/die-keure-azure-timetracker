@@ -10,6 +10,7 @@ import type { ActivityType, OfflineDraft, OfflineDraftView } from '../../../ipc/
 import { DeleteDraftButton } from '../../../features/offline/DeleteDraft';
 import { toZoned } from '../../../features/ticketContext/format';
 import { useAction } from '../../../state/hooks';
+import { mark, t } from '../../../i18n';
 import styles from './OfflineDrafts.module.css';
 
 const MAX_TICKET = 2_147_483_647;
@@ -23,56 +24,59 @@ export function parseTicket(text: string): { valid: boolean; ticketId: number | 
   return ticket > 0 && ticket <= MAX_TICKET ? { valid: true, ticketId: ticket } : { valid: false, ticketId: null };
 }
 
-const TICKET_OR_COMMENT = 'Choose a ticket or add a comment for ticket-free work.';
+/** Translate where shown, with `t`. */
+export const TICKET_OR_COMMENT = mark('Choose a ticket or add a comment for ticket-free work.');
 
 function activityItems(activities: readonly ActivityType[], current: string): PickerOption[] {
   const items: PickerOption[] = activities.map((activity) => ({ id: activity.id, label: activity.name ?? activity.id }));
-  if (current && !activities.some((activity) => activity.id === current)) items.push({ id: current, label: 'Previously selected activity' });
+  if (current && !activities.some((activity) => activity.id === current)) items.push({ id: current, label: t('Previously selected activity') });
   return items;
 }
 
-interface Fields {
+export interface Fields {
   ticket: string;
   comment: string;
   activity: string;
 }
 
-function DraftFields({
+export function DraftFields({
   fields,
   activities,
   onChange,
   isDisabled,
+  activityDescription = t('Activities are cached for this workspace. Reconnect and review to refresh them.'),
 }: {
   fields: Fields;
   activities: readonly ActivityType[];
   onChange: (fields: Fields) => void;
   isDisabled: boolean;
+  activityDescription?: string;
 }) {
   const ticket = parseTicket(fields.ticket);
   return (
     <>
       <TextField
-        label="Azure ticket number (optional)"
+        label={t('Azure ticket number (optional)')}
         inputMode="numeric"
         value={fields.ticket}
         onChange={(value) => onChange({ ...fields, ticket: value })}
         isInvalid={!ticket.valid}
-        errorMessage="Enter a ticket number from 1 to 2147483647, or leave it empty."
+        errorMessage={t('Enter a ticket number from 1 to 2147483647, or leave it empty.')}
         isDisabled={isDisabled}
       />
       <TextField
-        label="Comment (required without a ticket)"
+        label={t('Comment (required without a ticket)')}
         value={fields.comment}
         onChange={(value) => onChange({ ...fields, comment: value })}
         isDisabled={isDisabled}
       />
       <Select
-        label="Activity"
-        placeholder={activities.length === 0 ? 'Choose after reconnecting' : 'Choose an activity'}
+        label={t('Activity')}
+        placeholder={activities.length === 0 ? t('Choose after reconnecting') : t('Choose an activity')}
         items={activityItems(activities, fields.activity)}
         selectedKey={fields.activity || null}
         onSelectionChange={(key) => onChange({ ...fields, activity: key === null ? '' : String(key) })}
-        description="Activities are cached for this workspace. Reconnect and review to refresh them."
+        description={activityDescription}
         isDisabled={isDisabled}
       />
     </>
@@ -124,11 +128,11 @@ export function DraftEditor({ draft, activities, working, device, onClose, delet
 
   const submit = async () => {
     if (ticket.ticketId === null && !fields.comment.trim()) {
-      setProblem(TICKET_OR_COMMENT);
+      setProblem(t(TICKET_OR_COMMENT));
       return;
     }
     if (!start || (!running && !end)) {
-      setProblem('Enter a start and an end time.');
+      setProblem(t('Enter a start and an end time.'));
       return;
     }
     setProblem(null);
@@ -152,10 +156,10 @@ export function DraftEditor({ draft, activities, working, device, onClose, delet
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
-      title={running ? 'Local timer' : 'Edit offline time'}
-      description={`Saved on ${device} until you review and upload.`}
+      title={running ? t('Local timer') : t('Edit offline time')}
+      description={t('Saved on {device} until you review and upload.', { device })}
       primaryAction={{
-        label: running ? 'Save local timer' : 'Save draft',
+        label: running ? t('Save local timer') : t('Save draft'),
         onAction: () => void submit(),
         isDisabled: !ticket.valid || working || (activities.length > 0 && !fields.activity),
         isPending: save.pending,
@@ -179,7 +183,7 @@ export function DraftEditor({ draft, activities, working, device, onClose, delet
         <DraftFields fields={fields} activities={activities} onChange={setFields} isDisabled={working} />
         <div className={styles.fieldRow}>
           <DatePicker
-            label="Start"
+            label={t('Start')}
             value={start}
             onChange={setStart}
             maxValue={latest}
@@ -190,7 +194,7 @@ export function DraftEditor({ draft, activities, working, device, onClose, delet
           />
           {running ? null : (
             <DatePicker
-              label="End"
+              label={t('End')}
               value={end}
               onChange={setEnd}
               maxValue={latest}
@@ -202,7 +206,7 @@ export function DraftEditor({ draft, activities, working, device, onClose, delet
           )}
         </div>
         <Switch isSelected={billable} onChange={setBillable} isDisabled={working}>
-          Billable time
+          {t('Billable time')}
         </Switch>
         {error ? <Banner tone="error">{error}</Banner> : null}
       </div>
@@ -233,7 +237,7 @@ export function StartLocalSheet({ activities, initialTicketId, initialActivityId
 
   const submit = async () => {
     if (ticket.ticketId === null && !fields.comment.trim()) {
-      setProblem(TICKET_OR_COMMENT);
+      setProblem(t(TICKET_OR_COMMENT));
       return;
     }
     setProblem(null);
@@ -256,10 +260,10 @@ export function StartLocalSheet({ activities, initialTicketId, initialActivityId
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
-      title="Start local timer"
-      description={`Saved on ${device} until you review and upload. This does not change the 7pace timer.`}
+      title={t('Start local timer')}
+      description={t('Saved on {device} until you review and upload. This does not change the 7pace timer.', { device })}
       primaryAction={{
-        label: 'Start local timer',
+        label: t('Start local timer'),
         onAction: () => void submit(),
         isDisabled: !ticket.valid || working || (activities.length > 0 && !fields.activity),
         isPending: start.pending,

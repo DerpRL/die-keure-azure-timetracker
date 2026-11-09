@@ -5,6 +5,7 @@
  */
 import type { Configuration, HostOs } from '../../ipc/contract';
 import type { PageId } from '../../layout/navigation';
+import { mark, t } from '../../i18n';
 
 export type FeatureGroup = 'Tracking' | 'Meetings' | 'Views' | 'App';
 
@@ -23,9 +24,12 @@ export type FeatureBinding =
 
 export interface FeatureDefinition {
   id: string;
+  /** English (`mark`): show with `t`. */
   title: string;
   group: FeatureGroup;
+  /** In the interface language. */
   privacy: (os: HostOs) => string;
+  /** English (`mark`, "None" for no permission): show with `t`. */
   permission: (os: HostOs) => string;
   binding: FeatureBinding;
   /** Only on systems with a calendar source (macOS at launch). */
@@ -37,8 +41,8 @@ export interface FeatureDefinition {
 /** Pages whose views can be hidden (never Overview or Settings, which back Today and Settings). */
 export const HIDEABLE_PAGES: readonly PageId[] = ['agenda', 'offlineDrafts', 'statistics', 'weeklyReport', 'timeEditor'];
 
-const none = () => 'None';
-const local = (os: HostOs) => (os === 'windows' ? 'this PC' : 'this Mac');
+const none = () => mark('None');
+const local = (os: HostOs) => (os === 'windows' ? t('this PC') : t('this Mac'));
 
 function field(
   get: (configuration: Configuration) => boolean,
@@ -50,9 +54,9 @@ function field(
 export const FEATURES: readonly FeatureDefinition[] = [
   {
     id: 'watch',
-    title: 'Git branch watching',
+    title: mark('Git branch watching'),
     group: 'Tracking',
-    privacy: (os) => `Reads only the current branch of the repositories you add. Nothing leaves ${local(os)}.`,
+    privacy: (os) => t('Reads only the current branch of the repositories you add. Nothing leaves {place}.', { place: local(os) }),
     permission: none,
     binding: field(
       (c) => c.watchEnabled,
@@ -61,10 +65,10 @@ export const FEATURES: readonly FeatureDefinition[] = [
   },
   {
     id: 'idle',
-    title: 'Time awareness (idle, lock)',
+    title: mark('Time awareness (idle, lock)'),
     group: 'Tracking',
     privacy: () =>
-      'Reads elapsed input inactivity and lock events only. No keystrokes, window titles, documents or screenshots are collected.',
+      t('Reads elapsed input inactivity and lock events only. No keystrokes, window titles, documents or screenshots are collected.'),
     permission: none,
     binding: field(
       (c) => c.awareness.idleEnabled || c.awareness.lockEnabled,
@@ -73,9 +77,9 @@ export const FEATURES: readonly FeatureDefinition[] = [
   },
   {
     id: 'forgotten',
-    title: 'Forgotten-timer reminders',
+    title: mark('Forgotten-timer reminders'),
     group: 'Tracking',
-    privacy: () => 'Reads the foreground app’s identity only, compared with your work applications.',
+    privacy: () => t('Reads the foreground app’s identity only, compared with your work applications.'),
     permission: none,
     binding: field(
       (c) => c.awareness.forgottenEnabled,
@@ -84,10 +88,10 @@ export const FEATURES: readonly FeatureDefinition[] = [
   },
   {
     id: 'completion',
-    title: 'Ticket completion reminders',
+    title: mark('Ticket completion reminders'),
     group: 'Tracking',
-    privacy: () => 'Checks the tracked ticket’s state in Azure about once a minute while tracking.',
-    permission: () => 'Azure PAT with Work Items (Read)',
+    privacy: () => t('Checks the tracked ticket’s state in Azure about once a minute while tracking.'),
+    permission: () => mark('Azure PAT with Work Items (Read)'),
     binding: field(
       (c) => c.completionReminders,
       (c, on) => ({ ...c, completionReminders: on }),
@@ -95,20 +99,20 @@ export const FEATURES: readonly FeatureDefinition[] = [
   },
   {
     id: 'figma',
-    title: 'Figma context',
+    title: mark('Figma context'),
     group: 'Tracking',
     privacy: (os) =>
       os === 'windows'
-        ? 'Reads only Figma window titles. No design content, Figma account, token or plugin.'
-        : 'Reads only Figma file URLs and window titles. No design content, Figma account, token or plugin.',
-    permission: (os) => (os === 'windows' ? 'None (window titles, experimental)' : 'Accessibility'),
+        ? t('Reads only Figma window titles. No design content, Figma account, token or plugin.')
+        : t('Reads only Figma file URLs and window titles. No design content, Figma account, token or plugin.'),
+    permission: (os) => (os === 'windows' ? mark('None (window titles, experimental)') : mark('Accessibility')),
     binding: { kind: 'figma' },
   },
   {
     id: 'quickSwitch',
-    title: 'Quick switch',
+    title: mark('Quick switch'),
     group: 'Tracking',
-    privacy: () => 'Registers one global keyboard shortcut. No other keys are read.',
+    privacy: () => t('Registers one global keyboard shortcut. No other keys are read.'),
     permission: none,
     binding: field(
       (c) => c.quickSwitchEnabled,
@@ -117,18 +121,18 @@ export const FEATURES: readonly FeatureDefinition[] = [
   },
   {
     id: 'targets',
-    title: 'Targets and holidays',
+    title: mark('Targets and holidays'),
     group: 'Tracking',
-    privacy: (os) => `Your schedule and exceptions stay on ${local(os)}.`,
+    privacy: (os) => t('Your schedule and exceptions stay on {place}.', { place: local(os) }),
     permission: none,
-    binding: { kind: 'info', text: 'Always on. Progress, day reviews and statistics follow your weekly schedule.' },
+    binding: { kind: 'info', text: mark('Always on. Progress, day reviews and statistics follow your weekly schedule.') },
   },
   {
     id: 'calendar',
-    title: 'Calendar meetings',
+    title: mark('Calendar meetings'),
     group: 'Meetings',
-    privacy: () => 'Calendar events stay on your Mac and are never sent to Azure or 7pace.',
-    permission: () => 'Calendar access',
+    privacy: () => t('Calendar events stay on your Mac and are never sent to Azure or 7pace.'),
+    permission: () => mark('Calendar access'),
     binding: field(
       (c) => c.calendarEnabled,
       (c, on) => ({ ...c, calendarEnabled: on }),
@@ -137,10 +141,10 @@ export const FEATURES: readonly FeatureDefinition[] = [
   },
   {
     id: 'microphone',
-    title: 'Microphone meetings',
+    title: mark('Microphone meetings'),
     group: 'Meetings',
-    privacy: () => 'Reads which apps use the microphone; never records audio.',
-    permission: (os) => (os === 'windows' ? 'None' : 'None (macOS 14.2 or later)'),
+    privacy: () => t('Reads which apps use the microphone; never records audio.'),
+    permission: (os) => (os === 'windows' ? mark('None') : mark('None (macOS 14.2 or later)')),
     binding: field(
       (c) => c.microphone.enabled,
       (c, on) => ({ ...c, microphone: { ...c.microphone, enabled: on } }),
@@ -149,21 +153,21 @@ export const FEATURES: readonly FeatureDefinition[] = [
   },
   {
     id: 'meetingEnd',
-    title: 'Meeting-end reminders',
+    title: mark('Meeting-end reminders'),
     group: 'Meetings',
-    privacy: () => 'Uses the same calendar and microphone signals as the meeting suggestions.',
+    privacy: () => t('Uses the same calendar and microphone signals as the meeting suggestions.'),
     permission: none,
     binding: {
       kind: 'info',
-      text: 'Follow Calendar meetings and Microphone meetings. Choose how they interrupt under Notifications (Meeting ended, Return after meetings).',
+      text: mark('Follow Calendar meetings and Microphone meetings. Choose how they interrupt under Notifications (Meeting ended, Return after meetings).'),
     },
   },
   {
     id: 'dayReview',
-    title: 'Day review',
+    title: mark('Day review'),
     group: 'Tracking',
-    privacy: (os) => `Reminds you to review your day. Review status is stored only on ${local(os)}.`,
-    permission: () => 'Notifications (optional)',
+    privacy: (os) => t('Reminds you to review your day. Review status is stored only on {place}.', { place: local(os) }),
+    permission: () => mark('Notifications (optional)'),
     binding: field(
       (c) => c.dayReview.enabled,
       (c, on) => ({ ...c, dayReview: { ...c.dayReview, enabled: on } }),
@@ -171,50 +175,50 @@ export const FEATURES: readonly FeatureDefinition[] = [
   },
   {
     id: 'agenda',
-    title: 'Calendar on Today',
+    title: mark('Calendar on Today'),
     group: 'Views',
-    privacy: () => 'Shows events from the calendars you choose. Events stay on your Mac.',
-    permission: () => 'Calendar access',
-    binding: { kind: 'page', page: 'agenda', where: 'Shows your calendar next to tracked time on Today. Settings → Calendars stays available for meeting suggestions.' },
+    privacy: () => t('Shows events from the calendars you choose. Events stay on your Mac.'),
+    permission: () => mark('Calendar access'),
+    binding: { kind: 'page', page: 'agenda', where: mark('Shows your calendar next to tracked time on Today. Settings → Calendars stays available for meeting suggestions.') },
     needsCalendar: true,
   },
   {
     id: 'offlineDrafts',
-    title: 'Offline drafts and local timer',
+    title: mark('Offline drafts and local timer'),
     group: 'Views',
-    privacy: (os) => `Drafts stay on ${local(os)} until you upload them.`,
+    privacy: (os) => t('Drafts stay on {place} until you upload them.', { place: local(os) }),
     permission: none,
-    binding: { kind: 'page', page: 'offlineDrafts', where: 'Shows Drafts in Timesheet.' },
+    binding: { kind: 'page', page: 'offlineDrafts', where: mark('Shows Drafts in Timesheet.') },
   },
   {
     id: 'weeklyReport',
-    title: 'Weekly report',
+    title: mark('Weekly report'),
     group: 'Views',
-    privacy: (os) => `Report drafts are stored on ${local(os)}.`,
+    privacy: (os) => t('Report drafts are stored on {place}.', { place: local(os) }),
     permission: none,
-    binding: { kind: 'page', page: 'weeklyReport', where: 'Shows the weekly report in Insights.' },
+    binding: { kind: 'page', page: 'weeklyReport', where: mark('Shows the weekly report in Insights.') },
   },
   {
     id: 'statistics',
-    title: 'Statistics',
+    title: mark('Statistics'),
     group: 'Views',
-    privacy: (os) => `Calculated on ${local(os)} from your 7pace worklogs.`,
+    privacy: (os) => t('Calculated on {place} from your 7pace worklogs.', { place: local(os) }),
     permission: none,
-    binding: { kind: 'page', page: 'statistics', where: 'Shows Where time went and Patterns in Insights.' },
+    binding: { kind: 'page', page: 'statistics', where: mark('Shows Where time went and Patterns in Insights.') },
   },
   {
     id: 'timeEditor',
-    title: 'Time editor',
+    title: mark('Time editor'),
     group: 'Views',
-    privacy: (os) => `Changes reach 7pace only when you save them. The recovery journal stays on ${local(os)}.`,
+    privacy: (os) => t('Changes reach 7pace only when you save them. The recovery journal stays on {place}.', { place: local(os) }),
     permission: none,
-    binding: { kind: 'page', page: 'timeEditor', where: 'Shows Day in Timesheet, where you split, merge and correct entries.' },
+    binding: { kind: 'page', page: 'timeEditor', where: mark('Shows Day in Timesheet, where you split, merge and correct entries.') },
   },
   {
     id: 'updates',
-    title: 'Check for updates automatically',
+    title: mark('Check for updates automatically'),
     group: 'App',
-    privacy: () => 'Checks the public update feed. No personal data is sent.',
+    privacy: () => t('Checks the public update feed. No personal data is sent.'),
     permission: none,
     binding: field(
       (c) => c.automaticUpdateChecks,
@@ -223,18 +227,18 @@ export const FEATURES: readonly FeatureDefinition[] = [
   },
   {
     id: 'launchAtLogin',
-    title: 'Launch at login',
+    title: mark('Launch at login'),
     group: 'App',
-    privacy: () => 'Opens Azure timetracker when you sign in. Applies immediately.',
-    permission: (os) => (os === 'windows' ? 'None' : 'Login items'),
+    privacy: () => t('Opens Azure timetracker when you sign in. Applies immediately.'),
+    permission: (os) => (os === 'windows' ? mark('None') : mark('Login items')),
     binding: { kind: 'launchAtLogin' },
   },
   {
     id: 'notifications',
-    title: 'Notifications',
+    title: mark('Notifications'),
     group: 'App',
-    privacy: () => 'Shown by the system notification centre on this device only.',
-    permission: () => 'Notifications',
+    privacy: () => t('Shown by the system notification centre on this device only.'),
+    permission: () => mark('Notifications'),
     binding: field(
       (c) => c.notificationsEnabled,
       (c, on) => ({ ...c, notificationsEnabled: on }),

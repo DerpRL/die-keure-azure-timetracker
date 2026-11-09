@@ -34,6 +34,7 @@ import { useCsvExport } from '../useCsvExport';
 import styles from './History.module.css';
 import shared from '../timesheet.module.css';
 import { cx } from '../../../utils/cx';
+import { dateFormat, mark, t, tn } from '../../../i18n';
 
 /** Worklogs rendered at once; "Show more" adds this many (long ranges stay fast). */
 export const HISTORY_PAGE_SIZE = 150;
@@ -45,10 +46,10 @@ type Preset = 'today' | 'thisWeek' | 'lastWeek';
 type RangeChoice = Preset | 'custom';
 
 const PRESETS: ReadonlyArray<{ id: RangeChoice; label: string }> = [
-  { id: 'today', label: 'Today' },
-  { id: 'thisWeek', label: 'This week' },
-  { id: 'lastWeek', label: 'Last week' },
-  { id: 'custom', label: 'Custom…' },
+  { id: 'today', label: mark('Today') },
+  { id: 'thisWeek', label: mark('This week') },
+  { id: 'lastWeek', label: mark('Last week') },
+  { id: 'custom', label: mark('Custom…') },
 ];
 
 /** The `from`/`to` days a quick range loads (weeks start on Monday, as in 1.14). */
@@ -72,13 +73,13 @@ function presetOf(from: string, to: string): Preset | null {
 export function formatRangeTitle(from: string, to: string): string {
   const a = toCalendarDay(from);
   const b = toCalendarDay(to);
-  if (!a || !b) return 'Worklogs';
+  if (!a || !b) return t('Worklogs');
   if (a.compare(b) === 0) return formatDayLong(from);
   const date = (day: typeof a) => new Date(day.year, day.month - 1, day.day);
-  const short = (day: typeof a) => date(day).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const short = (day: typeof a) => dateFormat({ day: 'numeric', month: 'short' }).format(date(day));
   if (a.year !== b.year) return `${short(a)} ${a.year} – ${short(b)} ${b.year}`;
   if (a.month !== b.month) return `${short(a)} – ${short(b)} ${b.year}`;
-  return `${a.day} – ${b.day} ${date(b).toLocaleDateString('en-GB', { month: 'long' })} ${b.year}`;
+  return `${a.day} – ${b.day} ${dateFormat({ month: 'long' }).format(date(b))} ${b.year}`;
 }
 
 function matches(log: WorkLog, query: string, items: WorkItemsSlice | undefined): boolean {
@@ -109,12 +110,12 @@ function LogRow({ log, items, trackDisabled, colorIndex }: { log: WorkLog; items
         <div className={styles.workItem}>
           {ticket !== null ? (
             <span className={styles.ticket}>
-              <TicketLink ticketId={ticket} title={items?.[String(ticket)]?.title ?? (comment || `Azure ticket #${ticket}`)} />
+              <TicketLink ticketId={ticket} title={items?.[String(ticket)]?.title ?? (comment || t('Azure ticket #{ticket}', { ticket }))} />
             </span>
           ) : (
             <span>
-              {comment || 'Unassigned time'}
-              <span className={styles.caption}> · no ticket</span>
+              {comment || t('Unassigned time')}
+              <span className={styles.caption}>{` · ${t('no ticket')}`}</span>
             </span>
           )}
           {ticket !== null && comment ? <span className={styles.caption}>{comment}</span> : null}
@@ -132,9 +133,9 @@ function LogRow({ log, items, trackDisabled, colorIndex }: { log: WorkLog; items
             icon={PlayIcon}
             isDisabled={trackDisabled}
             onPress={() => void track.run({ type: 'tracking.chooseTicket', ticketId: ticket, surface: 'picker' })}
-            aria-label={`Track again, #${ticket}`}
+            aria-label={t('Track again, #{ticket}', { ticket })}
           >
-            Track again
+            {t('Track again')}
           </Button>
         ) : null}
       </td>
@@ -237,8 +238,8 @@ function Worklogs({ history, filter, trackDisabled }: { history: HistorySlice; f
         <EmptyState
           icon={HistoryIcon}
           headingLevel={2}
-          title={history.loaded ? 'No worklogs in this view' : 'Your worklogs are waiting'}
-          description={history.loaded ? 'Change the date range or clear the filter.' : 'Connect to 7pace in Settings to load your real worklogs.'}
+          title={history.loaded ? t('No worklogs in this view') : t('Your worklogs are waiting')}
+          description={history.loaded ? t('Change the date range or clear the filter.') : t('Connect to 7pace in Settings to load your real worklogs.')}
         />
       </Card>
     );
@@ -247,21 +248,21 @@ function Worklogs({ history, filter, trackDisabled }: { history: HistorySlice; f
     <>
       <Card padding="none" className={styles.tableCard}>
         <div className={styles.scroll}>
-          <table className={styles.table} aria-label="Worklogs">
+          <table className={styles.table} aria-label={t('Worklogs')}>
             <thead>
               <tr>
                 <th scope="col" className={styles.startColumn}>
-                  Start
+                  {t('Start')}
                 </th>
-                <th scope="col">Work item</th>
+                <th scope="col">{t('Work item')}</th>
                 <th scope="col" className={styles.activityColumn}>
-                  Activity
+                  {t('Activity')}
                 </th>
                 <th scope="col" className={styles.end}>
-                  Duration
+                  {t('Duration')}
                 </th>
                 <th scope="col" className={styles.end}>
-                  <span className="visually-hidden">Actions</span>
+                  <span className="visually-hidden">{t('Actions')}</span>
                 </th>
               </tr>
             </thead>
@@ -269,15 +270,15 @@ function Worklogs({ history, filter, trackDisabled }: { history: HistorySlice; f
               <DayGroup key={day} day={day} title={formatDayLong(day)} logs={logs} items={items} trackDisabled={trackDisabled} colorOf={colorOf} />
             ))}
             {unknown.length > 0 ? (
-              <DayGroup day={null} title="Unrecognized dates from 7pace" logs={unknown} items={items} trackDisabled={trackDisabled} colorOf={colorOf} />
+              <DayGroup day={null} title={t('Unrecognized dates from 7pace')} logs={unknown} items={items} trackDisabled={trackDisabled} colorOf={colorOf} />
             ) : null}
           </table>
         </div>
       </Card>
       {filtered.length > shownCount ? (
         <div className={styles.more}>
-          <span className={styles.caption}>{`Showing ${shownCount} of ${filtered.length} worklogs`}</span>
-          <Button onPress={() => setVisible((count) => count + HISTORY_PAGE_SIZE)}>Show more worklogs</Button>
+          <span className={styles.caption}>{t('Showing {shown} of {total} worklogs', { shown: shownCount, total: filtered.length })}</span>
+          <Button onPress={() => setVisible((count) => count + HISTORY_PAGE_SIZE)}>{t('Show more worklogs')}</Button>
         </div>
       ) : null}
     </>
@@ -285,7 +286,8 @@ function Worklogs({ history, filter, trackDisabled }: { history: HistorySlice; f
 }
 
 function AuditRow({ entry }: { entry: AuditEntry }) {
-  const Icon = entry.title.toLocaleLowerCase().includes('attention') ? AttentionIcon : CircleIcon;
+  // 2.6 entries carry `attention`; older ones only said so in their English title.
+  const Icon = entry.attention || entry.title.toLocaleLowerCase().includes('attention') ? AttentionIcon : CircleIcon;
   return (
     <li className={styles.auditRow}>
       <Icon className={styles.auditIcon} />
@@ -305,22 +307,22 @@ function AppActivity({ audit }: { audit: readonly AuditEntry[] }) {
   if (audit.length === 0) {
     return (
       <Card>
-        <EmptyState icon={InboxIcon} headingLevel={2} title="A quiet beginning" description="Branch changes and tracking decisions will appear here." />
+        <EmptyState icon={InboxIcon} headingLevel={2} title={t('A quiet beginning')} description={t('Branch changes and tracking decisions will appear here.')} />
       </Card>
     );
   }
   const shown = audit.slice(0, visible);
   return (
     <Card padding="none" className={styles.auditCard}>
-      <ol role="list" className={styles.audit} aria-label="App activity, newest first">
+      <ol role="list" className={styles.audit} aria-label={t('App activity, newest first')}>
         {shown.map((entry) => (
           <AuditRow key={entry.id} entry={entry} />
         ))}
       </ol>
       {audit.length > shown.length ? (
         <div className={styles.more}>
-          <span className={styles.caption}>{`Showing ${shown.length} of ${audit.length} entries`}</span>
-          <Button onPress={() => setVisible((count) => count + AUDIT_PAGE_SIZE)}>Show more activity</Button>
+          <span className={styles.caption}>{t('Showing {shown} of {total} entries', { shown: shown.length, total: audit.length })}</span>
+          <Button onPress={() => setVisible((count) => count + AUDIT_PAGE_SIZE)}>{t('Show more activity')}</Button>
         </div>
       ) : null}
     </Card>
@@ -367,12 +369,12 @@ export function ListView() {
     changeRange(a.add({ days }).toString(), b.add({ days }).toString(), true);
   };
 
-  useRefreshShortcut(runLoad, { isDisabled: !connected || loading, label: 'Refresh worklogs' });
+  useRefreshShortcut(runLoad, { isDisabled: !connected || loading, label: t('Refresh worklogs') });
   useCommands([
     {
       id: 'history.export',
       icon: DownloadIcon,
-      label: 'Export worklogs as CSV…',
+      label: t('Export worklogs as CSV…'),
       group: 'Actions',
       keywords: ['history', 'csv', 'export'],
       isDisabled: !canExport,
@@ -381,7 +383,7 @@ export function ListView() {
     {
       id: 'history.activity',
       icon: HistoryIcon,
-      label: source === 'activity' ? 'Show 7pace worklogs' : 'Show App activity',
+      label: source === 'activity' ? t('Show 7pace worklogs') : t('Show App activity'),
       group: 'Actions',
       keywords: ['history', 'audit', 'activity', 'worklogs'],
       onAction: () => setSource(source === 'activity' ? 'worklogs' : 'activity'),
@@ -394,12 +396,14 @@ export function ListView() {
   );
   const tickets = new Set(filtered.map(logTicket).filter((id) => id !== null)).size;
   const subtitle = history?.loaded
-    ? `${formatShortDuration(totalLength(filtered))} · ${filtered.length === 1 ? '1 worklog' : `${filtered.length} worklogs`} · ${
-        tickets === 1 ? '1 ticket' : `${tickets} tickets`
-      }`
+    ? [
+        formatShortDuration(totalLength(filtered)),
+        tn(filtered.length, '{count} worklog', '{count} worklogs'),
+        tn(tickets, '{count} ticket', '{count} tickets'),
+      ].join(' · ')
     : loading
-      ? 'Loading…'
-      : 'Not loaded yet';
+      ? t('Loading…')
+      : t('Not loaded yet');
   const today = localToday().toString();
 
   const header = (
@@ -418,7 +422,7 @@ export function ListView() {
       subtitle={subtitle}
       controls={
         <Button icon={ExportIcon} isDisabled={!canExport} isPending={exporting} onPress={() => void exportCsv()}>
-          Export CSV
+          {t('Export CSV')}
         </Button>
       }
     />
@@ -430,7 +434,7 @@ export function ListView() {
         {header}
         <div className={styles.page} aria-busy="true">
           <span role="status" className="visually-hidden">
-            Loading worklogs
+            {t('Loading worklogs')}
           </span>
           <Skeleton lines={2} />
           <Skeleton shape="rect" height="14rem" />
@@ -451,10 +455,10 @@ export function ListView() {
       {issue ? (
         <Banner
           tone="error"
-          title="Worklogs could not be loaded"
+          title={t('Worklogs could not be loaded')}
           actions={
             <Button size="small" isDisabled={loading || !connected} isPending={load.pending} onPress={runLoad}>
-              Retry
+              {t('Retry')}
             </Button>
           }
         >
@@ -465,16 +469,16 @@ export function ListView() {
       {exportError && exportError !== issue ? <Banner tone="error">{exportError}</Banner> : null}
       <TabsRoot selectedKey={source} onSelectionChange={(key) => setSource(key === 'activity' ? 'activity' : 'worklogs')} className={styles.tabs}>
         <div className={styles.sourceRow}>
-          <TabList aria-label="List source" className={styles.sourceTabs}>
-            <Tab id="worklogs">7pace worklogs</Tab>
-            <Tab id="activity">App activity</Tab>
+          <TabList aria-label={t('List source')} className={styles.sourceTabs}>
+            <Tab id="worklogs">{t('7pace worklogs')}</Tab>
+            <Tab id="activity">{t('App activity')}</Tab>
           </TabList>
           {source === 'worklogs' ? (
             <div className={styles.controls}>
               <SegmentedControl<RangeChoice>
-                label="Range"
+                label={t('Range')}
                 hideLabel
-                options={PRESETS.map((entry) => ({ ...entry, isDisabled: entry.id !== 'custom' && (loading || !connected) }))}
+                options={PRESETS.map((entry) => ({ ...entry, label: t(entry.label), isDisabled: entry.id !== 'custom' && (loading || !connected) }))}
                 selectedKey={choice}
                 onSelectionChange={(key) => {
                   if (key === 'custom') {
@@ -486,15 +490,15 @@ export function ListView() {
                   changeRange(next.from, next.to, true);
                 }}
               />
-              <SearchField label="Filter tickets" hideLabel value={filter} onChange={setFilter} placeholder="Filter tickets" width="auto" className={shared.listFilter} />
+              <SearchField label={t('Filter tickets')} hideLabel value={filter} onChange={setFilter} placeholder={t('Filter tickets')} width="auto" className={shared.listFilter} />
             </div>
           ) : null}
         </div>
         <TabPanel id="worklogs" className={styles.panel}>
           {choice === 'custom' ? (
-            <div className={styles.custom} role="group" aria-label="Custom range">
+            <div className={styles.custom} role="group" aria-label={t('Custom range')}>
               <DatePicker
-                label="From"
+                label={t('From')}
                 value={toCalendarDay(from)}
                 maxValue={localToday()}
                 onChange={(value) => {
@@ -502,7 +506,7 @@ export function ListView() {
                 }}
               />
               <DatePicker
-                label="To"
+                label={t('To')}
                 value={toCalendarDay(to)}
                 maxValue={localToday()}
                 onChange={(value) => {
@@ -510,18 +514,18 @@ export function ListView() {
                 }}
               />
               <Button variant="primary" isDisabled={loading || !connected} onPress={runLoad}>
-                Load
+                {t('Load')}
               </Button>
             </div>
           ) : null}
           {loading ? (
             <span role="status" className={styles.loadingNote}>
               <SpinnerIcon className={styles.spinner} />
-              Loading worklogs…
+              {t('Loading worklogs…')}
             </span>
           ) : null}
           <LoadingRegion
-            label="Loading worklogs…"
+            label={t('Loading worklogs…')}
             isLoading={loading && !history.loaded}
             placeholder={
               <div className={styles.panel}>

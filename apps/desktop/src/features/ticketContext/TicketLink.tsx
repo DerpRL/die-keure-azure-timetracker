@@ -1,4 +1,5 @@
 import { Button } from '../../components/Button';
+import { t } from '../../i18n';
 import { useAction, useWorkItem } from '../../state/hooks';
 
 export interface TicketLinkProps {
@@ -24,7 +25,7 @@ export function TicketLink({ ticketId, title, compact = false }: TicketLinkProps
       size="small"
       onPress={() => void show.run({ type: 'ticket.showContext', ticketId })}
       // The visible text comes first in the accessible name (WCAG 2.5.3).
-      aria-label={compact && name ? `${text} ${name}, show details` : `${text}, show details`}
+      aria-label={compact && name ? t('{ticket} {title}, show details', { ticket: text, title: name }) : t('{ticket}, show details', { ticket: text })}
     >
       {text}
     </Button>

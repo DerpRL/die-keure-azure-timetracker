@@ -108,8 +108,10 @@ impl WeeklyState {
                     Ok(text) => text.unwrap_or_default(),
                     Err(error) => {
                         self.storage_unreadable = true;
-                        self.storage_issue =
-                            Some(format!("Saved drafts could not be read: {error}"));
+                        self.storage_issue = Some(crate::nl::trf(
+                            "Saved drafts could not be read: {error}",
+                            &[("error", &error)],
+                        ));
                         String::new()
                     }
                 }
@@ -353,13 +355,13 @@ pub(crate) fn generate(engine: &Engine, replace: bool) -> Result<Value, IpcError
         if !replace && !weekly.text.is_empty() {
             return Err(IpcError::new(
                 "needsConfirmation",
-                "Replace this week’s draft? This replaces your local draft with a fresh summary of the loaded time.",
+                crate::nl::tr("Replace this week’s draft? This replaces your local draft with a fresh summary of the loaded time."),
             ));
         }
         let range = weekly.range(&cal);
         weekly.text = WeeklyReport::draft(&weekly.logs, &range, &targets, &titles, &cal, now);
         weekly.message =
-            Some("Draft generated. Review outcomes and blockers before sharing.".into());
+            Some(crate::nl::tr("Draft generated. Review outcomes and blockers before sharing.").into());
         weekly.mark_dirty();
         Ok(true)
     })?;
@@ -392,7 +394,7 @@ pub(crate) async fn export(engine: &Engine, path: String) -> Result<Value, IpcEr
     engine.update(|state| {
         let weekly = &mut state.controllers.weekly;
         match result {
-            Ok(()) => weekly.message = Some("Draft exported.".into()),
+            Ok(()) => weekly.message = Some(crate::nl::tr("Draft exported.").into()),
             Err(error) => weekly.issue = Some(error.to_string()),
         }
     });
@@ -452,8 +454,10 @@ fn flush_state(services: &Services, weekly: &mut WeeklyState, force: bool) -> Fl
         }
         Err(error) => {
             drop(writer);
-            weekly.storage_issue =
-                Some(format!("Draft is in memory but could not be saved: {error}"));
+            weekly.storage_issue = Some(crate::nl::trf(
+                "Draft is in memory but could not be saved: {error}",
+                &[("error", &error)],
+            ));
             Flush::Failed
         }
     }
@@ -470,7 +474,13 @@ pub(crate) fn persist_pending(services: &Services, weekly: &WeeklyState) -> Resu
     let Some(key) = weekly.text_key.as_deref() else { return Ok(()) };
     writer.last_write = Some(Instant::now());
     persist::write_weekly_draft(services, key, &weekly.text).map_err(|error| {
-        IpcError::new("storage", format!("Draft is in memory but could not be saved: {error}"))
+        IpcError::new(
+            "storage",
+            crate::nl::trf(
+                "Draft is in memory but could not be saved: {error}",
+                &[("error", &error)],
+            ),
+        )
     })?;
     writer.dirty = false;
     Ok(())

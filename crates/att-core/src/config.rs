@@ -20,6 +20,7 @@ use crate::interface_prefs::InterfacePreferences;
 use crate::meetings::MeetingPreferences;
 use crate::microphone::MicrophonePreferences;
 use crate::model::Repository;
+use crate::nl::tr;
 use crate::rounding::Rounding;
 use crate::targets::WorkTargets;
 
@@ -89,18 +90,18 @@ impl PromptKind {
 
     pub fn label(self) -> &'static str {
         match self {
-            Self::Branch => "Branch changes",
-            Self::Meeting => "Calendar meetings",
-            Self::Microphone => "Microphone meetings",
-            Self::MicrophoneEnd => "Meeting ended",
-            Self::MeetingReturn => "Return after meetings",
-            Self::Figma => "Figma files",
-            Self::Idle => "Time away",
-            Self::ForgottenTimer => "Working without a timer",
-            Self::TicketCompletion => "Completed tickets",
-            Self::TrackingAttention => "7pace timer checks",
-            Self::DayReview => "Day review",
-            Self::Update => "App updates",
+            Self::Branch => tr("Branch changes"),
+            Self::Meeting => tr("Calendar meetings"),
+            Self::Microphone => tr("Microphone meetings"),
+            Self::MicrophoneEnd => tr("Meeting ended"),
+            Self::MeetingReturn => tr("Return after meetings"),
+            Self::Figma => tr("Figma files"),
+            Self::Idle => tr("Time away"),
+            Self::ForgottenTimer => tr("Working without a timer"),
+            Self::TicketCompletion => tr("Completed tickets"),
+            Self::TrackingAttention => tr("7pace timer checks"),
+            Self::DayReview => tr("Day review"),
+            Self::Update => tr("App updates"),
         }
     }
 }
@@ -309,36 +310,36 @@ impl Configuration {
     /// URLs and credentials are validated by the network layer.
     pub fn validate(&self) -> Result<()> {
         if !self.awareness.is_valid() {
-            return Err(AppError::message(
+            return Err(AppError::message(tr(
                 "Choose idle and forgotten-timer thresholds between 1 and 120 minutes.",
-            ));
+            )));
         }
         if !self.day_review.is_valid() {
-            return Err(AppError::message(
+            return Err(AppError::message(tr(
                 "Day review needs a finish time after the workday start, at least one selected day, and valid gap/long-entry thresholds.",
-            ));
+            )));
         }
         if !self.targets.is_valid() {
-            return Err(AppError::message(
+            return Err(AppError::message(tr(
                 "Each daily target must be between 0 and 24 hours. Use 0 for a day off.",
-            ));
+            )));
         }
         let default_ticket = self.meetings.default_ticket.trim();
         if !default_ticket.is_empty()
             && !default_ticket.parse::<i64>().is_ok_and(|id| id > 0 && id <= i64::from(i32::MAX))
         {
-            return Err(AppError::message(
+            return Err(AppError::message(tr(
                 "Enter a valid default meeting ticket number, or leave it empty.",
-            ));
+            )));
         }
         BranchPattern::new(&self.branch_pattern)?;
         if !self.cadences.is_valid() {
-            return Err(AppError::message(
+            return Err(AppError::message(tr(
                 "Choose polling intervals within the ranges shown in Settings.",
-            ));
+            )));
         }
         if !self.quiet_hours.is_valid() {
-            return Err(AppError::message("Choose quiet hours between 00:00 and 23:59."));
+            return Err(AppError::message(tr("Choose quiet hours between 00:00 and 23:59.")));
         }
         Ok(())
     }

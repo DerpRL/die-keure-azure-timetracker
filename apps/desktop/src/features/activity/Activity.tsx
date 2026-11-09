@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import { seriesColor } from '../../charts/palette';
 import { cx } from '../../utils/cx';
 import styles from './activity.module.css';
+import { t } from '../../i18n';
 
 type Swatch = CSSProperties & { '--activity-color': string };
 
@@ -42,7 +43,7 @@ export interface LegendEntry {
 export function ActivityLegend({ items, className }: { items: readonly LegendEntry[]; className?: string }) {
   if (items.length === 0) return null;
   return (
-    <ul className={cx(styles.legend, className)} role="list" aria-label="Activities">
+    <ul className={cx(styles.legend, className)} role="list" aria-label={t('Activities')}>
       {items.map((item) => (
         <li key={item.id} className={styles.legendItem}>
           <ActivitySwatch colorIndex={item.colorIndex} />

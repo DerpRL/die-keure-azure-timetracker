@@ -47,8 +47,9 @@ fn read<T: DeserializeOwned>(
         Err(error) => {
             state.session.unreadable.insert(key);
             if state.storage_issue.is_none() {
-                state.storage_issue = Some(format!(
-                    "Saved data could not be read. The original data has been preserved: {error}"
+                state.storage_issue = Some(crate::nl::trf(
+                    "Saved data could not be read. The original data has been preserved: {error}",
+                    &[("error", &error)],
                 ));
             }
             None

@@ -4,6 +4,7 @@ import { FigmaIcon } from '../../../components/icons';
 import { TicketLink } from '../../../features/ticketContext/TicketLink';
 import type { FigmaPromptView } from '../../../ipc/contract';
 import { useAction, useSlice } from '../../../state/hooks';
+import { t } from '../../../i18n';
 import styles from './figma.module.css';
 
 /**
@@ -19,41 +20,41 @@ export function SuggestionCard({ prompt }: { prompt: FigmaPromptView }) {
   const offline = !(connection?.connected ?? false);
   const ticketId = suggestion.ticketId ?? null;
   return (
-    <Card as="article" aria-label={`Figma file active: ${suggestion.name}`} className={styles.suggestionCard}>
+    <Card as="article" aria-label={t('Figma file active: {name}', { name: suggestion.name })} className={styles.suggestionCard}>
       <div className={styles.suggestion}>
         <h4 className={styles.suggestionTitle}>
           <FigmaIcon />
-          Figma file active
+          {t('Figma file active')}
         </h4>
         <div>
           <p className={styles.fileName}>{suggestion.name}</p>
           {ticketId !== null ? (
             <p className={styles.ticket}>
-              <TicketLink ticketId={ticketId} title={prompt.ticketTitle ?? 'Azure ticket'} />
+              <TicketLink ticketId={ticketId} title={prompt.ticketTitle ?? t('Azure ticket')} />
             </p>
           ) : (
-            <p className={styles.text}>Track Design without a ticket. The file name becomes the comment.</p>
+            <p className={styles.text}>{t('Track Design without a ticket. The file name becomes the comment.')}</p>
           )}
         </div>
-        <p className={styles.text}>An active file suggests context; it does not prove the design was edited.</p>
+        <p className={styles.text}>{t('An active file suggests context; it does not prove the design was edited.')}</p>
         <div className={styles.buttons}>
           <Button
             variant="primary"
             isDisabled={busy || offline || action.pending}
             onPress={() => void action.run({ type: 'figma.track', suggestionId: suggestion.id, useLinkedTicket: true })}
           >
-            Start Design…
+            {t('Start Design…')}
           </Button>
           {ticketId !== null ? (
             <Button
               isDisabled={busy || offline || action.pending}
               onPress={() => void action.run({ type: 'figma.track', suggestionId: suggestion.id, useLinkedTicket: false })}
             >
-              Other ticket
+              {t('Other ticket')}
             </Button>
           ) : null}
           <Button isDisabled={busy || action.pending} onPress={() => void action.run({ type: 'figma.keep', suggestionId: suggestion.id })}>
-            Keep tracking
+            {t('Keep tracking')}
           </Button>
         </div>
         {action.error ? (

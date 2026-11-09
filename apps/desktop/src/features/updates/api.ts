@@ -6,6 +6,7 @@
  */
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { invoke, isTauri, listen, type Unlisten } from '../../ipc';
+import { mark, t } from '../../i18n';
 
 /** The 1.14 update phases (`AppUpdatePhase`). */
 export type UpdatePhase = 'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'installing' | 'failed';
@@ -40,7 +41,7 @@ export const UPDATE_EVENT = 'shell://update';
 /** Where the installers live: the newest GitHub Release. */
 export const DOWNLOADS_URL = 'https://github.com/DerpRL/die-keure-azure-timetracker/releases/latest';
 
-export const DISABLED_MESSAGE = 'Updates are disabled in preview and development builds.';
+export const DISABLED_MESSAGE = mark('Updates are disabled in preview and development builds.');
 
 /** What the browser preview and the gallery show: there is no updater outside the app. */
 export function previewUpdateStatus(): UpdateStatus {
@@ -52,7 +53,7 @@ export function previewUpdateStatus(): UpdateStatus {
     date: null,
     downloaded: 0,
     total: null,
-    message: DISABLED_MESSAGE,
+    message: t(DISABLED_MESSAGE),
     error: null,
     checkedAt: null,
     automatic: true,

@@ -1,5 +1,6 @@
 import type { Tone } from '../../../components/Badge';
 import type { OfflineDraft, OfflineDraftStatus, OfflineDraftView, WorkItemsSlice } from '../../../ipc/contract';
+import { mark } from '../../../i18n';
 
 /** The engine's title with the ticket's name when the title cache knows it ("#4821 · Checkout …"). */
 export function draftHeading(draft: OfflineDraftView, items: WorkItemsSlice | undefined): string {
@@ -22,6 +23,13 @@ export const STATUS_TONES: Record<OfflineDraftStatus, Tone> = {
   'Local draft': 'accent',
   'Check 7pace before retrying': 'warning',
   'Synced to 7pace': 'success',
+};
+
+/** The engine's raw status values as shown (translate with `t`). */
+export const STATUS_LABELS: Record<OfflineDraftStatus, string> = {
+  'Local draft': mark('Local draft'),
+  'Check 7pace before retrying': mark('Check 7pace before retrying'),
+  'Synced to 7pace': mark('Synced to 7pace'),
 };
 
 /** A one-hour draft ending now (to the minute): "Add past time…". */

@@ -135,9 +135,9 @@ pub(crate) async fn continue_tracking(engine: &Engine) -> std::result::Result<Va
             Some(id) => Some(lookup(engine, &clients, id).await?),
             None => {
                 if prompt.remark.non_empty().is_none() {
-                    return Err(AppError::message(
+                    return Err(AppError::message(crate::nl::tr(
                         "The stopped task has no ticket or comment. Choose a task manually.",
-                    ));
+                    )));
                 }
                 None
             }

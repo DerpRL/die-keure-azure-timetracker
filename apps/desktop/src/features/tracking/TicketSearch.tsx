@@ -9,6 +9,7 @@ import { cx } from '../../utils/cx';
 import { ActionError, useIntents, useWriteGuards } from './actions';
 import { StarIcon } from './icons';
 import styles from './tracking.module.css';
+import { mark, t, tn } from '../../i18n';
 
 /** Wait this long after the last keystroke before asking the engine to search. */
 export const SEARCH_DEBOUNCE_MS = 250;
@@ -21,7 +22,7 @@ function itemLabel(item: WorkItem): string {
 }
 
 function itemDescription(item: WorkItem): string {
-  return [`#${item.id}`, item.type ?? 'Work item', item.teamProject].filter(Boolean).join(' · ');
+  return [`#${item.id}`, item.type ?? t('Work item'), item.teamProject].filter(Boolean).join(' · ');
 }
 
 /**
@@ -64,8 +65,8 @@ export function TicketSearchField({ flow, autoFocus = false }: { flow: FlowSlice
   const typed = query.trim().length > 0;
   const items = typed ? results : [];
   const emptyMessage = waiting
-    ? 'Searching…'
-    : (error ?? 'No matching tickets. Enter a ticket number or a few words from its title.');
+    ? t('Searching…')
+    : (error ?? t('No matching tickets. Enter a ticket number or a few words from its title.'));
 
   const onSelectionChange = (key: Key | null) => {
     if (key === null) return;
@@ -87,8 +88,8 @@ export function TicketSearchField({ flow, autoFocus = false }: { flow: FlowSlice
   return (
     <div className={styles.stack} data-ticket-search="">
       <ComboBox<WorkItem>
-        label="Ticket number or title"
-        placeholder="#4821 or a few words"
+        label={t('Ticket number or title')}
+        placeholder={t('#4821 or a few words')}
         items={items}
         inputValue={query}
         onInputChange={onInputChange}
@@ -98,7 +99,7 @@ export function TicketSearchField({ flow, autoFocus = false }: { flow: FlowSlice
         isLoading={searching}
         emptyMessage={emptyMessage}
         autoFocus={autoFocus}
-        description="Choose a result to pick its activity next."
+        description={t('Choose a result to pick its activity next.')}
       >
         {(item) => (
           <PickerItem id={item.id} textValue={itemLabel(item)} description={itemDescription(item)}>
@@ -108,7 +109,7 @@ export function TicketSearchField({ flow, autoFocus = false }: { flow: FlowSlice
       </ComboBox>
       {typed && searching ? (
         <p role="status" className={styles.caption}>
-          Searching…
+          {t('Searching…')}
         </p>
       ) : null}
       {typed && error && !searching ? (
@@ -118,7 +119,7 @@ export function TicketSearchField({ flow, autoFocus = false }: { flow: FlowSlice
       ) : null}
       {typed && !searching && !error && results.length > 0 ? (
         <p role="status" className="visually-hidden">
-          {results.length === 1 ? '1 ticket found' : `${results.length} tickets found`}
+          {tn(results.length, '{count} ticket found', '{count} tickets found')}
         </p>
       ) : null}
       <ActionError error={search.error ?? choose.error} />
@@ -130,8 +131,10 @@ export function TicketSearchField({ flow, autoFocus = false }: { flow: FlowSlice
 function QuickTicketRow({ ticket, disabled }: { ticket: QuickTicketView; disabled: boolean }) {
   const item = useWorkItem(ticket.ticketId);
   const actions = useIntents();
-  const title = ticket.title ?? item?.title ?? `Azure ticket #${ticket.ticketId}`;
-  const favoriteLabel = `${ticket.favorite ? 'Remove favorite' : 'Save favorite'} ticket #${ticket.ticketId}`;
+  const title = ticket.title ?? item?.title ?? t('Azure ticket #{id}', { id: ticket.ticketId });
+  const favoriteLabel = ticket.favorite
+    ? t('Remove favorite ticket #{id}', { id: ticket.ticketId })
+    : t('Save favorite ticket #{id}', { id: ticket.ticketId });
   return (
     <li className={styles.quickItem}>
       <Button
@@ -169,7 +172,7 @@ export function QuickTickets({ flow, headingLevel }: { flow: FlowSlice; headingL
   return (
     <section aria-labelledby={headingId} className={styles.stack}>
       <Heading level={headingLevel} id={headingId} className={styles.subheading}>
-        Favorites & recent tickets
+        {t('Favorites & recent tickets')}
       </Heading>
       <ul role="list" className={styles.quickList}>
         {tickets.map((ticket) => (
@@ -181,9 +184,9 @@ export function QuickTickets({ flow, headingLevel }: { flow: FlowSlice; headingL
 }
 
 const MANUAL_KINDS: ReadonlyArray<{ kind: ManualTrackingKind; label: string }> = [
-  { kind: 'meeting', label: 'Meeting' },
-  { kind: 'standup', label: 'Stand-up' },
-  { kind: 'activity', label: 'Other activity' },
+  { kind: 'meeting', label: mark('Meeting') },
+  { kind: 'standup', label: mark('Stand-up') },
+  { kind: 'activity', label: mark('Other activity') },
 ];
 
 /** "Track without a ticket": Meeting, Stand-up or Other activity (1.14 `ManualTrackingChoices`). */
@@ -194,7 +197,7 @@ export function ManualChoices({ headingLevel }: { headingLevel: HeadingLevel }) 
   return (
     <section aria-labelledby={headingId} className={styles.stack}>
       <Heading level={headingLevel} id={headingId} className={styles.subheading}>
-        Track without a ticket
+        {t('Track without a ticket')}
       </Heading>
       <div className={styles.row}>
         {MANUAL_KINDS.map(({ kind, label }) => (
@@ -205,11 +208,11 @@ export function ManualChoices({ headingLevel }: { headingLevel: HeadingLevel }) 
             isPending={actions.isPending(kind)}
             onPress={() => void actions.run(kind, { type: 'tracking.chooseManual', kind })}
           >
-            {label}
+            {t(label)}
           </Button>
         ))}
       </div>
-      <p className={styles.caption}>Choose an activity. No ticket number or title needed.</p>
+      <p className={styles.caption}>{t('Choose an activity. No ticket number or title needed.')}</p>
       <ActionError error={actions.error} />
       {actions.confirmation}
     </section>
@@ -229,13 +232,13 @@ export function SuggestionWithoutTicket({ flow }: { flow: FlowSlice }) {
           isPending={actions.isPending()}
           onPress={() => void actions.run('continue', { type: 'tracking.continueWithoutTicket' })}
         >
-          Continue without a ticket…
+          {t('Continue without a ticket…')}
         </Button>
       </div>
       <p className={styles.caption}>
         {suggestion?.kind === 'figma'
-          ? `Design · ${suggestion.title}`
-          : 'Choose an activity and confirm Start. An Azure ticket is optional.'}
+          ? t('Design · {title}', { title: suggestion.title })
+          : t('Choose an activity and confirm Start. An Azure ticket is optional.')}
       </p>
       <ActionError error={actions.error} />
     </div>

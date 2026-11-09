@@ -190,9 +190,9 @@ pub(crate) async fn validate(engine: &Engine, prompt: &TicketCompletionPrompt) -
     });
     let _ = engine.persist();
     if !latest.completed() {
-        return Err(AppError::message(
+        return Err(AppError::message(crate::nl::tr(
             "This ticket is no longer completed. Your timer is unchanged.",
-        ));
+        )));
     }
     Ok(())
 }

@@ -13,6 +13,7 @@ import type {
   WorkAwarenessPreferences,
   WorkTargets,
 } from '../../ipc/contract';
+import { mark, t } from '../../i18n';
 import type { SettingsSectionId } from './sections';
 
 export interface Bounds {
@@ -46,16 +47,17 @@ export const POLL_CHOICES = [30, 60, 120, 300] as const;
 export const MAX_TICKET = 2_147_483_647;
 const MINUTES_PER_DAY = 24 * 60;
 
+/** English (`mark`); issues carry them translated (`validateConfiguration`). */
 export const MESSAGES = {
-  awareness: 'Choose idle and forgotten-timer thresholds between 1 and 120 minutes.',
+  awareness: mark('Choose idle and forgotten-timer thresholds between 1 and 120 minutes.'),
   dayReview:
-    'Day review needs a finish time after the workday start, at least one selected day, and valid gap/long-entry thresholds.',
-  targets: 'Each daily target must be between 0 and 24 hours. Use 0 for a day off.',
-  defaultTicket: 'Enter a valid default meeting ticket number, or leave it empty.',
-  cadences: 'Choose polling intervals within the ranges shown in Settings.',
-  quietHours: 'Choose quiet hours between 00:00 and 23:59.',
-  sevenPaceUrl: 'Use your 7pace workspace URL: https://your-organization.timehub.7pace.com',
-  organization: 'Enter the organization name from dev.azure.com/your-organization.',
+    mark('Day review needs a finish time after the workday start, at least one selected day, and valid gap/long-entry thresholds.'),
+  targets: mark('Each daily target must be between 0 and 24 hours. Use 0 for a day off.'),
+  defaultTicket: mark('Enter a valid default meeting ticket number, or leave it empty.'),
+  cadences: mark('Choose polling intervals within the ranges shown in Settings.'),
+  quietHours: mark('Choose quiet hours between 00:00 and 23:59.'),
+  sevenPaceUrl: mark('Use your 7pace workspace URL: https://your-organization.timehub.7pace.com'),
+  organization: mark('Enter the organization name from dev.azure.com/your-organization.'),
 } as const;
 
 export type IssueField = keyof typeof MESSAGES;
@@ -179,7 +181,7 @@ export function validateConfiguration(
   secrets: Secrets = { azurePat: '', sevenPaceToken: '' },
 ): SettingsIssue[] {
   const issues: SettingsIssue[] = [];
-  const add = (field: IssueField, section: SettingsSectionId) => issues.push({ field, section, message: MESSAGES[field] });
+  const add = (field: IssueField, section: SettingsSectionId) => issues.push({ field, section, message: t(MESSAGES[field]) });
   if (!awarenessValid(configuration.awareness)) add('awareness', 'awareness');
   if (!dayReviewValid(configuration.dayReview)) add('dayReview', 'dayReview');
   if (!targetsValid(configuration.targets)) add('targets', 'targets');

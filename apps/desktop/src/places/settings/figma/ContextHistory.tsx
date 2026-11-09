@@ -6,6 +6,7 @@ import type { FigmaSlice } from '../../../ipc/contract';
 import { showMain } from '../../../ipc/shell';
 import { useAction } from '../../../state/hooks';
 import { formatSeen, localDay } from './model';
+import { numberFormat, t, tn } from '../../../i18n';
 import styles from './figma.module.css';
 
 export interface ContextHistoryProps {
@@ -39,15 +40,20 @@ export function ContextHistory({ figma, confirming, onConfirmingChange }: Contex
     <Section
       headingLevel={3}
       className={styles.historyCard}
-      title="Context history"
-      subtitle={`Local observations, not recorded hours. Kept for ${figma.preferences.historyDays} ${figma.preferences.historyDays === 1 ? 'day' : 'days'}, up to 5,000 observations.`}
+      title={t('Context history')}
+      subtitle={tn(
+        figma.preferences.historyDays,
+        'Local observations, not recorded hours. Kept for {count} day, up to {limit} observations.',
+        'Local observations, not recorded hours. Kept for {count} days, up to {limit} observations.',
+        { limit: numberFormat().format(5000) },
+      )}
       actions={
         <>
           <Button onPress={() => setExpanded((value) => !value)} aria-expanded={expanded} aria-controls={expanded ? listId : undefined}>
-            {expanded ? 'Hide history' : 'Show history'}
+            {expanded ? t('Hide history') : t('Show history')}
           </Button>
           <Button variant="plain" className={styles.danger} isDisabled={history.length === 0} onPress={() => onConfirmingChange(true)}>
-            Clear history…
+            {t('Clear history…')}
           </Button>
         </>
       }
@@ -55,11 +61,11 @@ export function ContextHistory({ figma, confirming, onConfirmingChange }: Contex
       {expanded ? (
         history.length === 0 ? (
           <p id={listId} className={styles.text}>
-            No observations yet.
+            {t('No observations yet.')}
           </p>
         ) : (
           <>
-            <ol id={listId} role="list" aria-label="Figma observations, newest first" className={styles.history}>
+            <ol id={listId} role="list" aria-label={t('Figma observations, newest first')} className={styles.history}>
               {history.map((event) => {
                 const when = formatSeen(event.timestamp) ?? event.timestamp;
                 return (
@@ -69,21 +75,21 @@ export function ContextHistory({ figma, confirming, onConfirmingChange }: Contex
                     </time>
                     <div>
                       <div>{event.name}</div>
-                      {event.ticketId ? <div className={styles.text}>#{event.ticketId} at the time</div> : null}
+                      {event.ticketId ? <div className={styles.text}>{t('#{id} at the time', { id: event.ticketId })}</div> : null}
                     </div>
                     <Button
                       size="small"
                       variant="plain"
                       onPress={() => void reviewDay(event.timestamp)}
-                      aria-label={`Review day of ${when}`}
+                      aria-label={t('Review day of {date}', { date: when })}
                     >
-                      Review day
+                      {t('Review day')}
                     </Button>
                   </li>
                 );
               })}
             </ol>
-            {figma.historyCount > history.length ? <p className={styles.text}>Showing the latest {history.length} observations.</p> : null}
+            {figma.historyCount > history.length ? <p className={styles.text}>{t('Showing the latest {count} observations.', { count: history.length })}</p> : null}
           </>
         )
       ) : null}
@@ -102,9 +108,9 @@ export function ContextHistory({ figma, confirming, onConfirmingChange }: Contex
         }}
         role="alertdialog"
         size="small"
-        title="Clear local Figma history?"
-        description="Tracked hours, files and ticket links will stay."
-        primaryAction={{ label: 'Clear history', variant: 'destructive', onAction: () => void confirmClear(), isPending: clear.pending }}
+        title={t('Clear local Figma history?')}
+        description={t('Tracked hours, files and ticket links will stay.')}
+        primaryAction={{ label: t('Clear history'), variant: 'destructive', onAction: () => void confirmClear(), isPending: clear.pending }}
       >
         {clear.error ? (
           <p role="alert" className={styles.error}>

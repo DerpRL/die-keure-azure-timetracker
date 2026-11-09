@@ -12,6 +12,7 @@ import type { IconComponent } from '../../components/icons';
 import { MeetingIcon, NoTicketIcon, StandupIcon, StarIcon, WorkIcon } from './icons';
 import { useTicketSearch } from './TicketSearch';
 import styles from './ticketPicker.module.css';
+import { mark, t, tn } from '../../i18n';
 
 /** The picker's search input, for focusing it. */
 export const PICKER_SEARCH_SELECTOR = '[data-picker-search] input';
@@ -19,9 +20,9 @@ export const PICKER_SEARCH_SELECTOR = '[data-picker-search] input';
 type Filter = 'all' | 'favorites' | 'recent';
 
 const FILTERS: ReadonlyArray<{ id: Filter; label: string }> = [
-  { id: 'all', label: 'All' },
-  { id: 'favorites', label: 'Favorites' },
-  { id: 'recent', label: 'Recent' },
+  { id: 'all', label: mark('All') },
+  { id: 'favorites', label: mark('Favorites') },
+  { id: 'recent', label: mark('Recent') },
 ];
 
 /** One row of the ticket list: an Azure ticket, or a way to work without one. */
@@ -43,11 +44,14 @@ export type PickerRow =
 
 const ticketKey = (id: number) => `ticket-${id}`;
 
-const NO_TICKET_ROWS: ReadonlyArray<Extract<PickerRow, { kind: 'manual' }>> = [
-  { kind: 'manual', key: 'manual-activity', manual: 'activity', title: 'Work without a ticket', meta: 'Any activity' },
-  { kind: 'manual', key: 'manual-meeting', manual: 'meeting', title: 'Meeting without a ticket', meta: 'Saved as Meeting' },
-  { kind: 'manual', key: 'manual-standup', manual: 'standup', title: 'Daily stand-up', meta: 'Standup activity only' },
-];
+/** Built when shown, so the titles follow the interface language. */
+function noTicketRows(): Array<Extract<PickerRow, { kind: 'manual' }>> {
+  return [
+    { kind: 'manual', key: 'manual-activity', manual: 'activity', title: t('Work without a ticket'), meta: t('Any activity') },
+    { kind: 'manual', key: 'manual-meeting', manual: 'meeting', title: t('Meeting without a ticket'), meta: t('Saved as Meeting') },
+    { kind: 'manual', key: 'manual-standup', manual: 'standup', title: t('Daily stand-up'), meta: t('Standup activity only') },
+  ];
+}
 
 /** Rows for work without an Azure ticket: the quick actions above the tickets. */
 export function isTicketFree(row: PickerRow): boolean {
@@ -84,9 +88,9 @@ export function typeTag(type: string | null): { label: string; tone: Tone } {
 }
 
 const SUGGESTED_BY: Record<string, string> = {
-  branch: 'suggested by your branch',
-  meeting: 'suggested by your meeting',
-  figma: 'suggested by Figma',
+  branch: mark('suggested by your branch'),
+  meeting: mark('suggested by your meeting'),
+  figma: mark('suggested by Figma'),
 };
 
 /**
@@ -112,9 +116,9 @@ export function pickerRows(
 
   const notesFor = (id: number, favorite: boolean | null) => {
     const notes: string[] = [];
-    if (id === runningId) notes.push('tracking now');
-    if (suggestion?.ticketId === id) notes.push(SUGGESTED_BY[suggestion.kind] ?? 'suggested');
-    if (favorite) notes.push('favorite');
+    if (id === runningId) notes.push(t('tracking now'));
+    if (suggestion?.ticketId === id) notes.push(t(SUGGESTED_BY[suggestion.kind] ?? mark('suggested')));
+    if (favorite) notes.push(t('favorite'));
     return notes;
   };
   const addTicket = (id: number, title: string | null, type: string | null, favorite: boolean | null) => {
@@ -125,7 +129,7 @@ export function pickerRows(
       kind: 'ticket',
       key: ticketKey(id),
       ticketId: id,
-      title: title || cached?.title || `Azure ticket #${id}`,
+      title: title || cached?.title || t('Azure ticket #{id}', { id }),
       type: type ?? cached?.type ?? null,
       notes: notesFor(id, favorite),
       favorite,
@@ -160,14 +164,14 @@ export function pickerRows(
     rows.push({
       kind: 'continue',
       key: 'continue',
-      title: 'Continue without a ticket',
-      meta: suggestion.kind === 'figma' ? `Design · ${suggestion.title}` : `For ${suggestion.title}`,
+      title: t('Continue without a ticket'),
+      meta: suggestion.kind === 'figma' ? t('Design · {title}', { title: suggestion.title }) : t('For {title}', { title: suggestion.title }),
     });
   } else {
-    rows.push(...NO_TICKET_ROWS);
+    rows.push(...noTicketRows());
   }
   if (draft && draftKey(flow) === 'draft') {
-    rows.unshift({ kind: 'draft', key: 'draft', title: draft.remark ?? draft.title, meta: 'No Azure ticket' });
+    rows.unshift({ kind: 'draft', key: 'draft', title: draft.remark ?? draft.title, meta: t('No Azure ticket') });
   }
   return rows;
 }
@@ -185,7 +189,7 @@ export interface PendingChoice {
 export function pendingChoice(row: PickerRow): PendingChoice {
   return {
     key: row.key,
-    label: row.kind === 'ticket' ? `Track #${row.ticketId}` : 'Start tracking',
+    label: row.kind === 'ticket' ? t('Track #{id}', { id: row.ticketId }) : t('Start tracking'),
     commentApplies: row.kind === 'manual',
   };
 }
@@ -212,7 +216,7 @@ function FavoriteButton({ ticketId, favorite }: { ticketId: number; favorite: bo
   return (
     <>
       <IconButton
-        label={`${favorite ? 'Remove favorite' : 'Save favorite'} ticket #${ticketId}`}
+        label={favorite ? t('Remove favorite ticket #{id}', { id: ticketId }) : t('Save favorite ticket #{id}', { id: ticketId })}
         icon={StarIcon}
         size="small"
         className={cx(styles.favorite, favorite && styles.favoriteOn)}
@@ -238,13 +242,13 @@ function PickerRowItem({ row }: { row: PickerRow }) {
 
 /** The quick actions' tiles: short titles under the "Without a ticket" label. */
 const TILES: Record<ManualTrackingKind, { title: string; icon: IconComponent }> = {
-  activity: { title: 'Work', icon: WorkIcon },
-  meeting: { title: 'Meeting', icon: MeetingIcon },
-  standup: { title: 'Daily stand-up', icon: StandupIcon },
+  activity: { title: mark('Work'), icon: WorkIcon },
+  meeting: { title: mark('Meeting'), icon: MeetingIcon },
+  standup: { title: mark('Daily stand-up'), icon: StandupIcon },
 };
 
 function QuickTile({ row }: { row: PickerRow }) {
-  const tile = row.kind === 'manual' ? TILES[row.manual] : { title: row.title, icon: NoTicketIcon };
+  const tile = row.kind === 'manual' ? { ...TILES[row.manual], title: t(TILES[row.manual].title) } : { title: row.title, icon: NoTicketIcon };
   const meta = row.kind === 'ticket' ? `#${row.ticketId}` : row.meta;
   const Icon = tile.icon;
   return (
@@ -270,7 +274,7 @@ function focusRow(container: HTMLElement | null): boolean {
 }
 
 function RowContent({ row }: { row: PickerRow }) {
-  const tag = row.kind === 'ticket' ? typeTag(row.type) : { label: 'None', tone: 'neutral' as const };
+  const tag = row.kind === 'ticket' ? typeTag(row.type) : { label: t('None'), tone: 'neutral' as const };
   const meta = row.kind === 'ticket' ? [`#${row.ticketId}`, ...row.notes].join(' · ') : row.meta;
   return (
     <>
@@ -391,19 +395,19 @@ export function PickerTickets({ flow, pending, setPending, switching }: PickerTi
   const showFilter = !typed && flow.quickTickets.length > 0;
   const ticketRows = rows.filter((row) => row.kind === 'ticket').length;
   let listStatus: string | null = null;
-  if (typed && waiting && ticketRows === 0) listStatus = 'Searching…';
-  else if (typed && !waiting && !error && results.length === 0) listStatus = 'No matching tickets. Enter a ticket number or a few words from its title.';
-  else if (!typed && filter === 'favorites' && ticketRows === 0) listStatus = 'No favorites yet. Star a ticket to keep it here.';
+  if (typed && waiting && ticketRows === 0) listStatus = t('Searching…');
+  else if (typed && !waiting && !error && results.length === 0) listStatus = t('No matching tickets. Enter a ticket number or a few words from its title.');
+  else if (!typed && filter === 'favorites' && ticketRows === 0) listStatus = t('No favorites yet. Star a ticket to keep it here.');
   else if (!typed && flow.quickTickets.length === 0)
-    listStatus = connected ? 'Enter a ticket number or a few words from its title.' : 'Connect your account in Settings first.';
+    listStatus = connected ? t('Enter a ticket number or a few words from its title.') : t('Connect your account in Settings first.');
 
   return (
     <div className={styles.tickets} data-picker-column="">
       <div data-picker-search="" data-return-handled="">
         <SearchField
-          label="Search tickets"
+          label={t('Search tickets')}
           hideLabel
-          placeholder="Search by #number or title"
+          placeholder={t('Search by #number or title')}
           value={query}
           onChange={setQuery}
           autoFocus
@@ -424,7 +428,7 @@ export function PickerTickets({ flow, pending, setPending, switching }: PickerTi
       {/* The wrappers only pass arrow keys the lists leave unhandled on to the next list. */}
       <div ref={tilesRef} role="presentation" className={styles.quick} data-return-handled="" onKeyDown={onTilesKeyDown}>
         <span id={tilesLabel} className={styles.sectionLabel}>
-          Without a ticket
+          {t('Without a ticket')}
         </span>
         <GridList
           aria-labelledby={tilesLabel}
@@ -444,10 +448,10 @@ export function PickerTickets({ flow, pending, setPending, switching }: PickerTi
       </div>
       {showFilter ? (
         <SegmentedControl<Filter>
-          label="Show tickets"
+          label={t('Show tickets')}
           hideLabel
           size="small"
-          options={FILTERS}
+          options={FILTERS.map((option) => ({ ...option, label: t(option.label) }))}
           selectedKey={filter}
           onSelectionChange={setFilter}
           className={styles.filter}
@@ -464,12 +468,12 @@ export function PickerTickets({ flow, pending, setPending, switching }: PickerTi
         </p>
       ) : typed && !waiting && results.length > 0 ? (
         <p role="status" className="visually-hidden">
-          {results.length === 1 ? '1 ticket found' : `${results.length} tickets found`}
+          {tn(results.length, '{count} ticket found', '{count} tickets found')}
         </p>
       ) : null}
       <div ref={listRef} role="presentation" className={styles.listArea} data-return-handled="" onKeyDown={onTicketsKeyDown}>
         <GridList
-          aria-label="Tickets"
+          aria-label={t('Tickets')}
           items={ticketList}
           selectionMode="single"
           disallowEmptySelection

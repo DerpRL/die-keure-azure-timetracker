@@ -5,6 +5,7 @@ import { Tooltip } from '../../../components/Tooltip';
 import type { RepositoryView } from '../../../ipc/contract';
 import { useAction } from '../../../state/hooks';
 import { BranchIcon } from './icons';
+import { t } from '../../../i18n';
 import styles from './repositories.module.css';
 
 /** The branch line: error, paused, detached HEAD, the branch, or still reading (1.14 `RepositoriesView`). */
@@ -14,7 +15,7 @@ function RepositoryStatus({ repository }: { repository: RepositoryView }) {
       <p className={`${styles.rowStatus} ${styles.issue}`}>
         <WarningIcon />
         <span>
-          <span className="visually-hidden">Problem: </span>
+          <span className="visually-hidden">{t('Problem:')} </span>
           {repository.error}
         </span>
       </p>
@@ -24,7 +25,7 @@ function RepositoryStatus({ repository }: { repository: RepositoryView }) {
     return (
       <p className={styles.rowStatus}>
         <PausedIcon />
-        <span>Paused</span>
+        <span>{t('Paused')}</span>
       </p>
     );
   }
@@ -32,15 +33,15 @@ function RepositoryStatus({ repository }: { repository: RepositoryView }) {
     return (
       <p className={styles.rowStatus}>
         <BranchIcon />
-        <span className="visually-hidden">Current branch: </span>
-        {repository.detached ? <span>Detached HEAD</span> : <code className={styles.code}>{repository.branch}</code>}
+        <span className="visually-hidden">{t('Current branch:')} </span>
+        {repository.detached ? <span>{t('Detached HEAD')}</span> : <code className={styles.code}>{repository.branch}</code>}
       </p>
     );
   }
   return (
     <p className={styles.rowStatus}>
       <BranchIcon />
-      <span>Reading branch…</span>
+      <span>{t('Reading branch…')}</span>
     </p>
   );
 }
@@ -73,19 +74,19 @@ export function RepositoryRow({ repository, onRemove, compact = false }: Reposit
           isSelected={repository.enabled}
           isDisabled={toggle.pending}
           onChange={(enabled) => void toggle.run({ type: 'repositories.setEnabled', id: repository.id, enabled })}
-          aria-label={`Watch ${repository.name}`}
+          aria-label={t('Watch {name}', { name: repository.name })}
         >
           {null}
         </Switch>
-        <Tooltip content="Remove from watch list; repository files are preserved">
+        <Tooltip content={t('Remove from watch list; repository files are preserved')}>
           <Button
             size="small"
             variant="plain"
             className={styles.danger}
             onPress={() => onRemove(repository)}
-            aria-label={`Remove ${repository.name} from watch list`}
+            aria-label={t('Remove {name} from watch list', { name: repository.name })}
           >
-            Remove
+            {t('Remove')}
           </Button>
         </Tooltip>
       </div>

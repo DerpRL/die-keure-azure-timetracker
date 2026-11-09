@@ -5,6 +5,7 @@ import { Dialog } from '../../components/Dialog';
 import { useAction } from '../../state/hooks';
 import { cx } from '../../utils/cx';
 import styles from './tracking.module.css';
+import { t } from '../../i18n';
 
 export interface DeleteLocalTimerProps {
   /** The running local timer's draft (`offline.active.id`, `tracking.local.draftId`). */
@@ -34,24 +35,24 @@ export function DeleteLocalTimer({ draftId, isDisabled = false, size, className 
           setConfirming(true);
         }}
       >
-        Delete timer…
+        {t('Delete timer…')}
       </Button>
       <Dialog
         isOpen={confirming}
         onOpenChange={setConfirming}
         role="alertdialog"
         size="small"
-        title="Delete this local timer?"
-        description="Its time is not saved and not uploaded to 7pace. Your 7pace timer is not changed."
-        cancelLabel="Keep timer"
+        title={t('Delete this local timer?')}
+        description={t('Its time is not saved and not uploaded to 7pace. Your 7pace timer is not changed.')}
+        cancelLabel={t('Keep timer')}
         primaryAction={{
-          label: 'Delete timer',
+          label: t('Delete timer'),
           variant: 'destructive',
           isPending: remove.pending,
           onAction: () =>
             void remove.run({ type: 'offline.remove', draftId }).then((result) => {
               setConfirming(false);
-              if (result.ok) announce('Local timer deleted.');
+              if (result.ok) announce(t('Local timer deleted.'));
             }),
         }}
       />

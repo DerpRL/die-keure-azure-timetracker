@@ -1,5 +1,6 @@
 import type { CalendarDate } from '@internationalized/date';
 import { SpinnerIcon } from '../../../components/icons';
+import { mark, t } from '../../../i18n';
 import type { StatisticsPeriod, StatisticsSlice } from '../../../ipc/contract';
 import { calendarDate, syncedLabel } from './format';
 import styles from './Statistics.module.css';
@@ -8,10 +9,10 @@ import styles from './Statistics.module.css';
 export const JUMP_DEBOUNCE_MS = 400;
 
 export const PERIODS: ReadonlyArray<{ id: StatisticsPeriod; label: string }> = [
-  { id: 'day', label: 'Day' },
-  { id: 'week', label: 'Week' },
-  { id: 'month', label: 'Month' },
-  { id: 'year', label: 'Year' },
+  { id: 'day', label: mark('Day') },
+  { id: 'week', label: mark('Week') },
+  { id: 'month', label: mark('Month') },
+  { id: 'year', label: mark('Year') },
 ];
 
 /** The last day of the range is today or later: there is no later period to show yet (1.14). */
@@ -24,10 +25,10 @@ export function isCurrentOrFuture(slice: StatisticsSlice, now: CalendarDate): bo
 export function SyncStatus({ slice }: { slice: StatisticsSlice }) {
   const busy = slice.loading
     ? slice.analysis
-      ? 'Refreshing worklogs…'
-      : 'Loading your recorded time…'
+      ? t('Refreshing worklogs…')
+      : t('Loading your recorded time…')
     : slice.analyzing
-      ? 'Updating…'
+      ? t('Updating…')
       : null;
   return (
     // A span: it sits inside the header's subtitle paragraph.
@@ -38,7 +39,7 @@ export function SyncStatus({ slice }: { slice: StatisticsSlice }) {
           {busy}
         </span>
       ) : null}
-      {slice.syncedAt ? <span className={styles.synced}>{`Synced ${syncedLabel(slice.syncedAt)}`}</span> : null}
+      {slice.syncedAt ? <span className={styles.synced}>{t('Synced {time}', { time: syncedLabel(slice.syncedAt) })}</span> : null}
     </span>
   );
 }

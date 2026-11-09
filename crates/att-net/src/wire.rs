@@ -7,6 +7,7 @@ use reqwest::{Method, Request, Url};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
+use crate::nl::tr;
 use att_core::{AppError, Result};
 
 pub(crate) const JSON: &str = "application/json";
@@ -14,17 +15,18 @@ pub(crate) const FORM: &str = "application/x-www-form-urlencoded";
 
 /// Foundation's text for undecodable JSON, which 1.14.x showed for malformed responses. Decoder
 /// errors are never shown because they can quote the payload.
-pub(crate) const UNREADABLE: &str =
-    "The data couldn’t be read because it isn’t in the correct format.";
+pub(crate) fn unreadable() -> AppError {
+    AppError::message(tr("The data couldn’t be read because it isn’t in the correct format."))
+}
 
 pub(crate) fn decode<T: DeserializeOwned>(bytes: &[u8]) -> Result<T> {
-    serde_json::from_slice(bytes).map_err(|_| AppError::message(UNREADABLE))
+    serde_json::from_slice(bytes).map_err(|_| unreadable())
 }
 
 pub(crate) fn encode<T: Serialize>(body: &T) -> Result<Vec<u8>> {
     // Plain structs of strings and numbers always serialize; keep a message instead of a panic.
     serde_json::to_vec(body)
-        .map_err(|_| AppError::message("The request could not be prepared. Try again."))
+        .map_err(|_| AppError::message(tr("The request could not be prepared. Try again.")))
 }
 
 /// `base` plus `segments`, each percent-encoded as exactly one path segment (so a `/` or `?` in a
@@ -90,9 +92,9 @@ pub(crate) fn request(
 /// A header value marked sensitive, so it is never printed by `Debug` or HTTP/2 indexed.
 pub(crate) fn secret_header(value: &str) -> Result<HeaderValue> {
     let mut header = HeaderValue::from_str(value).map_err(|_| {
-        AppError::message(
+        AppError::message(tr(
             "The saved credential contains characters that cannot be sent. Replace it in Settings.",
-        )
+        ))
     })?;
     header.set_sensitive(true);
     Ok(header)

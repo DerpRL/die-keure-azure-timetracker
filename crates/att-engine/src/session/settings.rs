@@ -18,6 +18,7 @@ use crate::controllers::hooks as controllers;
 use crate::engine::Engine;
 use crate::intent::done;
 use crate::ipc::IpcError;
+use crate::nl::{tr, trf};
 use crate::probes::{PROBE_DEADLINE, blocking};
 use crate::state::AppState;
 
@@ -93,13 +94,16 @@ pub(crate) async fn test_azure_pat(
     let organization = organization.trim();
     let project = project.trim();
     if organization.is_empty() {
-        return Err(IpcError::new("organization", "Enter your Azure DevOps organization first."));
+        return Err(IpcError::new(
+            "organization",
+            tr("Enter your Azure DevOps organization first."),
+        ));
     }
     if let Err(error) = Endpoint::azure(organization) {
         return Err(IpcError::new("organization", error.to_string()));
     }
     if engine.preview() {
-        return Err(IpcError::new("preview", "Preview mode: testing tokens is turned off."));
+        return Err(IpcError::new("preview", tr("Preview mode: testing tokens is turned off.")));
     }
     let mut pat = azure_pat.trim().to_string();
     if pat.is_empty() {
@@ -114,7 +118,7 @@ pub(crate) async fn test_azure_pat(
         pat = stored.unwrap_or_default();
     }
     if pat.is_empty() {
-        return Err(IpcError::new("missingToken", "Paste your personal access token first."));
+        return Err(IpcError::new("missingToken", tr("Paste your personal access token first.")));
     }
     let client = engine.services().clients.azure(organization, project, &pat)?;
     if let Err(error) = client.verify_organization().await {
@@ -131,31 +135,35 @@ fn azure_test_error(error: AppError, organization: &str, project: Option<&str>) 
     match (error, project) {
         (AppError::Authentication(_), _) => IpcError::new(
             "authentication",
-            format!(
-                "Azure DevOps did not accept this token for “{organization}”. Check that you copied all of it, that it has not expired, and that it was created for this organization with the Work Items (Read) scope."
+            trf(
+                "Azure DevOps did not accept this token for “{organization}”. Check that you copied all of it, that it has not expired, and that it was created for this organization with the Work Items (Read) scope.",
+                &[("organization", &organization)],
             ),
         ),
         (AppError::AccessDenied(_), _) => IpcError::new(
             "accessDenied",
-            format!(
-                "This token cannot read work items in “{organization}”. Edit it in Azure DevOps and add the Work Items (Read) scope."
+            trf(
+                "This token cannot read work items in “{organization}”. Edit it in Azure DevOps and add the Work Items (Read) scope.",
+                &[("organization", &organization)],
             ),
         ),
         (AppError::NotFound, None) => IpcError::new(
             "organizationNotFound",
-            format!(
-                "Azure DevOps has no organization called “{organization}”. Use the name from dev.azure.com/your-organization."
+            trf(
+                "Azure DevOps has no organization called “{organization}”. Use the name from dev.azure.com/your-organization.",
+                &[("organization", &organization)],
             ),
         ),
         (AppError::NotFound, Some(project)) => IpcError::new(
             "projectNotFound",
-            format!(
-                "“{organization}” has no project called “{project}”, or this token cannot see it. Check the spelling, or leave Project empty to search every project."
+            trf(
+                "“{organization}” has no project called “{project}”, or this token cannot see it. Check the spelling, or leave Project empty to search every project.",
+                &[("organization", &organization), ("project", &project)],
             ),
         ),
         (AppError::Network(_) | AppError::Timeout, _) => IpcError::new(
             "offline",
-            "Azure DevOps could not be reached. Check your internet connection and try again.",
+            tr("Azure DevOps could not be reached. Check your internet connection and try again."),
         ),
         (other, _) => other.into(),
     }
@@ -203,11 +211,27 @@ async fn validate_and_store(
 
 /// Swift `setInterfacePreferences(_:)`: saved immediately; reverted when it cannot be saved.
 pub(crate) fn set_interface(engine: &Engine, preferences: InterfacePreferences) {
-    let previous =
-        engine.update(|state| std::mem::replace(&mut state.config.interface, preferences));
+    let previous = engine.update(|state| {
+        let previous = std::mem::replace(&mut state.config.interface, preferences);
+        state.apply_language();
+        previous
+    });
     if !engine.preview() && engine.persist().is_err() {
-        engine.update(|state| state.config.interface = previous);
+        engine.update(|state| {
+            state.config.interface = previous;
+            state.apply_language();
+        });
     }
+}
+
+/// `app.setSystemLanguage`: the system language a window sees (`navigator.language`), used while
+/// the interface language is `system`. Not saved: every launch reports it again.
+pub(crate) fn set_system_language(engine: &Engine, tag: &str) {
+    let language = att_core::i18n::Language::from_tag(tag);
+    engine.update(|state| {
+        state.system_language = language;
+        state.apply_language();
+    });
 }
 
 /// `settings.setPromptInterruption` (2.0), saved immediately.
@@ -221,7 +245,8 @@ pub(crate) fn set_interruption(engine: &Engine, kind: PromptKind, level: Interru
 pub(crate) fn set_quiet_hours(engine: &Engine, quiet_hours: QuietHours) {
     if !quiet_hours.is_valid() {
         engine.update(|state| {
-            state.session.error = Some("Choose quiet hours between 00:00 and 23:59.".to_string());
+            state.session.error =
+                Some(tr("Choose quiet hours between 00:00 and 23:59.").to_string());
         });
         return;
     }
@@ -237,7 +262,7 @@ pub(crate) async fn finish_onboarding(engine: &Engine) {
     if engine.read(|state| state.config.figma.enabled) && !access {
         engine.update(|state| {
             state.session.error = Some(
-                "Allow Accessibility for Figma detection, or turn Figma detection off to continue."
+                tr("Allow Accessibility for Figma detection, or turn Figma detection off to continue.")
                     .to_string(),
             );
         });
@@ -268,7 +293,7 @@ pub(crate) fn restart_onboarding(engine: &Engine) -> std::result::Result<(), Ipc
         engine.update(|state| state.config.interface_setup_completed = previous);
         return Err(IpcError::new(
             "message",
-            format!("The onboarding could not be reopened: {}", error.message),
+            trf("The onboarding could not be reopened: {error}", &[("error", &error.message)]),
         ));
     }
     engine.services().shell.show_main(None);
@@ -283,7 +308,9 @@ pub(crate) async fn app_identity(
     let presence = engine.services().platform.presence.clone();
     let result = blocking(PROBE_DEADLINE, move || presence.app_identity(&PathBuf::from(path)))
         .await
-        .ok_or_else(|| IpcError::new("timeout", "The application could not be read in time."))?;
+        .ok_or_else(|| {
+            IpcError::new("timeout", tr("The application could not be read in time."))
+        })?;
     let identity = result.map_err(|error| IpcError::new("message", error.to_string()))?;
     let known = WorkAppView::new(identity.id.clone(), AppLookup::Found(identity.clone()));
     engine.update(|state| state.session.work_apps.insert(known.id.clone(), known));
@@ -349,13 +376,13 @@ pub(crate) fn prepare_for_restart(engine: &Engine) -> std::result::Result<Value,
     if busy(engine) || working || engine.preview() {
         return Err(IpcError::new(
             "busy",
-            "Wait for the current save or connection operation to finish before restarting.",
+            tr("Wait for the current save or connection operation to finish before restarting."),
         ));
     }
     engine.persist().map_err(|_| {
         IpcError::new(
             "storage",
-            "Local settings could not be saved. Resolve the storage error before updating.",
+            tr("Local settings could not be saved. Resolve the storage error before updating."),
         )
     })?;
     done()

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Button } from '../components/Button';
 import { RefreshIcon } from '../components/icons';
+import { t } from '../i18n';
 import { useRefreshShortcut } from '../shortcuts/hooks';
 import type { KeyCombo } from '../shortcuts/keys';
 import { usePageTitleId } from './pageTitle';
@@ -28,7 +29,7 @@ export function PageHeader({
   onRefresh,
   isRefreshing = false,
   refreshDisabled = false,
-  refreshLabel = 'Refresh',
+  refreshLabel = t('Refresh'),
   actions,
 }: PageHeaderProps) {
   const titleId = usePageTitleId();

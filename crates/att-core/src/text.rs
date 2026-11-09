@@ -44,7 +44,10 @@ pub mod duration_text {
     /// `Xh Ym`.
     pub fn short(seconds: f64) -> String {
         let minutes = whole(seconds) / 60;
-        format!("{}h {}m", minutes / 60, minutes % 60)
+        crate::nl::trf(
+            "{hours}h {minutes}m",
+            &[("hours", &(minutes / 60)), ("minutes", &(minutes % 60))],
+        )
     }
 }
 

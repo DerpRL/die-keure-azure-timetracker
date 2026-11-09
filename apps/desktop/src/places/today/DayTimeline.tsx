@@ -3,6 +3,7 @@ import { seriesColor } from '../../charts/palette';
 import type { AgendaEventView } from '../../ipc/contract';
 import { cx } from '../../utils/cx';
 import { HOUR_MS, formatTime, overlapLanes, visibleRange } from './model';
+import { t } from '../../i18n';
 import styles from './today.module.css';
 
 /** Spans shorter than this get a one-line block. */
@@ -89,7 +90,7 @@ function EventItem({ event, range, lane }: { event: AgendaEventView; range: Rang
       {short ? (
         <span className={styles.blockLine}>
           {`${formatTime(event.start)} ${event.title}`}
-          <span className="visually-hidden">{` until ${formatTime(event.end)}`}</span>
+          <span className="visually-hidden">{` ${t('until {time}', { time: formatTime(event.end) })}`}</span>
         </span>
       ) : (
         <>
@@ -97,7 +98,7 @@ function EventItem({ event, range, lane }: { event: AgendaEventView; range: Rang
           <span className={styles.blockDetail}>{place ? `${times} · ${place}` : times}</span>
         </>
       )}
-      {event.isNow ? <span className="visually-hidden">, happening now</span> : null}
+      {event.isNow ? <span className="visually-hidden">{`, ${t('happening now')}`}</span> : null}
     </li>
   );
 }
@@ -115,7 +116,7 @@ function TrackedItem({
 }) {
   const short = block.end - block.start < SHORT_MS;
   const style: Vars = { ...position(range, block.start, block.end), ...laneStyle(lane), '--activity-color': seriesColor(block.colorIndex) };
-  const flags = [block.running ? 'running' : null, block.long ? 'long entry' : null, block.overlap ? 'overlaps another entry' : null].filter(Boolean);
+  const flags = [block.running ? t('running') : null, block.long ? t('long entry') : null, block.overlap ? t('overlaps another entry') : null].filter(Boolean);
   const content = (
     <>
       {short ? (
@@ -151,7 +152,7 @@ function TrackedItem({
         <button
           type="button"
           className={cx(styles.blockButton, short && styles.short)}
-          aria-label={[`Open ${block.title}`, block.detail, ...flags].join(', ')}
+          aria-label={[t('Open {title}', { title: block.title }), block.detail, ...flags].join(', ')}
           onClick={open}
         >
           {content}
@@ -192,15 +193,15 @@ export function DayTimeline({ day, calendar, blocks, gaps = [], now = null, onOp
     <div className={styles.timeline}>
       <div className={cx(grid, styles.timelineHead)} aria-hidden="true">
         <span />
-        {withCalendar ? <span>Calendar</span> : null}
-        <span className={withCalendar ? styles.divider : undefined}>Tracked</span>
+        {withCalendar ? <span>{t('Calendar')}</span> : null}
+        <span className={withCalendar ? styles.divider : undefined}>{t('Tracked')}</span>
       </div>
       {allDay.length > 0 ? (
         <div className={cx(grid, styles.allDay)}>
           <span className={styles.allDayLabel} aria-hidden="true">
-            All day
+            {t('All day')}
           </span>
-          <ul role="list" aria-label="All-day events" className={styles.allDayList}>
+          <ul role="list" aria-label={t('All-day events')} className={styles.allDayList}>
             {allDay.map((event) => (
               <li key={event.id} className={cx(styles.block, styles.event, styles.allDayBlock)}>
                 <b className={styles.blockTitle}>{event.title}</b>
@@ -219,16 +220,16 @@ export function DayTimeline({ day, calendar, blocks, gaps = [], now = null, onOp
         {calendar && 'notice' in calendar ? (
           <div className={cx(styles.column, styles.noticeColumn)}>{calendar.notice}</div>
         ) : withCalendar ? (
-          <ul role="list" aria-label="Calendar events" className={styles.column}>
+          <ul role="list" aria-label={t('Calendar events')} className={styles.column}>
             {shownEvents.map((event) => (
               <EventItem key={event.id} event={event} range={range} lane={eventLanes.get(event.id)} />
             ))}
           </ul>
         ) : null}
-        <ul role="list" aria-label="Tracked time" className={cx(styles.column, withCalendar && styles.divider)}>
+        <ul role="list" aria-label={t('Tracked time')} className={cx(styles.column, withCalendar && styles.divider)}>
           {gaps.map((gap) => (
             <li key={`gap-${gap.start}`} className={styles.gap} style={position(range, gap.start, gap.end)}>
-              <span className="visually-hidden">{`Possible gap ${formatTime(gap.start)} – ${formatTime(gap.end)}`}</span>
+              <span className="visually-hidden">{t('Possible gap {start} – {end}', { start: formatTime(gap.start), end: formatTime(gap.end) })}</span>
             </li>
           ))}
           {shownBlocks.map((block) => (

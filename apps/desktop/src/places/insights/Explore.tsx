@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { SegmentedControl } from '../../components/Segmented';
+import { mark, t } from '../../i18n';
 import type { AnalysisView, Interval, StatisticsSection, StatisticsSlice } from '../../ipc/contract';
 import { SearchFilter } from './explore/Filters';
 import { TasksSection } from './explore/TasksSection';
@@ -12,8 +13,8 @@ import { StatisticsIcon } from '../../components/icons';
 type ExploreSection = Exclude<StatisticsSection, 'patterns'>;
 
 export const EXPLORE_SECTIONS: ReadonlyArray<{ id: ExploreSection; label: string }> = [
-  { id: 'time', label: 'Time explorer' },
-  { id: 'tasks', label: 'Tasks' },
+  { id: 'time', label: mark('Time explorer') },
+  { id: 'tasks', label: mark('Tasks') },
 ];
 
 export interface ExploreProps {
@@ -49,7 +50,7 @@ export function Explore({ slice, analysis, analysisKey, colors, chart, onChartCh
     EXPLORE_SECTIONS.map((item) => ({
       id: `statistics.section.${item.id}`,
       icon: StatisticsIcon,
-      label: `Show ${item.label}`,
+      label: t('Show {section}', { section: t(item.label) }),
       group: 'Actions' as const,
       keywords: ['statistics', 'section', 'insights'],
       isDisabled: shown === item.id,
@@ -60,7 +61,10 @@ export function Explore({ slice, analysis, analysisKey, colors, chart, onChartCh
   return (
     <div className={styles.explore}>
       <div className={styles.exploreHead}>
-        <SegmentedControl label="Explore" hideLabel options={EXPLORE_SECTIONS} selectedKey={shown} onSelectionChange={choose} />
+        <SegmentedControl
+          label={t('Explore')}
+          hideLabel
+          options={EXPLORE_SECTIONS.map((option) => ({ ...option, label: t(option.label) }))} selectedKey={shown} onSelectionChange={choose} />
         <SearchFilter slice={slice} className={styles.exploreSearch} />
       </div>
       <div aria-busy={slice.analyzing || undefined} className={slice.analyzing ? styles.analyzing : undefined}>

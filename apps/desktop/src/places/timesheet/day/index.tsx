@@ -25,6 +25,7 @@ import { RecentEditsSheet } from './RecentEditsSheet';
 import styles from './TimeEditor.module.css';
 import shared from '../timesheet.module.css';
 import { cx } from '../../../utils/cx';
+import { t, tn } from '../../../i18n';
 
 /** The day before or after `day` (`YYYY-MM-DD`). */
 function shiftDay(day: string, days: number): string | null {
@@ -75,14 +76,14 @@ export function DayView() {
 
   useRefreshShortcut(() => void load.run({ type: 'timeEditor.load' }), {
     isDisabled: !editor || blocked || loading || !!editor.selected || !editor.configured,
-    label: 'Refresh the day',
+    label: t('Refresh the day'),
   });
 
   useCommands([
     {
       id: 'timeEditor.corrections',
       icon: WarningIcon,
-      label: 'Gaps & overlaps…',
+      label: t('Gaps & overlaps…'),
       group: 'Actions',
       keywords: ['time editor', 'gaps', 'overlaps', 'corrections'],
       isDisabled: !editor || blocked || loading,
@@ -91,7 +92,7 @@ export function DayView() {
     {
       id: 'timeEditor.recentEdits',
       icon: HistoryIcon,
-      label: 'Recent edits',
+      label: t('Recent edits'),
       group: 'Actions',
       keywords: ['time editor', 'journal', 'undo', 'history'],
       isDisabled: !editor,
@@ -100,7 +101,7 @@ export function DayView() {
     {
       id: 'timeEditor.merge',
       icon: MergeIcon,
-      label: 'Merge selected entries…',
+      label: t('Merge selected entries…'),
       group: 'Actions',
       keywords: ['time editor', 'merge'],
       isDisabled: !editor || editor.selection.length < 2 || blocked,
@@ -111,10 +112,10 @@ export function DayView() {
   if (!editor) {
     return (
       <>
-        <TimesheetHeader view="day" title="Day" />
+        <TimesheetHeader view="day" title={t('Day')} />
         <div className={styles.page} aria-busy="true">
           <span role="status" className="visually-hidden">
-            Loading the day
+            {t('Loading the day')}
           </span>
           <Skeleton lines={2} />
           <Skeleton shape="rect" height="16rem" />
@@ -140,11 +141,11 @@ export function DayView() {
   const target = review && review.selectedDay === editor.day && review.targetSeconds > 0 ? review.targetSeconds : 0;
   const count = editor.logs.length;
   const subtitle = loading
-    ? 'Loading…'
+    ? t('Loading…')
     : [
-        target ? `${formatShortDuration(total)} of ${formatShortDuration(target)}` : formatShortDuration(total),
-        count === 1 ? '1 entry' : `${count} entries`,
-        overlaps.length > 0 ? (overlaps.length === 1 ? '1 overlap' : `${overlaps.length} overlaps`) : null,
+        target ? t('{done} of {target}', { done: formatShortDuration(total), target: formatShortDuration(target) }) : formatShortDuration(total),
+        tn(count, '{count} entry', '{count} entries'),
+        overlaps.length > 0 ? tn(overlaps.length, '{count} overlap', '{count} overlaps') : null,
       ]
         .filter(Boolean)
         .join(' · ');
@@ -162,13 +163,13 @@ export function DayView() {
             isNextDisabled={blocked || !day || day >= today}
           />
         }
-        title={day ? formatDayLong(day) : 'Day'}
+        title={day ? formatDayLong(day) : t('Day')}
         subtitle={subtitle}
         controls={
           <>
-            <Button onPress={() => setRecentOpen(true)}>Recent edits</Button>
+            <Button onPress={() => setRecentOpen(true)}>{t('Recent edits')}</Button>
             <Button variant="primary" icon={PlusIcon} isDisabled={!offline?.canCreate} onPress={() => setAdding(true)}>
-              Add time
+              {t('Add time')}
             </Button>
           </>
         }
@@ -177,14 +178,14 @@ export function DayView() {
       {editor.requiresReview ? (
         <Banner
           tone="warning"
-          title="An earlier change needs review"
+          title={t('An earlier change needs review')}
           actions={
             <Button size="small" onPress={() => setRecentOpen(true)}>
-              Open Recent edits
+              {t('Open Recent edits')}
             </Button>
           }
         >
-          Open Recent edits before making another change.
+          {t('Open Recent edits before making another change.')}
         </Banner>
       ) : null}
       {editor.journalIssue ? <Banner tone="warning">{editor.journalIssue}</Banner> : null}
@@ -193,7 +194,7 @@ export function DayView() {
         <details className={styles.savedNotice}>
           <summary>
             <WarningIcon className={styles.warningIcon} />
-            {editor.savedConflicts.length === 0 ? 'Overlap check incomplete' : 'Saved with overlapping time'}
+            {editor.savedConflicts.length === 0 ? t('Overlap check incomplete') : t('Saved with overlapping time')}
           </summary>
           <OverlapNotice conflicts={editor.savedConflicts} issue={editor.savedOverlapIssue} saved />
         </details>
@@ -204,9 +205,9 @@ export function DayView() {
       <Card as="section" aria-labelledby={clockId} className={styles.clockCard}>
         <div className={styles.sectionHeader}>
           <Heading level={2} id={clockId} className={styles.sectionTitle}>
-            On the clock
+            {t('On the clock')}
           </Heading>
-          <p className={styles.caption}>Gaps appear once Gaps &amp; overlaps has checked the day.</p>
+          <p className={styles.caption}>{t('Gaps appear once Gaps & overlaps has checked the day.')}</p>
         </div>
         {!loading && editor.day && editor.logs.length > 0 ? (
           <DayOverview
@@ -218,7 +219,7 @@ export function DayView() {
             issues={editor.corrections.issues}
           />
         ) : (
-          <p className={styles.caption}>{loading ? 'Loading the day…' : 'Nothing recorded on this day.'}</p>
+          <p className={styles.caption}>{loading ? t('Loading the day…') : t('Nothing recorded on this day.')}</p>
         )}
       </Card>
 
@@ -226,15 +227,15 @@ export function DayView() {
         <div className={styles.toolbar}>
           <div className={styles.headingText}>
             <Heading level={2} id={headingId} className={styles.sectionTitle}>
-              {day ? `Entries · ${formatDayLong(day)}` : 'Entries'}
+              {day ? t('Entries · {day}', { day: formatDayLong(day) }) : t('Entries')}
             </Heading>
             <p className={styles.caption}>
-              {`Select adjacent entries using the checkboxes or ${platform === 'windows' ? 'Ctrl-click' : '⌘-click'}.`}
+              {platform === 'windows' ? t('Select adjacent entries using the checkboxes or Ctrl-click.') : t('Select adjacent entries using the checkboxes or ⌘-click.')}
             </p>
           </div>
           <div className={cx(styles.actions, shared.noWrap)}>
             <DatePicker
-              label="Go to date"
+              label={t('Go to date')}
               hideLabel
               value={toCalendarDay(day)}
               maxValue={localToday()}
@@ -244,9 +245,9 @@ export function DayView() {
               isDisabled={blocked}
             />
             <SearchField
-              label="Filter"
+              label={t('Filter')}
               hideLabel
-              placeholder="Filter by ticket or comment"
+              placeholder={t('Filter by ticket or comment')}
               value={filter}
               onChange={(text) => {
                 setFilterDraft(text);
@@ -257,14 +258,14 @@ export function DayView() {
               className={shared.dayFilter}
             />
             <Button isDisabled={editor.selection.length < 2 || blocked} isPending={merge.pending} onPress={beginMerge}>
-              Merge selected…
+              {t('Merge selected…')}
             </Button>
             <Button isDisabled={blocked || loading} onPress={openCorrections}>
-              Gaps & overlaps…
+              {t('Gaps & overlaps…')}
             </Button>
           </div>
         </div>
-        <LoadingRegion label="Loading tracked time…" isLoading={loading} placeholder={<Skeleton shape="rect" height="12rem" />}>
+        <LoadingRegion label={t('Loading tracked time…')} isLoading={loading} placeholder={<Skeleton shape="rect" height="12rem" />}>
           <EntriesTable
             className={shared.noWrap}
             logs={editor.logs}
@@ -277,7 +278,7 @@ export function DayView() {
             disabled={blocked}
             labelledBy={headingId}
             emptyMessage={
-              configured || preview ? 'No entries match this date or filter.' : 'Connect to 7pace in Settings to edit your recorded time.'
+              configured || preview ? t('No entries match this date or filter.') : t('Connect to 7pace in Settings to edit your recorded time.')
             }
             onSelectionChange={(ids) => void selection.run({ type: 'timeEditor.setSelection', ids })}
             onEdit={(log) => void select.run({ type: 'timeEditor.select', logId: log.id })}

@@ -2,6 +2,7 @@ import { useId, useState, type ReactNode } from 'react';
 import { ToggleButton } from 'react-aria-components';
 import { Heading, type HeadingLevel } from '../components/Card';
 import { TableIcon } from '../components/icons';
+import { t } from '../i18n';
 import { cx } from '../utils/cx';
 import styles from './charts.module.css';
 
@@ -60,7 +61,7 @@ export function ChartFrame({
           {actions}
           <ToggleButton isSelected={showTable} onChange={setShowTable} className={styles.tableToggle}>
             <TableIcon />
-            <span>Show as table</span>
+            <span>{t('Show as table')}</span>
           </ToggleButton>
         </div>
       </div>

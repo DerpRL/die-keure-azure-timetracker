@@ -3,6 +3,7 @@ import { announce } from '../../components/Announcer';
 import type { ConnectionSlice, HostOs, ProgressSlice, TrackingSlice } from '../../ipc/contract';
 import { useLiveSeconds, useSlice } from '../../state/hooks';
 import type { TrackingStatus } from '../../timer/status';
+import { t } from '../../i18n';
 
 /** The tray state the engine resolved (Swift `TrackingIndicator`); "connecting" until it arrives. */
 export function trackingStatus(connection: ConnectionSlice | undefined): TrackingStatus {
@@ -46,18 +47,18 @@ export function totalsConfirmed(connection: ConnectionSlice | undefined, progres
 
 /** "this Mac" or "this computer", for the local-timer texts. */
 export function deviceName(os: HostOs | undefined): string {
-  return os === 'macos' ? 'this Mac' : 'this computer';
+  return os === 'macos' ? t('this Mac') : t('this computer');
 }
 
 function trackingAnnouncement(tracking: TrackingSlice): { key: string; message: string } {
   if (tracking.running) {
-    return { key: sessionKey(tracking), message: `Tracking ${tracking.title}` };
+    return { key: sessionKey(tracking), message: t('Tracking {title}', { title: tracking.title }) };
   }
-  if (tracking.paused) return { key: sessionKey(tracking), message: `Paused · ${tracking.paused.title}` };
+  if (tracking.paused) return { key: sessionKey(tracking), message: t('Paused · {title}', { title: tracking.paused.title }) };
   if (tracking.local && tracking.showsLocalTimer) {
-    return { key: `local:${tracking.local.draftId}`, message: `Local tracking · ${tracking.local.title}` };
+    return { key: `local:${tracking.local.draftId}`, message: t('Local tracking · {title}', { title: tracking.local.title }) };
   }
-  return { key: 'idle', message: 'Tracking stopped' };
+  return { key: 'idle', message: t('Tracking stopped') };
 }
 
 /**

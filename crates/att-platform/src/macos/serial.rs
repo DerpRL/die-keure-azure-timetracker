@@ -9,6 +9,8 @@ use std::time::Duration;
 
 use objc2::rc::autoreleasepool;
 
+use crate::nl::trf;
+use crate::unsupported::capability_label;
 use crate::{PlatformError, Result};
 
 /// Jobs that may wait behind a slow one before new calls fail fast.
@@ -42,11 +44,17 @@ impl<S: 'static> Serial<S> {
     }
 
     fn not_responding(&self) -> PlatformError {
-        PlatformError::Failed(format!("{} is not responding. Retrying automatically.", self.name))
+        PlatformError::Failed(trf(
+            "{name} is not responding. Retrying automatically.",
+            &[("name", &capability_label(self.name))],
+        ))
     }
 
     fn failed(&self) -> PlatformError {
-        PlatformError::Failed(format!("{} could not be read.", self.name))
+        PlatformError::Failed(trf(
+            "{name} could not be read.",
+            &[("name", &capability_label(self.name))],
+        ))
     }
 
     fn spawn(&self) -> Result<Worker<S>> {
@@ -66,7 +74,12 @@ impl<S: 'static> Serial<S> {
                     finished.fetch_sub(1, Ordering::SeqCst);
                 }
             })
-            .map_err(|error| PlatformError::Failed(format!("{name} could not start ({error}).")))?;
+            .map_err(|error| {
+                PlatformError::Failed(trf(
+                    "{name} could not start ({error}).",
+                    &[("name", &capability_label(name)), ("error", &error)],
+                ))
+            })?;
         Ok(Worker { jobs, pending })
     }
 

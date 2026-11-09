@@ -23,6 +23,7 @@ pub mod engine;
 pub mod guard;
 pub mod intent;
 pub mod ipc;
+mod nl;
 mod persist;
 pub mod probes;
 pub mod publish;

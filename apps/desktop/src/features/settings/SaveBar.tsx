@@ -6,6 +6,7 @@ import type { KeyCombo } from '../../shortcuts/keys';
 import { useSlice } from '../../state/hooks';
 import { sectionTitle } from './sections';
 import { useSettingsForm } from './SettingsForm';
+import { t, tn } from '../../i18n';
 import styles from './settings.module.css';
 
 export const SAVE_SHORTCUT: KeyCombo = { key: 's', mod: true };
@@ -33,22 +34,23 @@ export function SaveBar() {
   const { dirty, saving, saved, busy, preview, changes } = form;
   const count = changes.length;
   let state: string;
-  if (saving) state = 'Saving…';
-  else if (dirty) state = `${count} unsaved ${count === 1 ? 'change' : 'changes'}`;
-  else if (saved) state = connection?.connected ? 'Settings saved · connection verified' : 'Settings saved';
-  else state = 'No unsaved changes';
+  if (saving) state = t('Saving…');
+  else if (dirty) state = tn(count, '{count} unsaved change', '{count} unsaved changes');
+  else if (saved) state = connection?.connected ? t('Settings saved · connection verified') : t('Settings saved');
+  else state = t('No unsaved changes');
   // At most four names, then "and 3 more".
-  const named = changes.length > 4 ? `${changes.slice(0, 4).join(', ')} and ${changes.length - 4} more` : changes.join(', ');
+  const named =
+    changes.length > 4 ? t('{names} and {count} more', { names: changes.slice(0, 4).join(', '), count: changes.length - 4 }) : changes.join(', ');
   return (
     <div ref={bar} className={styles.saveBar}>
       {form.showIssues ? (
-        <Banner tone="error" title="Fix these settings before saving">
+        <Banner tone="error" title={t('Fix these settings before saving')}>
           <ul className={styles.issueList}>
             {form.issues.map((issue) => (
               <li key={issue.field}>
                 {issue.message}{' '}
                 <Button size="small" variant="plain" onPress={() => form.goTo(issue.section)}>
-                  {`Go to ${sectionTitle(issue.section)}`}
+                  {t('Go to {section}', { section: sectionTitle(issue.section) })}
                 </Button>
               </li>
             ))}
@@ -56,7 +58,7 @@ export function SaveBar() {
         </Banner>
       ) : null}
       {form.saveError ? (
-        <Banner tone="error" title="Settings were not saved">
+        <Banner tone="error" title={t('Settings were not saved')}>
           {form.saveError.message}
         </Banner>
       ) : null}
@@ -67,11 +69,11 @@ export function SaveBar() {
             <span className={styles.saveCount}>{state}</span>
             {dirty && !saving && named ? <span className={styles.saveNames}>{`· ${named}`}</span> : null}
           </p>
-          {preview ? <p className={styles.saveNote}>Preview mode: saving settings and credentials is turned off.</p> : null}
+          {preview ? <p className={styles.saveNote}>{t('Preview mode: saving settings and credentials is turned off.')}</p> : null}
         </div>
         <div className={styles.saveButtons}>
           <Button size="small" variant="plain" onPress={form.revert} isDisabled={!dirty || saving} className={styles.saveRevert}>
-            Revert
+            {t('Revert')}
           </Button>
           <Button
             size="small"
@@ -82,7 +84,7 @@ export function SaveBar() {
             showShortcut
             className={styles.saveSubmit}
           >
-            Save changes
+            {t('Save changes')}
           </Button>
         </div>
       </div>

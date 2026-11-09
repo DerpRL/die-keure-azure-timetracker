@@ -7,8 +7,9 @@ import { ChoiceButtons } from './ChoiceButtons';
 import { osWords } from './labels';
 import { InlineIssue, IssueRow, SettingRow, SettingsSection, ToggleRow } from './SettingsSection';
 import { useSettingsForm } from './SettingsForm';
-import { WEEKDAY_NAMES, WEEKDAYS_MONDAY_FIRST } from './targets';
+import { weekdayName, WEEKDAYS_MONDAY_FIRST } from './targets';
 import { dayReviewProblems, GAP_MINUTES, issueFor, LONG_SESSION_MINUTES } from './validation';
+import { t } from '../../i18n';
 import styles from './settings.module.css';
 
 /** Minutes after midnight ↔ a time-of-day value for `TimeField`. */
@@ -41,14 +42,14 @@ export function WorkdayTimes() {
   const problems = dayReviewProblems(preferences);
   return (
     <SettingRow
-      title="Starts and ends"
-      help="Also sets when the day review reminder appears."
-      below={problems.times ? <InlineIssue>Choose an end time after the workday start.</InlineIssue> : null}
+      title={t('Starts and ends')}
+      help={t('Also sets when the day review reminder appears.')}
+      below={problems.times ? <InlineIssue>{t('Choose an end time after the workday start.')}</InlineIssue> : null}
     >
       {({ helpId }) => (
         <>
           <TimeField
-            label="Workday starts"
+            label={t('Workday starts')}
             hideLabel
             aria-describedby={helpId}
             value={minutesToTime(preferences.startMinute)}
@@ -58,10 +59,10 @@ export function WorkdayTimes() {
             isInvalid={problems.times}
           />
           <span className={styles.muted} aria-hidden="true">
-            to
+            {t('to')}
           </span>
           <TimeField
-            label="Workday ends"
+            label={t('Workday ends')}
             hideLabel
             aria-describedby={helpId}
             value={minutesToTime(preferences.finishMinute)}
@@ -79,13 +80,11 @@ export function WorkdayTimes() {
 /** When the day review reminder comes, with the times for the current workday. */
 function reminderOptions(preferences: DayReviewPreferences): Array<{ id: DayReviewReminder; label: string }> {
   return [
-    { id: 'beforeEnd', label: `15 minutes before the workday ends (${clock(Math.max(0, preferences.finishMinute - 15))})` },
-    { id: 'atEnd', label: `When the workday ends (${clock(preferences.finishMinute)})` },
-    { id: 'nextMorning', label: `Next morning, when the workday starts (${clock(preferences.startMinute)})` },
+    { id: 'beforeEnd', label: t('15 minutes before the workday ends ({time})', { time: clock(Math.max(0, preferences.finishMinute - 15)) }) },
+    { id: 'atEnd', label: t('When the workday ends ({time})', { time: clock(preferences.finishMinute) }) },
+    { id: 'nextMorning', label: t('Next morning, when the workday starts ({time})', { time: clock(preferences.startMinute) }) },
   ];
 }
-
-const SHORT_DAY = (weekday: number) => (WEEKDAY_NAMES[weekday] ?? '').slice(0, 3);
 
 /** Settings → Reminders → Day review (1.14 `DayReviewSettings`). */
 export function DayReviewSection() {
@@ -94,16 +93,16 @@ export function DayReviewSection() {
   const problems = dayReviewProblems(preferences);
   const issue = issueFor(issues, 'dayReview');
   return (
-    <SettingsSection id="dayReview" subtitle="A short check of gaps and long entries before you send them to 7pace.">
+    <SettingsSection id="dayReview" subtitle={t('A short check of gaps and long entries before you send them to 7pace.')}>
       <ToggleRow
-        title="Remind me to review my day"
-        help={`From the ${osWords(os).trayPlace}. Snooze or skip any day; reviewed days survive restarts.`}
+        title={t('Remind me to review my day')}
+        help={t('From the {place}. Snooze or skip any day; reviewed days survive restarts.', { place: osWords(os).trayPlace })}
         isSelected={preferences.enabled}
         onChange={(enabled) => set({ enabled })}
       />
-      <SettingRow title="When" dimmed={!preferences.enabled}>
+      <SettingRow title={t('When')} dimmed={!preferences.enabled}>
         <Select
-          label="When"
+          label={t('When')}
           hideLabel
           items={reminderOptions(preferences)}
           selectedKey={preferences.reminder}
@@ -113,22 +112,22 @@ export function DayReviewSection() {
           className={styles.fieldWide}
         />
       </SettingRow>
-      <SettingRow title="On" below={problems.weekdays ? <InlineIssue>Select at least one review day.</InlineIssue> : null}>
+      <SettingRow title={t('On')} below={problems.weekdays ? <InlineIssue>{t('Select at least one review day.')}</InlineIssue> : null}>
         <ChoiceButtons
-          label="Review days"
+          label={t('Review days')}
           selectionMode="multiple"
-          items={WEEKDAYS_MONDAY_FIRST.map((day) => ({ id: day, label: SHORT_DAY(day), accessibleLabel: WEEKDAY_NAMES[day] }))}
+          items={WEEKDAYS_MONDAY_FIRST.map((day) => ({ id: day, label: weekdayName(day, 'short'), accessibleLabel: weekdayName(day) }))}
           selected={new Set(preferences.weekdays)}
           onChange={(keys) => set({ weekdays: WEEKDAYS_MONDAY_FIRST.filter((day) => keys.has(day)) })}
         />
       </SettingRow>
-      <SettingRow title="Flag entries longer than" help="Long entries often mean a forgotten timer.">
+      <SettingRow title={t('Flag entries longer than')} help={t('Long entries often mean a forgotten timer.')}>
         {({ helpId }) => (
           <NumberField
-            label="Flag entries longer than"
+            label={t('Flag entries longer than')}
             hideLabel
             aria-describedby={helpId}
-            unit="min"
+            unit={t('min')}
             minValue={LONG_SESSION_MINUTES.min}
             maxValue={LONG_SESSION_MINUTES.max}
             step={LONG_SESSION_MINUTES.step}
@@ -141,11 +140,11 @@ export function DayReviewSection() {
           />
         )}
       </SettingRow>
-      <SettingRow title="Ignore gaps shorter than">
+      <SettingRow title={t('Ignore gaps shorter than')}>
         <NumberField
-          label="Ignore gaps shorter than"
+          label={t('Ignore gaps shorter than')}
           hideLabel
-          unit="min"
+          unit={t('min')}
           minValue={GAP_MINUTES.min}
           maxValue={GAP_MINUTES.max}
           step={GAP_MINUTES.step}

@@ -1,8 +1,9 @@
 /**
  * Appearance preferences, mirroring Swift `InterfacePreferences` (1.14.2) and its JSON shape:
  * `{ "theme": "system" | "light" | "dark", "scale": 90 | 100 | 110 | 125 | 150,
- *    "contrast": "system" | "standard" | "increased" }`.
+ *    "contrast": "system" | "standard" | "increased", "language"?: "system" | "en" | "nl" }`.
  */
+import { LANGUAGE_PREFERENCES, mark, type LanguagePreference } from '../i18n';
 
 export const THEME_PREFERENCES = ['system', 'light', 'dark'] as const;
 export const CONTRAST_PREFERENCES = ['system', 'standard', 'increased'] as const;
@@ -16,6 +17,8 @@ export interface InterfacePreferences {
   theme: ThemePreference;
   scale: ScalePreference;
   contrast: ContrastPreference;
+  /** 2.6; missing means `system`. */
+  language?: LanguagePreference;
 }
 
 export const DEFAULT_INTERFACE_PREFERENCES: Readonly<InterfacePreferences> = Object.freeze({
@@ -24,11 +27,13 @@ export const DEFAULT_INTERFACE_PREFERENCES: Readonly<InterfacePreferences> = Obj
   contrast: 'system',
 });
 
-export const THEME_LABELS: Record<ThemePreference, string> = { system: 'System', light: 'Light', dark: 'Dark' };
+/** English (`mark`): show with `t(THEME_LABELS[id])`. */
+export const THEME_LABELS: Record<ThemePreference, string> = { system: mark('System'), light: mark('Light'), dark: mark('Dark') };
+/** English (`mark`): show with `t(CONTRAST_LABELS[id])`. */
 export const CONTRAST_LABELS: Record<ContrastPreference, string> = {
-  system: 'System',
-  standard: 'Standard',
-  increased: 'Increased',
+  system: mark('System'),
+  standard: mark('Standard'),
+  increased: mark('Increased'),
 };
 export function scaleLabel(scale: ScalePreference): string {
   return `${scale}%`;
@@ -47,15 +52,18 @@ function oneOf<T extends string | number>(values: readonly T[], value: unknown, 
  */
 export function parseInterfacePreferences(value: unknown): InterfacePreferences {
   const record = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+  const language = oneOf<LanguagePreference>(LANGUAGE_PREFERENCES, record.language, 'system');
   return {
     theme: oneOf(THEME_PREFERENCES, record.theme, DEFAULT_INTERFACE_PREFERENCES.theme),
     scale: oneOf(SCALE_PREFERENCES, record.scale, DEFAULT_INTERFACE_PREFERENCES.scale),
     contrast: oneOf(CONTRAST_PREFERENCES, record.contrast, DEFAULT_INTERFACE_PREFERENCES.contrast),
+    // Like the engine, `system` is left out.
+    ...(language === 'system' ? {} : { language }),
   };
 }
 
 export function preferencesEqual(a: InterfacePreferences, b: InterfacePreferences): boolean {
-  return a.theme === b.theme && a.scale === b.scale && a.contrast === b.contrast;
+  return a.theme === b.theme && a.scale === b.scale && a.contrast === b.contrast && (a.language ?? 'system') === (b.language ?? 'system');
 }
 
 /** What the operating system reports through media queries. */

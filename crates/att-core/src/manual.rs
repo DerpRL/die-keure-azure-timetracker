@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use unicode_normalization::char::is_combining_mark;
 
 use crate::model::ActivityType;
+use crate::nl::tr;
 use crate::text::NonEmpty;
 
 /// What the user tracks without an Azure ticket (Swift `ManualTrackingKind`).
@@ -35,9 +36,9 @@ impl ManualTrackingKind {
 
     pub fn label(self) -> &'static str {
         match self {
-            Self::Activity => "Other activity",
-            Self::Meeting => "Meeting",
-            Self::Standup => "Stand-up",
+            Self::Activity => tr("Other activity"),
+            Self::Meeting => tr("Meeting"),
+            Self::Standup => tr("Stand-up"),
         }
     }
 

@@ -5,6 +5,7 @@ import '@fontsource-variable/jetbrains-mono';
 import './theme/tokens.css';
 import './theme/global.css';
 import { AppProviders } from './app/AppProviders';
+import { LanguageBoundary } from './i18n/LanguageBoundary';
 import { InterfaceSync } from './features/app/InterfaceSync';
 import { isTauri } from './ipc';
 import { EngineProvider } from './state/EngineProvider';
@@ -93,6 +94,8 @@ async function installPreviewEngine(): Promise<void> {
       }
     })
     // Settings → Updates & advanced → "Show onboarding again", and finishing it, like the engine.
+    // Settings → Appearance applies at once, like the engine (the language included).
+    .handle('app.setInterface', (intent, mock) => mock.setSlice('interface', intent.preferences))
     .handle('app.restartOnboarding', (_intent, mock) => mock.patchSlice('app', { onboarding: true }))
     .handle('app.finishOnboarding', (_intent, mock) => mock.patchSlice('app', { onboarding: false, visiblePage: 'overview' }))
     // Deleting an offline draft (or the running local timer), like the engine's `offline.remove`.
@@ -131,6 +134,35 @@ async function installPreviewEngine(): Promise<void> {
       const end = new Date(Date.parse(log.timestamp) + log.length * 1000).toISOString();
       mock.patchSlice('timeEditor', { selected: log, mode: 'edit', start: log.timestamp, end, review: null, plan: null });
     })
+    // Drag to create on Timesheet · Week adds the entry to the sample history, like the engine.
+    .handle('timeEditor.create', (intent, mock) => {
+      const id = crypto.randomUUID();
+      const history = mock.slices.history;
+      const activityType = mock.slices.flow?.activityTypes.find((activity) => activity.id === intent.activityId) ?? null;
+      if (history) {
+        const length = (Date.parse(intent.end) - Date.parse(intent.start)) / 1000;
+        const log = {
+          id,
+          timestamp: intent.start,
+          length,
+          workItemId: intent.ticketId,
+          comment: intent.comment || null,
+          activityType,
+          isCanEdit: true,
+          isCanDelete: true,
+          billableLength: intent.billable ? length : 0,
+          editedTimestamp: null,
+          user: history.logs[0]?.user ?? null,
+        };
+        mock.patchSlice('history', { logs: [log, ...history.logs] });
+      }
+      mock.patchSlice('timeEditor', {
+        message: 'Add time confirmed by 7pace. You can undo this from Recent edits.',
+        savedConflicts: [],
+        savedOverlapIssue: null,
+      });
+      return { id };
+    })
     .handle('timeEditor.cancel', (_intent, mock) => mock.patchSlice('timeEditor', { selected: null, start: null, end: null, review: null, plan: null }));
 }
 
@@ -150,7 +182,9 @@ if (container) {
         >
           <EngineProvider connect={surface !== 'gallery'}>
             <InterfaceSync />
-            <SurfaceRoot surface={surface} />
+            <LanguageBoundary>
+              <SurfaceRoot surface={surface} />
+            </LanguageBoundary>
           </EngineProvider>
         </AppProviders>
       </StrictMode>,

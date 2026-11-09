@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useToast } from '../../components/Toast';
 import { chooseSavePath } from '../../features/ticketContext/native';
 import { useAction } from '../../state/hooks';
+import { t } from '../../i18n';
 
 /**
  * Export CSV: asks where to save, then `history.exportCsv` writes the loaded range's worklogs.
@@ -18,16 +19,16 @@ export function useCsvExport(): { exportCsv: () => Promise<void>; pending: boole
       path = await chooseSavePath({
         defaultPath: 'azure-time-history.csv',
         filters: [{ name: 'CSV', extensions: ['csv'] }],
-        title: 'Export worklogs',
+        title: t('Export worklogs'),
       });
     } catch (error) {
-      toast.show({ title: 'Could not open the save dialog', description: error instanceof Error ? error.message : String(error), tone: 'error' });
+      toast.show({ title: t('Could not open the save dialog'), description: error instanceof Error ? error.message : String(error), tone: 'error' });
     } finally {
       setChoosing(false);
     }
     if (!path) return;
     const result = await exporter.run({ type: 'history.exportCsv', path });
-    if (result.ok) toast.show({ title: 'Worklogs exported', description: path, tone: 'success' });
+    if (result.ok) toast.show({ title: t('Worklogs exported'), description: path, tone: 'success' });
   };
   return { exportCsv, pending: choosing || exporter.pending, error: exporter.error?.message ?? null };
 }

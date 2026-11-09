@@ -6,8 +6,9 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { EmptyState, LoadingRegion, Skeleton } from '../../components/EmptyState';
 import { ArrowLeftIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, ClearFilterIcon, ResetIcon, StatisticsIcon, WarningIcon, ZoomInIcon, ZoomOutIcon } from '../../components/icons';
+import { t, tn } from '../../i18n';
 import type { AnalysisView, Interval, StatisticsSlice } from '../../ipc/contract';
-import { duration, plural, syncedLabel } from './explore/format';
+import { currentPeriodLabel, duration, syncedLabel } from './explore/format';
 import { activityColors, analysisKey, isFilterActive } from './explore/model';
 import { isCurrentOrFuture } from './explore/PeriodControls';
 import type { TimeChart } from './explore/TimeSection';
@@ -53,7 +54,7 @@ export function StatisticsView({ view, tabs, reportAside = false, onShowTime, on
       {!slice ? (
         <>
           {tabs}
-          <LoadingRegion label="Loading statistics" isLoading placeholder={<StatisticsSkeleton />}>
+          <LoadingRegion label={t('Loading statistics')} isLoading placeholder={<StatisticsSkeleton />}>
             {null}
           </LoadingRegion>
         </>
@@ -91,11 +92,11 @@ function NotConfigured() {
       <EmptyState
         icon={StatisticsIcon}
         headingLevel={2}
-        title="Your statistics are waiting"
-        description="Connect to 7pace in Settings to explore your recorded time."
+        title={t('Your statistics are waiting')}
+        description={t('Connect to 7pace in Settings to explore your recorded time.')}
         action={
           <Button variant="primary" onPress={() => openPage('settings')}>
-            Open Settings
+            {t('Open Settings')}
           </Button>
         }
       />
@@ -112,15 +113,15 @@ function StatisticsContent({ slice, view, tabs, reportAside, onShowTime, onSeeEn
   const issue = slice.issue ? (
     <Banner
       tone="warning"
-      title="Could not refresh worklogs"
+      title={t('Could not refresh worklogs')}
       actions={
         <Button size="small" onPress={retry} isDisabled={slice.loading}>
-          Retry
+          {t('Retry')}
         </Button>
       }
     >
       <p>{slice.issue}</p>
-      {analysis ? <p>Showing the last downloaded worklogs.</p> : null}
+      {analysis ? <p>{t('Showing the last downloaded worklogs.')}</p> : null}
     </Banner>
   ) : null;
 
@@ -131,7 +132,7 @@ function StatisticsContent({ slice, view, tabs, reportAside, onShowTime, onSeeEn
         {issue}
         {slice.loading || slice.analyzing ? (
           <Card padding="large">
-            <LoadingRegion label="Loading your recorded time…" isLoading placeholder={<StatisticsSkeleton />}>
+            <LoadingRegion label={t('Loading your recorded time…')} isLoading placeholder={<StatisticsSkeleton />}>
               {null}
             </LoadingRegion>
           </Card>
@@ -140,11 +141,11 @@ function StatisticsContent({ slice, view, tabs, reportAside, onShowTime, onSeeEn
             <EmptyState
               icon={StatisticsIcon}
               headingLevel={2}
-              title="Your statistics are waiting"
-              description="Refresh to download the recorded time of this period."
+              title={t('Your statistics are waiting')}
+              description={t('Refresh to download the recorded time of this period.')}
               action={
                 <Button variant="primary" onPress={retry}>
-                  Refresh
+                  {t('Refresh')}
                 </Button>
               }
             />
@@ -183,7 +184,7 @@ function Analysed({ slice, analysis, view, tabs, issue, reportAside, onShowTime,
   const announce = useAnnounce();
   const wasAnalyzing = useRef(slice.analyzing);
   useEffect(() => {
-    if (wasAnalyzing.current && !slice.analyzing) announce(`Statistics updated: ${duration(analysis.total)} recorded.`);
+    if (wasAnalyzing.current && !slice.analyzing) announce(t('Statistics updated: {time} recorded.', { time: duration(analysis.total) }));
     wasAnalyzing.current = slice.analyzing;
   }, [slice.analyzing, analysis.total, announce]);
 
@@ -206,8 +207,8 @@ function Analysed({ slice, analysis, view, tabs, issue, reportAside, onShowTime,
       <EmptyState
         icon={StatisticsIcon}
         headingLevel={2}
-        title="No time tracked in this period"
-        description="Nothing was recorded in 7pace for this period. Choose another period, or refresh after recording time."
+        title={t('No time tracked in this period')}
+        description={t('Nothing was recorded in 7pace for this period. Choose another period, or refresh after recording time.')}
       />
     </Card>
   ) : noMatch ? (
@@ -215,9 +216,9 @@ function Analysed({ slice, analysis, view, tabs, issue, reportAside, onShowTime,
       <EmptyState
         icon={StatisticsIcon}
         headingLevel={2}
-        title="No entries match these filters"
-        description="Try a different search or activity, or clear your filters."
-        action={<Button onPress={() => void clear.run({ type: 'statistics.clearFilters' })}>Clear filters</Button>}
+        title={t('No entries match these filters')}
+        description={t('Try a different search or activity, or clear your filters.')}
+        action={<Button onPress={() => void clear.run({ type: 'statistics.clearFilters' })}>{t('Clear filters')}</Button>}
       />
     </Card>
   ) : null;
@@ -271,7 +272,7 @@ function Analysed({ slice, analysis, view, tabs, issue, reportAside, onShowTime,
         {reportAside ? <ReportAside statisticsRange={slice.period === 'week' ? slice.range.start : null} /> : null}
         {empty ? null : (
           <div className={styles.fullRow}>
-            <Extras id="explore" title="Explore entries" summary="Time explorer, heatmaps, timeline, progress, tasks and entries">
+            <Extras id="explore" title={t('Explore entries')} summary={t('Time explorer, heatmaps, timeline, progress, tasks and entries')}>
               <Explore
                 slice={slice}
                 analysis={analysis}
@@ -304,19 +305,25 @@ function ReportAside({ statisticsRange }: { statisticsRange: string | null }) {
 function SourceNotes({ slice }: { slice: StatisticsSlice }) {
   return (
     <div className={styles.sourceNotes}>
-      {slice.syncedAt ? <p className={styles.strongNote}>{`Synced ${syncedLabel(slice.syncedAt)}`}</p> : null}
+      {slice.syncedAt ? <p className={styles.strongNote}>{t('Synced {time}', { time: syncedLabel(slice.syncedAt) })}</p> : null}
       <p>
-        7pace worklogs only; the live timer is not added. Entries are clipped to your selected window and split at midnight. Weeks start on
-        Monday. Refresh after editing time.
+        {t(
+          '7pace worklogs only; the live timer is not added. Entries are clipped to your selected window and split at midnight. Weeks start on Monday. Refresh after editing time.',
+        )}
       </p>
       <p>
-        One preceding day is downloaded to include overnight work. Entries that started earlier are not included. Targets use your daily
-        schedule, holidays and leave from Settings.
+        {t(
+          'One preceding day is downloaded to include overnight work. Entries that started earlier are not included. Targets use your daily schedule, holidays and leave from Settings.',
+        )}
       </p>
       {slice.omitted > 0 ? (
         <p className={styles.warningNote}>
           <WarningIcon className={styles.inlineIcon} />
-          {`${plural(slice.omitted, 'entry was', 'entries were')} omitted because their date or duration is invalid.`}
+          {tn(
+            slice.omitted,
+            '{count} entry was omitted because their date or duration is invalid.',
+            '{count} entries were omitted because their date or duration is invalid.',
+          )}
         </p>
       ) : null}
     </div>
@@ -329,21 +336,21 @@ function useStatisticsCommands(slice: StatisticsSlice) {
   const keywords = ['statistics', 'insights'];
   const atLatest = isCurrentOrFuture(slice, today(getLocalTimeZone()));
   useCommands([
-    { id: 'statistics.previous', icon: ChevronLeftIcon, label: 'Previous period', group: 'Actions', keywords, onAction: () => void run({ type: 'statistics.move', amount: -1 }) },
+    { id: 'statistics.previous', icon: ChevronLeftIcon, label: t('Previous period'), group: 'Actions', keywords, onAction: () => void run({ type: 'statistics.move', amount: -1 }) },
     {
       id: 'statistics.next',
       icon: ChevronRightIcon,
-      label: 'Next period',
+      label: t('Next period'),
       group: 'Actions',
       keywords,
       isDisabled: atLatest,
       onAction: () => void run({ type: 'statistics.move', amount: 1 }),
     },
-    { id: 'statistics.current', icon: CalendarIcon, label: `Current ${slice.period}`, group: 'Actions', keywords, onAction: () => void run({ type: 'statistics.current' }) },
+    { id: 'statistics.current', icon: CalendarIcon, label: currentPeriodLabel(slice.period), group: 'Actions', keywords, onAction: () => void run({ type: 'statistics.current' }) },
     {
       id: 'statistics.zoomIn',
       icon: ZoomInIcon,
-      label: 'Zoom in',
+      label: t('Zoom in'),
       group: 'Actions',
       keywords,
       isDisabled: !slice.analysis || !canZoomIn(slice),
@@ -352,7 +359,7 @@ function useStatisticsCommands(slice: StatisticsSlice) {
     {
       id: 'statistics.zoomOut',
       icon: ZoomOutIcon,
-      label: 'Zoom out',
+      label: t('Zoom out'),
       group: 'Actions',
       keywords,
       isDisabled: !slice.isZoomed,
@@ -361,7 +368,7 @@ function useStatisticsCommands(slice: StatisticsSlice) {
     {
       id: 'statistics.back',
       icon: ArrowLeftIcon,
-      label: 'Back to the previous zoom',
+      label: t('Back to the previous zoom'),
       group: 'Actions',
       keywords,
       isDisabled: slice.zoomDepth === 0,
@@ -370,7 +377,7 @@ function useStatisticsCommands(slice: StatisticsSlice) {
     {
       id: 'statistics.resetZoom',
       icon: ResetIcon,
-      label: 'Reset zoom',
+      label: t('Reset zoom'),
       group: 'Actions',
       keywords,
       isDisabled: !slice.isZoomed,
@@ -379,7 +386,7 @@ function useStatisticsCommands(slice: StatisticsSlice) {
     {
       id: 'statistics.clearFilters',
       icon: ClearFilterIcon,
-      label: 'Clear filters',
+      label: t('Clear filters'),
       group: 'Actions',
       keywords,
       isDisabled: !isFilterActive(slice.filter),

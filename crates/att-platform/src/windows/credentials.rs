@@ -16,6 +16,7 @@ use windows::Win32::Security::Credentials::{
 use windows::core::{HSTRING, PWSTR};
 
 use super::system::{failure, wide};
+use crate::nl::tr;
 use crate::windows_parse::{
     CREDENTIAL_BLOB_LIMIT, CREDENTIAL_MAX_PARTS, credential_part_target, credential_parts,
     credential_target, decode_secret,
@@ -71,7 +72,7 @@ impl Credentials for WindowsCredentials {
         let _guard = self.guard();
         let read = |part: usize| {
             read_blob(&self.part_target(account, part)).map_err(|error| {
-                failure("Credential Manager could not read the saved credential", &error)
+                failure(tr("Credential Manager could not read the saved credential"), &error)
             })
         };
         let Some(mut secret) = read(1)? else { return Ok(None) };
@@ -85,7 +86,8 @@ impl Credentials for WindowsCredentials {
         }
         decode_secret(&secret).map(Some).ok_or_else(|| {
             PlatformError::Failed(
-                "The saved credential could not be read. Save it again in Settings.".to_string(),
+                tr("The saved credential could not be read. Save it again in Settings.")
+                    .to_string(),
             )
         })
     }
@@ -95,12 +97,12 @@ impl Credentials for WindowsCredentials {
         let parts = credential_parts(secret.as_bytes());
         let Some((first, rest)) = parts.as_deref().and_then(<[&[u8]]>::split_first) else {
             return Err(PlatformError::Failed(
-                "This credential is too long to save in Credential Manager.".to_string(),
+                tr("This credential is too long to save in Credential Manager.").to_string(),
             ));
         };
         let save = |part: usize, blob: &[u8]| {
             write_blob(&self.part_target(account, part), account, blob).map_err(|error| {
-                failure("Credential Manager could not save the credential", &error)
+                failure(tr("Credential Manager could not save the credential"), &error)
             })
         };
         // Continuation parts first and the credential itself last, so a reader in between still
@@ -117,7 +119,7 @@ impl Credentials for WindowsCredentials {
 
     fn delete(&self, account: &str) -> Result<()> {
         let _guard = self.guard();
-        let context = "Credential Manager could not remove this credential";
+        let context = tr("Credential Manager could not remove this credential");
         delete_blob(&self.part_target(account, 1)).map_err(|error| failure(context, &error))?;
         self.delete_parts_from(account, 2).map_err(|error| failure(context, &error))
     }

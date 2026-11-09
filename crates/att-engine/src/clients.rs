@@ -198,7 +198,10 @@ impl NetClientFactory {
 
 pub(crate) fn read_secret(credentials: &dyn Credentials, account: &str) -> Result<Option<String>> {
     credentials.get(account).map_err(|error| {
-        AppError::Message(format!("Keychain could not read the saved credential ({error})."))
+        AppError::Message(crate::nl::trf(
+            "Keychain could not read the saved credential ({error}).",
+            &[("error", &error)],
+        ))
     })
 }
 
@@ -208,7 +211,9 @@ pub fn read_oauth(credentials: &dyn Credentials, host: &str) -> Result<Option<Se
         return Ok(None);
     };
     serde_json::from_str(&raw).map(Some).map_err(|_| {
-        AppError::message("The saved 7pace pairing could not be read. Pair again in Settings.")
+        AppError::message(crate::nl::tr(
+            "The saved 7pace pairing could not be read. Pair again in Settings.",
+        ))
     })
 }
 
@@ -220,7 +225,10 @@ pub fn save_oauth(
 ) -> Result<()> {
     let raw = serde_json::to_string(tokens).map_err(|e| AppError::Message(e.to_string()))?;
     credentials.set(&accounts::seven_pace_oauth(host), &raw).map_err(|error| {
-        AppError::Message(format!("Keychain could not save the credential ({error})."))
+        AppError::Message(crate::nl::trf(
+            "Keychain could not save the credential ({error}).",
+            &[("error", &error)],
+        ))
     })
 }
 
@@ -240,9 +248,9 @@ impl ClientFactory for NetClientFactory {
         let seven_pace: Arc<dyn SevenPaceClient> = match config.seven_pace_auth_mode {
             SevenPaceAuthMode::MobilePin => {
                 let Some(tokens) = read_oauth(credentials.as_ref(), &host)? else {
-                    return Err(AppError::message(
+                    return Err(AppError::message(crate::nl::tr(
                         "Pair this Mac with a mobile PIN in Settings → Accounts.",
-                    ));
+                    )));
                 };
                 let oauth = SevenPaceOAuth::new(base.clone(), self.transport.clone());
                 let store = credentials.clone();
@@ -255,7 +263,7 @@ impl ClientFactory for NetClientFactory {
                         tokio::task::spawn_blocking(move || {
                             if read_oauth(store.as_ref(), &scope)?.as_ref() != Some(&previous) {
                                 return Err(AppError::message(
-                                    "7pace pairing changed. Reconnect to use the saved credentials.",
+                                    crate::nl::tr("7pace pairing changed. Reconnect to use the saved credentials."),
                                 ));
                             }
                             save_oauth(store.as_ref(), &scope, &next)
@@ -276,7 +284,7 @@ impl ClientFactory for NetClientFactory {
                     .filter(|token| !token.is_empty())
                     .ok_or_else(|| {
                         AppError::message(
-                            "Pair with a mobile PIN or add your 7pace API token in Settings → Accounts.",
+                            crate::nl::tr("Pair with a mobile PIN or add your 7pace API token in Settings → Accounts."),
                         )
                     })?;
                 Arc::new(SevenPaceApi::with_token(

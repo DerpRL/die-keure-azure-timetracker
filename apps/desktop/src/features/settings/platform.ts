@@ -8,6 +8,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { isTauri } from '../../ipc';
 import { getShortcut, type ShortcutStatus } from '../../ipc/shell';
+import { t } from '../../i18n';
 
 /** Launch at login through `@tauri-apps/plugin-autostart`; `null` when not available here. */
 export async function readLaunchAtLogin(): Promise<boolean | null> {
@@ -17,7 +18,7 @@ export async function readLaunchAtLogin(): Promise<boolean | null> {
 
 /** Turns launch at login on or off and returns the state the OS reports afterwards. */
 export async function writeLaunchAtLogin(enabled: boolean): Promise<boolean> {
-  if (!isTauri()) throw new Error('Launch at login is available in the desktop app only.');
+  if (!isTauri()) throw new Error(t('Launch at login is available in the desktop app only.'));
   if (enabled) await enable();
   else await disable();
   return isEnabled();
@@ -25,7 +26,7 @@ export async function writeLaunchAtLogin(enabled: boolean): Promise<boolean> {
 
 /** Opens an https link in the default browser. Other schemes are refused. */
 export async function openExternalLink(url: string): Promise<void> {
-  if (!url.startsWith('https://')) throw new Error('Only https links can be opened.');
+  if (!url.startsWith('https://')) throw new Error(t('Only https links can be opened.'));
   if (isTauri()) {
     await openUrl(url);
     return;
@@ -40,11 +41,11 @@ export async function openExternalLink(url: string): Promise<void> {
 export async function chooseApplications(os: 'macos' | 'windows'): Promise<string[]> {
   if (!isTauri()) return [];
   const selection = await open({
-    title: 'Add work applications',
+    title: t('Add work applications'),
     multiple: true,
     directory: false,
     defaultPath: os === 'macos' ? '/Applications' : undefined,
-    filters: [{ name: 'Applications', extensions: [os === 'macos' ? 'app' : 'exe'] }],
+    filters: [{ name: t('Applications'), extensions: [os === 'macos' ? 'app' : 'exe'] }],
   });
   if (selection === null) return [];
   return Array.isArray(selection) ? selection : [selection];

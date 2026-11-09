@@ -10,13 +10,14 @@ import { ACTION_LABELS, downloadPercent, downloadText, hasUpdate, phaseAnnouncem
 import { UpdateDetails } from './UpdateDetails';
 import { useUpdateActions, useUpdateStatus } from './useUpdateStatus';
 import styles from './updates.module.css';
+import { mark, t } from '../../i18n';
 
 const TITLES: Partial<Record<UpdatePhase, string>> = {
-  available: 'App update available',
-  downloading: 'Downloading update',
-  ready: 'Update ready to install',
-  installing: 'Installing update',
-  failed: 'Update needs attention',
+  available: mark('App update available'),
+  downloading: mark('Downloading update'),
+  ready: mark('Update ready to install'),
+  installing: mark('Installing update'),
+  failed: mark('Update needs attention'),
 };
 
 function toneOf(status: UpdateStatus): BannerTone {
@@ -62,7 +63,7 @@ export function UpdateBanner() {
     case 'downloading':
       body = (
         <ProgressBar
-          label="Update download"
+          label={t('Update download')}
           value={percent ?? 0}
           isIndeterminate={percent === null}
           valueLabel={percent === null ? downloadText(status) : `${percent}% · ${downloadText(status)}`}
@@ -74,8 +75,8 @@ export function UpdateBanner() {
       body = (
         <>
           <p>{status.error ?? status.message}</p>
-          <p>Restarting keeps your 7pace timer running. Save any open edits first.</p>
-          {restartBlocked ? <p>Waiting for the current operation to finish…</p> : null}
+          <p>{t('Restarting keeps your 7pace timer running. Save any open edits first.')}</p>
+          {restartBlocked ? <p>{t('Waiting for the current operation to finish…')}</p> : null}
         </>
       );
       break;
@@ -90,7 +91,7 @@ export function UpdateBanner() {
     <>
       <Banner
         tone={toneOf(status)}
-        title={TITLES[status.phase]}
+        title={TITLES[status.phase] ? t(TITLES[status.phase]!) : undefined}
         live="off"
         actions={
           <>
@@ -102,11 +103,11 @@ export function UpdateBanner() {
                 isDisabled={restartBlocked}
                 isPending={actions.pending === 'install'}
               >
-                {ACTION_LABELS[action]}
+                {t(ACTION_LABELS[action])}
               </Button>
             ) : null}
-            <Button size="small" onPress={() => setShowDetails(true)} aria-label="View details of the app update">
-              View details
+            <Button size="small" onPress={() => setShowDetails(true)} aria-label={t('View details of the app update')}>
+              {t('View details')}
             </Button>
           </>
         }
@@ -123,8 +124,8 @@ export function UpdateBanner() {
       <Dialog
         isOpen={showDetails}
         onOpenChange={setShowDetails}
-        title="App updates"
-        cancelLabel="Done"
+        title={t('App updates')}
+        cancelLabel={t('Done')}
         size="medium"
       >
         <UpdateDetails status={status} headingLevel={3} />

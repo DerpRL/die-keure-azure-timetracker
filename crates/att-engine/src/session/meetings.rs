@@ -11,6 +11,7 @@ use att_core::{AppError, Result};
 use att_platform::{CalendarAccess, CalendarEvent, CalendarInfo, EventStatus};
 
 use crate::engine::Engine;
+use crate::nl::tr;
 use crate::probes::{PROBE_DEADLINE, blocking};
 use crate::state::AppState;
 
@@ -83,7 +84,7 @@ pub(crate) async fn refresh_calendar(engine: &Engine) {
     let Some(access) = access else {
         engine.update(|state| {
             state.session.calendar.issue =
-                Some("Calendar is not responding. Retrying automatically.".to_string());
+                Some(tr("Calendar is not responding. Retrying automatically.").to_string());
         });
         return;
     };
@@ -115,7 +116,7 @@ pub(crate) async fn refresh_calendar(engine: &Engine) {
         Ok((calendars, events, current))
     })
     .await
-    .unwrap_or_else(|| Err("Calendar is not responding. Retrying automatically.".to_string()));
+    .unwrap_or_else(|| Err(tr("Calendar is not responding. Retrying automatically.").to_string()));
     engine.update(|state| {
         let calendar = &mut state.session.calendar;
         calendar.access = Some(access);
@@ -140,7 +141,7 @@ fn agenda_events(events: &[CalendarEvent]) -> Vec<AgendaEvent> {
         .map(|event| AgendaEvent {
             id: event.occurrence_id.clone(),
             title: if event.title.is_empty() {
-                "Untitled event".to_string()
+                tr("Untitled event").to_string()
             } else {
                 event.title.clone()
             },
@@ -159,8 +160,11 @@ fn agenda_events(events: &[CalendarEvent]) -> Vec<AgendaEvent> {
 /// Swift `MeetingEvent` from an EventKit occurrence. The id is the 1.14.x occurrence key
 /// (`sha256(calendar|item|start)`), so imported `meetingReminders` keep matching.
 fn meeting_event(event: &CalendarEvent, organization: &str) -> MeetingEvent {
-    let title =
-        if event.title.is_empty() { "Untitled meeting".to_string() } else { event.title.clone() };
+    let title = if event.title.is_empty() {
+        tr("Untitled meeting").to_string()
+    } else {
+        event.title.clone()
+    };
     MeetingEvent {
         id: event.occurrence_id.clone(),
         title,
@@ -272,7 +276,7 @@ pub(crate) fn validate(engine: &Engine, meeting: &MeetingEvent) -> Result<()> {
     if valid {
         Ok(())
     } else {
-        Err(AppError::message("This meeting suggestion has ended or is no longer available."))
+        Err(AppError::message(tr("This meeting suggestion has ended or is no longer available.")))
     }
 }
 
@@ -356,7 +360,7 @@ pub(crate) async fn enable_calendar(engine: &Engine) {
             calendar.issue = None;
         } else if access != CalendarAccess::Unsupported {
             calendar.issue = Some(
-                "Calendar access is off. Enable Azure timetracker in System Settings → Privacy & Security → Calendars."
+                tr("Calendar access is off. Enable Azure timetracker in System Settings → Privacy & Security → Calendars.")
                     .to_string(),
             );
         }

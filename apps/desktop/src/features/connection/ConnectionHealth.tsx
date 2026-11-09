@@ -10,6 +10,7 @@ import { openMainPage } from '../tracking/platform';
 import { deviceName } from '../tracking/status';
 import { ConnectionDetails, LocalDraftStatus } from './ConnectionDetails';
 import styles from './connection.module.css';
+import { t } from '../../i18n';
 
 /** States the user fixes in Settings rather than by reconnecting. */
 export function needsSetup(connection: ConnectionSlice): boolean {
@@ -31,7 +32,7 @@ export function ConnectionHealth() {
     return (
       <div aria-busy="true" className={styles.health}>
         <span role="status" className="visually-hidden">
-          Loading the connection
+          {t('Loading the connection')}
         </span>
         <Skeleton lines={1} />
       </div>
@@ -55,7 +56,7 @@ export function ConnectionHealth() {
         <div className={styles.actions}>
           {needsSetup(connection) ? (
             <Button size="small" onPress={() => openMainPage('settings')}>
-              Set up
+              {t('Set up')}
             </Button>
           ) : !settled ? (
             <Button
@@ -64,14 +65,14 @@ export function ConnectionHealth() {
               isPending={actions.isPending('retry')}
               onPress={() => void actions.run('retry', { type: 'connection.retry' })}
             >
-              Reconnect
+              {t('Reconnect')}
             </Button>
           ) : null}
           <PopoverTrigger>
-            <Button variant="plain" size="small" aria-label="7pace connection details">
-              Details
+            <Button variant="plain" size="small" aria-label={t('7pace connection details')}>
+              {t('Details')}
             </Button>
-            <Popover title="Connection details" placement="top" width="medium">
+            <Popover title={t('Connection details')} placement="top" width="medium">
               <ConnectionDetails headingLevel={null} />
             </Popover>
           </PopoverTrigger>
@@ -80,11 +81,11 @@ export function ConnectionHealth() {
       {!settled && health !== 'unconfigured' ? (
         <p className={styles.warning}>
           {tracking?.showsLocalTimer
-            ? `Local tracking continues on ${deviceName(app?.os)}. Reconnect to confirm the 7pace timer.`
-            : 'Showing the last known timer. Check 7pace before changing it.'}
+            ? t('Local tracking continues on {device}. Reconnect to confirm the 7pace timer.', { device: deviceName(app?.os) })
+            : t('Showing the last known timer. Check 7pace before changing it.')}
         </p>
       ) : detailIssue ? (
-        <p className={styles.warning}>Some details could not refresh</p>
+        <p className={styles.warning}>{t('Some details could not refresh')}</p>
       ) : null}
       {tracking?.local ? null : <LocalDraftStatus />}
       <ActionError error={actions.error} />

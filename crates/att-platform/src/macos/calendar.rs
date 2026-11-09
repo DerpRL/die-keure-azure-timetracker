@@ -38,6 +38,7 @@ use objc2_foundation::{NSArray, NSDate, NSError, NSString, NSURL};
 
 use super::serial::Serial;
 use super::swift::{double_description, sha256_hex, string_cmp};
+use crate::nl::tr;
 use crate::{
     CalendarAccess, CalendarEvent, CalendarInfo, CalendarSource, EventStatus, PlatformError, Result,
 };
@@ -126,7 +127,9 @@ impl CalendarSource for EventKitCalendar {
                 other => other,
             }),
             Some(Err(message)) => Err(PlatformError::Failed(message)),
-            None => Err(PlatformError::Failed("Calendar access could not be requested.".into())),
+            None => {
+                Err(PlatformError::Failed(tr("Calendar access could not be requested.").into()))
+            }
         }
     }
 
@@ -159,7 +162,7 @@ impl CalendarSource for EventKitCalendar {
             if NSWorkspace::sharedWorkspace().openURL(&url) {
                 Ok(())
             } else {
-                Err(PlatformError::Failed("Calendar could not be opened.".into()))
+                Err(PlatformError::Failed(tr("Calendar could not be opened.").into()))
             }
         })
     }

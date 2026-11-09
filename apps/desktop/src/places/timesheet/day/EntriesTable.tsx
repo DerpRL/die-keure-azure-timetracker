@@ -9,26 +9,27 @@ import { TicketLink } from '../../../features/ticketContext/TicketLink';
 import { formatShortDuration } from '../../../utils/duration';
 import styles from './TimeEditor.module.css';
 import { cx } from '../../../utils/cx';
+import { mark, t, tn } from '../../../i18n';
 
 type Column = 'task' | 'time' | 'duration' | 'activity' | 'comment' | 'action';
 
 const COLUMNS: TableColumn<Column>[] = [
-  { id: 'task', title: 'Work item', isRowHeader: true, minWidth: '14rem' },
-  { id: 'time', title: 'Time' },
-  { id: 'duration', title: 'Duration', align: 'end' },
-  { id: 'activity', title: 'Activity' },
-  { id: 'comment', title: 'Comment', minWidth: '10rem' },
-  { id: 'action', title: 'Action' },
+  { id: 'task', title: mark('Work item'), isRowHeader: true, minWidth: '14rem' },
+  { id: 'time', title: mark('Time') },
+  { id: 'duration', title: mark('Duration'), align: 'end' },
+  { id: 'activity', title: mark('Activity') },
+  { id: 'comment', title: mark('Comment'), minWidth: '10rem' },
+  { id: 'action', title: mark('Action') },
 ];
 
 /** "10m", or "1h 5m" from an hour. */
 function formatOverlap(seconds: number): string {
   const minutes = Math.max(1, Math.round(seconds / 60));
-  return minutes < 60 ? `${minutes}m` : formatShortDuration(minutes * 60);
+  return minutes < 60 ? t('{minutes}m', { minutes }) : formatShortDuration(minutes * 60);
 }
 
 function TimeCell({ date }: { date: Date | null }) {
-  if (!date) return <span>Unknown</span>;
+  if (!date) return <span>{t('Unknown')}</span>;
   return (
     <time dateTime={date.toISOString()} title={formatDateTime(date)} className={styles.mono}>
       {formatClockTime(date)}
@@ -77,10 +78,10 @@ export function EntriesTable({
     <div className={cx(styles.tableCard, className)}>
       <Table<WorkLog, Column>
         aria-labelledby={labelledBy}
-        columns={COLUMNS}
+        columns={COLUMNS.map((column) => ({ ...column, title: t(column.title) }))}
         rows={logs}
         getRowId={(log) => log.id}
-        getRowText={(log) => `${timeEditorTitle(log, items)} at ${formatClockTime(logStart(log))}`}
+        getRowText={(log) => t('{title} at {time}', { title: timeEditorTitle(log, items), time: formatClockTime(logStart(log)) })}
         selectionMode="multiple"
         selectedKeys={new Set(selection)}
         onSelectionChange={(keys: Selection) => {
@@ -100,12 +101,12 @@ export function EntriesTable({
               return (
                 <span className={styles.task}>
                   {ticket !== null ? (
-                    <TicketLink ticketId={ticket} title={items?.[String(ticket)]?.title ?? 'Azure task'} />
+                    <TicketLink ticketId={ticket} title={items?.[String(ticket)]?.title ?? t('Azure task')} />
                   ) : (
-                    <span className={styles.noTicket}>No Azure ticket</span>
+                    <span className={styles.noTicket}>{t('No Azure ticket')}</span>
                   )}
-                  {long ? <Badge tone="warning">Long</Badge> : null}
-                  {overlap ? <Badge tone="danger">Overlap</Badge> : null}
+                  {long ? <Badge tone="warning">{t('Long')}</Badge> : null}
+                  {overlap ? <Badge tone="danger">{t('Overlap')}</Badge> : null}
                 </span>
               );
             }
@@ -122,7 +123,7 @@ export function EntriesTable({
             case 'activity':
               return (
                 <ActivityChip
-                  name={log.activityType?.name ?? 'Default activity'}
+                  name={log.activityType?.name ?? t('Default activity')}
                   colorIndex={activityColorIndex(colors, log.activityType?.id)}
                 />
               );
@@ -131,7 +132,7 @@ export function EntriesTable({
               return (
                 <>
                   {log.comment?.trim() || '—'}
-                  {overlap > 0 ? <span className={styles.overlapNote}>{` · overlaps ${formatOverlap(overlap)}`}</span> : null}
+                  {overlap > 0 ? <span className={styles.overlapNote}>{` · ${t('overlaps {duration}', { duration: formatOverlap(overlap) })}`}</span> : null}
                 </>
               );
             }
@@ -139,14 +140,14 @@ export function EntriesTable({
               if (log.id === runningLogId) {
                 return (
                   <Badge tone="running" icon={RunningIcon}>
-                    Running
+                    {t('Running')}
                   </Badge>
                 );
               }
               if (log.isCanEdit === false) {
                 return (
-                  <Badge tone="neutral" accessibleLabel="Locked by 7pace">
-                    Locked
+                  <Badge tone="neutral" accessibleLabel={t('Locked by 7pace')}>
+                    {t('Locked')}
                   </Badge>
                 );
               }
@@ -155,9 +156,9 @@ export function EntriesTable({
                   size="small"
                   isDisabled={disabled}
                   onPress={() => onEdit(log)}
-                  aria-label={`Edit time for ${timeEditorTitle(log, items)}`}
+                  aria-label={t('Edit time for {title}', { title: timeEditorTitle(log, items) })}
                 >
-                  Edit
+                  {t('Edit')}
                 </Button>
               );
           }
@@ -165,10 +166,10 @@ export function EntriesTable({
       />
       {logs.length > 0 ? (
         <p className={styles.tableSummary}>
-          <span className={styles.summaryCount}>{logs.length === 1 ? '1 entry' : `${logs.length} entries`}</span>
+          <span className={styles.summaryCount}>{tn(logs.length, '{count} entry', '{count} entries')}</span>
           <span className={styles.summaryTotal}>{formatShortDuration(total)}</span>
           {overlapCount > 0 ? (
-            <span className={styles.summaryNote}>{overlapCount === 1 ? '1 overlap' : `${overlapCount} overlaps`}</span>
+            <span className={styles.summaryNote}>{tn(overlapCount, '{count} overlap', '{count} overlaps')}</span>
           ) : null}
         </p>
       ) : null}

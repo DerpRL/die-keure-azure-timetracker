@@ -1,5 +1,6 @@
 //! Appearance preferences and the onboarding rule. Ported from InterfacePreferences.swift.
 
+use crate::nl::tr;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
@@ -29,9 +30,9 @@ impl InterfaceTheme {
 
     pub fn label(self) -> &'static str {
         match self {
-            Self::System => "System",
-            Self::Light => "Light",
-            Self::Dark => "Dark",
+            Self::System => tr("System"),
+            Self::Light => tr("Light"),
+            Self::Dark => tr("Dark"),
         }
     }
 }
@@ -63,9 +64,50 @@ impl InterfaceContrast {
 
     pub fn label(self) -> &'static str {
         match self {
-            Self::System => "System",
-            Self::Standard => "Standard",
-            Self::Increased => "Increased",
+            Self::System => tr("System"),
+            Self::Standard => tr("Standard"),
+            Self::Increased => tr("Increased"),
+        }
+    }
+}
+
+/// The interface language: the system's (Dutch for a Dutch system, otherwise English), or a
+/// fixed one.
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum InterfaceLanguage {
+    #[default]
+    System,
+    En,
+    Nl,
+}
+
+impl InterfaceLanguage {
+    pub const ALL: [Self; 3] = [Self::System, Self::En, Self::Nl];
+
+    pub fn raw(self) -> &'static str {
+        match self {
+            Self::System => "system",
+            Self::En => "en",
+            Self::Nl => "nl",
+        }
+    }
+
+    pub fn from_raw(raw: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|language| language.raw() == raw)
+    }
+
+    pub fn is_system(&self) -> bool {
+        *self == Self::System
+    }
+
+    /// The language to show, with `system` the system's language.
+    pub fn resolve(self, system: crate::i18n::Language) -> crate::i18n::Language {
+        match self {
+            Self::System => system,
+            Self::En => crate::i18n::Language::En,
+            Self::Nl => crate::i18n::Language::Nl,
         }
     }
 }
@@ -130,6 +172,11 @@ pub struct InterfacePreferences {
     #[cfg_attr(feature = "ts", ts(type = "90 | 100 | 110 | 125 | 150"))]
     pub scale: InterfaceScale,
     pub contrast: InterfaceContrast,
+    /// Added in 2.6; configurations without it follow the system language. Left out while it is
+    /// `system`, so the stored shape stays the one 1.14.x and 2.5 write.
+    #[serde(skip_serializing_if = "InterfaceLanguage::is_system")]
+    #[cfg_attr(feature = "ts", ts(as = "Option<InterfaceLanguage>", optional))]
+    pub language: InterfaceLanguage,
 }
 
 impl<'de> Deserialize<'de> for InterfacePreferences {
@@ -144,6 +191,7 @@ impl<'de> Deserialize<'de> for InterfacePreferences {
                 .and_then(InterfaceScale::from_raw)
                 .unwrap_or_default(),
             contrast: text("contrast").and_then(InterfaceContrast::from_raw).unwrap_or_default(),
+            language: text("language").and_then(InterfaceLanguage::from_raw).unwrap_or_default(),
         })
     }
 }

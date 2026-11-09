@@ -4,6 +4,7 @@ import { Card, Section } from '../../../components/Card';
 import { Select } from '../../../components/Pickers';
 import { Table, type TableColumn } from '../../../components/Table';
 import { Donut } from '../../../charts/Donut';
+import { mark, t } from '../../../i18n';
 import type { AnalysisView, ExplorerTask, StatisticsSection, StatisticsSlice } from '../../../ipc/contract';
 import { TicketLink } from '../../../features/ticketContext/TicketLink';
 import { useAction } from '../../../state/hooks';
@@ -15,18 +16,18 @@ type TaskOrder = 'time' | 'entries' | 'recent';
 type Column = 'task' | 'time' | 'entries' | 'days' | 'average' | 'actions';
 
 const ORDERS: ReadonlyArray<{ id: TaskOrder; label: string }> = [
-  { id: 'time', label: 'Most time' },
-  { id: 'entries', label: 'Most entries' },
-  { id: 'recent', label: 'Recently worked' },
+  { id: 'time', label: mark('Most time') },
+  { id: 'entries', label: mark('Most entries') },
+  { id: 'recent', label: mark('Recently worked') },
 ];
 
 const COLUMNS: ReadonlyArray<TableColumn<Column>> = [
-  { id: 'task', title: 'Task / share of selected time', isRowHeader: true, minWidth: '16rem' },
-  { id: 'time', title: 'Time', align: 'end' },
-  { id: 'entries', title: 'Entries', align: 'end' },
-  { id: 'days', title: 'Days', align: 'end' },
-  { id: 'average', title: 'Avg / entry', align: 'end' },
-  { id: 'actions', title: 'Actions', hideTitle: true },
+  { id: 'task', title: mark('Task / share of selected time'), isRowHeader: true, minWidth: '16rem' },
+  { id: 'time', title: mark('Time'), align: 'end' },
+  { id: 'entries', title: mark('Entries'), align: 'end' },
+  { id: 'days', title: mark('Days'), align: 'end' },
+  { id: 'average', title: mark('Avg / entry'), align: 'end' },
+  { id: 'actions', title: mark('Actions'), hideTitle: true },
 ];
 
 /** Tasks shown at first and added per "Show 20 more tasks" (1.14). */
@@ -69,13 +70,13 @@ export function TasksSection({ slice, analysis, analysisKey, colors, onSection }
   return (
     <div className={styles.stack}>
       <Section
-        title="Tasks you worked on"
-        subtitle="Select a task to explore its timeline and entries."
+        title={t('Tasks you worked on')}
+        subtitle={t('Select a task to explore its timeline and entries.')}
         actions={
           <Select
-            label="Sort"
+            label={t('Sort')}
             width="auto"
-            items={ORDERS}
+            items={ORDERS.map((item) => ({ ...item, label: t(item.label) }))}
             selectedKey={order}
             onSelectionChange={(key) => {
               if (key !== null) setOrder(key as TaskOrder);
@@ -84,8 +85,8 @@ export function TasksSection({ slice, analysis, analysisKey, colors, onSection }
         }
       >
         <Table<ExplorerTask, Column>
-          aria-label="Tasks you worked on"
-          columns={COLUMNS}
+          aria-label={t('Tasks you worked on')}
+          columns={COLUMNS.map((column) => ({ ...column, title: t(column.title) }))}
           rows={visible}
           getRowId={(task) => task.id}
           getRowText={(task) => task.title}
@@ -93,7 +94,7 @@ export function TasksSection({ slice, analysis, analysisKey, colors, onSection }
             const task = analysis.tasks.find((item) => item.id === key);
             if (task) explore(task);
           }}
-          renderEmptyState={() => 'No tasks match these filters.'}
+          renderEmptyState={() => t('No tasks match these filters.')}
           renderCell={(task, column) => {
             switch (column) {
               case 'task': {
@@ -126,8 +127,8 @@ export function TasksSection({ slice, analysis, analysisKey, colors, onSection }
                 return <span className={styles.number}>{duration(task.count > 0 ? task.seconds / task.count : 0)}</span>;
               case 'actions':
                 return (
-                  <Button size="small" variant="plain" aria-label={`Explore ${task.title}`} onPress={() => explore(task)}>
-                    Explore
+                  <Button size="small" variant="plain" aria-label={t('Explore {title}', { title: task.title })} onPress={() => explore(task)}>
+                    {t('Explore')}
                   </Button>
                 );
             }
@@ -136,20 +137,20 @@ export function TasksSection({ slice, analysis, analysisKey, colors, onSection }
         {tasks.length > limit ? (
           <div className={styles.buttonRow}>
             <Button size="small" onPress={() => setShown({ key: analysisKey, limit: limit + TASK_PAGE })}>
-              Show 20 more tasks
+              {t('Show {count} more tasks', { count: TASK_PAGE })}
             </Button>
-            <span className={styles.secondary}>{`${visible.length} of ${tasks.length} tasks`}</span>
+            <span className={styles.secondary}>{t('{shown} of {total} tasks', { shown: visible.length, total: tasks.length })}</span>
           </div>
         ) : null}
         <p className={styles.secondary}>
-          Work without an Azure ticket is grouped by activity and comment. Entry averages use only the selected time window.
+          {t('Work without an Azure ticket is grouped by activity and comment. Entry averages use only the selected time window.')}
         </p>
       </Section>
       <Card padding="large">
         <Donut
-          title="Time by activity"
+          title={t('Time by activity')}
           headingLevel={2}
-          description="Select an activity to filter every chart and task in this period."
+          description={t('Select an activity to filter every chart and task in this period.')}
           slices={analysis.activities.map((activity) => ({
             id: activity.id,
             name: activity.name,
@@ -158,7 +159,7 @@ export function TasksSection({ slice, analysis, analysisKey, colors, onSection }
           }))}
           selectedId={slice.filter.activityId}
           onSelect={(activityId) => void filter.run({ type: 'statistics.setFilter', filter: { ...slice.filter, activityId } })}
-          emptyMessage="No activities in this selection."
+          emptyMessage={t('No activities in this selection.')}
         />
       </Card>
       {filter.error ? (

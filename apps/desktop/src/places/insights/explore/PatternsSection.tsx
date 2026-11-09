@@ -5,10 +5,11 @@ import { CheckIcon, FilterIcon, WarningIcon } from '../../../components/icons';
 import { ActivityBars, type ActivityBucket } from '../../../charts/ActivityBars';
 import { ChartFrame } from '../../../charts/ChartFrame';
 import { DataTable } from '../../../charts/DataTable';
+import { t, tn } from '../../../i18n';
 import type { AnalysisView, ExplorerFilter, ExplorerPattern, StatisticsSlice } from '../../../ipc/contract';
 import { useAction } from '../../../state/hooks';
 import { EntriesList } from './EntriesList';
-import { duration, localDay, monthLabel, plural, weekdayDayMonthLabel } from './format';
+import { duration, localDay, monthLabel, weekdayDayMonthLabel } from './format';
 import { Metric, MetricList } from './Summary';
 import styles from './Statistics.module.css';
 
@@ -27,18 +28,18 @@ export function PatternsSection({ slice, analysis, analysisKey, colors }: Patter
 
   return (
     <div className={styles.stack}>
-      <MetricList label="Work pattern totals">
-        <Metric title="Context switches" value={String(switches)} note="Between tasks, with breaks up to 15 min" />
-        <Metric title="Longest work block" value={duration(longestBlock)} note="Continuous entries for the same task" />
-        <Metric title="Average work block" value={duration(averageBlock)} note="Mean length of continuous work" />
-        <Metric title="Overlapping time" value={duration(analysis.overlap)} note="Recorded total minus covered clock time" />
+      <MetricList label={t('Work pattern totals')}>
+        <Metric title={t('Context switches')} value={String(switches)} note={t('Between tasks, with breaks up to 15 min')} />
+        <Metric title={t('Longest work block')} value={duration(longestBlock)} note={t('Continuous entries for the same task')} />
+        <Metric title={t('Average work block')} value={duration(averageBlock)} note={t('Mean length of continuous work')} />
+        <Metric title={t('Overlapping time')} value={duration(analysis.overlap)} note={t('Recorded total minus covered clock time')} />
       </MetricList>
       <div className={styles.columns}>
         <Card padding="large">
           <PatternBars
-            title="Time by weekday"
-            description="Total recorded time. Select a day to filter."
-            nameHeader="Weekday"
+            title={t('Time by weekday')}
+            description={t('Total recorded time. Select a day to filter.')}
+            nameHeader={t('Weekday')}
             items={analysis.weekdays}
             selectedId={slice.filter.weekday}
             onToggle={(weekday) => setFilter({ ...slice.filter, weekday })}
@@ -46,14 +47,14 @@ export function PatternsSection({ slice, analysis, analysisKey, colors }: Patter
         </Card>
         <Card padding="large">
           <PatternBars
-            title="Entry lengths"
-            description="Original entry duration. Select a band to filter."
-            nameHeader="Entry length"
+            title={t('Entry lengths')}
+            description={t('Original entry duration. Select a band to filter.')}
+            nameHeader={t('Entry length')}
             items={analysis.lengths}
             selectedId={slice.filter.lengthBand}
             onToggle={(lengthBand) => setFilter({ ...slice.filter, lengthBand })}
             showCount
-            footer="Long entries are not a measure of concentration. Filters keep the original duration band when you zoom."
+            footer={t('Long entries are not a measure of concentration. Filters keep the original duration band when you zoom.')}
           />
         </Card>
       </div>
@@ -70,8 +71,8 @@ export function PatternsSection({ slice, analysis, analysisKey, colors }: Patter
       </Card>
       <ReadingNotes analysis={analysis} />
       <EntriesList
-        title="Entries behind these patterns"
-        detail="Open an entry’s day to review or correct it in Time editor."
+        title={t('Entries behind these patterns')}
+        detail={t('Open an entry’s day to review or correct it in Time editor.')}
         analysis={analysis}
         analysisKey={analysisKey}
         colors={colors}
@@ -99,8 +100,8 @@ function PatternBars({ title, description, nameHeader, items, selectedId, onTogg
       caption={title}
       columns={[
         { id: 'name', header: nameHeader },
-        { id: 'time', header: 'Recorded', align: 'end' },
-        ...(showCount ? [{ id: 'count', header: 'Entries', align: 'end' as const }] : []),
+        { id: 'time', header: t('Recorded'), align: 'end' },
+        ...(showCount ? [{ id: 'count', header: t('Entries'), align: 'end' as const }] : []),
       ]}
       rows={items.map((item) => ({
         id: String(item.id),
@@ -125,12 +126,16 @@ function PatternBars({ title, description, nameHeader, items, selectedId, onTogg
                 isSelected={selected}
                 onChange={() => onToggle(selected ? null : item.id)}
                 // 1.14's name: "Filter by Mon, 7h 25m"; the pressed state says whether it applies.
-                aria-label={`Filter by ${item.label}, ${duration(item.seconds)}${showCount ? `, ${plural(item.count, 'entry', 'entries')}` : ''}`}
+                aria-label={
+                  showCount
+                    ? tn(item.count, 'Filter by {name}, {time}, {count} entry', 'Filter by {name}, {time}, {count} entries', { name: item.label, time: duration(item.seconds) })
+                    : t('Filter by {name}, {time}', { name: item.label, time: duration(item.seconds) })
+                }
                 className={styles.patternRow}
               >
                 <span className={styles.patternText}>
                   <span className={styles.patternLabel}>{item.label}</span>
-                  {showCount ? <span className={styles.note}>{`${plural(item.count, 'entry', 'entries')} ·`}</span> : null}
+                  {showCount ? <span className={styles.note}>{`${tn(item.count, '{count} entry', '{count} entries')} ·`}</span> : null}
                   <span className={styles.number}>{duration(item.seconds)}</span>
                   {selected ? <CheckIcon className={styles.patternIcon} /> : <FilterIcon className={styles.patternIcon} />}
                 </span>
@@ -146,7 +151,6 @@ function PatternBars({ title, description, nameHeader, items, selectedId, onTogg
   );
 }
 
-const HOUR_SERIES = [{ id: 'recorded', name: 'Recorded time', colorIndex: 0 }];
 
 /** 1.14 "When you record work": recorded time per clock hour across the selection. */
 function HoursChart({ analysis }: { analysis: AnalysisView }) {
@@ -160,21 +164,22 @@ function HoursChart({ analysis }: { analysis: AnalysisView }) {
       }),
     [analysis.hours],
   );
+  const series = useMemo(() => [{ id: 'recorded', name: t('Recorded time'), colorIndex: 0 }], []);
   const peak = analysis.hours.reduce<ExplorerPattern | null>((best, hour) => (!best || hour.seconds > best.seconds ? hour : best), null);
   return (
     <>
       <ActivityBars
-        title="When you record work"
+        title={t('When you record work')}
         headingLevel={2}
-        description="Hours by time of day, summed across this selection in your computer’s time zone."
-        series={HOUR_SERIES}
+        description={t('Hours by time of day, summed across this selection in your computer’s time zone.')}
+        series={series}
         buckets={buckets}
         patterns={false}
         height="13rem"
-        emptyMessage="No recorded time in this selection."
+        emptyMessage={t('No recorded time in this selection.')}
       />
       {peak && peak.seconds > 0 ? (
-        <p className={styles.footnoteStrong}>{`Most recorded hour: ${peak.label} · ${duration(peak.seconds)} across the selection.`}</p>
+        <p className={styles.footnoteStrong}>{t('Most recorded hour: {hour} · {time} across the selection.', { hour: peak.label, time: duration(peak.seconds) })}</p>
       ) : null}
     </>
   );
@@ -198,15 +203,15 @@ function ContextSwitches({ analysis, slice }: { analysis: AnalysisView; slice: S
     return [...months.values()];
   }, [analysis.context.days, slice.period]);
   const maximum = Math.max(1, ...rows.map((row) => row.switches));
-  const unit = slice.period === 'year' ? 'Month' : 'Day';
+  const byMonth = slice.period === 'year';
 
   const table = (
     <DataTable
-      caption={`Task switches by ${unit.toLowerCase()}`}
+      caption={byMonth ? t('Task switches by month') : t('Task switches by day')}
       columns={[
-        { id: 'label', header: unit },
-        { id: 'switches', header: 'Task switches', align: 'end' },
-        { id: 'blocks', header: 'Work blocks', align: 'end' },
+        { id: 'label', header: byMonth ? t('Month') : t('Day') },
+        { id: 'switches', header: t('Task switches'), align: 'end' },
+        { id: 'blocks', header: t('Work blocks'), align: 'end' },
       ]}
       rows={rows.map((row) => ({ id: row.id, cells: { label: row.label, switches: String(row.switches), blocks: String(row.blocks) } }))}
     />
@@ -214,13 +219,14 @@ function ContextSwitches({ analysis, slice }: { analysis: AnalysisView; slice: S
   const footer = (
     <div className={styles.notes}>
       <p className={styles.secondary}>
-        Inferred from recorded entries, not a measure of concentration. A switch changes ticket (or ticket-free activity/comment) within 15
-        minutes. Adjacent entries on the same task form one block; longer breaks and overlapping entries interrupt the sequence.
+        {t(
+          'Inferred from recorded entries, not a measure of concentration. A switch changes ticket (or ticket-free activity/comment) within 15 minutes. Adjacent entries on the same task form one block; longer breaks and overlapping entries interrupt the sequence.',
+        )}
       </p>
       {analysis.context.ambiguousEntries > 0 ? (
         <p className={styles.warningNote}>
           <WarningIcon className={styles.inlineIcon} />
-          {`${plural(analysis.context.ambiguousEntries, 'invalid or overlapping segment')} excluded.`}
+          {tn(analysis.context.ambiguousEntries, '{count} invalid or overlapping segment excluded.', '{count} invalid or overlapping segments excluded.')}
         </p>
       ) : null}
     </div>
@@ -228,9 +234,9 @@ function ContextSwitches({ analysis, slice }: { analysis: AnalysisView; slice: S
 
   return (
     <ChartFrame
-      title="Context switches"
+      title={t('Context switches')}
       headingLevel={2}
-      description="Understand how your recorded work is divided across tasks."
+      description={t('Understand how your recorded work is divided across tasks.')}
       table={table}
       footer={footer}
     >
@@ -242,12 +248,12 @@ function ContextSwitches({ analysis, slice }: { analysis: AnalysisView; slice: S
               <span className={styles.shareTrack} aria-hidden="true">
                 <span className={styles.shareFill} style={{ width: `${(row.switches / maximum) * 100}%` }} />
               </span>
-              <span className={styles.number}>{plural(row.switches, 'switch', 'switches')}</span>
+              <span className={styles.number}>{tn(row.switches, '{count} switch', '{count} switches')}</span>
             </li>
           ))}
         </ul>
       ) : (
-        <p className={styles.secondary}>{`${plural(rows[0]?.switches ?? 0, 'task switch', 'task switches')} in this selection.`}</p>
+        <p className={styles.secondary}>{tn(rows[0]?.switches ?? 0, '{count} task switch in this selection.', '{count} task switches in this selection.')}</p>
       )}
     </ChartFrame>
   );
@@ -256,20 +262,27 @@ function ContextSwitches({ analysis, slice }: { analysis: AnalysisView; slice: S
 /** 1.14 "Reading these patterns". */
 function ReadingNotes({ analysis }: { analysis: AnalysisView }) {
   return (
-    <Section title="Reading these patterns">
+    <Section title={t('Reading these patterns')}>
       <p className={styles.secondary}>
-        {`${duration(analysis.covered)} of clock time is covered by matching entries. Overlapping entries remain in recorded totals, but are excluded from context-switch and continuous-block calculations.`}
+        {t(
+          '{time} of clock time is covered by matching entries. Overlapping entries remain in recorded totals, but are excluded from context-switch and continuous-block calculations.',
+          { time: duration(analysis.covered) },
+        )}
       </p>
       <p className={styles.secondary}>
-        {`Billable time: ${
-          analysis.billableKnownCount > 0
-            ? `${duration(analysis.billable)} · supplied by 7pace for ${analysis.billableKnownCount} of ${plural(analysis.count, 'entry', 'entries')}.`
-            : 'Not supplied by 7pace for these entries.'
-        }`}
+        {analysis.billableKnownCount > 0
+          ? tn(
+              analysis.count,
+              'Billable time: {time} · supplied by 7pace for {known} of {count} entry.',
+              'Billable time: {time} · supplied by 7pace for {known} of {count} entries.',
+              { time: duration(analysis.billable), known: analysis.billableKnownCount },
+            )
+          : t('Billable time: Not supplied by 7pace for these entries.')}
       </p>
       <p className={styles.secondary}>
-        Switches and blocks describe recorded entries, not attention or productivity. Applying filters can hide intervening tasks; clear
-        filters for the complete sequence.
+        {t(
+          'Switches and blocks describe recorded entries, not attention or productivity. Applying filters can hide intervening tasks; clear filters for the complete sequence.',
+        )}
       </p>
     </Section>
   );

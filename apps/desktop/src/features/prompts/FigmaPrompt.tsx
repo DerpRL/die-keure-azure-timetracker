@@ -4,6 +4,7 @@ import type { FigmaPromptView } from '../../ipc/contract';
 import { useWorkItem } from '../../state/hooks';
 import { useIntents, useWriteGuards } from '../tracking/actions';
 import { PromptCard, promptStyles as styles, usePromptContext } from './PromptCard';
+import { t } from '../../i18n';
 
 /**
  * "Figma file active" (1.14 `FigmaPrompt`): start Design for the file's linked ticket, another
@@ -20,7 +21,7 @@ export function FigmaPrompt({ view }: { view: FigmaPromptView }) {
     <PromptCard
       kind="figma"
       icon={FigmaIcon}
-      title="Figma file active"
+      title={t('Figma file active')}
       runner={actions}
       actions={
         <>
@@ -33,7 +34,7 @@ export function FigmaPrompt({ view }: { view: FigmaPromptView }) {
               void actions.run('track', { type: 'figma.track', suggestionId: suggestion.id, useLinkedTicket: true })
             }
           >
-            Start Design…
+            {t('Start Design…')}
           </Button>
           {ticketId !== null ? (
             <Button
@@ -43,7 +44,7 @@ export function FigmaPrompt({ view }: { view: FigmaPromptView }) {
                 void actions.run('other', { type: 'figma.track', suggestionId: suggestion.id, useLinkedTicket: false })
               }
             >
-              Other ticket
+              {t('Other ticket')}
             </Button>
           ) : null}
           <Button
@@ -51,19 +52,19 @@ export function FigmaPrompt({ view }: { view: FigmaPromptView }) {
             isPending={actions.isPending('keep')}
             onPress={() => void actions.run('keep', { type: 'figma.keep', suggestionId: suggestion.id })}
           >
-            Keep tracking
+            {t('Keep tracking')}
           </Button>
         </>
       }
     >
       <p className={styles.strong}>{suggestion.name}</p>
       {ticketId !== null ? (
-        <p className={styles.text}>{`#${ticketId} · ${view.ticketTitle ?? item?.title ?? 'Azure ticket'}`}</p>
+        <p className={styles.text}>{`#${ticketId} · ${view.ticketTitle ?? item?.title ?? t('Azure ticket')}`}</p>
       ) : (
-        <p className={styles.caption}>Track Design without a ticket. The file name becomes the comment.</p>
+        <p className={styles.caption}>{t('Track Design without a ticket. The file name becomes the comment.')}</p>
       )}
       {!compact ? (
-        <p className={styles.caption}>An active file suggests context; it does not prove the design was edited.</p>
+        <p className={styles.caption}>{t('An active file suggests context; it does not prove the design was edited.')}</p>
       ) : null}
     </PromptCard>
   );

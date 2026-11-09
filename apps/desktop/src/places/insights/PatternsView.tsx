@@ -4,13 +4,13 @@ import { Card } from '../../components/Card';
 import { CalendarHeatmap, type HeatmapDay } from '../../charts/CalendarHeatmap';
 import { DataTable } from '../../charts/DataTable';
 import { HourHeatmap, type HourHeatmapCell, type HourHeatmapRow } from '../../charts/HourHeatmap';
-import type { AnalysisView, ExplorerCalendarDay, ExplorerVisuals, Interval, StatisticsSlice } from '../../ipc/contract';
+import { dateFormat, mark, t, tn } from '../../i18n';
+import type { AnalysisView, ExplorerCalendarDay, ExplorerVisuals, Interval, StatisticsPeriod, StatisticsSlice } from '../../ipc/contract';
 import {
   duration,
   fullDateLabel,
   localDay,
   longDayTimeLabel,
-  plural,
   timeLabel,
   timeZoneLabel,
   weekdayDayMonthLabel,
@@ -23,7 +23,15 @@ import styles from './insights.module.css';
 /** More days than this show as the calendar heatmap instead of tiles. */
 const MAX_TILES = 31;
 
-const weekdayDay = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric' });
+const WEEKDAY_DAY: Intl.DateTimeFormatOptions = { weekday: 'short', day: 'numeric' };
+
+const GLANCE_TITLES: Record<StatisticsPeriod | 'window', string> = {
+  window: mark('This window at a glance'),
+  day: mark('This day at a glance'),
+  week: mark('This week at a glance'),
+  month: mark('This month at a glance'),
+  year: mark('This year at a glance'),
+};
 
 /** Heat level of a day against its own target (or 8 hours on a day without one). */
 export function dayLevel(seconds: number, target: number): 0 | 1 | 2 | 3 | 4 {
@@ -49,7 +57,7 @@ export function busiestHours(analysis: AnalysisView): string | null {
   }
   const clock = (hour: number) => `${String(hour % 24).padStart(2, '0')}:00`;
   const labels = ranges.slice(0, 3).map(([from, to]) => `${clock(from)} – ${clock(to + 1)}`);
-  return labels.length > 1 ? `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}` : labels[0]!;
+  return labels.length > 1 ? t('{ranges} and {last}', { ranges: labels.slice(0, -1).join(', '), last: labels[labels.length - 1] }) : labels[0]!;
 }
 
 function longestDay(days: readonly ExplorerCalendarDay[]): ExplorerCalendarDay | null {
@@ -84,13 +92,13 @@ export function PatternsView({ slice, analysis, analysisKey, colors, onOpenTimel
           </>
         ) : (
           <Card padding="medium">
-            <p className={styles.muted}>The day and hour patterns appear once this window’s worklogs are analysed.</p>
+            <p className={styles.muted}>{t('The day and hour patterns appear once this window’s worklogs are analysed.')}</p>
           </Card>
         )}
       </div>
       <Glance slice={slice} analysis={analysis} visuals={visuals} onSeeEntries={onSeeEntries} />
       <div className={styles.fullRow}>
-        <Extras id="patterns" title="More work patterns" summary="Weekdays, entry lengths, hours, context switches and entries">
+        <Extras id="patterns" title={t('More work patterns')} summary={t('Weekdays, entry lengths, hours, context switches and entries')}>
           <PatternsSection slice={slice} analysis={analysis} analysisKey={analysisKey} colors={colors} />
         </Extras>
       </div>
@@ -109,7 +117,9 @@ function DaysCard({ visuals, targets, onOpenTimeline }: { visuals: ExplorerVisua
         value: day.seconds,
         label: fullDateLabel(day.date),
         shortLabel: weekdayDayMonthLabel(day.date),
-        detail: `${plural(day.entries, 'entry', 'entries')}${targets ? ` · target ${duration(day.target)}` : ''}`,
+        detail: targets
+          ? tn(day.entries, '{count} entry · target {target}', '{count} entries · target {target}', { target: duration(day.target) })
+          : tn(day.entries, '{count} entry', '{count} entries'),
         future: day.future,
       })),
     [visuals.days, targets],
@@ -118,19 +128,19 @@ function DaysCard({ visuals, targets, onOpenTimeline }: { visuals: ExplorerVisua
     <Card as="section" aria-labelledby={headingId} padding="medium" className={styles.chartCard}>
       <div className={styles.cardHead}>
         <h2 id={headingId} className={styles.cardTitle}>
-          Per day
+          {t('Per day')}
         </h2>
         {tiles ? (
           <Button size="small" aria-pressed={asTable} onPress={() => setAsTable((value) => !value)}>
-            {asTable ? 'Show as tiles' : 'Show as table'}
+            {asTable ? t('Show as tiles') : t('Show as table')}
           </Button>
         ) : null}
       </div>
       {!tiles ? (
         <CalendarHeatmap
-          title="Calendar heatmap"
+          title={t('Calendar heatmap')}
           headingLevel={3}
-          description="Each cell is a day. Select one to open its timeline."
+          description={t('Each cell is a day. Select one to open its timeline.')}
           days={days}
           onSelectDay={(selected) => {
             const day = visuals.days.find((item) => localDay(item.date) === selected);
@@ -139,12 +149,12 @@ function DaysCard({ visuals, targets, onOpenTimeline }: { visuals: ExplorerVisua
         />
       ) : asTable ? (
         <DataTable
-          caption="Recorded time per day"
+          caption={t('Recorded time per day')}
           columns={[
-            { id: 'day', header: 'Day' },
-            { id: 'time', header: 'Recorded', align: 'end' },
-            { id: 'entries', header: 'Entries', align: 'end' },
-            ...(targets ? [{ id: 'target', header: 'Target', align: 'end' as const }] : []),
+            { id: 'day', header: t('Day') },
+            { id: 'time', header: t('Recorded'), align: 'end' },
+            { id: 'entries', header: t('Entries'), align: 'end' },
+            ...(targets ? [{ id: 'target', header: t('Target'), align: 'end' as const }] : []),
           ]}
           rows={visuals.days.map((day) => ({
             id: day.date,
@@ -157,7 +167,7 @@ function DaysCard({ visuals, targets, onOpenTimeline }: { visuals: ExplorerVisua
           }))}
         />
       ) : (
-        <ul role="list" aria-label="Recorded time per day. Choose a day to open its timeline." className={styles.dayTiles}>
+        <ul role="list" aria-label={t('Recorded time per day. Choose a day to open its timeline.')} className={styles.dayTiles}>
           {visuals.days.map((day) => {
             const level = dayLevel(day.seconds, targets ? day.target : 0);
             return (
@@ -166,10 +176,10 @@ function DaysCard({ visuals, targets, onOpenTimeline }: { visuals: ExplorerVisua
                   type="button"
                   className={cx(styles.dayTile, level >= 3 && styles.dayTileStrong, level === 0 && styles.dayTileEmpty)}
                   style={{ '--tile': `var(--heat-${level})` } as CSSProperties}
-                  aria-label={`${fullDateLabel(day.date)}: ${day.seconds > 0 ? duration(day.seconds) : 'no time'}, ${plural(day.entries, 'entry', 'entries')}`}
+                  aria-label={`${fullDateLabel(day.date)}: ${day.seconds > 0 ? duration(day.seconds) : t('no time')}, ${tn(day.entries, '{count} entry', '{count} entries')}`}
                   onClick={() => onOpenTimeline(day.interval)}
                 >
-                  <span className={styles.dayTileDay}>{weekdayDay.format(new Date(day.date))}</span>
+                  <span className={styles.dayTileDay}>{dateFormat(WEEKDAY_DAY).format(new Date(day.date))}</span>
                   <b className={styles.dayTileTime}>{day.seconds > 0 ? duration(day.seconds) : '–'}</b>
                 </button>
               </li>
@@ -206,13 +216,13 @@ function HoursCard({ visuals, onOpenTimeline }: { visuals: ExplorerVisuals; onOp
   return (
     <Card as="section" aria-labelledby={headingId} padding="medium" className={styles.chartCard}>
       <h2 id={headingId} className={styles.cardTitle}>
-        Per hour
+        {t('Per hour')}
       </h2>
       {visuals.hours.length > 0 ? (
         <HourHeatmap
-          title="Hourly heatmap"
+          title={t('Hourly heatmap')}
           headingLevel={3}
-          description="Select an hour to open its timeline. Repeated daylight-saving hours have separate cells."
+          description={t('Select an hour to open its timeline. Repeated daylight-saving hours have separate cells.')}
           rows={hours.rows}
           cells={hours.cells}
           onSelectCell={(cell) => {
@@ -221,7 +231,7 @@ function HoursCard({ visuals, onOpenTimeline }: { visuals: ExplorerVisuals; onOp
           }}
         />
       ) : (
-        <p className={styles.muted}>Hours show for windows up to eight days. Choose a week or a day, or zoom in.</p>
+        <p className={styles.muted}>{t('Hours show for windows up to eight days. Choose a week or a day, or zoom in.')}</p>
       )}
     </Card>
   );
@@ -241,18 +251,18 @@ function Glance({
   const headingId = useId();
   const busiest = busiestHours(analysis);
   const longest = visuals ? longestDay(visuals.days) : null;
-  const scope = slice.isZoomed ? 'This window' : `This ${slice.period}`;
+  const glanceTitle = t(GLANCE_TITLES[slice.isZoomed ? 'window' : slice.period]);
   const facts: Array<{ label: string; value: string }> = [
-    { label: 'Busiest hours', value: busiest ?? 'No recorded time' },
-    ...(longest ? [{ label: 'Longest day', value: `${weekdayDayMonthLabel(longest.date)} · ${duration(longest.seconds)}` }] : []),
-    { label: 'Average tracked day', value: duration(analysis.trackedDays > 0 ? analysis.total / analysis.trackedDays : 0) },
-    { label: 'Overlapping time', value: duration(analysis.overlap) },
-    { label: 'Covered clock time', value: duration(analysis.covered) },
+    { label: t('Busiest hours'), value: busiest ?? t('No recorded time') },
+    ...(longest ? [{ label: t('Longest day'), value: `${weekdayDayMonthLabel(longest.date)} · ${duration(longest.seconds)}` }] : []),
+    { label: t('Average tracked day'), value: duration(analysis.trackedDays > 0 ? analysis.total / analysis.trackedDays : 0) },
+    { label: t('Overlapping time'), value: duration(analysis.overlap) },
+    { label: t('Covered clock time'), value: duration(analysis.covered) },
   ];
   return (
     <Card as="aside" aria-labelledby={headingId} padding="medium" className={styles.glance}>
       <h2 id={headingId} className={styles.cardTitle}>
-        {`${scope} at a glance`}
+        {glanceTitle}
       </h2>
       <dl className={styles.facts}>
         {facts.map((fact) => (
@@ -264,7 +274,7 @@ function Glance({
       </dl>
       {onSeeEntries ? (
         <Button size="small" className={styles.alignStart} onPress={onSeeEntries}>
-          See entries in Timesheet
+          {t('See entries in Timesheet')}
         </Button>
       ) : null}
     </Card>

@@ -18,6 +18,7 @@ use uuid::Uuid;
 
 use crate::error::{AppError, Result};
 use crate::model::{ActivityType, TrackingState, WorkLog, resolve_activity};
+use crate::nl::tr;
 use crate::rounding::{QUARTER_HOUR_SECONDS, Rounding, previous_end};
 use crate::service::OfflineDraftService;
 use crate::text::NonEmpty;
@@ -41,7 +42,8 @@ pub enum OfflineDraftStatus {
 }
 
 impl OfflineDraftStatus {
-    /// The Swift raw value, which is also the label shown to the user.
+    /// The Swift raw value, persisted and compared by the UI: English in every language (the UI
+    /// translates it where it is shown).
     pub fn raw(&self) -> &'static str {
         match self {
             Self::Draft => "Local draft",
@@ -118,7 +120,7 @@ impl OfflineDraft {
     pub fn title(&self) -> String {
         match self.ticket_id {
             Some(id) => format!("#{id}"),
-            None => self.comment.non_empty().unwrap_or("Untitled draft").to_string(),
+            None => self.comment.non_empty().unwrap_or(tr("Untitled draft")).to_string(),
         }
     }
 
@@ -134,7 +136,7 @@ impl OfflineDraft {
         cal: &Cal,
     ) -> Result<WorkLogDraft> {
         let Some(end) = self.end else {
-            return Err(AppError::message("Stop the local timer before reviewing this draft."));
+            return Err(AppError::message(tr("Stop the local timer before reviewing this draft.")));
         };
         let proposal = WorkLogDraft::from_times(
             self.start,
@@ -173,10 +175,10 @@ impl OfflineLedger {
     /// run at a time, across all workspaces.
     pub fn replace(&mut self, draft: OfflineDraft) -> Result<()> {
         if draft.workspace.is_empty() {
-            return Err(AppError::message("Set a 7pace workspace URL in Settings first."));
+            return Err(AppError::message(tr("Set a 7pace workspace URL in Settings first.")));
         }
         if draft.running() && self.drafts.iter().any(|d| d.id != draft.id && d.running()) {
-            return Err(AppError::message("Stop the existing local timer first."));
+            return Err(AppError::message(tr("Stop the existing local timer first.")));
         }
         self.drafts.retain(|d| d.id != draft.id);
         self.drafts.push(draft);
@@ -291,27 +293,27 @@ impl OfflineSync {
     {
         let draft = &reviewed.draft;
         if draft.workspace != workspace || draft.status != OfflineDraftStatus::Draft {
-            return Err(AppError::message(
+            return Err(AppError::message(tr(
                 "This draft belongs to another workspace or has an unconfirmed upload. Review it before sending.",
-            ));
+            )));
         }
         let fresh = Self::review(draft, service, rounding, now, cal).await?;
         if !fresh.matches.is_empty() {
-            return Err(AppError::message(
+            return Err(AppError::message(tr(
                 "A matching entry already exists. Refresh the review and link it instead of uploading again.",
-            ));
+            )));
         }
         if fresh.warning_key() != reviewed.warning_key() {
-            return Err(AppError::message(
+            return Err(AppError::message(tr(
                 "Overlap details changed. Refresh the review before uploading.",
-            ));
+            )));
         }
         let activities = service.activity_types().await?;
         let selected = resolve_activity(draft.activity_id.as_deref().unwrap_or(""), &activities)?;
         if selected != draft.activity_id {
-            return Err(AppError::message(
+            return Err(AppError::message(tr(
                 "The saved activity is no longer available. Edit the draft’s activity.",
-            ));
+            )));
         }
         let proposal = fresh.proposal;
         let mut pending = draft.clone();
@@ -321,9 +323,9 @@ impl OfflineSync {
         checkpoint(pending.clone()).await?;
         let created = service.create_work_log(&proposal).await?;
         if !is_swift_uuid(&created.id) || !proposal.matches(&created, cal) {
-            return Err(AppError::message(
+            return Err(AppError::message(tr(
                 "7pace did not confirm this draft exactly. Check 7pace before retrying.",
-            ));
+            )));
         }
         pending.status = OfflineDraftStatus::Synced;
         pending.remote_id = Some(created.id);

@@ -21,6 +21,7 @@ use att_core::microphone_end::MicrophoneEndPrompt;
 use att_core::productivity::MeetingReturn;
 
 use crate::engine::Engine;
+use crate::nl::{tr, trf};
 use crate::shell::Notification;
 use crate::state::AppState;
 
@@ -125,17 +126,27 @@ pub(crate) fn branch(change: &BranchChange, running: bool) -> Notification {
     if change.suggests_break() {
         return notification(
             change.id.to_string(),
-            if running { "Pause or stop your timer?" } else { "No ticket tracking suggested" },
-            format!("{place}\nDevelop and long-feature branches suggest a pause or stop."),
+            if running {
+                tr("Pause or stop your timer?")
+            } else {
+                tr("No ticket tracking suggested")
+            },
+            format!(
+                "{place}\n{}",
+                tr("Develop and long-feature branches suggest a pause or stop.")
+            ),
         );
     }
     let detail = match change.ticket_id {
-        Some(id) => format!("\nSwitch to Azure ticket #{id}, or keep your current tracking."),
-        None => "\nChoose an Azure ticket in the app.".to_string(),
+        Some(id) => format!(
+            "\n{}",
+            trf("Switch to Azure ticket #{id}, or keep your current tracking.", &[("id", &id)])
+        ),
+        None => format!("\n{}", tr("Choose an Azure ticket in the app.")),
     };
     notification(
         change.id.to_string(),
-        if running { "New branch. Keep your timer?" } else { "Ready to start tracking?" },
+        if running { tr("New branch. Keep your timer?") } else { tr("Ready to start tracking?") },
         format!("{place}{detail}"),
     )
 }
@@ -143,18 +154,24 @@ pub(crate) fn branch(change: &BranchChange, running: bool) -> Notification {
 /// Swift `NotificationService.postFigma(_:ticketTitle:)`.
 pub(crate) fn figma(proposal: &FigmaSuggestion, ticket_title: Option<&str>) -> Notification {
     let detail = match proposal.ticket_id {
-        Some(id) => format!("\n#{id} · {}", ticket_title.unwrap_or("Azure ticket")),
-        None => "\nTrack Design with the file name as the comment. No ticket needed.".to_string(),
+        Some(id) => format!("\n#{id} · {}", ticket_title.unwrap_or(tr("Azure ticket"))),
+        None => {
+            format!("\n{}", tr("Track Design with the file name as the comment. No ticket needed."))
+        }
     };
-    notification(proposal.id.to_string(), "Figma file active", format!("{}{detail}", proposal.name))
+    notification(
+        proposal.id.to_string(),
+        tr("Figma file active"),
+        format!("{}{detail}", proposal.name),
+    )
 }
 
 /// Swift `NotificationService.postDayReview()`.
 pub(crate) fn day_review() -> Notification {
     notification(
         DAY_REVIEW_ID,
-        "Time to review your day",
-        "Check your tracked time and current timer before finishing.",
+        tr("Time to review your day"),
+        tr("Check your tracked time and current timer before finishing."),
     )
 }
 
@@ -172,8 +189,8 @@ pub(crate) fn attention(prompt: &TrackingAttention) -> Notification {
 pub(crate) fn idle() -> Notification {
     notification(
         AWARENESS_ID,
-        "Review time away",
-        "Keep the recorded time, or pause and review the detected idle interval.",
+        tr("Review time away"),
+        tr("Keep the recorded time, or pause and review the detected idle interval."),
     )
 }
 
@@ -181,19 +198,19 @@ pub(crate) fn idle() -> Notification {
 pub(crate) fn forgotten() -> Notification {
     notification(
         AWARENESS_ID,
-        "Working without a timer?",
-        "Choose a ticket to start tracking, snooze, or ignore today.",
+        tr("Working without a timer?"),
+        tr("Choose a ticket to start tracking, snooze, or ignore today."),
     )
 }
 
 /// New in 2.0 (1.14.x only opened the panel), with the prompt card's texts.
 pub(crate) fn meeting(event: &MeetingEvent, ticket: Option<i64>) -> Notification {
     let detail = match (ticket, event.ticket_id) {
-        (Some(id), Some(_)) => format!("Linked ticket #{id}"),
-        (Some(id), None) => format!("Default meeting ticket #{id}"),
-        (None, _) => "No ticket needed. The meeting title becomes the comment.".to_string(),
+        (Some(id), Some(_)) => trf("Linked ticket #{id}", &[("id", &id)]),
+        (Some(id), None) => trf("Default meeting ticket #{id}", &[("id", &id)]),
+        (None, _) => tr("No ticket needed. The meeting title becomes the comment.").to_string(),
     };
-    notification(meeting_id(&event.id), "Meeting started", format!("{}\n{detail}", event.title))
+    notification(meeting_id(&event.id), tr("Meeting started"), format!("{}\n{detail}", event.title))
 }
 
 pub(crate) fn meeting_id(occurrence: &str) -> String {
@@ -204,10 +221,11 @@ pub(crate) fn meeting_id(occurrence: &str) -> String {
 pub(crate) fn microphone(session: &MicrophoneSession) -> Notification {
     notification(
         microphone_id(&session.id),
-        "Microphone in use · possible meeting",
+        tr("Microphone in use · possible meeting"),
         format!(
-            "{}\nTrack a meeting, or a daily standup with the Standup activity.",
-            session.owner.name
+            "{}\n{}",
+            session.owner.name,
+            tr("Track a meeting, or a daily standup with the Standup activity.")
         ),
     )
 }
@@ -220,10 +238,10 @@ pub(crate) fn microphone_id(session: &str) -> String {
 pub(crate) fn microphone_end(prompt: &MicrophoneEndPrompt) -> Notification {
     notification(
         MICROPHONE_END_ID,
-        "Microphone use stopped",
-        format!(
-            "{} has not used the microphone for at least a minute. Has your meeting finished?",
-            prompt.app_names.join(", ")
+        tr("Microphone use stopped"),
+        trf(
+            "{apps} has not used the microphone for at least a minute. Has your meeting finished?",
+            &[("apps", &prompt.app_names.join(", "))],
         ),
     )
 }
@@ -231,13 +249,14 @@ pub(crate) fn microphone_end(prompt: &MicrophoneEndPrompt) -> Notification {
 /// New in 2.0, with the prompt card's texts.
 pub(crate) fn meeting_return(plan: &MeetingReturn, title: Option<&str>) -> Notification {
     let heading = if plan.microphone_session_id.is_none() {
-        "Meeting ended"
+        tr("Meeting ended")
     } else {
-        "Microphone use stopped"
+        tr("Microphone use stopped")
     };
+    let question = trf("Return to #{id}?", &[("id", &plan.ticket_id)]);
     let body = match title {
-        Some(title) => format!("Return to #{}?\n{title}", plan.ticket_id),
-        None => format!("Return to #{}?", plan.ticket_id),
+        Some(title) => format!("{question}\n{title}"),
+        None => question,
     };
     notification(MEETING_RETURN_ID, heading, body)
 }
@@ -246,10 +265,38 @@ pub(crate) fn meeting_return(plan: &MeetingReturn, title: Option<&str>) -> Notif
 pub(crate) fn completion(prompt: &TicketCompletionPrompt) -> Notification {
     notification(
         COMPLETION_ID,
-        "Tracked ticket completed",
+        tr("Tracked ticket completed"),
         format!(
-            "#{} · {}\nAzure status: {}. Your timer is still running.",
-            prompt.ticket_id, prompt.title, prompt.workflow_state
+            "#{} · {}\n{}",
+            prompt.ticket_id,
+            prompt.title,
+            trf(
+                "Azure status: {status}. Your timer is still running.",
+                &[("status", &prompt.workflow_state)]
+            )
         ),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use att_core::i18n::{Language, with_language};
+
+    use super::*;
+
+    #[test]
+    fn prompts_and_notifications_follow_the_interface_language() {
+        let english = day_review();
+        assert_eq!(english.title, "Time to review your day");
+        with_language(Language::Nl, || {
+            let dutch = day_review();
+            assert_eq!(dutch.id, DAY_REVIEW_ID, "ids stay stable");
+            assert_eq!(dutch.title, "Tijd om je dag te controleren");
+            assert_eq!(
+                dutch.body,
+                "Controleer je geregistreerde tijd en je huidige timer voor je afsluit."
+            );
+            assert_eq!(idle().title, "Afwezigheid controleren");
+        });
+    }
 }

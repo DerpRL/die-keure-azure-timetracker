@@ -3,6 +3,7 @@ import { Disclosure, DisclosurePanel, Button as AriaButton, Heading as AriaHeadi
 import { Button } from '../components/Button';
 import { AppLogo } from '../components/AppLogo';
 import { ChevronRightIcon, type IconComponent } from '../components/icons';
+import { t } from '../i18n';
 import { cx } from '../utils/cx';
 import styles from './PanelShell.module.css';
 
@@ -88,7 +89,7 @@ export interface PanelSectionLink {
 }
 
 /** "Open a section": a two-column grid of labelled buttons that collapses to one column. */
-export function PanelSectionGrid({ title = 'Open a section', links }: { title?: string; links: readonly PanelSectionLink[] }) {
+export function PanelSectionGrid({ title = t('Open a section'), links }: { title?: string; links: readonly PanelSectionLink[] }) {
   const headingId = useId();
   return (
     <section aria-labelledby={headingId} className={styles.section}>
@@ -122,7 +123,7 @@ export interface PanelNavItem {
  * The panel's footer (2.2 layout "S9 · Menu-bar popup"): one row of icon-over-label buttons for the
  * main window's places and Quit, with a note under it.
  */
-export function PanelNav({ label = 'Open a section', items, note }: { label?: string; items: readonly PanelNavItem[]; note?: ReactNode }) {
+export function PanelNav({ label = t('Open a section'), items, note }: { label?: string; items: readonly PanelNavItem[]; note?: ReactNode }) {
   return (
     <nav aria-label={label} className={styles.nav}>
       <ul role="list" className={styles.navList}>

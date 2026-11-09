@@ -2,6 +2,7 @@ import type { MouseEvent, ReactNode } from 'react';
 import { ExternalLinkIcon } from '../../components/icons';
 import { cx } from '../../utils/cx';
 import { openExternalLink } from './platform';
+import { t } from '../../i18n';
 import styles from './settings.module.css';
 
 /**
@@ -28,7 +29,7 @@ export function ExternalLink({ href, children, className }: { href: string; chil
     >
       {children}
       <ExternalLinkIcon />
-      <span className="visually-hidden"> (opens in your browser)</span>
+      <span className="visually-hidden"> {t('(opens in your browser)')}</span>
     </a>
   );
 }

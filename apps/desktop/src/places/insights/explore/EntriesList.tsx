@@ -5,11 +5,12 @@ import { Card, SectionHeading } from '../../../components/Card';
 import { Skeleton } from '../../../components/EmptyState';
 import { TimeEditorIcon } from '../../../components/icons';
 import { Table, type TableColumn } from '../../../components/Table';
+import { mark, t, tn } from '../../../i18n';
 import type { AnalysisView, ExplorerEntry, Interval } from '../../../ipc/contract';
 import { ActivityChip } from '../../../features/activity';
 import { TicketLink } from '../../../features/ticketContext/TicketLink';
 import { useAction } from '../../../state/hooks';
-import { duration, entryTimes, instant, localDay, plural } from './format';
+import { duration, entryTimes, instant, localDay } from './format';
 import { recordTitle, taskTitles } from './model';
 import { useEntriesPage } from './useEntriesPage';
 import { useOpenPage, useStableHandler } from './useOpenPage';
@@ -21,12 +22,12 @@ export const ENTRIES_PAGE_SIZE = 100;
 type Column = 'task' | 'when' | 'activity' | 'comment' | 'duration' | 'actions';
 
 const COLUMNS: ReadonlyArray<TableColumn<Column>> = [
-  { id: 'task', title: 'Task', isRowHeader: true, minWidth: '14rem' },
-  { id: 'when', title: 'When', minWidth: '10rem' },
-  { id: 'activity', title: 'Activity' },
-  { id: 'comment', title: 'Comment', minWidth: '10rem' },
-  { id: 'duration', title: 'Duration', align: 'end' },
-  { id: 'actions', title: 'Actions', hideTitle: true },
+  { id: 'task', title: mark('Task'), isRowHeader: true, minWidth: '14rem' },
+  { id: 'when', title: mark('When'), minWidth: '10rem' },
+  { id: 'activity', title: mark('Activity') },
+  { id: 'comment', title: mark('Comment'), minWidth: '10rem' },
+  { id: 'duration', title: mark('Duration'), align: 'end' },
+  { id: 'actions', title: mark('Actions'), hideTitle: true },
 ];
 
 export function entryId(entry: ExplorerEntry): string {
@@ -84,11 +85,11 @@ export function EntryTable({ label, entries, analysis, colors, clip = null, flus
       aria-label={label}
       density="compact"
       className={flush ? styles.flushTable : undefined}
-      columns={COLUMNS}
+      columns={COLUMNS.map((column) => ({ ...column, title: t(column.title) }))}
       rows={entries}
       getRowId={entryId}
       getRowText={(entry) => recordTitle(entry.record, titles)}
-      renderEmptyState={() => 'No matching entries. Try a different interval or clear your filters.'}
+      renderEmptyState={() => t('No matching entries. Try a different interval or clear your filters.')}
       renderCell={(entry, column) => {
         const { record } = entry;
         const title = recordTitle(record, titles);
@@ -112,7 +113,7 @@ export function EntryTable({ label, entries, analysis, colors, clip = null, flus
             return (
               <span className={styles.durationCell}>
                 <span className={styles.duration}>{duration(part.seconds)}</span>
-                {part.partial ? <span className={styles.note}>in selection</span> : null}
+                {part.partial ? <span className={styles.note}>{t('in selection')}</span> : null}
               </span>
             );
           case 'actions':
@@ -120,7 +121,7 @@ export function EntryTable({ label, entries, analysis, colors, clip = null, flus
               <IconButton
                 size="small"
                 icon={TimeEditorIcon}
-                label={`Edit entries for ${title} in Time editor`}
+                label={t('Edit entries for {title} in Time editor', { title })}
                 onPress={() => openInEditor(entry)}
               />
             );
@@ -176,13 +177,13 @@ export function EntriesList({ title, detail, analysis, analysisKey, colors, with
   const status =
     page === null
       ? analysis.entryCount > rows.length
-        ? `Showing the first ${rows.length} of ${plural(analysis.entryCount, 'entry', 'entries')}`
-        : plural(analysis.entryCount, 'entry', 'entries')
+        ? tn(analysis.entryCount, 'Showing the first {shown} of {count} entry', 'Showing the first {shown} of {count} entries', { shown: rows.length })
+        : tn(analysis.entryCount, '{count} entry', '{count} entries')
       : loaded.loading
-        ? 'Loading entries…'
+        ? t('Loading entries…')
         : loaded.error
-          ? 'Entries unavailable'
-          : `Entries ${total === 0 ? 0 : first + 1}–${Math.min(total, first + rows.length)} of ${total}`;
+          ? t('Entries unavailable')
+          : t('Entries {from}–{to} of {total}', { from: total === 0 ? 0 : first + 1, to: Math.min(total, first + rows.length), total });
 
   return (
     <Card as="section" aria-labelledby={headingId} padding="none" className={styles.entriesCard}>
@@ -192,10 +193,10 @@ export function EntriesList({ title, detail, analysis, analysisKey, colors, with
         {page !== null && loaded.error ? (
           <Banner
             tone="error"
-            title="Could not load entries"
+            title={t('Could not load entries')}
             actions={
               <Button size="small" onPress={loaded.retry}>
-                Retry
+                {t('Retry')}
               </Button>
             }
           >
@@ -216,23 +217,23 @@ export function EntriesList({ title, detail, analysis, analysisKey, colors, with
         </p>
         {page === null ? (
           analysis.entryCount > rows.length ? (
-            <Button size="small" onPress={() => goTo(0)}>{`Show all ${analysis.entryCount} entries`}</Button>
+            <Button size="small" onPress={() => goTo(0)}>{t('Show all {count} entries', { count: analysis.entryCount })}</Button>
           ) : null
         ) : (
           <>
             {pageCount > 1 ? (
               <>
                 <Button size="small" isDisabled={page === 0 || loaded.loading} onPress={() => goTo(page - 1)}>
-                  Previous entries
+                  {t('Previous entries')}
                 </Button>
                 <Button size="small" isDisabled={page >= pageCount - 1 || loaded.loading} onPress={() => goTo(page + 1)}>
-                  Next entries
+                  {t('Next entries')}
                 </Button>
               </>
             ) : null}
             {within ? null : (
               <Button size="small" variant="plain" onPress={() => goTo(null)}>
-                Show fewer
+                {t('Show fewer')}
               </Button>
             )}
           </>

@@ -8,6 +8,7 @@ import { Select } from '../../../components/Pickers';
 import type { TimeRange } from '../../../charts/ActivityBars';
 import type { ChartSeries } from '../../../charts/palette';
 import { Timeline, type TimelineEntry } from '../../../charts/Timeline';
+import { t } from '../../../i18n';
 import type { AnalysisView, ExplorerCalendarDay, ExplorerEntry, StatisticsSlice } from '../../../ipc/contract';
 import { EntryTable, entryId } from './EntriesList';
 import { date, duration, weekdayDayMonthLabel } from './format';
@@ -18,7 +19,7 @@ import styles from './Statistics.module.css';
 /** Entries asked for at once for a day's timeline (the timeline itself pages 12 rows). */
 export const TIMELINE_LIMIT = MAX_ENTRIES_PAGE;
 
-const TITLE = 'Your day’s task timeline';
+const TITLE = () => t('Your day’s task timeline');
 
 export interface TimelineViewProps {
   slice: StatisticsSlice;
@@ -72,8 +73,8 @@ export function TimelineView({ slice, analysis, analysisKey, series, colors, onZ
 
   if (!day) {
     return (
-      <Section title={TITLE} variant="plain">
-        <p className={styles.secondary}>No days in this window.</p>
+      <Section title={TITLE()} variant="plain">
+        <p className={styles.secondary}>{t('No days in this window.')}</p>
       </Section>
     );
   }
@@ -83,7 +84,7 @@ export function TimelineView({ slice, analysis, analysisKey, series, colors, onZ
       <div className={styles.inlineForm}>
         {days.length > 1 ? (
           <Select
-            label="Timeline day"
+            label={t('Timeline day')}
             width="auto"
             items={days.map((item) => ({ id: item.date, label: `${weekdayDayMonthLabel(item.date)} · ${duration(item.seconds)}` }))}
             selectedKey={day.date}
@@ -94,7 +95,7 @@ export function TimelineView({ slice, analysis, analysisKey, series, colors, onZ
         ) : null}
         {!coversWindow ? (
           <Button icon={ZoomInIcon} onPress={() => onZoom({ start: date(day.interval.start), end: date(day.interval.end) })}>
-            Zoom to this day
+            {t('Zoom to this day')}
           </Button>
         ) : null}
       </div>
@@ -106,37 +107,45 @@ export function TimelineView({ slice, analysis, analysisKey, series, colors, onZ
       {loaded.error ? (
         <Banner
           tone="error"
-          title="Could not load the timeline"
+          title={t('Could not load the timeline')}
           actions={
             <Button size="small" onPress={loaded.retry}>
-              Retry
+              {t('Retry')}
             </Button>
           }
         >
           {loaded.error}
         </Banner>
       ) : (
-        <LoadingRegion label="Loading the timeline" isLoading={loaded.loading} placeholder={<Skeleton lines={6} />}>
+        <LoadingRegion label={t('Loading the timeline')} isLoading={loaded.loading} placeholder={<Skeleton lines={6} />}>
           <Timeline
-            title={TITLE}
+            title={TITLE()}
             headingLevel={2}
-            description="Each row is one recorded entry. Gaps and overlapping times stay visible. Select a bar for its entry details below."
+            description={t('Each row is one recorded entry. Gaps and overlapping times stay visible. Select a bar for its entry details below.')}
             domain={{ start: date(day.interval.start), end: date(day.interval.end) }}
             entries={rows}
             series={series}
             selectedId={selectedId}
             onSelect={(id) => setSelection({ key: dayKey, id })}
             onZoomToEntry={(entry) => onZoom({ start: entry.start, end: entry.end })}
-            emptyMessage="No entries in this day. Choose another day or adjust the active filters."
+            emptyMessage={t('No entries in this day. Choose another day or adjust the active filters.')}
           />
           {loaded.page && loaded.page.total > loaded.page.entries.length ? (
             <p className={styles.secondary}>
-              {`Showing the first ${loaded.page.entries.length} of ${loaded.page.total} entries of this day. Zoom in to see the rest.`}
+              {t('Showing the first {shown} of {total} entries of this day. Zoom in to see the rest.', {
+                shown: loaded.page.entries.length,
+                total: loaded.page.total,
+              })}
             </p>
           ) : null}
           {selected ? (
-            <Section title="Selected timeline entry" subtitle="Recorded task, activity and times inside the selected window." variant="plain" headingLevel={3}>
-              <EntryTable label="Selected timeline entry" entries={[selected]} analysis={analysis} colors={colors} />
+            <Section
+              title={t('Selected timeline entry')}
+              subtitle={t('Recorded task, activity and times inside the selected window.')}
+              variant="plain"
+              headingLevel={3}
+            >
+              <EntryTable label={t('Selected timeline entry')} entries={[selected]} analysis={analysis} colors={colors} />
             </Section>
           ) : null}
         </LoadingRegion>

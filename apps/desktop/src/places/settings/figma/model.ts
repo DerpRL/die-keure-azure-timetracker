@@ -1,8 +1,23 @@
 import type { FigmaSlice } from '../../../ipc/contract';
+import { dateFormat, t } from '../../../i18n';
 
-const DATE_TIME = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
-const TIME = new Intl.DateTimeFormat('en-GB', { timeStyle: 'short' });
+const DATE_TIME: Intl.DateTimeFormatOptions = { dateStyle: 'medium', timeStyle: 'short' };
+const TIME: Intl.DateTimeFormatOptions = { timeStyle: 'short' };
+/** The engine keeps this form English so it can be matched here; it is translated on display. */
 const WAITING = 'Waiting for Figma · ';
+const SEEN = 'Seen: ';
+
+/** The engine's English text after "Waiting for Figma · ", in the interface language. */
+function waitingDetail(rest: string): string {
+  if (rest.startsWith(SEEN)) return t('Seen: {name}', { name: rest.slice(SEEN.length) });
+  return rest === 'No file address found' ? t('No file address found') : rest;
+}
+
+/** The engine's `label`, with its English "Waiting for Figma · …" form translated. */
+export function figmaLabel(figma: FigmaSlice): string {
+  if (!figma.label.startsWith(WAITING)) return figma.label;
+  return `${t('Waiting for Figma')} · ${waitingDetail(figma.label.slice(WAITING.length))}`;
+}
 
 /**
  * The observation line: the engine's `label` (1.14 `FigmaService.status`), with the time Figma
@@ -10,15 +25,15 @@ const WAITING = 'Waiting for Figma · ';
  */
 export function observationText(figma: FigmaSlice): string {
   const time = figma.lastForegroundAt ? Date.parse(figma.lastForegroundAt) : Number.NaN;
-  if (!figma.label.startsWith(WAITING) || Number.isNaN(time)) return figma.label;
-  return `${WAITING}${TIME.format(time)} · ${figma.label.slice(WAITING.length)}`;
+  if (!figma.label.startsWith(WAITING) || Number.isNaN(time)) return figmaLabel(figma);
+  return `${t('Waiting for Figma')} · ${dateFormat(TIME).format(time)} · ${waitingDetail(figma.label.slice(WAITING.length))}`;
 }
 
 /** "6 Oct 2026, 09:52" in the local time zone. */
 export function formatSeen(instant: string | null | undefined): string | null {
   if (!instant) return null;
   const time = Date.parse(instant);
-  return Number.isNaN(time) ? null : DATE_TIME.format(time);
+  return Number.isNaN(time) ? null : dateFormat(DATE_TIME).format(time);
 }
 
 /** The local calendar day (`YYYY-MM-DD`) of an instant, for `dayReview.setDay`. */

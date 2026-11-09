@@ -3,6 +3,7 @@ import { useSlice } from '../../state/hooks';
 import { useCommands } from '../../shortcuts/hooks';
 import { useIntents, useWriteGuards } from './actions';
 import { flowSurface, openFlow, type TrackingSurface } from './CurrentTracking';
+import { t } from '../../i18n';
 
 /**
  * The 1.14 Tracking menu as palette commands and shortcuts: Track a ticket… (⌘N / Ctrl+N), Stop,
@@ -18,7 +19,7 @@ export function TrackingCommands({ surface }: { surface: TrackingSurface }) {
   useCommands([
     {
       id: 'tracking.chooseTicket',
-      label: 'Track a ticket…',
+      label: t('Track a ticket…'),
       group: 'Tracking',
       icon: PlayIcon,
       keywords: ['choose', 'track', 'switch', 'start', 'ticket'],
@@ -28,7 +29,7 @@ export function TrackingCommands({ surface }: { surface: TrackingSurface }) {
     },
     {
       id: 'tracking.stop',
-      label: 'Stop tracking',
+      label: t('Stop tracking'),
       group: 'Tracking',
       icon: StopIcon,
       isDisabled: !connected || !running || busy,
@@ -36,7 +37,7 @@ export function TrackingCommands({ surface }: { surface: TrackingSurface }) {
     },
     {
       id: 'tracking.pause',
-      label: 'Pause tracking',
+      label: t('Pause tracking'),
       group: 'Tracking',
       icon: PauseIcon,
       isDisabled: !connected || !running || busy,
@@ -44,7 +45,7 @@ export function TrackingCommands({ surface }: { surface: TrackingSurface }) {
     },
     {
       id: 'tracking.resume',
-      label: 'Resume tracking…',
+      label: t('Resume tracking…'),
       group: 'Tracking',
       icon: PlayIcon,
       isDisabled: !connected || !paused || busy,
@@ -53,7 +54,7 @@ export function TrackingCommands({ surface }: { surface: TrackingSurface }) {
     },
     {
       id: 'tracking.reviewToday',
-      label: 'Review today',
+      label: t('Review today'),
       group: 'Tracking',
       icon: DayReviewIcon,
       keywords: ['day review'],

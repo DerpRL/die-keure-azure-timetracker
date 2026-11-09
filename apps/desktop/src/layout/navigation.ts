@@ -12,6 +12,7 @@ import {
   WeeklyReportIcon,
   type IconComponent,
 } from '../components/icons';
+import { mark } from '../i18n';
 import type { Platform } from '../shortcuts/platform';
 
 /*
@@ -135,6 +136,7 @@ export type ViewOf<P extends PlaceId> = Extract<Route, { place: P }> extends { v
 
 export interface ViewDefinition<V extends string = string> {
   id: V;
+  /** English (`mark`): translate where shown, `t(view.title)`. */
   title: string;
   /**
    * The engine pages the view shows. The first is reported as the visible page; the others load
@@ -152,6 +154,7 @@ export interface ViewDefinition<V extends string = string> {
 
 export interface PlaceDefinition {
   id: PlaceId;
+  /** English (`mark`): translate where shown, `t(place.title)`. */
   title: string;
   /** Top-bar tabs; Settings sits behind the gear. */
   inTopBar: boolean;
@@ -162,61 +165,61 @@ export interface PlaceDefinition {
 export const PLACES: Readonly<Record<PlaceId, PlaceDefinition>> = {
   today: {
     id: 'today',
-    title: 'Today',
+    title: mark('Today'),
     inTopBar: true,
-    views: [{ id: 'day', title: 'Today', pages: ['overview', 'dayReview'] }],
+    views: [{ id: 'day', title: mark('Today'), pages: ['overview', 'dayReview'] }],
   },
   timesheet: {
     id: 'timesheet',
-    title: 'Timesheet',
+    title: mark('Timesheet'),
     inTopBar: true,
     views: [
-      { id: 'week', title: 'Week', pages: ['history', 'timeEditor'], requires: 'history' },
-      { id: 'day', title: 'Day', pages: ['timeEditor'], requires: 'timeEditor' },
-      { id: 'list', title: 'List', pages: ['history'], requires: 'history' },
-      { id: 'drafts', title: 'Drafts', pages: ['offlineDrafts'], requires: 'offlineDrafts' },
+      { id: 'week', title: mark('Week'), pages: ['history', 'timeEditor'], requires: 'history' },
+      { id: 'day', title: mark('Day'), pages: ['timeEditor'], requires: 'timeEditor' },
+      { id: 'list', title: mark('List'), pages: ['history'], requires: 'history' },
+      { id: 'drafts', title: mark('Drafts'), pages: ['offlineDrafts'], requires: 'offlineDrafts' },
     ],
   },
   insights: {
     id: 'insights',
-    title: 'Insights',
+    title: mark('Insights'),
     inTopBar: true,
     views: [
-      { id: 'time', title: 'Where time went', pages: ['statistics', 'weeklyReport'], requires: 'statistics' },
-      { id: 'patterns', title: 'Patterns', pages: ['statistics'], requires: 'statistics' },
-      { id: 'report', title: 'Weekly report', pages: ['weeklyReport'], requires: 'weeklyReport' },
+      { id: 'time', title: mark('Where time went'), pages: ['statistics', 'weeklyReport'], requires: 'statistics' },
+      { id: 'patterns', title: mark('Patterns'), pages: ['statistics'], requires: 'statistics' },
+      { id: 'report', title: mark('Weekly report'), pages: ['weeklyReport'], requires: 'weeklyReport' },
     ],
   },
   settings: {
     id: 'settings',
-    title: 'Settings',
+    title: mark('Settings'),
     inTopBar: false,
     views: [
-      { id: 'accounts', title: 'Azure DevOps & 7pace', pages: ['settings'] },
-      { id: 'schedule', title: 'Schedule & holidays', pages: ['settings'] },
-      { id: 'meetings', title: 'Meetings', pages: ['settings'] },
-      { id: 'reminders', title: 'Reminders', pages: ['settings'] },
-      { id: 'notifications', title: 'Notifications', pages: ['settings'] },
-      { id: 'sources', title: 'Overview', pages: ['settings', 'repositories', 'figma'] },
-      { id: 'git', title: 'Git repositories', pages: ['repositories'] },
-      { id: 'figma', title: 'Figma', pages: ['figma'], requires: 'figma' },
-      { id: 'calendars', title: 'Calendars', pages: ['settings', 'agenda'], requiresAvailable: 'agenda' },
-      { id: 'appearance', title: 'Appearance & shortcuts', pages: ['settings'] },
-      { id: 'features', title: 'Features & privacy', pages: ['settings'] },
-      { id: 'advanced', title: 'Updates & advanced', pages: ['settings'] },
-      { id: 'about', title: 'About', pages: ['settings'] },
+      { id: 'accounts', title: mark('Azure DevOps & 7pace'), pages: ['settings'] },
+      { id: 'schedule', title: mark('Schedule & holidays'), pages: ['settings'] },
+      { id: 'meetings', title: mark('Meetings'), pages: ['settings'] },
+      { id: 'reminders', title: mark('Reminders'), pages: ['settings'] },
+      { id: 'notifications', title: mark('Notifications'), pages: ['settings'] },
+      { id: 'sources', title: mark('Overview'), pages: ['settings', 'repositories', 'figma'] },
+      { id: 'git', title: mark('Git repositories'), pages: ['repositories'] },
+      { id: 'figma', title: mark('Figma'), pages: ['figma'], requires: 'figma' },
+      { id: 'calendars', title: mark('Calendars'), pages: ['settings', 'agenda'], requiresAvailable: 'agenda' },
+      { id: 'appearance', title: mark('Appearance & shortcuts'), pages: ['settings'] },
+      { id: 'features', title: mark('Features & privacy'), pages: ['settings'] },
+      { id: 'advanced', title: mark('Updates & advanced'), pages: ['settings'] },
+      { id: 'about', title: mark('About'), pages: ['settings'] },
     ],
   },
 };
 
 export const PLACE_ORDER: readonly PlaceId[] = ['today', 'timesheet', 'insights', 'settings'];
 
-/** The Settings menu: groups of views, as in the design's settings sidebar. */
+/** The Settings menu: groups of views, as in the design's settings sidebar (titles: `t(group.title)`). */
 export const SETTINGS_GROUPS: ReadonlyArray<{ id: string; title: string; views: readonly SettingsView[] }> = [
-  { id: 'account', title: 'Account', views: ['accounts'] },
-  { id: 'tracking', title: 'Tracking', views: ['schedule', 'meetings', 'reminders', 'notifications'] },
-  { id: 'sources', title: 'Sources', views: ['sources', 'git', 'figma', 'calendars'] },
-  { id: 'app', title: 'App', views: ['appearance', 'features', 'advanced', 'about'] },
+  { id: 'account', title: mark('Account'), views: ['accounts'] },
+  { id: 'tracking', title: mark('Tracking'), views: ['schedule', 'meetings', 'reminders', 'notifications'] },
+  { id: 'sources', title: mark('Sources'), views: ['sources', 'git', 'figma', 'calendars'] },
+  { id: 'app', title: mark('App'), views: ['appearance', 'features', 'advanced', 'about'] },
 ];
 
 function routeView(route: Route): string {

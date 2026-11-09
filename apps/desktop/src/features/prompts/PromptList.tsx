@@ -18,6 +18,7 @@ import { MicrophonePrompt } from './MicrophonePrompt';
 import { PromptContext, promptStyles as styles } from './PromptCard';
 import { TicketCompletionPrompt } from './TicketCompletionPrompt';
 import { TrackingAttentionPrompt } from './TrackingAttentionPrompt';
+import { t, tn } from '../../i18n';
 
 export interface PromptItem {
   /** Stable per prompt occurrence, so arrival is announced once. */
@@ -57,13 +58,13 @@ export function buildPromptItems(
     const more = panel ? branches.length - 1 : 0;
     items.push({
       key: `branch:${view.change.id}`,
-      label: `Branch changed · ${view.change.repositoryName}`,
+      label: t('Branch changed · {repository}', { repository: view.change.repositoryName }),
       element: (
         <div className={styles.list}>
           <BranchPrompt view={view} />
           {more > 0 ? (
             <Button variant="plain" size="small" className={styles.more} onPress={() => openMainPage('overview')}>
-              {`Review ${more} more branch ${more === 1 ? 'change' : 'changes'}`}
+              {tn(more, 'Review {count} more branch change', 'Review {count} more branch changes')}
             </Button>
           ) : null}
         </div>
@@ -75,17 +76,17 @@ export function buildPromptItems(
   for (const view of panel ? figma.slice(0, 1) : figma) {
     items.push({
       key: `figma:${view.suggestion.id}`,
-      label: `Figma file active · ${view.suggestion.name}`,
+      label: t('Figma file active · {name}', { name: view.suggestion.name }),
       element: <FigmaPrompt view={view} />,
     });
   }
 
   if (prompts.idle) {
-    items.push({ key: `idle:${prompts.idle.id}`, label: 'Review time away', element: <IdlePrompt idle={prompts.idle} /> });
+    items.push({ key: `idle:${prompts.idle.id}`, label: t('Review time away'), element: <IdlePrompt idle={prompts.idle} /> });
   } else if (prompts.idleCorrection) {
     items.push({
       key: `idleCorrection:${prompts.idleCorrection.id}`,
-      label: 'Saved idle-time review',
+      label: t('Saved idle-time review'),
       element: <IdleCorrectionPrompt />,
     });
   }
@@ -93,7 +94,7 @@ export function buildPromptItems(
   if (prompts.forgotten) {
     items.push({
       key: `forgotten:${prompts.forgotten.id}`,
-      label: 'Working without a timer?',
+      label: t('Working without a timer?'),
       element: <ForgottenTimerPrompt reminder={prompts.forgotten} tickets={prompts.forgottenTickets} />,
     });
   }
@@ -101,7 +102,7 @@ export function buildPromptItems(
   if (prompts.ticketCompletion) {
     items.push({
       key: `completion:${prompts.ticketCompletion.id}`,
-      label: 'Tracked ticket completed',
+      label: t('Tracked ticket completed'),
       element: <TicketCompletionPrompt prompt={prompts.ticketCompletion} />,
     });
   }
@@ -109,7 +110,7 @@ export function buildPromptItems(
   if (prompts.dayReview) {
     items.push({
       key: `dayReview:${prompts.dayReview.day}`,
-      label: 'Review your day',
+      label: t('Review your day'),
       element: <DayReviewPrompt view={prompts.dayReview} />,
     });
   }
@@ -117,7 +118,7 @@ export function buildPromptItems(
   if (prompts.microphoneEnd) {
     items.push({
       key: `microphoneEnd:${prompts.microphoneEnd.id}`,
-      label: 'Microphone use stopped',
+      label: t('Microphone use stopped'),
       element: <MicrophoneEndPrompt prompt={prompts.microphoneEnd} canReturn={prompts.canReturnAfterMicrophone} />,
     });
   }
@@ -125,7 +126,7 @@ export function buildPromptItems(
   if (prompts.meetingReturn?.ready) {
     items.push({
       key: `meetingReturn:${prompts.meetingReturn.ticketId}:${prompts.meetingReturn.end}`,
-      label: 'Meeting ended',
+      label: t('Meeting ended'),
       element: <MeetingReturnPrompt view={prompts.meetingReturn} />,
     });
   }
@@ -133,7 +134,7 @@ export function buildPromptItems(
   for (const session of panel ? prompts.microphone.slice(0, 1) : prompts.microphone) {
     items.push({
       key: `microphone:${session.id}`,
-      label: `Microphone in use · ${session.owner.name}`,
+      label: t('Microphone in use · {app}', { app: session.owner.name }),
       element: <MicrophonePrompt session={session} />,
     });
   }
@@ -142,12 +143,12 @@ export function buildPromptItems(
     const more = panel ? prompts.meetings.length - 1 : 0;
     items.push({
       key: `meeting:${view.event.id}`,
-      label: `Meeting started · ${view.event.title}`,
+      label: t('Meeting started · {title}', { title: view.event.title }),
       element: (
         <div className={styles.list}>
           <MeetingPrompt view={view} />
           {more > 0 ? (
-            <p className={styles.caption}>{`${more} more meeting ${more === 1 ? 'suggestion' : 'suggestions'} in Overview`}</p>
+            <p className={styles.caption}>{tn(more, '{count} more meeting suggestion in Overview', '{count} more meeting suggestions in Overview')}</p>
           ) : null}
         </div>
       ),
@@ -177,8 +178,8 @@ export function usePromptAnnouncements(items: PromptItem[] | undefined): void {
     const known = seen.current;
     const fresh = known ? items.filter((item) => !known.has(item.key)) : [];
     seen.current = new Set(items.map((item) => item.key));
-    if (fresh.length === 1) announce(`New suggestion: ${fresh[0]!.label}`);
-    else if (fresh.length > 1) announce(`${fresh.length} new suggestions. First: ${fresh[0]!.label}`);
+    if (fresh.length === 1) announce(t('New suggestion: {label}', { label: fresh[0]!.label }));
+    else if (fresh.length > 1) announce(t('{count} new suggestions. First: {label}', { count: fresh.length, label: fresh[0]!.label }));
     // `keys` captures every change of the list; the items themselves are new on each render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keys]);

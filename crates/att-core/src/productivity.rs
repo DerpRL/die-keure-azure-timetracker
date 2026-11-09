@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::AppError;
 use crate::model::TrackingState;
+use crate::nl::tr;
 use crate::time::{add_secs, diff_secs, swift_date};
 
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
@@ -50,13 +51,13 @@ impl ConnectionHealth {
 
     pub fn label(&self) -> &'static str {
         match self {
-            Self::Unconfigured => "Set up 7pace",
-            Self::Connecting => "Connecting to 7pace…",
-            Self::Confirmed => "7pace connected",
-            Self::Stale => "7pace status is out of date",
-            Self::Offline => "7pace offline",
-            Self::Authentication => "Sign in to 7pace",
-            Self::AccessDenied => "7pace access denied",
+            Self::Unconfigured => tr("Set up 7pace"),
+            Self::Connecting => tr("Connecting to 7pace…"),
+            Self::Confirmed => tr("7pace connected"),
+            Self::Stale => tr("7pace status is out of date"),
+            Self::Offline => tr("7pace offline"),
+            Self::Authentication => tr("Sign in to 7pace"),
+            Self::AccessDenied => tr("7pace access denied"),
         }
     }
 

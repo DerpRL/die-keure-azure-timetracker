@@ -35,6 +35,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use windows::core::{GUID, PCWSTR, w};
 
 use super::system::failure;
+use crate::nl::{tr, trf};
 use crate::windows_parse::{PowerTracker, pbt, session_change_event};
 use crate::{PlatformError, Result, SystemEvent, SystemEventSink};
 
@@ -63,13 +64,14 @@ pub(crate) fn start(sink: SystemEventSink) -> Result<()> {
         .name("att-system-events".to_string())
         .spawn(move || run(sink, ready))
         .map_err(|error| {
-            PlatformError::Failed(format!(
-                "Windows session notifications could not start ({error})."
+            PlatformError::Failed(trf(
+                "Windows session notifications could not start ({error}).",
+                &[("error", &error)],
             ))
         })?;
     started.recv_timeout(Duration::from_secs(5)).unwrap_or_else(|_| {
         Err(PlatformError::Failed(
-            "Windows session notifications did not start in time.".to_string(),
+            tr("Windows session notifications did not start in time.").to_string(),
         ))
     })
 }
@@ -82,8 +84,8 @@ fn run(sink: SystemEventSink, ready: mpsc::Sender<Result<()>>) {
     let window = match create_window() {
         Ok(window) => window,
         Err(error) => {
-            let _ =
-                ready.send(Err(failure("Windows session notifications could not start", &error)));
+            let _ = ready
+                .send(Err(failure(tr("Windows session notifications could not start"), &error)));
             return;
         }
     };

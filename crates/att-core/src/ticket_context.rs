@@ -15,6 +15,7 @@ use serde_json::{Map, Value};
 
 use crate::error::{AppError, Result};
 
+use crate::nl::tr;
 pub use uri::UriParts;
 
 /// A related link shown in the context panel.
@@ -61,7 +62,7 @@ impl TicketContext {
     /// decides which relation links are rewritten to browser links. Any body that is not a JSON
     /// object with an integer `id` and a `fields` object is rejected without echoing its content.
     pub fn decode(data: &[u8], organization_url: &str) -> Result<Self> {
-        let incomplete = || AppError::message("Azure returned incomplete ticket details.");
+        let incomplete = || AppError::message(tr("Azure returned incomplete ticket details."));
         let Ok(Value::Object(object)) = serde_json::from_slice::<Value>(data) else {
             return Err(incomplete());
         };
@@ -139,7 +140,7 @@ fn links(object: &Map<String, Value>, organization_url: &str) -> Vec<TicketLink>
             .and_then(|attributes| attributes.get("name"))
             .and_then(Value::as_str)
             .or_else(|| relation.get("rel").and_then(Value::as_str))
-            .unwrap_or("Related link");
+            .unwrap_or(tr("Related link"));
         links.push(TicketLink { title: title.to_string(), url });
     }
     links

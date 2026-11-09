@@ -22,15 +22,13 @@ use att_store::keys;
 use crate::engine::Engine;
 use crate::intent::done;
 use crate::ipc::IpcError;
+use crate::nl::{tr, trf};
 use crate::probes::{PROBE_DEADLINE, blocking};
 use crate::state::AppState;
 
 use super::connection::{lookup, running_ticket, workspace};
 use super::tracking::{self, Choice, TrackingDraft};
 use super::{Effects, announce, busy, update_with};
-
-const STORAGE_ISSUE: &str =
-    "Figma context could not be saved on this Mac. Resolve the storage error before quitting.";
 
 pub(crate) struct FigmaState {
     /// Swift `figmaStore` (persisted): every workspace's ledger.
@@ -109,7 +107,10 @@ pub(crate) fn persist_ledger(engine: &Engine) {
     let saved = engine.persist().is_ok()
         && !engine.read(|state| state.session.unreadable.contains(keys::FIGMA_STORE));
     engine.update(|state| {
-        state.session.figma.storage_issue = (!saved).then(|| STORAGE_ISSUE.to_string());
+        state.session.figma.storage_issue = (!saved).then(|| {
+            tr("Figma context could not be saved on this Mac. Resolve the storage error before quitting.")
+                .to_string()
+        });
     });
 }
 
@@ -377,9 +378,9 @@ pub(crate) fn validate(
             || !state.config.figma.enabled
             || !state.config.watch_enabled
         {
-            return Err(AppError::message(
+            return Err(AppError::message(tr(
                 "Figma observation was paused, disabled or its workspace changed. Review the current context.",
-            ));
+            )));
         }
         let empty = FigmaLedger::default();
         let ledger = ledger(state).unwrap_or(&empty);
@@ -388,7 +389,7 @@ pub(crate) fn validate(
         } else if let Some(file) = file
             && ledger.links.get(file).copied() != ticket
         {
-            return Err(AppError::message("This Figma file’s ticket link changed. Choose the ticket again."));
+            return Err(AppError::message(tr("This Figma file’s ticket link changed. Choose the ticket again.")));
         }
         Ok(())
     })
@@ -467,14 +468,14 @@ pub(crate) async fn link(
     let result: Result<bool> = async {
         if let Some(id) = ticket {
             if !(1..=i64::from(i32::MAX)).contains(&id) {
-                return Err(AppError::message("Enter a valid ticket number."));
+                return Err(AppError::message(tr("Enter a valid ticket number.")));
             }
             let clients = engine
                 .clients()
-                .ok_or_else(|| AppError::message("Connect your account in Settings first."))?;
+                .ok_or_else(|| AppError::message(tr("Connect your account in Settings first.")))?;
             let item = lookup(engine, &clients, id).await?;
             if engine.read(self::scope) != scope {
-                return Err(AppError::message("Workspace changed. Review the link again."));
+                return Err(AppError::message(tr("Workspace changed. Review the link again.")));
             }
             engine.update(|state| state.session.work_items.insert(item.id, item));
         }
@@ -540,15 +541,15 @@ pub(crate) fn complete_tracking(
 /// Swift `openFigma(_:desktop:)`.
 pub(crate) fn open(engine: &Engine, key: &str, desktop: bool) {
     let url = if !FigmaDocument::valid_key(key) {
-        Err("This Figma file key is invalid.")
+        Err(tr("This Figma file key is invalid."))
     } else if desktop {
         if engine.services().platform.figma.figma_installed() {
-            FigmaDocument::desktop_url(key).ok_or("This Figma file key is invalid.")
+            FigmaDocument::desktop_url(key).ok_or(tr("This Figma file key is invalid."))
         } else {
-            Err("Install Figma Desktop to open this file in Figma.")
+            Err(tr("Install Figma Desktop to open this file in Figma."))
         }
     } else {
-        FigmaDocument::web_url(key).ok_or("This Figma file key is invalid.")
+        FigmaDocument::web_url(key).ok_or(tr("This Figma file key is invalid."))
     };
     match url {
         Ok(url) => engine.services().shell.open_url(&url),
@@ -589,13 +590,13 @@ pub(crate) async fn refresh_access(engine: &Engine) {
 pub(crate) fn status_label(state: &AppState) -> String {
     let figma = &state.session.figma;
     if !state.config.figma.enabled {
-        return "Disabled".into();
+        return tr("Disabled").into();
     }
     if !state.config.watch_enabled {
-        return "Paused".into();
+        return tr("Paused").into();
     }
     match &figma.observation {
-        FigmaObservation::MissingAccess => "Accessibility permission needed".into(),
+        FigmaObservation::MissingAccess => tr("Accessibility permission needed").into(),
         FigmaObservation::Waiting => {
             let previous = figma
                 .last_foreground
@@ -603,13 +604,15 @@ pub(crate) fn status_label(state: &AppState) -> String {
                 .and_then(FigmaObservation::document)
                 .map(|document| format!("Seen: {}", document.name))
                 .unwrap_or_else(|| "No file address found".into());
+            // The UI matches the "Waiting for Figma · " prefix to insert the time Figma was last
+            // in front (`places/settings/figma/model.ts`), so this form stays English.
             if figma.last_foreground_at.is_some() {
                 format!("Waiting for Figma · {previous}")
             } else {
-                "Waiting for Figma".into()
+                tr("Waiting for Figma").into()
             }
         }
-        FigmaObservation::NoAddress => "Figma is active · no file address found".into(),
-        FigmaObservation::File(file) => format!("File: {}", file.name),
+        FigmaObservation::NoAddress => tr("Figma is active · no file address found").into(),
+        FigmaObservation::File(file) => trf("File: {name}", &[("name", &file.name)]),
     }
 }

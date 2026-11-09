@@ -3,6 +3,7 @@ import type { MeetingPromptView } from '../../ipc/contract';
 import { useIntents, useWriteGuards } from '../tracking/actions';
 import { MeetingIcon } from '../tracking/icons';
 import { PromptCard, promptStyles as styles, useTimeOfDay } from './PromptCard';
+import { t } from '../../i18n';
 
 /**
  * "Meeting started" (1.14 `MeetingPrompt`): choose the activity for the meeting's ticket (its
@@ -17,7 +18,7 @@ export function MeetingPrompt({ view }: { view: MeetingPromptView }) {
     <PromptCard
       kind="meeting"
       icon={MeetingIcon}
-      title="Meeting started"
+      title={t('Meeting started')}
       runner={actions}
       actions={
         <>
@@ -25,7 +26,7 @@ export function MeetingPrompt({ view }: { view: MeetingPromptView }) {
             isPending={actions.isPending('dismiss')}
             onPress={() => void actions.run('dismiss', { type: 'meeting.dismiss', id: event.id })}
           >
-            {running ? 'Keep current' : 'Dismiss'}
+            {running ? t('Keep current') : t('Dismiss')}
           </Button>
           <span className={styles.spacer} />
           {ticketId !== null ? (
@@ -34,7 +35,7 @@ export function MeetingPrompt({ view }: { view: MeetingPromptView }) {
               isPending={actions.isPending('other')}
               onPress={() => void actions.run('other', { type: 'meeting.begin', id: event.id, useSuggestedTicket: false })}
             >
-              Other ticket…
+              {t('Other ticket…')}
             </Button>
           ) : null}
           <Button
@@ -44,7 +45,7 @@ export function MeetingPrompt({ view }: { view: MeetingPromptView }) {
             isPending={actions.isPending('begin')}
             onPress={() => void actions.run('begin', { type: 'meeting.begin', id: event.id, useSuggestedTicket: true })}
           >
-            Choose activity…
+            {t('Choose activity…')}
           </Button>
         </>
       }
@@ -57,9 +58,9 @@ export function MeetingPrompt({ view }: { view: MeetingPromptView }) {
       <p className={styles.caption}>
         {ticketId !== null
           ? event.ticketId === null
-            ? `Default meeting ticket #${ticketId}`
-            : `Linked ticket #${ticketId}`
-          : 'No ticket needed. The meeting title becomes the comment.'}
+            ? t('Default meeting ticket #{id}', { id: ticketId })
+            : t('Linked ticket #{id}', { id: ticketId })
+          : t('No ticket needed. The meeting title becomes the comment.')}
       </p>
     </PromptCard>
   );

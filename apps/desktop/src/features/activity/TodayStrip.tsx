@@ -4,6 +4,7 @@ import type { TrackingSlice, WorkLog } from '../../ipc/contract';
 import { useSlice } from '../../state/hooks';
 import { activityColorIndex, type ActivityColors } from './colors';
 import { DayStrip, stripWindow, type DayStripBlock } from './DayStrip';
+import { t } from '../../i18n';
 
 /** The current minute, so the running block and the now line move along. */
 function useMinute(): number {
@@ -56,7 +57,7 @@ export function TodayStrip({
         start: started,
         end: Math.max(now, started + 60_000),
         colorIndex: activityColorIndex(colors, tracking.activityId),
-        label: `${tracking.ticketId !== null ? `#${tracking.ticketId} · ` : ''}running`,
+        label: `${tracking.ticketId !== null ? `#${tracking.ticketId} · ` : ''}${t('running')}`,
         running: true,
       });
     }
@@ -70,8 +71,9 @@ export function TodayStrip({
     .slice()
     .sort((a, b) => a.start - b.start)
     .map((block) => {
-      const since = block.start < window.from ? 'since before today' : `from ${time.format(new Date(block.start))}`;
-      return `${block.label ?? 'Unassigned'} ${since}${block.running ? '' : ` to ${time.format(new Date(block.end))}`}`;
+      const since = block.start < window.from ? t('since before today') : t('from {time}', { time: time.format(new Date(block.start)) });
+      const until = block.running ? '' : ` ${t('to {time}', { time: time.format(new Date(block.end)) })}`;
+      return `${block.label ?? t('Unassigned')} ${since}${until}`;
     });
   return (
     <DayStrip
@@ -81,7 +83,7 @@ export function TodayStrip({
       to={window.to}
       blocks={blocks}
       now={now}
-      label={`Today’s time: ${parts.join(', ')}`}
+      label={t('Today’s time: {parts}', { parts: parts.join(', ') })}
     />
   );
 }

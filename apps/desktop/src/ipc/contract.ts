@@ -109,6 +109,8 @@ export interface IntentResults {
   'settings.testBranchPattern': BranchPatternTest;
   /** The bundle id (macOS) or executable name (Windows) and display name of a picked app. */
   'settings.resolveWorkApp': AppIdentity;
+  /** The id of the entry 7pace confirmed (the week calendar's drag to create). */
+  'timeEditor.create': { id: string };
 }
 
 export type IntentResult<T extends IntentType> = T extends keyof IntentResults ? IntentResults[T] : null;

@@ -1,0 +1,4 @@
+/* Dutch texts of Info.plist. The app declares Dutch in CFBundleLocalizations, so macOS (and the
+   web view's navigator.language) can pick Dutch for a Dutch system. */
+"NSCalendarsFullAccessUsageDescription" = "Azure timetracker leest je agenda's om je dagplanning naast je geregistreerde werk te tonen. Het wijzigt geen afspraken en stuurt ze niet naar Azure of 7pace.";
+"NSCalendarsUsageDescription" = "Toon je agenda naast je geregistreerde werk.";

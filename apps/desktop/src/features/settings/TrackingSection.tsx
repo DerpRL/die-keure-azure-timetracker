@@ -13,6 +13,7 @@ import { fallbackShortcut, readShortcut } from './platform';
 import { InlineIssue, IssueRow, SettingRow, SettingsSection, ToggleRow } from './SettingsSection';
 import { useSettingsForm } from './SettingsForm';
 import { POLL_CHOICES } from './validation';
+import { t } from '../../i18n';
 import styles from './settings.module.css';
 
 /** `Select` keys cannot be empty; "" (use the 7pace default) maps to this key. */
@@ -67,8 +68,8 @@ function RuleTable() {
       <table className={styles.rules}>
         <thead>
           <tr>
-            <th scope="col">When you switch to</th>
-            <th scope="col">The app suggests</th>
+            <th scope="col">{t('When you switch to')}</th>
+            <th scope="col">{t('The app suggests')}</th>
           </tr>
         </thead>
         <tbody>
@@ -77,7 +78,7 @@ function RuleTable() {
               <code className={styles.code}>{TEST_BRANCH}</code>
             </td>
             <td>
-              <Badge tone="accent">Track ticket #33624</Badge>
+              <Badge tone="accent">{t('Track ticket #{id}', { id: 33624 })}</Badge>
             </td>
           </tr>
           <tr>
@@ -86,13 +87,13 @@ function RuleTable() {
               <code className={styles.code}>long-feature/*</code>
             </td>
             <td>
-              <Badge tone="neutral">Ask to pause, stop or keep tracking</Badge>
+              <Badge tone="neutral">{t('Ask to pause, stop or keep tracking')}</Badge>
             </td>
           </tr>
           <tr>
-            <td>Detached HEAD</td>
+            <td>{t('Detached HEAD')}</td>
             <td>
-              <Badge tone="neutral">Nothing</Badge>
+              <Badge tone="neutral">{t('Nothing')}</Badge>
             </td>
           </tr>
         </tbody>
@@ -109,15 +110,15 @@ export function BranchRulesSection() {
   return (
     <SettingsSection id="branchRules">
       <RuleTable />
-      <SettingRow title="Ticket number pattern" help="Regular expression. The first group is the ticket number.">
+      <SettingRow title={t('Ticket number pattern')} help={t('Regular expression. The first group is the ticket number.')}>
         {({ helpId }) => (
           <TextField
-            label="Ticket number pattern"
+            label={t('Ticket number pattern')}
             hideLabel
             aria-describedby={helpId}
             value={draft.branchPattern}
             onChange={(branchPattern) => update((current) => ({ ...current, branchPattern }))}
-            placeholder="Regular expression"
+            placeholder={t('Regular expression')}
             isInvalid={test.invalid}
             errorMessage={test.invalid ? (test.text ?? undefined) : undefined}
             className={`${styles.mono} ${styles.fieldMedium}`}
@@ -126,9 +127,9 @@ export function BranchRulesSection() {
           />
         )}
       </SettingRow>
-      <SettingRow title="Try a branch name">
+      <SettingRow title={t('Try a branch name')}>
         <TextField
-          label="Try a branch name"
+          label={t('Try a branch name')}
           hideLabel
           value={branch}
           onChange={setBranch}
@@ -137,13 +138,13 @@ export function BranchRulesSection() {
           spellCheck="false"
         />
         <output aria-live="polite" className={test.invalid ? styles.resultBad : test.testing ? styles.resultPending : styles.resultGood}>
-          <span className="visually-hidden">Result: </span>
-          {test.testing ? 'Testing…' : test.text}
+          <span className="visually-hidden">{t('Result:')} </span>
+          {test.testing ? t('Testing…') : test.text}
         </output>
       </SettingRow>
       <ToggleRow
-        title="Ask for an activity when the branch changes"
-        help="Opens the activity chooser for a new branch while no timer runs. Every timer still starts after you choose its activity and confirm."
+        title={t('Ask for an activity when the branch changes')}
+        help={t('Opens the activity chooser for a new branch while no timer runs. Every timer still starts after you choose its activity and confirm.')}
         isSelected={draft.autoStartWhenIdle}
         onChange={(autoStartWhenIdle) => update((current) => ({ ...current, autoStartWhenIdle }))}
       />
@@ -158,13 +159,13 @@ export function PollSelect() {
     ? POLL_CHOICES
     : [...POLL_CHOICES, draft.pollSeconds].sort((a, b) => a - b);
   return (
-    <SettingRow title="Timer status" help="The 7pace timer, so changes from the web show up here. Server rate limits are always respected.">
+    <SettingRow title={t('Timer status')} help={t('The 7pace timer, so changes from the web show up here. Server rate limits are always respected.')}>
       {({ helpId }) => (
         <Select
-          label="Refresh 7pace"
+          label={t('Refresh 7pace')}
           hideLabel
           aria-describedby={helpId}
-          items={pollOptions.map((seconds) => ({ id: seconds, label: POLL_LABELS[seconds] ?? `Every ${seconds} seconds` }))}
+          items={pollOptions.map((seconds) => ({ id: seconds, label: POLL_LABELS[seconds] ? t(POLL_LABELS[seconds]) : t('Every {count} seconds', { count: seconds }) }))}
           selectedKey={draft.pollSeconds}
           onSelectionChange={(key) => {
             if (typeof key === 'number') update((current) => ({ ...current, pollSeconds: key }));
@@ -283,7 +284,7 @@ export function QuickSwitch() {
   const record = useCallback(
     (quickSwitchShortcut: string) => {
       update((current) => ({ ...current, quickSwitchShortcut }));
-      announce(`Quick switch shortcut set to ${spokenAccelerator(quickSwitchShortcut, os)}. Save changes to use it.`);
+      announce(t('Quick switch shortcut set to {shortcut}. Save changes to use it.', { shortcut: spokenAccelerator(quickSwitchShortcut, os) }));
     },
     [update, os],
   );
@@ -291,32 +292,38 @@ export function QuickSwitch() {
   return (
     <>
       <ToggleRow
-        title="Quick switch ticket"
-        help="Works everywhere, also when the app window is closed. Opens ticket search with favorites and recent tickets."
+        title={t('Quick switch ticket')}
+        help={t('Works everywhere, also when the app window is closed. Opens ticket search with favorites and recent tickets.')}
         isSelected={draft.quickSwitchEnabled}
         onChange={(quickSwitchEnabled) => update((current) => ({ ...current, quickSwitchEnabled }))}
       />
       <SettingRow
         sub
-        title="Shortcut"
-        help={typed.trim() === '' ? `The default, ${status.defaultLabel}.` : `Clear to use the default, ${status.defaultLabel}.`}
+        title={t('Shortcut')}
+        help={
+          typed.trim() === ''
+            ? t('The default, {shortcut}.', { shortcut: status.defaultLabel })
+            : t('Clear to use the default, {shortcut}.', { shortcut: status.defaultLabel })
+        }
         dimmed={!draft.quickSwitchEnabled}
         below={
           <>
-            {looksInvalid ? <InlineIssue tone="warning">Include at least one modifier key and one other key, such as {status.defaultAccelerator}.</InlineIssue> : null}
+            {looksInvalid ? <InlineIssue tone="warning">
+                {t('Include at least one modifier key and one other key, such as {shortcut}.', { shortcut: status.defaultAccelerator })}
+              </InlineIssue> : null}
             {status.issue ? <InlineIssue tone="warning">{status.issue}</InlineIssue> : null}
           </>
         }
       >
         <span className={recorder.recording ? styles.recorderActive : styles.recorder}>
           {recorder.recording ? (
-            <span aria-live="polite">Press the new shortcut, or Escape</span>
+            <span aria-live="polite">{t('Press the new shortcut, or Escape')}</span>
           ) : (
             <KeyboardShortcut shortcut={acceleratorCombo(accelerator)} variant="standalone" />
           )}
         </span>
         <Button size="small" onPress={() => recorder.setRecording((value) => !value)} isDisabled={!draft.quickSwitchEnabled}>
-          {recorder.recording ? 'Cancel' : 'Record…'}
+          {recorder.recording ? t('Cancel') : t('Record…')}
         </Button>
         <Button
           size="small"
@@ -324,7 +331,7 @@ export function QuickSwitch() {
           isDisabled={!draft.quickSwitchEnabled || typed.trim() === ''}
           onPress={() => update((current) => ({ ...current, quickSwitchShortcut: null }))}
         >
-          Clear
+          {t('Clear')}
         </Button>
       </SettingRow>
     </>
@@ -339,16 +346,16 @@ export function TimerSection() {
   return (
     <SettingsSection
       id="tracking"
-      subtitle="Nothing starts a timer until you choose an activity and confirm. Only quarter-hour rounding changes what is saved to 7pace."
+      subtitle={t('Nothing starts a timer until you choose an activity and confirm. Only quarter-hour rounding changes what is saved to 7pace.')}
     >
       {activities.length > 0 ? (
-        <SettingRow title="Activity for new timers" help="Used when a source does not suggest one.">
+        <SettingRow title={t('Activity for new timers')} help={t('Used when a source does not suggest one.')}>
           {({ helpId }) => (
             <Select
-              label="Default activity"
+              label={t('Default activity')}
               hideLabel
               aria-describedby={helpId}
-              items={activityOptions(activities, 'Use 7pace default', draft.activityTypeId)}
+              items={activityOptions(activities, t('Use 7pace default'), draft.activityTypeId)}
               selectedKey={draft.activityTypeId === '' ? DEFAULT_ACTIVITY_KEY : draft.activityTypeId}
               onSelectionChange={(key) =>
                 update((current) => ({ ...current, activityTypeId: key === DEFAULT_ACTIVITY_KEY || key === null ? '' : String(key) }))
@@ -358,13 +365,13 @@ export function TimerSection() {
           )}
         </SettingRow>
       ) : (
-        <SettingRow title="Activity type ID" help="Optional. Only needed if your organization requires a specific activity.">
+        <SettingRow title={t('Activity type ID')} help={t('Optional. Only needed if your organization requires a specific activity.')}>
           {({ helpId }) => (
             <TextField
-              label="Activity type ID"
+              label={t('Activity type ID')}
               hideLabel
               aria-describedby={helpId}
-              placeholder="Use 7pace default"
+              placeholder={t('Use 7pace default')}
               value={draft.activityTypeId}
               onChange={(activityTypeId) => update((current) => ({ ...current, activityTypeId }))}
               autoComplete="off"
@@ -375,14 +382,16 @@ export function TimerSection() {
       )}
       {flow?.activityError ? <IssueRow tone="warning">{flow.activityError}</IssueRow> : null}
       <ToggleRow
-        title="Tell me when my ticket is closed"
-        help="If the ticket you track is set to Done or Closed in Azure DevOps, offer to switch. Checks about once a minute while tracking (needs an Azure PAT)."
+        title={t('Tell me when my ticket is closed')}
+        help={t('If the ticket you track is set to Done or Closed in Azure DevOps, offer to switch. Checks about once a minute while tracking (needs an Azure PAT).')}
         isSelected={draft.completionReminders}
         onChange={(completionReminders) => update((current) => ({ ...current, completionReminders }))}
       />
       <ToggleRow
-        title="Round saved time to the nearest quarter hour"
-        help="1h 5m is saved as 1h, 1h 12m as 1h 15m, and anything shorter than 7m 30s as 15m. Applies when the app saves time to 7pace: stopped timers, offline drafts and Time editor changes. Entries already in 7pace stay as they are."
+        title={t('Round saved time to the nearest quarter hour')}
+        help={t(
+          '1h 5m is saved as 1h, 1h 12m as 1h 15m, and anything shorter than 7m 30s as 15m. Applies when the app saves time to 7pace: stopped timers, offline drafts and Time editor changes. Entries already in 7pace stay as they are.',
+        )}
         isSelected={draft.roundToQuarterHours}
         onChange={(roundToQuarterHours) => update((current) => ({ ...current, roundToQuarterHours }))}
       />

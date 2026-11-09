@@ -8,6 +8,8 @@ import { useAction, useSlice } from '../../state/hooks';
 import { deepEqual } from './configDraft';
 import { Hint, InlineIssue } from './SettingsSection';
 import { FIGMA_DISMISSAL_MINUTES, FIGMA_HISTORY_DAYS } from './validation';
+import { t } from '../../i18n';
+import { figmaLabel } from '../../places/settings/figma/model';
 import styles from './settings.module.css';
 
 /**
@@ -61,30 +63,30 @@ export function FigmaSettings({ onboarding = false }: { onboarding?: boolean }) 
   return (
     <>
       <Switch isSelected={preferences.enabled} onChange={(enabled) => apply({ ...preferences, enabled })}>
-        Observe Figma files
+        {t('Observe Figma files')}
       </Switch>
       <Hint>
         {titleOnly
-          ? 'Reads only Figma window titles on this PC. No design content, Figma account, token or plugin. Browser tabs are not observed. Window-title detection is experimental.'
-          : 'Reads only file URLs and window titles on this Mac. No design content, Figma account, token or plugin. Browser tabs are not observed.'}
+          ? t('Reads only Figma window titles on this PC. No design content, Figma account, token or plugin. Browser tabs are not observed. Window-title detection is experimental.')
+          : t('Reads only file URLs and window titles on this Mac. No design content, Figma account, token or plugin. Browser tabs are not observed.')}
       </Hint>
       {preferences.enabled && figma ? (
         <p className={styles.status}>
           {hasAccess || !macos ? <SuccessIcon className={styles.statusIcon} /> : <InfoIcon className={styles.statusIcon} />}
-          <span>{figma.label}</span>
+          <span>{figmaLabel(figma)}</span>
         </p>
       ) : null}
       {preferences.enabled && macos && !hasAccess ? (
         <>
           <div className={styles.row}>
             <Button onPress={() => void access.run({ type: 'figma.requestAccess' })} isPending={access.pending}>
-              Allow Accessibility…
+              {t('Allow Accessibility…')}
             </Button>
           </div>
           <Hint>
-            Enable Azure timetracker in System Settings → Privacy & Security → Accessibility, then return here. The status updates
-            automatically. Already on? macOS ties the permission to the app’s signature, so after an update or with a local build, remove
-            Azure timetracker with − and add it again.
+            {t(
+              'Enable Azure timetracker in System Settings → Privacy & Security → Accessibility, then return here. The status updates automatically. Already on? macOS ties the permission to the app’s signature, so after an update or with a local build, remove Azure timetracker with − and add it again.',
+            )}
           </Hint>
         </>
       ) : null}
@@ -92,8 +94,8 @@ export function FigmaSettings({ onboarding = false }: { onboarding?: boolean }) 
         <>
           <div className={styles.fieldRow}>
             <NumberField
-              label="Keep tracking: suppress suggestions for"
-              unit="minutes"
+              label={t('Keep tracking: suppress suggestions for')}
+              unit={t('minutes')}
               minValue={FIGMA_DISMISSAL_MINUTES.min}
               maxValue={FIGMA_DISMISSAL_MINUTES.max}
               value={preferences.dismissalMinutes}
@@ -105,8 +107,8 @@ export function FigmaSettings({ onboarding = false }: { onboarding?: boolean }) 
               formatOptions={{ maximumFractionDigits: 0 }}
             />
             <NumberField
-              label="Keep context history for"
-              unit="days"
+              label={t('Keep context history for')}
+              unit={t('days')}
               minValue={FIGMA_HISTORY_DAYS.min}
               maxValue={FIGMA_HISTORY_DAYS.max}
               value={preferences.historyDays}
@@ -117,8 +119,9 @@ export function FigmaSettings({ onboarding = false }: { onboarding?: boolean }) 
             />
           </div>
           <Hint>
-            Zero suppression allows a new suggestion at the next activation. Pausing branch watching (Settings → Git repositories) pauses Figma
-            observations. Changes here save immediately.
+            {t(
+              'Zero suppression allows a new suggestion at the next activation. Pausing branch watching (Settings → Git repositories) pauses Figma observations. Changes here save immediately.',
+            )}
           </Hint>
         </>
       ) : null}

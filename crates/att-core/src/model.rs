@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::error::{AppError, Result};
+use crate::nl::{tr, trf};
 use crate::text::NonEmpty;
 use crate::time::wire_date;
 
@@ -196,8 +197,8 @@ impl Track {
             return remark.to_string();
         }
         match self.ticket_id() {
-            Some(id) => format!("Work item #{id}"),
-            None => "Unassigned time".to_string(),
+            Some(id) => trf("Work item #{id}", &[("id", &id)]),
+            None => tr("Unassigned time").to_string(),
         }
     }
 
@@ -265,15 +266,15 @@ impl TrackingState {
             let message = settings
                 .response_message
                 .non_empty()
-                .unwrap_or("7pace rejected this request.")
+                .unwrap_or(tr("7pace rejected this request."))
                 .to_string();
             return Err(AppError::Message(message));
         }
         match &self.track {
             Some(track) if track.is_running() || track.is_idle() => Ok(self),
-            _ => Err(AppError::message(
+            _ => Err(AppError::message(tr(
                 "7pace returned an unknown tracking state. Refresh before changing your timer.",
-            )),
+            ))),
         }
     }
 }
@@ -300,7 +301,7 @@ pub fn resolve_activity(selected_id: &str, available: &[ActivityType]) -> Result
         return Ok(None);
     }
     if !available.iter().any(|a| a.id == selected_id) {
-        return Err(AppError::message("Choose an activity type before starting the timer."));
+        return Err(AppError::message(tr("Choose an activity type before starting the timer.")));
     }
     Ok(Some(selected_id.to_string()))
 }

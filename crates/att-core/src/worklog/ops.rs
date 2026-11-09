@@ -21,6 +21,7 @@ use uuid::Uuid;
 use super::{WorkLogDraft, WorkLogTimeEdit, edit::WorkLogOverlap};
 use crate::error::{AppError, Result};
 use crate::model::WorkLog;
+use crate::nl::{tr, trf};
 use crate::service::WorkLogMutationService;
 use crate::text::NonEmpty;
 use crate::time::{Cal, add_secs, diff_secs, floor_to_second, round_to_second};
@@ -41,7 +42,7 @@ impl WorkLogDraft {
         cal: &Cal,
     ) -> Result<Self> {
         if end > now {
-            return Err(AppError::message("Choose valid times with no time in the future."));
+            return Err(AppError::message(tr("Choose valid times with no time in the future.")));
         }
         let edit = WorkLogTimeEdit::new(floor_to_second(start), floor_to_second(end));
         edit.validate(now, cal)?;
@@ -73,7 +74,9 @@ impl WorkLogDraft {
             && billable.is_finite()
             && (0.0..=limit).contains(&billable);
         let Some(date) = log.date(cal.tz()).filter(|_| readable) else {
-            return Err(AppError::message("This entry has an invalid time or billable duration."));
+            return Err(AppError::message(tr(
+                "This entry has an invalid time or billable duration.",
+            )));
         };
         Ok(Self {
             existing_id: existing.then(|| log.id.clone()),
@@ -100,9 +103,9 @@ impl WorkLogDraft {
             None => self.comment.non_empty().is_some(),
         };
         if !(0..=limit).contains(&self.billable_seconds) || !target {
-            return Err(AppError::message(
+            return Err(AppError::message(tr(
                 "Choose a valid ticket or add a comment for ticket-free time.",
-            ));
+            )));
         }
         Ok(())
     }
@@ -140,6 +143,21 @@ pub struct WorkLogPlan {
 }
 
 impl WorkLogPlan {
+    /// One new entry (the week calendar's drag to create). Its undo removes the entry again.
+    pub fn create(draft: WorkLogDraft) -> Result<Self> {
+        if draft.existing_id.is_some() || draft.restored_id.is_some() {
+            return Err(AppError::message(tr(
+                "This change contains duplicate or unknown entries.",
+            )));
+        }
+        Ok(Self {
+            title: tr("Add time").into(),
+            before: Vec::new(),
+            desired: vec![draft],
+            undo_of: None,
+        })
+    }
+
     /// New start and length for one entry. An entry without an explicit billable length keeps
     /// billing its full (new) length.
     pub fn edit(log: &WorkLog, time: WorkLogTimeEdit, now: Timestamp, cal: &Cal) -> Result<Self> {
@@ -151,7 +169,7 @@ impl WorkLogPlan {
             draft.billable_seconds = time.seconds();
         }
         Ok(Self {
-            title: "Edit time".into(),
+            title: tr("Edit time").into(),
             before: vec![log.clone()],
             desired: vec![draft],
             undo_of: None,
@@ -174,7 +192,7 @@ impl WorkLogPlan {
         let mut second = first.clone();
         let left = diff_secs(at, first.start).round() as i64;
         if left <= 0 || left >= first.seconds {
-            return Err(AppError::message("Choose a split time strictly inside the entry."));
+            return Err(AppError::message(tr("Choose a split time strictly inside the entry.")));
         }
         second.existing_id = None;
         second.start = add_secs(first.start, left as f64);
@@ -191,7 +209,7 @@ impl WorkLogPlan {
         first.validate(now, cal)?;
         second.validate(now, cal)?;
         Ok(Self {
-            title: "Split entry".into(),
+            title: tr("Split entry").into(),
             before: vec![log.clone()],
             desired: vec![first, second],
             undo_of: None,
@@ -207,7 +225,7 @@ impl WorkLogPlan {
         sorted.sort_by_cached_key(|log| log.date(cal.tz()).unwrap_or(Timestamp::MIN));
         let distinct: BTreeSet<&str> = sorted.iter().map(|log| log.id.as_str()).collect();
         if sorted.len() < 2 || distinct.len() != sorted.len() {
-            return Err(AppError::message("Select at least two different entries to merge."));
+            return Err(AppError::message(tr("Select at least two different entries to merge.")));
         }
         let mut combined = WorkLogDraft::from_log(&sorted[0], true, cal)?;
         let mut end = combined.edit().end;
@@ -218,14 +236,14 @@ impl WorkLogPlan {
                 || next.comment != combined.comment
                 || next.user_id != combined.user_id
             {
-                return Err(AppError::message(
+                return Err(AppError::message(tr(
                     "Merge entries with the same ticket, activity, comment and owner. Different work stays separate.",
-                ));
+                )));
             }
             if diff_secs(next.start, end).abs() >= 1.0 {
-                return Err(AppError::message(
+                return Err(AppError::message(tr(
                     "Only adjacent entries can be merged. Gaps and overlapping time are not filled or removed.",
-                ));
+                )));
             }
             combined.seconds += next.seconds;
             combined.billable_seconds += next.billable_seconds;
@@ -233,7 +251,7 @@ impl WorkLogPlan {
         }
         combined.validate(now, cal)?;
         Ok(Self {
-            title: format!("Merge {} entries", sorted.len()),
+            title: trf("Merge {count} entries", &[("count", &sorted.len())]),
             before: sorted,
             desired: vec![combined],
             undo_of: None,
@@ -245,7 +263,7 @@ impl WorkLogPlan {
     /// created are deleted.
     pub fn undo(record: &WorkLogChange, cal: &Cal) -> Result<Self> {
         if record.status != WorkLogChangeStatus::Complete {
-            return Err(AppError::message("Only a confirmed, completed change can be undone."));
+            return Err(AppError::message(tr("Only a confirmed, completed change can be undone.")));
         }
         let existing: BTreeSet<&str> = record.after.iter().map(|log| log.id.as_str()).collect();
         let desired = record
@@ -261,7 +279,7 @@ impl WorkLogPlan {
             })
             .collect::<Result<Vec<_>>>()?;
         Ok(Self {
-            title: format!("Undo {}", record.title.to_lowercase()),
+            title: trf("Undo {title}", &[("title", &record.title.to_lowercase())]),
             before: record.after.clone(),
             desired,
             undo_of: Some(record.id),
@@ -320,7 +338,7 @@ pub struct WorkLogChange {
 }
 
 fn preparing_change() -> String {
-    "Preparing change".to_string()
+    tr("Preparing change").to_string()
 }
 
 impl WorkLogChange {
@@ -369,14 +387,14 @@ impl WorkLogOperations {
     ) -> Result<()> {
         let actual = service.work_log(&expected.id).await?;
         if !Self::unchanged(&actual, expected) {
-            return Err(AppError::message(
+            return Err(AppError::message(tr(
                 "An affected entry changed in 7pace. Refresh before applying this change.",
-            ));
+            )));
         }
         if actual.is_can_edit != Some(true) || (deleting && actual.is_can_delete != Some(true)) {
-            return Err(AppError::message(
+            return Err(AppError::message(tr(
                 "7pace does not allow editing or deleting one of these entries. Check its approval state and permissions.",
-            ));
+            )));
         }
         let state = service.current_tracking().await?.checked()?;
         WorkLogOverlap::validate_editable_entry(&expected.id, &state)
@@ -401,8 +419,10 @@ impl WorkLogOperations {
         F: FnMut(WorkLogChange) -> Fut,
         Fut: Future<Output = Result<()>>,
     {
-        if plan.before.is_empty() || plan.desired.is_empty() {
-            return Err(AppError::message("This change has no entries."));
+        // A change touches at least one entry: a new entry has no `before`, and the undo of a
+        // new entry removes it and has no `desired`.
+        if plan.before.is_empty() && plan.desired.is_empty() {
+            return Err(AppError::message(tr("This change has no entries.")));
         }
         for draft in &plan.desired {
             draft.validate(now, cal)?;
@@ -415,7 +435,9 @@ impl WorkLogOperations {
             || !retained.is_subset(&originals)
             || retained.len() != existing.len()
         {
-            return Err(AppError::message("This change contains duplicate or unknown entries."));
+            return Err(AppError::message(tr(
+                "This change contains duplicate or unknown entries.",
+            )));
         }
         for log in &plan.before {
             Self::verify(log, !retained.contains(log.id.as_str()), service).await?;
@@ -424,9 +446,9 @@ impl WorkLogOperations {
             if let Some(old_id) = draft.restored_id.as_deref()
                 && service.find_work_log(old_id).await?.is_some()
             {
-                return Err(AppError::message(
+                return Err(AppError::message(tr(
                     "An entry scheduled for restoration already exists. Refresh before undoing.",
-                ));
+                )));
             }
         }
         let mut record = WorkLogChange::new(plan, workspace, now);
@@ -436,15 +458,15 @@ impl WorkLogOperations {
             Ok(()) => Ok(record),
             Err(error) => {
                 record.status = WorkLogChangeStatus::NeedsReview;
-                record.detail = format!(
-                    "{} Some changes may already be saved. No request was retried. {error}",
-                    record.detail
+                record.detail = trf(
+                    "{detail} Some changes may already be saved. No request was retried. {error}",
+                    &[("detail", &record.detail), ("error", &error)],
                 );
                 // Best effort: the error below already tells the user to review the entries.
                 let _ = checkpoint(record.clone()).await;
-                Err(AppError::Message(format!(
-                    "{} Review Recent edits and the actual entries in 7pace before continuing.",
-                    record.detail
+                Err(AppError::Message(trf(
+                    "{detail} Review Recent edits and the actual entries in 7pace before continuing.",
+                    &[("detail", &record.detail)],
                 )))
             }
         }
@@ -476,7 +498,10 @@ impl Steps<'_> {
             for log in &self.plan.before {
                 WorkLogOperations::verify(log, self.deleting(log), service).await?;
             }
-            record.detail = "Creating a replacement entry; if interrupted, check 7pace before doing anything else.".into();
+            record.detail = tr(
+                "Creating a replacement entry; if interrupted, check 7pace before doing anything else.",
+            )
+            .into();
             checkpoint(record.clone()).await?;
             let created = service.create_work_log(draft).await?;
             record.after.push(created.clone());
@@ -485,30 +510,30 @@ impl Steps<'_> {
                 || self.originals.contains(created.id.as_str())
                 || !draft.matches(&created, self.cal)
             {
-                return Err(AppError::message(
+                return Err(AppError::message(tr(
                     "7pace did not confirm the replacement entry as requested.",
-                ));
+                )));
             }
         }
         for draft in &self.plan.desired {
             let Some(id) = draft.existing_id.as_deref() else { continue };
             // `apply` checked that every retained ID is one of the originals.
             let Some(original) = self.plan.before.iter().find(|log| log.id == id) else {
-                return Err(AppError::message(
+                return Err(AppError::message(tr(
                     "This change contains duplicate or unknown entries.",
-                ));
+                )));
             };
             WorkLogOperations::verify(original, false, service).await?;
-            record.detail = format!("Updating entry {id}.");
+            record.detail = trf("Updating entry {id}.", &[("id", &id)]);
             checkpoint(record.clone()).await?;
             let saved = service.replace_work_log_time(id, draft).await?;
             record.after.retain(|log| log.id != id);
             record.after.push(saved.clone());
             checkpoint(record.clone()).await?;
             if saved.id != id || !draft.matches(&saved, self.cal) {
-                return Err(AppError::message(
+                return Err(AppError::message(tr(
                     "7pace did not confirm the updated entry as requested.",
-                ));
+                )));
             }
         }
         for original in self.plan.before.iter().filter(|log| self.deleting(log)) {
@@ -526,26 +551,26 @@ impl Steps<'_> {
             for saved in &replacements {
                 let actual = service.work_log(&saved.id).await?;
                 if !WorkLogOperations::unchanged(&actual, saved) {
-                    return Err(AppError::message(
+                    return Err(AppError::message(tr(
                         "A replacement entry changed before the merge finished. Check the change history.",
-                    ));
+                    )));
                 }
             }
             WorkLogOperations::verify(original, true, service).await?;
-            record.detail = format!("Removing original entry {}.", original.id);
+            record.detail = trf("Removing original entry {id}.", &[("id", &original.id)]);
             checkpoint(record.clone()).await?;
             service.delete_work_log(&original.id).await?;
             // Only a 404 (`None`) confirms the removal.
             if service.find_work_log(&original.id).await?.is_some() {
-                return Err(AppError::message(
+                return Err(AppError::message(tr(
                     "7pace did not confirm removal of the original entry.",
-                ));
+                )));
             }
             record.after.retain(|log| log.id != original.id);
             checkpoint(record.clone()).await?;
         }
         record.status = WorkLogChangeStatus::Complete;
-        record.detail = "Confirmed by 7pace".into();
+        record.detail = tr("Confirmed by 7pace").into();
         checkpoint(record.clone()).await
     }
 }

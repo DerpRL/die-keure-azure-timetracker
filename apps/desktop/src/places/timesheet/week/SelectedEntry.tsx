@@ -9,6 +9,7 @@ import { formatClockTime, formatDayLong } from '../../../features/ticketContext/
 import { TicketLink } from '../../../features/ticketContext/TicketLink';
 import { useAction, useSlice } from '../../../state/hooks';
 import { formatShortDuration } from '../../../utils/duration';
+import { t } from '../../../i18n';
 import { canSave, EditTimes, SaveConfirmation } from '../day/EditSheet';
 import type { WeekBlock } from './weekModel';
 import styles from './week.module.css';
@@ -55,40 +56,40 @@ export function SelectedEntry({ block, onClose, onMoreOptions, onOpenDay }: Sele
     <Card as="section" aria-labelledby={headingId} className={styles.card}>
       <div className={styles.cardHead}>
         <h2 id={headingId} className={styles.cardTitle}>
-          Selected entry
+          {t('Selected entry')}
         </h2>
-        <IconButton label="Close selected entry" icon={CloseIcon} size="small" variant="secondary" tooltip={false} onPress={onClose} />
+        <IconButton label={t('Close selected entry')} icon={CloseIcon} size="small" variant="secondary" tooltip={false} onPress={onClose} />
       </div>
 
-      <div className={styles.fieldLabel}>Ticket</div>
+      <div className={styles.fieldLabel}>{t('Ticket')}</div>
       <div className={styles.ticketBox}>
         <span className={styles.ticketTitle}>{block.title}</span>
         <span className={styles.caption}>
-          {block.ticketId !== null ? <TicketLink ticketId={block.ticketId} compact /> : 'No Azure ticket'}
+          {block.ticketId !== null ? <TicketLink ticketId={block.ticketId} compact /> : t('No Azure ticket')}
         </span>
       </div>
 
       <dl className={styles.facts}>
         <div>
-          <dt className={styles.fieldLabel}>Activity</dt>
+          <dt className={styles.fieldLabel}>{t('Activity')}</dt>
           <dd>
             {block.activityName ? (
               <ActivityChip name={block.activityName} colorIndex={activityColorIndex(colors, block.activityId)} />
             ) : (
-              'Default activity'
+              t('Default activity')
             )}
           </dd>
         </div>
         <div>
-          <dt className={styles.fieldLabel}>Date</dt>
+          <dt className={styles.fieldLabel}>{t('Date')}</dt>
           <dd>{formatDayLong(block.day)}</dd>
         </div>
         {!editing ? (
           <div>
-            <dt className={styles.fieldLabel}>Time</dt>
+            <dt className={styles.fieldLabel}>{t('Time')}</dt>
             <dd className={styles.mono}>
               {block.kind === 'running'
-                ? `${formatClockTime(new Date(block.start))} – now`
+                ? t('{start} – now', { start: formatClockTime(new Date(block.start)) })
                 : `${formatClockTime(new Date(block.start))} – ${formatClockTime(new Date(block.end))}`}
             </dd>
           </div>
@@ -106,20 +107,20 @@ export function SelectedEntry({ block, onClose, onMoreOptions, onOpenDay }: Sele
       ) : null}
 
       <p className={styles.caption}>
-        Duration <span className={styles.strong}>{formatShortDuration(seconds)}</span>
+        {t('Duration')} <span className={styles.strong}>{formatShortDuration(seconds)}</span>
       </p>
       {block.comment ? (
         <p className={styles.caption}>
-          Comment <span className={styles.strong}>{block.comment}</span>
+          {t('Comment')} <span className={styles.strong}>{block.comment}</span>
         </p>
       ) : null}
 
       {block.kind === 'running' ? (
-        <p className={styles.caption}>The 7pace timer is still running. Stop it before you change its time.</p>
+        <p className={styles.caption}>{t('The 7pace timer is still running. Stop it before you change its time.')}</p>
       ) : block.locked ? (
-        <p className={styles.caption}>7pace doesn’t allow editing this entry.</p>
+        <p className={styles.caption}>{t('7pace doesn’t allow editing this entry.')}</p>
       ) : !loaded ? (
-        <ProgressBar label="Loading the entry from 7pace…" isIndeterminate />
+        <ProgressBar label={t('Loading the entry from 7pace…')} isIndeterminate />
       ) : null}
 
       {editing?.validationIssue ? (
@@ -129,7 +130,7 @@ export function SelectedEntry({ block, onClose, onMoreOptions, onOpenDay }: Sele
       ) : null}
       {editing?.requiresReview ? (
         <Banner tone="warning" live="off">
-          An earlier change needs review. Open Recent edits in the Day view before making another change.
+          {t('An earlier change needs review. Open Recent edits in the Day view before making another change.')}
         </Banner>
       ) : null}
       {issue ? <Banner tone="error">{issue}</Banner> : null}
@@ -138,16 +139,16 @@ export function SelectedEntry({ block, onClose, onMoreOptions, onOpenDay }: Sele
         <div className={styles.buttonGroup}>
           {editable ? (
             <Button size="small" isDisabled={!loaded || locked} onPress={onMoreOptions}>
-              More options…
+              {t('More options…')}
             </Button>
           ) : null}
           <Button size="small" variant="plain" onPress={onOpenDay}>
-            Open day
+            {t('Open day')}
           </Button>
         </div>
         {editable ? (
           <Button variant="primary" isDisabled={!editing || !canSave(editing, busy, preview)} onPress={() => setConfirming(true)}>
-            Save to 7pace
+            {t('Save to 7pace')}
           </Button>
         ) : null}
       </div>

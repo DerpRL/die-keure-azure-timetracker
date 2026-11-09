@@ -17,6 +17,7 @@ import {
 } from 'react-aria-components';
 import { KeyboardShortcut } from '../components/KeyboardShortcut';
 import { SearchIcon } from '../components/icons';
+import { t } from '../i18n';
 import { useRegisteredCommands } from './hooks';
 import { usePlatform } from './platform';
 import { PALETTE_GROUP_ORDER, PALETTE_GROUP_TITLES, type Command, type CommandGroup } from './store';
@@ -107,7 +108,7 @@ export function CommandPalette({ isOpen, onOpenChange }: CommandPaletteProps) {
   return (
     <ModalOverlay isOpen={isOpen} onOpenChange={close} isDismissable className={styles.overlay}>
       <Modal className={styles.modal}>
-        <Dialog aria-label="Command palette" className={styles.dialog}>
+        <Dialog aria-label={t('Command palette')} className={styles.dialog}>
           <div
             className={styles.content}
             onKeyDownCapture={(event) => {
@@ -128,7 +129,7 @@ export function CommandPalette({ isOpen, onOpenChange }: CommandPaletteProps) {
           >
             <Autocomplete filter={filter} inputValue={query} onInputChange={setQuery}>
               <SearchField
-                aria-label="Search pages and actions"
+                aria-label={t('Search pages and actions')}
                 autoFocus
                 className={styles.search}
                 // Escape closes the palette at once instead of first clearing the query.
@@ -138,7 +139,7 @@ export function CommandPalette({ isOpen, onOpenChange }: CommandPaletteProps) {
                 }}
               >
                 <SearchIcon className={styles.searchIcon} />
-                <Input placeholder="Search tickets, actions and views…" className={styles.input} />
+                <Input placeholder={t('Search tickets, actions and views…')} className={styles.input} />
                 <kbd className={styles.kbd} aria-hidden="true">
                   esc
                 </kbd>
@@ -147,15 +148,15 @@ export function CommandPalette({ isOpen, onOpenChange }: CommandPaletteProps) {
                 items={sections}
                 onAction={run}
                 className={styles.menu}
-                renderEmptyState={() => <p className={styles.empty}>No matching tickets, actions or views</p>}
+                renderEmptyState={() => <p className={styles.empty}>{t('No matching tickets, actions or views')}</p>}
               >
                 {(section) => (
                   <MenuSection id={section.id} className={styles.section}>
-                    <Header className={styles.sectionHeader}>{PALETTE_GROUP_TITLES[section.id]}</Header>
+                    <Header className={styles.sectionHeader}>{t(PALETTE_GROUP_TITLES[section.id])}</Header>
                     <Collection items={section.commands}>
                       {(command) => {
                         const Icon = command.icon;
-                        const label = command.group === 'Pages' ? `Go to ${command.label}` : command.label;
+                        const label = command.group === 'Pages' ? t('Go to {page}', { page: command.label }) : command.label;
                         return (
                           <MenuItem id={command.id} textValue={command.label} className={styles.item}>
                             <span className={styles.lead} aria-hidden="true">
@@ -192,11 +193,11 @@ export function CommandPalette({ isOpen, onOpenChange }: CommandPaletteProps) {
               </Menu>
             </Autocomplete>
             <footer className={styles.footer} aria-hidden="true">
-              <Hint keys={['↑', '↓']} label="Move" />
-              <Hint keys={['↵']} label="Open" />
-              {hasAlternates ? <Hint keys={[mod, '↵']} label="Track" /> : null}
+              <Hint keys={['↑', '↓']} label={t('Move')} />
+              <Hint keys={['↵']} label={t('Open')} />
+              {hasAlternates ? <Hint keys={[mod, '↵']} label={t('Track')} /> : null}
               <span className={styles.footerEnd}>
-                <Hint keys={['esc']} label="Close" />
+                <Hint keys={['esc']} label={t('Close')} />
               </span>
             </footer>
           </div>

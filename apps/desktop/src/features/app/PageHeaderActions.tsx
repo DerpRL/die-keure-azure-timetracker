@@ -4,6 +4,7 @@ import { Button } from '../../components/Button';
 import { RefreshIcon } from '../../components/icons';
 import { REFRESH_SHORTCUT } from '../../layout/PageHeader';
 import { useRefreshShortcut } from '../../shortcuts/hooks';
+import { t } from '../../i18n';
 
 /** The element in the main window's page header where the current page puts its actions. */
 export const PageHeaderSlotContext = createContext<HTMLElement | null>(null);
@@ -27,7 +28,8 @@ export interface PageRefreshProps {
 }
 
 /** The page's Refresh button in the header, with ⌘R / Ctrl+R. */
-export function PageRefresh({ onRefresh, isRefreshing = false, isDisabled = false, label = 'Refresh' }: PageRefreshProps) {
+export function PageRefresh({ onRefresh, isRefreshing = false, isDisabled = false, label: custom }: PageRefreshProps) {
+  const label = custom ?? t('Refresh');
   useRefreshShortcut(onRefresh, { isDisabled: isDisabled || isRefreshing, label });
   return (
     <PageHeaderActions>

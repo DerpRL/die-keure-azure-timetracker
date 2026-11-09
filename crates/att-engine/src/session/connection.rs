@@ -466,7 +466,10 @@ pub(crate) async fn refresh_activities(engine: &Engine) {
             }
             Err(error) => {
                 connection.activities_loaded = false;
-                connection.activity_error = Some(format!("Could not load activity types: {error}"));
+                connection.activity_error = Some(crate::nl::trf(
+                    "Could not load activity types: {error}",
+                    &[("error", &error)],
+                ));
                 None
             }
         }
@@ -486,7 +489,10 @@ pub(crate) async fn lookup(engine: &Engine, clients: &Clients, id: i64) -> Resul
     }
     let items = clients.seven_pace.search(&id.to_string()).await?;
     items.into_iter().find(|item| item.id == id).ok_or_else(|| {
-        AppError::Message(format!("Azure ticket #{id} was not found or is not accessible."))
+        AppError::Message(crate::nl::trf(
+            "Azure ticket #{id} was not found or is not accessible.",
+            &[("id", &id)],
+        ))
     })
 }
 

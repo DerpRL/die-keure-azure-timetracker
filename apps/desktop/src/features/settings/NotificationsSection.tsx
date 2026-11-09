@@ -10,11 +10,12 @@ import { INTERRUPTION_LEVELS, osWords } from './labels';
 import { SystemSettingsButton } from './MeetingsSections';
 import { HintRow, InlineIssue, IssueRow, SectionFooter, SettingRow, SettingsSection, ToggleRow } from './SettingsSection';
 import { useSettingsForm } from './SettingsForm';
+import { mark, t } from '../../i18n';
 import styles from './settings.module.css';
 
 /** Extra advice under one prompt kind. */
 const KIND_HINTS: Partial<Record<PromptKind, string>> = {
-  trackingAttention: '7pace stops the timer when its checks go unanswered, so these also interrupt during quiet hours.',
+  trackingAttention: mark('7pace stops the timer when its checks go unanswered, so these also interrupt during quiet hours.'),
 };
 
 /** Settings → Notifications → Prompts: how each kind of prompt reaches you (applies right away). */
@@ -42,25 +43,26 @@ export function PromptsSection() {
       id="prompts"
       subtitle={
         <>
-          <b>Notify</b> shows a banner. <b>Open panel</b> opens the panel without taking focus. <b>Open & focus</b> also brings it to the
-          front. Changes apply right away.
+          <b>{t(MATRIX_LABELS.notifyOnly)}</b> {t('shows a banner.')} <b>{t(MATRIX_LABELS.openPanel)}</b>{' '}
+          {t('opens the panel without taking focus.')} <b>{t(MATRIX_LABELS.openAndFocus)}</b> {t('also brings it to the front.')}{' '}
+          {t('Changes apply right away.')}
         </>
       }
       actions={
         <Button size="small" variant="plain" onPress={resetAll} isDisabled={changed.length === 0}>
-          Reset to defaults
+          {t('Reset to defaults')}
         </Button>
       }
     >
-      {!draft.notificationsEnabled ? <HintRow>Notifications are off, so Notify works like Off.</HintRow> : null}
+      {!draft.notificationsEnabled ? <HintRow>{t('Notifications are off, so Notify works like Off.')}</HintRow> : null}
       <div className={styles.tableScroll}>
         <table className={styles.matrix}>
           <thead>
             <tr>
-              <th scope="col">Prompt</th>
+              <th scope="col">{t('Prompt')}</th>
               {INTERRUPTION_LEVELS.map((level) => (
-                <th key={level.id} scope="col" title={level.description}>
-                  {MATRIX_LABELS[level.id]}
+                <th key={level.id} scope="col" title={t(level.description)}>
+                  {t(MATRIX_LABELS[level.id])}
                 </th>
               ))}
             </tr>
@@ -70,14 +72,14 @@ export function PromptsSection() {
               <tr key={choice.kind}>
                 <th scope="row">
                   <span className={styles.matrixPrompt}>{choice.label}</span>
-                  {KIND_HINTS[choice.kind] ? <span className={styles.listMeta}>{KIND_HINTS[choice.kind]}</span> : null}
+                  {KIND_HINTS[choice.kind] ? <span className={styles.listMeta}>{t(KIND_HINTS[choice.kind] ?? '')}</span> : null}
                 </th>
                 {INTERRUPTION_LEVELS.map((level) => (
                   <td key={level.id}>
                     <input
                       type="radio"
                       name={`interruption-${choice.kind}`}
-                      aria-label={`${choice.label}: ${MATRIX_LABELS[level.id]}`}
+                      aria-label={`${choice.label}: ${t(MATRIX_LABELS[level.id])}`}
                       checked={choice.level === level.id}
                       onChange={() => {
                         if (choice.level !== level.id) choose(choice.kind, level.id);
@@ -92,7 +94,7 @@ export function PromptsSection() {
         </table>
       </div>
       {action.error ? <IssueRow>{action.error.message}</IssueRow> : null}
-      <SectionFooter>Off only hides the prompt: it stays listed in the panel and on Today. 7pace activity checks keep running.</SectionFooter>
+      <SectionFooter>{t('Off only hides the prompt: it stays listed in the panel and on Today. 7pace activity checks keep running.')}</SectionFooter>
     </SettingsSection>
   );
 }
@@ -101,10 +103,10 @@ export function PromptsSection() {
 const DEFAULT_INTERRUPTION: Interruption = 'openPanel';
 
 const MATRIX_LABELS: Record<Interruption, string> = {
-  off: 'Off',
-  notifyOnly: 'Notify',
-  openPanel: 'Open panel',
-  openAndFocus: 'Open & focus',
+  off: mark('Off'),
+  notifyOnly: mark('Notify'),
+  openPanel: mark('Open panel'),
+  openAndFocus: mark('Open & focus'),
 };
 
 function QuietHoursRows() {
@@ -120,16 +122,16 @@ function QuietHoursRows() {
   return (
     <>
       <ToggleRow
-        title="Quiet hours"
-        help="No banners and no panels in this period. Prompts wait in the panel and on Today; 7pace activity checks still interrupt. Applies right away."
+        title={t('Quiet hours')}
+        help={t('No banners and no panels in this period. Prompts wait in the panel and on Today; 7pace activity checks still interrupt. Applies right away.')}
         isSelected={quiet.enabled}
         onChange={(enabled) => apply({ ...quiet, enabled })}
       />
-      <SettingRow sub title="From" help="The period can run past midnight." dimmed={!quiet.enabled} below={action.error ? <InlineIssue>{action.error.message}</InlineIssue> : null}>
+      <SettingRow sub title={t('From')} help={t('The period can run past midnight.')} dimmed={!quiet.enabled} below={action.error ? <InlineIssue>{action.error.message}</InlineIssue> : null}>
         {({ helpId }) => (
           <>
             <TimeField
-              label="Quiet from"
+              label={t('Quiet from')}
               hideLabel
               aria-describedby={helpId}
               value={minutesToTime(quiet.startMinute)}
@@ -139,10 +141,10 @@ function QuietHoursRows() {
               isDisabled={!quiet.enabled}
             />
             <span className={styles.muted} aria-hidden="true">
-              to
+              {t('to')}
             </span>
             <TimeField
-              label="Quiet until"
+              label={t('Quiet until')}
               hideLabel
               aria-describedby={helpId}
               value={minutesToTime(quiet.endMinute)}
@@ -164,30 +166,34 @@ export function NotificationsSection() {
   const words = osWords(os);
   const authorized = settings.notificationsAuthorized;
   return (
-    <SettingsSection id="notifications" title={`${words.name} notifications`}>
+    <SettingsSection id="notifications" title={t('{os} notifications', { os: words.name })}>
       <ToggleRow
-        title="Banners"
-        help={`For branch changes, prompts and day reviews. Saved with Save changes; ${words.name} asks for permission the first time.`}
+        title={t('Banners')}
+        help={t('For branch changes, prompts and day reviews. Saved with Save changes; {os} asks for permission the first time.', { os: words.name })}
         isSelected={draft.notificationsEnabled}
         onChange={(notificationsEnabled) => update((current) => ({ ...current, notificationsEnabled }))}
       />
       <SettingRow
         sub
-        title="Permission"
+        title={t('Permission')}
         help={
           authorized === false
-            ? `Turned off for Azure timetracker in ${os === 'windows' ? 'Windows Settings' : 'System Settings › Notifications'}.`
-            : `Managed in ${os === 'windows' ? 'Windows Settings' : 'System Settings › Notifications'}.`
+            ? os === 'windows'
+              ? t('Turned off for Azure timetracker in Windows Settings.')
+              : t('Turned off for Azure timetracker in System Settings › Notifications.')
+            : os === 'windows'
+              ? t('Managed in Windows Settings.')
+              : t('Managed in System Settings › Notifications.')
         }
       >
         {authorized === true ? (
           <Badge tone="success" icon={CheckIcon}>
-            Allowed
+            {t('Allowed')}
           </Badge>
         ) : authorized === false ? (
-          <Badge tone="warning">Not allowed</Badge>
+          <Badge tone="warning">{t('Not allowed')}</Badge>
         ) : (
-          <Badge tone="neutral">Not asked yet</Badge>
+          <Badge tone="neutral">{t('Not asked yet')}</Badge>
         )}
         <SystemSettingsButton pane="notifications" />
       </SettingRow>

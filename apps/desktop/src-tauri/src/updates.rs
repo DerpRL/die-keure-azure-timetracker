@@ -28,21 +28,59 @@ use crate::shell::lock;
 /// Emitted to every window whenever the status changes. Payload: [`UpdateStatus`].
 pub const UPDATE_EVENT: &str = "shell://update";
 
-pub const DISABLED_MESSAGE: &str = "Updates are disabled in preview and development builds.";
-pub const CHECKING_MESSAGE: &str = "Checking GitHub for a new version…";
-pub const UP_TO_DATE_MESSAGE: &str = "You’re up to date.";
-pub const DOWNLOADING_MESSAGE: &str = "Downloading and verifying the update…";
-pub const READY_MESSAGE: &str = "Download verified. Install and restart when you’re ready.";
-pub const INSTALLING_MESSAGE: &str = "Installing the verified update and restarting…";
-pub const NETWORK_MESSAGE: &str = "The update server could not be reached. Check your connection and try Check for updates again.";
-pub const NOT_FOUND_MESSAGE: &str =
-    "The update server has no release information yet. Try Check for updates again later.";
-pub const VERIFY_MESSAGE: &str =
-    "The update could not be verified with the app’s release key, so it was not installed.";
-pub const PLATFORM_MESSAGE: &str = "This release has no update for this computer yet.";
-pub const NOTHING_TO_INSTALL_MESSAGE: &str =
-    "There is no update to install. Check for updates first.";
-pub const STARTING_MESSAGE: &str = "The app is still starting. Try again in a moment.";
+pub fn disabled_message() -> &'static str {
+    crate::nl::tr("Updates are disabled in preview and development builds.")
+}
+
+pub fn checking_message() -> &'static str {
+    crate::nl::tr("Checking GitHub for a new version…")
+}
+
+pub fn up_to_date_message() -> &'static str {
+    crate::nl::tr("You’re up to date.")
+}
+
+pub fn downloading_message() -> &'static str {
+    crate::nl::tr("Downloading and verifying the update…")
+}
+
+pub fn ready_message() -> &'static str {
+    crate::nl::tr("Download verified. Install and restart when you’re ready.")
+}
+
+pub fn installing_message() -> &'static str {
+    crate::nl::tr("Installing the verified update and restarting…")
+}
+
+pub fn network_message() -> &'static str {
+    crate::nl::tr(
+        "The update server could not be reached. Check your connection and try Check for updates again.",
+    )
+}
+
+pub fn not_found_message() -> &'static str {
+    crate::nl::tr(
+        "The update server has no release information yet. Try Check for updates again later.",
+    )
+}
+
+pub fn verify_message() -> &'static str {
+    crate::nl::tr(
+        "The update could not be verified with the app’s release key, so it was not installed.",
+    )
+}
+
+pub fn platform_message() -> &'static str {
+    crate::nl::tr("This release has no update for this computer yet.")
+}
+
+pub fn nothing_to_install_message() -> &'static str {
+    crate::nl::tr("There is no update to install. Check for updates first.")
+}
+
+pub fn starting_message() -> &'static str {
+    crate::nl::tr("The app is still starting. Try again in a moment.")
+}
 
 /// Bounds of `cadences.updateCheckSeconds` (`att_core::Cadences::UPDATE_CHECK`).
 const MIN_INTERVAL: u32 = 60;
@@ -136,29 +174,41 @@ pub fn clamp_interval(seconds: u32) -> u32 {
     seconds.clamp(MIN_INTERVAL, MAX_INTERVAL)
 }
 
-fn every(seconds: u32) -> String {
-    let seconds = clamp_interval(seconds);
-    let (amount, unit) = if seconds.is_multiple_of(3600) {
-        (seconds / 3600, "hour")
-    } else if seconds.is_multiple_of(60) {
-        (seconds / 60, "minute")
-    } else {
-        (seconds, "second")
-    };
-    if amount == 1 { format!("every {unit}") } else { format!("every {amount} {unit}s") }
-}
-
 /// The idle line before the first check (1.14: "…when the app opens and every minute.").
 pub fn schedule_message(automatic: bool, interval_seconds: u32) -> String {
-    if automatic {
-        format!("Checks for updates when the app opens and {}.", every(interval_seconds))
+    use crate::nl::{tr, trf};
+    if !automatic {
+        return tr("Automatic checks are off. Use Check for updates to look for a new version.")
+            .to_string();
+    }
+    let seconds = clamp_interval(interval_seconds);
+    if seconds.is_multiple_of(3600) {
+        match seconds / 3600 {
+            1 => tr("Checks for updates when the app opens and every hour.").to_string(),
+            hours => trf(
+                "Checks for updates when the app opens and every {count} hours.",
+                &[("count", &hours)],
+            ),
+        }
+    } else if seconds.is_multiple_of(60) {
+        match seconds / 60 {
+            1 => tr("Checks for updates when the app opens and every minute.").to_string(),
+            minutes => trf(
+                "Checks for updates when the app opens and every {count} minutes.",
+                &[("count", &minutes)],
+            ),
+        }
     } else {
-        "Automatic checks are off. Use Check for updates to look for a new version.".to_string()
+        // At least a minute: never a single second.
+        trf(
+            "Checks for updates when the app opens and every {count} seconds.",
+            &[("count", &seconds)],
+        )
     }
 }
 
 pub fn available_message(version: &str) -> String {
-    format!("Version {version} is available.")
+    crate::nl::trf("Version {version} is available.", &[("version", &version)])
 }
 
 impl UpdateMachine {
@@ -181,7 +231,7 @@ impl UpdateMachine {
                 message: if enabled {
                     schedule_message(automatic, interval)
                 } else {
-                    DISABLED_MESSAGE.to_string()
+                    disabled_message().to_string()
                 },
                 error: None,
                 checked_at: None,
@@ -240,7 +290,7 @@ impl UpdateMachine {
         let silent = automatic && self.status.phase == Phase::Available;
         if !silent {
             self.status.phase = Phase::Checking;
-            self.status.message = CHECKING_MESSAGE.to_string();
+            self.status.message = checking_message().to_string();
             self.status.error = None;
         }
         Some(CheckTicket { attempt: self.attempt, silent })
@@ -276,7 +326,7 @@ impl UpdateMachine {
                 self.status.notes = None;
                 self.status.date = None;
                 self.status.error = None;
-                self.status.message = UP_TO_DATE_MESSAGE.to_string();
+                self.status.message = up_to_date_message().to_string();
                 self.status.checked_at = Some(now.to_string());
             }
             // A background re-check must not hide the update that is already offered.
@@ -298,7 +348,7 @@ impl UpdateMachine {
     /// `downloaded` says whether the verified package is still kept.
     pub fn install_step(&self, downloaded: bool) -> Result<InstallStep, String> {
         if !self.status.enabled {
-            return Err(DISABLED_MESSAGE.to_string());
+            return Err(disabled_message().to_string());
         }
         match self.status.phase {
             Phase::Ready if downloaded => Ok(InstallStep::Restart),
@@ -307,7 +357,7 @@ impl UpdateMachine {
             Phase::Downloading | Phase::Installing | Phase::Checking => {
                 Err(self.status.message.clone())
             }
-            _ => Err(NOTHING_TO_INSTALL_MESSAGE.to_string()),
+            _ => Err(nothing_to_install_message().to_string()),
         }
     }
 
@@ -318,7 +368,7 @@ impl UpdateMachine {
         self.status.downloaded = 0;
         self.status.total = None;
         self.status.error = None;
-        self.status.message = DOWNLOADING_MESSAGE.to_string();
+        self.status.message = downloading_message().to_string();
         self.attempt
     }
 
@@ -347,7 +397,7 @@ impl UpdateMachine {
             return false;
         }
         self.status.phase = Phase::Ready;
-        self.status.message = READY_MESSAGE.to_string();
+        self.status.message = ready_message().to_string();
         self.status.error = None;
         true
     }
@@ -366,13 +416,13 @@ impl UpdateMachine {
     /// verified download stays ready and the engine's message is shown.
     pub fn restart_blocked(&mut self, message: String) {
         self.status.phase = Phase::Ready;
-        self.status.message = READY_MESSAGE.to_string();
+        self.status.message = ready_message().to_string();
         self.status.error = Some(message);
     }
 
     pub fn begin_install(&mut self) {
         self.status.phase = Phase::Installing;
-        self.status.message = INSTALLING_MESSAGE.to_string();
+        self.status.message = installing_message().to_string();
         self.status.error = None;
     }
 
@@ -380,7 +430,7 @@ impl UpdateMachine {
     /// `reportInstallFailure`).
     pub fn install_failed(&mut self, error: String) {
         self.status.phase = Phase::Ready;
-        self.status.message = READY_MESSAGE.to_string();
+        self.status.message = ready_message().to_string();
         self.status.error = Some(error);
     }
 }
@@ -478,14 +528,14 @@ pub fn is_newer(installed: &str, offered: &str) -> bool {
 pub fn describe_error(error: &tauri_plugin_updater::Error) -> String {
     use tauri_plugin_updater::Error;
     match error {
-        Error::Reqwest(_) | Error::Network(_) => NETWORK_MESSAGE.to_string(),
-        Error::ReleaseNotFound => NOT_FOUND_MESSAGE.to_string(),
+        Error::Reqwest(_) | Error::Network(_) => network_message().to_string(),
+        Error::ReleaseNotFound => not_found_message().to_string(),
         Error::Minisign(_)
         | Error::Base64(_)
         | Error::SignatureUtf8(_)
         | Error::SignedVersionMismatch { .. }
-        | Error::MissingSignedVersion => VERIFY_MESSAGE.to_string(),
-        Error::TargetNotFound(_) | Error::TargetsNotFound(_) => PLATFORM_MESSAGE.to_string(),
+        | Error::MissingSignedVersion => verify_message().to_string(),
+        Error::TargetNotFound(_) | Error::TargetsNotFound(_) => platform_message().to_string(),
         other => other.to_string(),
     }
 }
@@ -697,7 +747,7 @@ async fn download_and_restart(app: AppHandle, update: Update, attempt: u64) {
 async fn restart(app: AppHandle, update: Update, bytes: Vec<u8>) {
     let updates = app.state::<Updates>();
     let Some(engine) = app.try_state::<Engine>().map(|engine| engine.inner().clone()) else {
-        lock(&updates.inner).machine.restart_blocked(STARTING_MESSAGE.to_string());
+        lock(&updates.inner).machine.restart_blocked(starting_message().to_string());
         emit(&app);
         return;
     };
@@ -743,7 +793,8 @@ pub fn shell_update_install(app: AppHandle) -> Result<UpdateStatus, String> {
     let (update, next) = {
         let mut inner = lock(&updates.inner);
         let step = inner.machine.install_step(inner.bytes.is_some())?;
-        let update = inner.update.clone().ok_or_else(|| NOTHING_TO_INSTALL_MESSAGE.to_string())?;
+        let update =
+            inner.update.clone().ok_or_else(|| nothing_to_install_message().to_string())?;
         let next = match (step, inner.bytes.clone()) {
             (InstallStep::Restart, Some(bytes)) => {
                 inner.machine.begin_install();
@@ -803,14 +854,14 @@ mod tests {
         assert!(!updates_enabled(true, false));
         assert!(!updates_enabled(false, true));
         let mut machine = UpdateMachine::new("2.0.0", false, true, 60);
-        assert_eq!(machine.status().message, DISABLED_MESSAGE);
-        assert_eq!(DISABLED_MESSAGE, "Updates are disabled in preview and development builds.");
+        assert_eq!(machine.status().message, disabled_message());
+        assert_eq!(disabled_message(), "Updates are disabled in preview and development builds.");
         assert!(!machine.can_check());
         assert_eq!(machine.begin_check(false), None);
-        assert_eq!(machine.install_step(false), Err(DISABLED_MESSAGE.to_string()));
+        assert_eq!(machine.install_step(false), Err(disabled_message().to_string()));
         // Following the settings keeps the disabled message.
         assert!(machine.set_schedule(false, 120));
-        assert_eq!(machine.status().message, DISABLED_MESSAGE);
+        assert_eq!(machine.status().message, disabled_message());
     }
 
     #[test]
@@ -848,6 +899,22 @@ mod tests {
     }
 
     #[test]
+    fn schedule_messages_in_dutch() {
+        use att_core::i18n::{Language, with_language};
+        with_language(Language::Nl, || {
+            assert_eq!(
+                schedule_message(true, 7200),
+                "Controleert op updates wanneer de app opent en elke 2 uur."
+            );
+            assert_eq!(
+                schedule_message(true, 60),
+                "Controleert op updates wanneer de app opent en elke minuut."
+            );
+            assert_eq!(available_message("2.0.1"), "Versie 2.0.1 is beschikbaar.");
+        });
+    }
+
+    #[test]
     fn new_status_serializes_camel_case() {
         let value = serde_json::to_value(machine().status()).unwrap();
         assert_eq!(
@@ -874,7 +941,7 @@ mod tests {
         let mut machine = machine();
         let ticket = machine.begin_check(false).unwrap();
         assert_eq!(machine.status().phase, Phase::Checking);
-        assert_eq!(machine.status().message, CHECKING_MESSAGE);
+        assert_eq!(machine.status().message, checking_message());
         // A second check while one runs is refused.
         assert_eq!(machine.begin_check(false), None);
         assert!(machine.finish_check(ticket, Ok(Some(release("2.0.1"))), NOW));
@@ -889,21 +956,21 @@ mod tests {
         assert!(machine.finish_check(ticket, Ok(None), NOW));
         assert_eq!(machine.status().phase, Phase::Idle);
         assert_eq!(machine.status().version, None);
-        assert_eq!(machine.status().message, UP_TO_DATE_MESSAGE);
+        assert_eq!(machine.status().message, up_to_date_message());
     }
 
     #[test]
     fn failed_check_shows_the_error() {
         let mut machine = machine();
         let ticket = machine.begin_check(false).unwrap();
-        assert!(machine.finish_check(ticket, Err(NOT_FOUND_MESSAGE.to_string()), NOW));
+        assert!(machine.finish_check(ticket, Err(not_found_message().to_string()), NOW));
         let status = machine.status();
         assert_eq!(status.phase, Phase::Failed);
-        assert_eq!(status.error.as_deref(), Some(NOT_FOUND_MESSAGE));
-        assert_eq!(status.message, NOT_FOUND_MESSAGE);
+        assert_eq!(status.error.as_deref(), Some(not_found_message()));
+        assert_eq!(status.message, not_found_message());
         assert_eq!(status.version, None);
         // Nothing to install after a failed check; checking again is allowed.
-        assert_eq!(machine.install_step(false), Err(NOTHING_TO_INSTALL_MESSAGE.to_string()));
+        assert_eq!(machine.install_step(false), Err(nothing_to_install_message().to_string()));
         assert!(machine.can_check());
     }
 
@@ -925,7 +992,7 @@ mod tests {
         let ticket = machine.begin_check(true).unwrap();
         // Silent: the offered update stays on screen while the feed is read again.
         assert_eq!(machine.status().phase, Phase::Available);
-        assert!(!machine.finish_check(ticket, Err(NETWORK_MESSAGE.to_string()), NOW));
+        assert!(!machine.finish_check(ticket, Err(network_message().to_string()), NOW));
         assert_eq!(machine.status().phase, Phase::Available);
         assert_eq!(machine.status().error, None);
         let ticket = machine.begin_check(true).unwrap();
@@ -952,8 +1019,8 @@ mod tests {
         let attempt = machine.begin_download();
         let status = machine.status();
         assert_eq!(status.phase, Phase::Downloading);
-        assert_eq!(status.message, DOWNLOADING_MESSAGE);
-        assert_eq!(machine.install_step(false), Err(DOWNLOADING_MESSAGE.to_string()));
+        assert_eq!(status.message, downloading_message());
+        assert_eq!(machine.install_step(false), Err(downloading_message().to_string()));
         assert!(!machine.can_check());
         // The first chunk with a size, then only whole-percent changes are emitted.
         assert!(machine.progress(attempt, 1_000, Some(1_000_000)));
@@ -963,7 +1030,7 @@ mod tests {
         assert_eq!(machine.status().total, Some(1_000_000));
         assert!(machine.download_finished(attempt));
         assert_eq!(machine.status().phase, Phase::Ready);
-        assert_eq!(machine.status().message, READY_MESSAGE);
+        assert_eq!(machine.status().message, ready_message());
         assert_eq!(machine.install_step(true), Ok(InstallStep::Restart));
         // Without the kept package the update is downloaded again.
         assert_eq!(machine.install_step(false), Ok(InstallStep::Download));
@@ -984,10 +1051,10 @@ mod tests {
     fn failed_download_keeps_the_offer() {
         let mut machine = available();
         let attempt = machine.begin_download();
-        assert!(machine.download_failed(attempt, VERIFY_MESSAGE.to_string()));
+        assert!(machine.download_failed(attempt, verify_message().to_string()));
         let status = machine.status();
         assert_eq!(status.phase, Phase::Failed);
-        assert_eq!(status.error.as_deref(), Some(VERIFY_MESSAGE));
+        assert_eq!(status.error.as_deref(), Some(verify_message()));
         assert_eq!(status.version.as_deref(), Some("2.0.1"));
         assert_eq!(machine.install_step(false), Ok(InstallStep::Download));
     }
@@ -1000,14 +1067,14 @@ mod tests {
         // The download goes straight on to the restart.
         machine.begin_install();
         assert_eq!(machine.status().phase, Phase::Installing);
-        assert_eq!(machine.status().message, INSTALLING_MESSAGE);
+        assert_eq!(machine.status().message, installing_message());
         assert_eq!(machine.status().error, None);
         // A second click while installing is refused.
-        assert_eq!(machine.install_step(true), Err(INSTALLING_MESSAGE.to_string()));
+        assert_eq!(machine.install_step(true), Err(installing_message().to_string()));
         // The engine refuses while a write is in progress: the package stays ready.
         machine.restart_blocked("Wait for the current save to finish.".to_string());
         assert_eq!(machine.status().phase, Phase::Ready);
-        assert_eq!(machine.status().message, READY_MESSAGE);
+        assert_eq!(machine.status().message, ready_message());
         assert_eq!(machine.status().error.as_deref(), Some("Wait for the current save to finish."));
         assert_eq!(machine.install_step(true), Ok(InstallStep::Restart));
 
@@ -1045,16 +1112,16 @@ mod tests {
     #[test]
     fn updater_errors_read_as_english() {
         use tauri_plugin_updater::Error;
-        assert_eq!(describe_error(&Error::ReleaseNotFound), NOT_FOUND_MESSAGE);
-        assert_eq!(describe_error(&Error::Network("status 404".into())), NETWORK_MESSAGE);
-        assert_eq!(describe_error(&Error::MissingSignedVersion), VERIFY_MESSAGE);
+        assert_eq!(describe_error(&Error::ReleaseNotFound), not_found_message());
+        assert_eq!(describe_error(&Error::Network("status 404".into())), network_message());
+        assert_eq!(describe_error(&Error::MissingSignedVersion), verify_message());
         assert_eq!(
             describe_error(&Error::TargetNotFound("darwin-aarch64".into())),
-            PLATFORM_MESSAGE
+            platform_message()
         );
         // The placeholder public key in tauri.conf.json is not base64, so a real download fails
         // in verification and is reported like any unverified update.
-        assert_eq!(describe_error(&Error::SignatureUtf8("PLACEHOLDER".into())), VERIFY_MESSAGE);
+        assert_eq!(describe_error(&Error::SignatureUtf8("PLACEHOLDER".into())), verify_message());
         assert_eq!(
             describe_error(&Error::EmptyEndpoints),
             "Updater does not have any endpoints set."

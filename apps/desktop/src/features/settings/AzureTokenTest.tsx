@@ -6,6 +6,7 @@ import { useAction } from '../../state/hooks';
 import { osWords } from './labels';
 import { InlineIssue, SectionFooter } from './SettingsSection';
 import { useSettingsForm } from './SettingsForm';
+import { t } from '../../i18n';
 import styles from './settings.module.css';
 
 interface Outcome {
@@ -52,15 +53,18 @@ export function useAzureTokenTest() {
     if (!saved.ok) {
       finish({
         tone: 'error',
-        message: `The token works, but it was not saved. ${saved.error.message}`,
+        message: t('The token works, but it was not saved. {error}', { error: saved.error.message }),
         key: keyOf(organization, project, token),
       });
       return;
     }
-    const where = project === '' ? `“${organization}”` : `“${organization}”, project “${project}”`;
+    const store = osWords(os).credentials;
     finish({
       tone: 'success',
-      message: `The token works for ${where} and is saved in ${osWords(os).credentials}.`,
+      message:
+        project === ''
+          ? t('The token works for “{organization}” and is saved in {store}.', { organization, store })
+          : t('The token works for “{organization}”, project “{project}” and is saved in {store}.', { organization, project, store }),
       // The field is cleared after saving.
       key: keyOf(organization, project, ''),
     });
@@ -75,13 +79,13 @@ export function AzureTokenTest({ tester }: { tester: ReturnType<typeof useAzureT
   const { run, canRun, pending, outcome, organization, hasToken, preview } = tester;
   const { settings } = useSettingsForm();
   const hint = preview
-    ? 'Preview mode: testing tokens is turned off.'
+    ? t('Preview mode: testing tokens is turned off.')
     : organization === ''
-      ? 'Enter your organization to test the token.'
+      ? t('Enter your organization to test the token.')
       : !hasToken
-        ? 'Paste a token to test it.'
+        ? t('Paste a token to test it.')
         : settings.hasAzurePat
-          ? 'Tests the stored token, or a new one you paste, before saving it.'
+          ? t('Tests the stored token, or a new one you paste, before saving it.')
           : null;
   return (
     <SectionFooter
@@ -93,12 +97,12 @@ export function AzureTokenTest({ tester }: { tester: ReturnType<typeof useAzureT
           isPending={pending}
           isDisabled={!canRun}
         >
-          Test and save
+          {t('Test and save')}
         </Button>
       }
     >
       {pending ? (
-        <span>Checking the token with Azure DevOps…</span>
+        <span>{t('Checking the token with Azure DevOps…')}</span>
       ) : outcome?.tone === 'success' ? (
         <span className={`${styles.status} ${styles.success}`}>
           <SuccessIcon className={styles.statusIcon} />

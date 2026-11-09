@@ -21,7 +21,9 @@ impl IpcError {
     pub fn busy() -> Self {
         Self::new(
             "busy",
-            "Another tracking change is still in progress. Wait for it to finish, then try again.",
+            crate::nl::tr(
+                "Another tracking change is still in progress. Wait for it to finish, then try again.",
+            ),
         )
     }
 }

@@ -204,7 +204,10 @@ impl Engine {
         }
         let result = self.read(|state| crate::persist::save(&self.inner.services, state));
         if let Err(error) = &result {
-            let message = format!("Could not save local settings: {}", error.message);
+            let message = crate::nl::trf(
+                "Could not save local settings: {error}",
+                &[("error", &error.message)],
+            );
             self.update(|state| state.storage_issue = Some(message));
         }
         result
@@ -212,7 +215,18 @@ impl Engine {
 
     /// Records an App activity entry (Swift `record`).
     pub(crate) fn record(&self, title: impl Into<String>, detail: impl Into<String>) {
-        let entry = AuditEntry::new(title, detail, self.now());
+        self.record_entry(AuditEntry::new(title, detail, self.now()));
+    }
+
+    /// Records an App activity entry that asks the user to check something.
+    pub(crate) fn record_attention(&self, title: impl Into<String>, detail: impl Into<String>) {
+        self.record_entry(AuditEntry {
+            attention: true,
+            ..AuditEntry::new(title, detail, self.now())
+        });
+    }
+
+    fn record_entry(&self, entry: AuditEntry) {
         self.update(|state| {
             state.audit.insert(0, entry.clone());
             state.audit.truncate(AUDIT_LIMIT);

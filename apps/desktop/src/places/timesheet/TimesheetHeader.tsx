@@ -6,6 +6,7 @@ import { useNavigation } from '../../layout/NavigationContext';
 import { visibleViews, type TimesheetView } from '../../layout/navigation';
 import { PlaceHeader } from '../../layout/Place';
 import { useSlice } from '../../state/hooks';
+import { t } from '../../i18n';
 
 /** Week / Day / List / Drafts · N: the Timesheet's views, as a segmented switch. */
 export function ViewSwitch({ current }: { current: TimesheetView }) {
@@ -17,11 +18,11 @@ export function ViewSwitch({ current }: { current: TimesheetView }) {
   const ready = offline?.readyCount ?? 0;
   return (
     <SegmentedControl<TimesheetView>
-      label="View"
+      label={t('View')}
       hideLabel
       options={views.map((view) => ({
         id: view.id as TimesheetView,
-        label: view.id === 'drafts' && ready > 0 ? `Drafts · ${ready}` : view.title,
+        label: view.id === 'drafts' && ready > 0 ? t('Drafts · {count}', { count: ready }) : t(view.title),
       }))}
       selectedKey={current}
       onSelectionChange={(view) => navigation.navigate({ place: 'timesheet', view })}
@@ -30,20 +31,32 @@ export function ViewSwitch({ current }: { current: TimesheetView }) {
 }
 
 export interface StepButtonsProps {
-  /** "week", "day", "range": names the buttons ("Previous week"). */
-  unit: string;
+  /** Names the buttons ("Previous week"). */
+  unit: 'week' | 'day' | 'range';
   onPrevious: () => void;
   onNext: () => void;
   isPreviousDisabled?: boolean;
   isNextDisabled?: boolean;
 }
 
+function stepLabels(unit: StepButtonsProps['unit']): [previous: string, next: string] {
+  switch (unit) {
+    case 'week':
+      return [t('Previous week'), t('Next week')];
+    case 'day':
+      return [t('Previous day'), t('Next day')];
+    case 'range':
+      return [t('Previous range'), t('Next range')];
+  }
+}
+
 /** The previous / next buttons before a view's title. */
 export function StepButtons({ unit, onPrevious, onNext, isPreviousDisabled, isNextDisabled }: StepButtonsProps) {
+  const [previous, next] = stepLabels(unit);
   return (
     <>
       <IconButton
-        label={`Previous ${unit}`}
+        label={previous}
         icon={ChevronLeftIcon}
         variant="secondary"
         tooltip={false}
@@ -51,7 +64,7 @@ export function StepButtons({ unit, onPrevious, onNext, isPreviousDisabled, isNe
         onPress={onPrevious}
       />
       <IconButton
-        label={`Next ${unit}`}
+        label={next}
         icon={ChevronRightIcon}
         variant="secondary"
         tooltip={false}

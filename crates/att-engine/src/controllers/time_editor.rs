@@ -34,7 +34,11 @@ use crate::ipc::IpcError;
 use crate::services::Services;
 
 /// Swift's detail for a change the app did not see finish.
-pub(crate) const INTERRUPTED_DETAIL: &str = "The app closed during this change. Check the affected entries in 7pace; no request will be replayed.";
+pub(crate) fn interrupted_detail() -> &'static str {
+    crate::nl::tr(
+        "The app closed during this change. Check the affected entries in 7pace; no request will be replayed.",
+    )
+}
 
 /// The correction options of `timeEditor.prepareCorrection` (Swift's buttons, in order).
 pub(crate) mod options {
@@ -145,13 +149,15 @@ impl TimeEditorState {
 
     fn exact_plan(&self, now: Timestamp, cal: &Cal) -> Result<WorkLogPlan> {
         let Some(selected) = &self.selected else {
-            return Err(AppError::message("Choose an entry."));
+            return Err(AppError::message(crate::nl::tr("Choose an entry.")));
         };
         match self.mode {
             TimeEditMode::Guided => {
                 if let Some(interval) = self.idle_interval {
                     let ticket = ticket_number(&self.second_ticket).ok_or_else(|| {
-                        AppError::message("Enter a valid ticket number or leave it blank.")
+                        AppError::message(crate::nl::tr(
+                            "Enter a valid ticket number or leave it blank.",
+                        ))
                     })?;
                     let separate = if self.separate_idle {
                         Some(WorkLogDraft::from_times(
@@ -176,18 +182,18 @@ impl TimeEditorState {
                         cal,
                     );
                 }
-                self.guided_plan
-                    .clone()
-                    .ok_or_else(|| AppError::message("Choose a correction to preview."))
+                self.guided_plan.clone().ok_or_else(|| {
+                    AppError::message(crate::nl::tr("Choose a correction to preview."))
+                })
             }
             TimeEditMode::Edit => {
                 WorkLogPlan::edit(selected, WorkLogTimeEdit::new(self.start, self.end), now, cal)
             }
             TimeEditMode::Split => {
                 let ticket = ticket_number(&self.second_ticket).ok_or_else(|| {
-                    AppError::message(
+                    AppError::message(crate::nl::tr(
                         "Enter a valid ticket number, or leave it empty for comment-only time.",
-                    )
+                    ))
                 })?;
                 WorkLogPlan::split(
                     selected,
@@ -204,7 +210,7 @@ impl TimeEditorState {
                 let record = self
                     .undo_record
                     .as_ref()
-                    .ok_or_else(|| AppError::message("Choose a recent edit."))?;
+                    .ok_or_else(|| AppError::message(crate::nl::tr("Choose a recent edit.")))?;
                 WorkLogPlan::undo(record, cal)
             }
         }
@@ -260,7 +266,10 @@ fn checkpoint(
 ) -> Result<()> {
     if editor.journal_unreadable {
         return Err(AppError::Message(
-            editor.journal_issue.clone().unwrap_or_else(|| "Edit history is unavailable.".into()),
+            editor
+                .journal_issue
+                .clone()
+                .unwrap_or_else(|| crate::nl::tr("Edit history is unavailable.").into()),
         ));
     }
     let parent = if record.status == WorkLogChangeStatus::Complete { record.undo_of } else { None };
@@ -429,7 +438,7 @@ pub(crate) async fn select(engine: &Engine, log_id: String) -> Result<Value, Ipc
 
 fn open_entry(editor: &mut TimeEditorState, current: WorkLog, cal: &Cal) -> Result<()> {
     if current.is_can_edit != Some(true) {
-        return Err(AppError::message("7pace does not allow editing this entry."));
+        return Err(AppError::message(crate::nl::tr("7pace does not allow editing this entry.")));
     }
     let draft = WorkLogDraft::from_log(&current, true, cal)?;
     editor.start = draft.start;
@@ -588,7 +597,9 @@ pub(crate) fn begin_undo(engine: &Engine, change_id: Uuid) -> Result<Value, IpcE
         }
         match WorkLogPlan::undo(&record, &cal) {
             Ok(_) => {
-                editor.selected = record.after.first().cloned();
+                // Undoing the removal of a new entry has no entry after it: show the one it
+                // restores.
+                editor.selected = record.after.first().or(record.before.first()).cloned();
                 editor.undo_record = Some(record);
                 editor.mode = TimeEditMode::Undo;
                 editor.review = None;
@@ -603,7 +614,7 @@ pub(crate) fn begin_undo(engine: &Engine, change_id: Uuid) -> Result<Value, IpcE
 }
 
 fn unknown_change() -> IpcError {
-    IpcError::new("notFound", "This change is no longer listed in Recent edits.")
+    IpcError::new("notFound", crate::nl::tr("This change is no longer listed in Recent edits."))
 }
 
 /// Swift `checkChanges()`: the optional overlap check against the full history.
@@ -626,7 +637,7 @@ pub(crate) async fn check_changes(engine: &Engine) -> Result<Value, IpcError> {
         let result: Result<Option<WorkLogEditReview>> = async {
             let plan = plan?;
             let Some(clients) = engine.clients() else {
-                return Err(AppError::message("Connect to 7pace first."));
+                return Err(AppError::message(crate::nl::tr("Connect to 7pace first.")));
             };
             let review = overlap_review(&clients, &plan, now, &cal).await?;
             Ok(still_current(&engine, &clients).then_some(review))
@@ -658,30 +669,60 @@ async fn overlap_review(
     now: Timestamp,
     cal: &Cal,
 ) -> Result<WorkLogEditReview> {
-    let (Some(original), Some(first)) = (plan.before.first(), plan.desired.first()) else {
-        return Err(AppError::message("This change has no entries."));
+    let Some(original) = plan.before.first() else {
+        return Err(AppError::message(crate::nl::tr("This change has no entries.")));
     };
-    let checked: Result<Vec<WorkLogConflict>> = async {
-        let end = plan.desired.iter().map(|draft| draft.edit().end).max().unwrap_or(first.end());
-        let history = clients.seven_pace.work_logs_before(end).await?;
-        let state = TrackingService::current(clients.seven_pace.as_ref()).await?;
-        let sources: BTreeSet<&str> = plan.before.iter().map(|log| log.id.as_str()).collect();
-        let others: Vec<WorkLog> =
-            history.into_iter().filter(|log| !sources.contains(log.id.as_str())).collect();
-        plan_conflicts(plan, &original.id, &others, &state, now, cal)
-    }
-    .await;
-    let (conflicts, overlap_issue) = match checked {
-        Ok(conflicts) => (conflicts, None),
-        Err(AppError::Cancelled) => return Err(AppError::Cancelled),
-        Err(error) => (Vec::new(), Some(format!("Overlap check incomplete. {error}"))),
+    // Undoing a new entry only removes it: nothing can overlap.
+    let Some(first) = plan.desired.first() else {
+        return Ok(WorkLogEditReview {
+            original: original.clone(),
+            edit: WorkLogDraft::from_log(original, true, cal)?.edit(),
+            conflicts: Vec::new(),
+            overlap_issue: None,
+        });
     };
+    let (conflicts, overlap_issue) =
+        history_conflicts(clients, plan, &original.id, now, cal).await?;
     Ok(WorkLogEditReview {
         original: original.clone(),
         edit: first.edit(),
         conflicts,
         overlap_issue,
     })
+}
+
+/// Overlapping entries, and why the overlap check is incomplete.
+type Overlaps = (Vec<WorkLogConflict>, Option<String>);
+
+/// The overlaps of `plan`'s desired drafts with the full history before their latest end, and
+/// why that check is incomplete when it failed. Only a cancellation is an error.
+async fn history_conflicts(
+    clients: &Clients,
+    plan: &WorkLogPlan,
+    excluding: &str,
+    now: Timestamp,
+    cal: &Cal,
+) -> Result<Overlaps> {
+    let Some(end) = plan.desired.iter().map(|draft| draft.edit().end).max() else {
+        return Ok((Vec::new(), None));
+    };
+    let checked: Result<Vec<WorkLogConflict>> = async {
+        let history = clients.seven_pace.work_logs_before(end).await?;
+        let state = TrackingService::current(clients.seven_pace.as_ref()).await?;
+        let sources: BTreeSet<&str> = plan.before.iter().map(|log| log.id.as_str()).collect();
+        let others: Vec<WorkLog> =
+            history.into_iter().filter(|log| !sources.contains(log.id.as_str())).collect();
+        plan_conflicts(plan, excluding, &others, &state, now, cal)
+    }
+    .await;
+    match checked {
+        Ok(conflicts) => Ok((conflicts, None)),
+        Err(AppError::Cancelled) => Err(AppError::Cancelled),
+        Err(error) => Ok((
+            Vec::new(),
+            Some(crate::nl::trf("Overlap check incomplete. {error}", &[("error", &error)])),
+        )),
+    }
 }
 
 /// Conflicts of every desired draft, once per conflicting entry (the last draft's wins, as in
@@ -741,7 +782,10 @@ pub(crate) async fn save_time_edit(engine: &Engine) -> Result<Value, IpcError> {
                 crate::session::hooks::idle_correction_applied(engine, id);
             }
             super::hooks::invalidate_worklogs(engine);
-            engine.record("Tracked time updated", "Saved a time correction in 7pace");
+            engine.record(
+                crate::nl::tr("Tracked time updated"),
+                crate::nl::tr("Saved a time correction in 7pace"),
+            );
             crate::session::hooks::worklogs_changed(engine).await;
             if engine.read(|state| visible(state, pages::TIME_EDITOR)) {
                 load_intent(engine).await?;
@@ -779,9 +823,13 @@ async fn save(engine: &Engine) -> SaveOutcome {
         Some((editor.generation, plan, editor.workspace.clone(), idle))
     });
     let Some((request, plan, workspace, idle)) = started else { return SaveOutcome::Refused };
-    let result: Result<(WorkLogEditReview, WorkLogChange)> = async {
+    let result: Result<(Overlaps, WorkLogChange)> = async {
         let plan = plan?;
-        let overlaps = overlap_review(&clients, &plan, now, &cal).await?;
+        // Undoing an undone new entry creates it again: there is no source entry to review.
+        let overlaps = match plan.before.first() {
+            Some(original) => history_conflicts(&clients, &plan, &original.id, now, &cal).await?,
+            None => history_conflicts(&clients, &plan, "", now, &cal).await?,
+        };
         let service: &dyn WorkLogMutationService = clients.seven_pace.as_ref();
         let record = WorkLogOperations::apply(&plan, &workspace, service, now, &cal, |record| {
             ready(checkpoint_journal(engine, record))
@@ -797,13 +845,13 @@ async fn save(engine: &Engine) -> SaveOutcome {
             editor.working = false;
         }
         match result {
-            Ok((overlaps, record)) => {
+            Ok(((conflicts, overlap_issue), record)) => {
                 if current {
-                    editor.saved_conflicts = overlaps.conflicts;
-                    editor.saved_overlap_issue = overlaps.overlap_issue;
-                    editor.message = Some(format!(
-                        "{} confirmed by 7pace. You can undo this from Recent edits.",
-                        record.title
+                    editor.saved_conflicts = conflicts;
+                    editor.saved_overlap_issue = overlap_issue;
+                    editor.message = Some(crate::nl::trf(
+                        "{title} confirmed by 7pace. You can undo this from Recent edits.",
+                        &[("title", &record.title)],
                     ));
                     editor.selected = None;
                     editor.review = None;
@@ -842,13 +890,150 @@ pub(crate) fn acknowledge(engine: &Engine, change_id: Uuid) -> Result<Value, Ipc
             return Ok(());
         }
         record.status = WorkLogChangeStatus::Reviewed;
-        record.detail.push_str(" User acknowledged checking the entries in 7pace.");
+        record.detail.push(' ');
+        record.detail.push_str(crate::nl::tr("User acknowledged checking the entries in 7pace."));
         if let Err(error) = checkpoint(services, editor, record) {
             editor.journal_issue = Some(error.to_string());
         }
         Ok(())
     })?;
     done()
+}
+
+// -- New entries ----------------------------------------------------------------------------------
+
+/// The fields of `timeEditor.create`.
+pub(crate) struct NewEntry {
+    pub start: Timestamp,
+    pub end: Timestamp,
+    pub ticket_id: Option<i64>,
+    pub comment: String,
+    pub activity_id: Option<String>,
+    pub billable: bool,
+}
+
+/// `timeEditor.create`: one new entry from times the user chose (the week calendar's drag to
+/// create). The quarter-hour setting applies as for any other change; overlaps with the entries
+/// around it are reported, never blocking. The change is journalled before the request, so Recent
+/// edits can undo it and an interrupted create is flagged for review. Never retried.
+pub(crate) async fn create_entry(engine: &Engine, entry: NewEntry) -> Result<Value, IpcError> {
+    if engine.preview() {
+        return done();
+    }
+    let Some(clients) = engine.clients() else {
+        return Err(IpcError::new("notConnected", crate::nl::tr("Connect to 7pace first.")));
+    };
+    let Some(busy) = engine.inner.busy.try_acquire() else { return Err(IpcError::busy()) };
+    let (now, cal) = (engine.now(), engine.cal());
+    let started = engine.update(|state| {
+        let rounding = state.config.rounding();
+        let editor = &mut state.controllers.time_editor;
+        if editor.working {
+            return Err(IpcError::busy());
+        }
+        if editor.journal_unreadable || editor.requires_review() {
+            return Err(IpcError::new(
+                "needsReview",
+                crate::nl::tr("Review Recent edits in the Time editor before adding time."),
+            ));
+        }
+        editor.working = true;
+        editor.issue = None;
+        editor.message = None;
+        Ok((editor.workspace.clone(), rounding))
+    })?;
+    let (workspace, rounding) = started;
+    let task_engine = engine.clone();
+    let result = detached(async move {
+        let _busy = busy;
+        let engine = task_engine;
+        let result: Result<(WorkLogChange, Vec<WorkLogConflict>, Option<String>)> = async {
+            let draft = WorkLogDraft::from_times(
+                entry.start,
+                entry.end,
+                entry.ticket_id,
+                entry.comment.non_empty().map(str::to_string),
+                entry.activity_id.non_empty().map(str::to_string),
+                entry.billable,
+                now,
+                &cal,
+            )?;
+            // The day around the entry, from the day before for overnight entries: it bounds the
+            // rounded start and is what the new entry is checked against.
+            let day = cal.start_of_date(cal.date(entry.start));
+            let around = clients
+                .seven_pace
+                .work_logs(Some(cal.add_days(day, -1)), cal.add_days(day, 2), true)
+                .await?;
+            let plan = WorkLogPlan::create(draft)?.rounded(rounding, &around, now, &cal)?;
+            let (conflicts, overlap_issue) =
+                match TrackingService::current(clients.seven_pace.as_ref()).await {
+                    Ok(state) => match plan_conflicts(&plan, "", &around, &state, now, &cal) {
+                        Ok(conflicts) => (conflicts, None),
+                        Err(error) => (
+                            Vec::new(),
+                            Some(crate::nl::trf(
+                                "Overlap check incomplete. {error}",
+                                &[("error", &error)],
+                            )),
+                        ),
+                    },
+                    Err(AppError::Cancelled) => return Err(AppError::Cancelled),
+                    Err(error) => (
+                        Vec::new(),
+                        Some(crate::nl::trf(
+                            "Overlap check incomplete. {error}",
+                            &[("error", &error)],
+                        )),
+                    ),
+                };
+            if !still_current(&engine, &clients) {
+                return Err(AppError::message(crate::nl::tr(
+                    "The 7pace connection changed. Nothing was saved.",
+                )));
+            }
+            let service: &dyn WorkLogMutationService = clients.seven_pace.as_ref();
+            let record =
+                WorkLogOperations::apply(&plan, &workspace, service, now, &cal, |record| {
+                    ready(checkpoint_journal(&engine, record))
+                })
+                .await?;
+            Ok((record, conflicts, overlap_issue))
+        }
+        .await;
+        let outcome = engine.update(|state| {
+            let editor = &mut state.controllers.time_editor;
+            editor.working = false;
+            match &result {
+                Ok((record, conflicts, overlap_issue)) => {
+                    editor.saved_conflicts = conflicts.clone();
+                    editor.saved_overlap_issue = overlap_issue.clone();
+                    editor.message = Some(crate::nl::trf(
+                        "{title} confirmed by 7pace. You can undo this from Recent edits.",
+                        &[("title", &record.title)],
+                    ));
+                    SaveOutcome::Saved { idle_correction: None }
+                }
+                Err(_) if editor.requires_review() => SaveOutcome::NeedsReview,
+                Err(_) => SaveOutcome::Failed,
+            }
+        });
+        (outcome, result.map(|(record, _, _)| record))
+    })
+    .await
+    .ok_or_else(internal)?;
+    let (outcome, result) = result;
+    if outcome != SaveOutcome::Failed {
+        super::hooks::invalidate_worklogs(engine);
+        crate::session::hooks::worklogs_changed(engine).await;
+        if engine.read(|state| visible(state, pages::TIME_EDITOR)) {
+            load_intent(engine).await?;
+        }
+    }
+    let record = result.map_err(IpcError::from)?;
+    engine.record(crate::nl::tr("Tracked time added"), crate::nl::tr("Added an entry in 7pace"));
+    let id = record.after.first().map(|log| log.id.clone()).unwrap_or_default();
+    Ok(serde_json::json!({ "id": id }))
 }
 
 // -- Gaps and overlaps ----------------------------------------------------------------------------
@@ -885,11 +1070,11 @@ pub(crate) async fn load_corrections(engine: &Engine) -> Result<Value, IpcError>
             let start = preferences.time(preferences.start_minute, day_start, &cal);
             if end <= start {
                 return Err(AppError::message(
-                    "There is no elapsed workday to review for this date.",
+                    crate::nl::tr("There is no elapsed workday to review for this date."),
                 ));
             }
             let Some(clients) = engine.clients() else {
-                return Err(AppError::message("Connect to 7pace first."));
+                return Err(AppError::message(crate::nl::tr("Connect to 7pace first.")));
             };
             let entries = clients.seven_pace.work_logs_before(cal.add_days(day_start, 1)).await?;
             let state = TrackingService::current(clients.seven_pace.as_ref()).await?.checked()?;
@@ -901,7 +1086,7 @@ pub(crate) async fn load_corrections(engine: &Engine) -> Result<Value, IpcError>
                     .and_then(|text| wire_date::parse(text, Some(cal.tz())));
                 if !active_start.is_some_and(|active| active >= end) {
                     return Err(AppError::message(
-                        "Pause or stop the timer that crosses this review window, so its boundaries are confirmed.",
+                        crate::nl::tr("Pause or stop the timer that crosses this review window, so its boundaries are confirmed."),
                     ));
                 }
             }
@@ -943,7 +1128,7 @@ pub(crate) fn correction_plan(
         .filter(|_| issue.kind == TimeCorrectionKind::Overlap)
     {
         Some(log) => TimeCorrections::remove_interval(log, issue.start, issue.end, None, now, cal),
-        None => Err(AppError::message("Select two overlapping entries.")),
+        None => Err(AppError::message(crate::nl::tr("Select two overlapping entries."))),
     };
     match option {
         options::EXTEND_EARLIER => TimeCorrections::fill_gap(issue, true, now, cal),
@@ -954,7 +1139,7 @@ pub(crate) fn correction_plan(
             let middle = add_secs(issue.start, issue.seconds() / 2.0);
             TimeCorrections::move_boundary(issue, boundary.unwrap_or(middle), now, cal)
         }
-        _ => Err(AppError::message("Choose one of the offered corrections.")),
+        _ => Err(AppError::message(crate::nl::tr("Choose one of the offered corrections."))),
     }
 }
 
@@ -994,7 +1179,7 @@ pub(crate) async fn prepare_correction(
         None => {
             return Err(IpcError::new(
                 "notFound",
-                "This correction is no longer listed. Refresh the review.",
+                crate::nl::tr("This correction is no longer listed. Refresh the review."),
             ));
         }
         Some(plan) => plan?,
@@ -1013,14 +1198,14 @@ pub(crate) async fn prepare_correction(
     detached(async move {
         let result: Result<()> = async {
             let Some(clients) = engine.clients() else {
-                return Err(AppError::message("Connect to 7pace first."));
+                return Err(AppError::message(crate::nl::tr("Connect to 7pace first.")));
             };
             for original in &plan.before {
                 let actual = clients.seven_pace.work_log(&original.id).await?;
                 if !WorkLogOperations::unchanged(&actual, original) {
-                    return Err(AppError::message(
+                    return Err(AppError::message(crate::nl::tr(
                         "An entry changed. Refresh the correction review.",
-                    ));
+                    )));
                 }
             }
             Ok(())
@@ -1078,25 +1263,25 @@ pub(crate) async fn prepare_idle(
     detached(async move {
         let result: Result<(WorkLog, WorkLogDraft, Interval)> = async {
             let Some(clients) = engine.clients() else {
-                return Err(AppError::message("Connect to 7pace first."));
+                return Err(AppError::message(crate::nl::tr("Connect to 7pace first.")));
             };
             let Some(id) = work_log_id.filter(|id| !id.trim().is_empty()) else {
                 return Err(AppError::message(
-                    "The stopped session has no 7pace worklog to correct. Check its recorded time in the Time editor.",
+                    crate::nl::tr("The stopped session has no 7pace worklog to correct. Check its recorded time in the Time editor."),
                 ));
             };
             let log = clients.seven_pace.work_log(&id).await?;
             let state = TrackingService::current(clients.seven_pace.as_ref()).await?.checked()?;
             WorkLogOverlap::validate_editable_entry(&id, &state)?;
             if log.is_can_edit != Some(true) {
-                return Err(AppError::message("7pace does not allow editing this entry."));
+                return Err(AppError::message(crate::nl::tr("7pace does not allow editing this entry.")));
             }
             let draft = WorkLogDraft::from_log(&log, true, &cal)?;
             let lower = draft.start.max(start);
             let upper = draft.edit().end.min(end);
             if upper <= lower {
                 return Err(AppError::message(
-                    "The idle interval is no longer inside this entry. Check its recorded time.",
+                    crate::nl::tr("The idle interval is no longer inside this entry. Check its recorded time."),
                 ));
             }
             Ok((log, draft, Interval::new(lower, upper)))
@@ -1115,7 +1300,7 @@ pub(crate) async fn prepare_idle(
                     editor.guided_plan = None;
                     editor.separate_idle = false;
                     editor.second_ticket.clear();
-                    editor.second_comment = "Idle time".into();
+                    editor.second_comment = crate::nl::tr("Idle time").into();
                     editor.second_activity = draft.activity_id.unwrap_or_default();
                     editor.mode = TimeEditMode::Guided;
                     editor.selected = Some(log);
@@ -1147,4 +1332,40 @@ pub(crate) fn loaded_conflicts(
     let others: Vec<WorkLog> =
         editor.logs.iter().filter(|log| !sources.contains(log.id.as_str())).cloned().collect();
     plan_conflicts(&plan, &first.id, &others, state, now, cal).unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use att_core::i18n::{Language, with_language};
+
+    use super::*;
+
+    #[test]
+    fn messages_follow_the_interface_language() {
+        let editor = TimeEditorState::default();
+        let cal = Cal::utc();
+        let issue = || {
+            editor
+                .proposed_plan(Rounding::Exact, Timestamp::UNIX_EPOCH, &cal)
+                .unwrap_err()
+                .to_string()
+        };
+        assert_eq!(issue(), "Choose an entry.");
+        assert_eq!(with_language(Language::Nl, issue), "Kies een boeking.");
+
+        let confirmed = || {
+            crate::nl::trf(
+                "{title} confirmed by 7pace. You can undo this from Recent edits.",
+                &[("title", &"Split entry")],
+            )
+        };
+        assert_eq!(
+            confirmed(),
+            "Split entry confirmed by 7pace. You can undo this from Recent edits."
+        );
+        assert_eq!(
+            with_language(Language::Nl, confirmed),
+            "Split entry bevestigd door 7pace. Je kunt dit ongedaan maken via Recente wijzigingen."
+        );
+    }
 }

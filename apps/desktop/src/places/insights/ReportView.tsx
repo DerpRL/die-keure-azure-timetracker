@@ -7,6 +7,7 @@ import { Skeleton } from '../../components/EmptyState';
 import { TextField } from '../../components/Fields';
 import { ChevronLeftIcon, ChevronRightIcon, RefreshIcon } from '../../components/icons';
 import { deviceName, formatClockTime, instantToDay, localToday, parseInstant } from '../../features/ticketContext/format';
+import { t } from '../../i18n';
 import { PlaceHeader } from '../../layout/Place';
 import { REFRESH_SHORTCUT } from '../../layout/PageHeader';
 import { rangeTitle } from './explore/format';
@@ -31,16 +32,16 @@ export function ReportView({ tabs }: { tabs?: ReactNode }) {
   const previewId = useId();
   const { weekly, draft, empty } = report;
   const loading = weekly?.loading ?? false;
-  useRefreshShortcut(report.refresh, { isDisabled: !weekly?.configured || loading, label: 'Refresh time' });
+  useRefreshShortcut(report.refresh, { isDisabled: !weekly?.configured || loading, label: t('Refresh time') });
 
   if (!weekly) {
     return (
       <>
-        <PlaceHeader title="Weekly report" />
+        <PlaceHeader title={t('Weekly report')} />
         {tabs}
         <div aria-busy="true" className={styles.stack}>
           <span role="status" className="visually-hidden">
-            Loading the weekly report
+            {t('Loading the weekly report')}
           </span>
           <Skeleton lines={2} />
           <Skeleton shape="rect" height="20rem" />
@@ -56,8 +57,8 @@ export function ReportView({ tabs }: { tabs?: ReactNode }) {
   const isCurrent = !!weekStart && !!weekEnd && weekStart.compare(today) <= 0 && weekEnd.compare(today) > 0;
   const synced = parseInstant(weekly.syncedAt);
   const status = [
-    weekly.hasDraft || !empty ? `Draft saved on ${deviceName(app?.os)}` : 'No draft yet',
-    loading ? 'loading time…' : synced ? `time loaded ${formatClockTime(synced)}` : null,
+    weekly.hasDraft || !empty ? t('Draft saved on {device}', { device: deviceName(app?.os) }) : t('No draft yet'),
+    loading ? t('loading time…') : synced ? t('time loaded {time}', { time: formatClockTime(synced) }) : null,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -69,21 +70,21 @@ export function ReportView({ tabs }: { tabs?: ReactNode }) {
         subtitle={<span role="status">{status}</span>}
         before={
           <div className={styles.stepper}>
-            <IconButton label="Previous week" icon={ChevronLeftIcon} variant="secondary" onPress={() => report.move(-1)} />
-            <IconButton label="Next week" icon={ChevronRightIcon} variant="secondary" isDisabled={isFuture} onPress={() => report.move(1)} />
+            <IconButton label={t('Previous week')} icon={ChevronLeftIcon} variant="secondary" onPress={() => report.move(-1)} />
+            <IconButton label={t('Next week')} icon={ChevronRightIcon} variant="secondary" isDisabled={isFuture} onPress={() => report.move(1)} />
           </div>
         }
         after={
           isCurrent ? null : (
             <Button size="small" variant="plain" onPress={() => report.jumpTo(today.toString())}>
-              This week
+              {t('This week')}
             </Button>
           )
         }
         actions={
           <>
             <DatePicker<CalendarDate>
-              label="Week of"
+              label={t('Week of')}
               hideLabel
               className={styles.jumpTo}
               value={weekStart}
@@ -93,7 +94,7 @@ export function ReportView({ tabs }: { tabs?: ReactNode }) {
               }}
             />
             <IconButton
-              label="Refresh time"
+              label={t('Refresh time')}
               icon={RefreshIcon}
               variant="secondary"
               shortcut={REFRESH_SHORTCUT}
@@ -102,13 +103,13 @@ export function ReportView({ tabs }: { tabs?: ReactNode }) {
               onPress={report.refresh}
             />
             <Button isDisabled={!weekly.hasData || loading} isPending={report.generating} onPress={() => void report.generate()}>
-              {empty ? 'Generate from time' : 'Regenerate from time'}
+              {empty ? t('Generate from time') : t('Regenerate from time')}
             </Button>
             <Button isDisabled={empty} onPress={() => void report.copy()}>
-              Copy
+              {t('Copy')}
             </Button>
             <Button variant="primary" isDisabled={empty || report.exporting} isPending={report.exporting} onPress={() => void report.exportMarkdown()}>
-              Export Markdown…
+              {t('Export Markdown…')}
             </Button>
           </>
         }
@@ -119,38 +120,38 @@ export function ReportView({ tabs }: { tabs?: ReactNode }) {
         <Card as="section" aria-labelledby={editId} padding="none" className={styles.reportCard}>
           <div className={styles.reportHead}>
             <h2 id={editId} className={styles.cardTitle}>
-              Edit
+              {t('Edit')}
             </h2>
             <span className={styles.muted}>Markdown</span>
           </div>
           <TextField
-            label="Editable weekly status report"
+            label={t('Editable weekly status report')}
             hideLabel
             multiline
             rows={24}
             value={draft}
             onChange={report.edit}
-            placeholder="Generate a draft, or write your update here."
+            placeholder={t('Generate a draft, or write your update here.')}
             className={styles.reportEditor}
           />
         </Card>
         <Card as="section" aria-labelledby={previewId} padding="none" className={styles.reportCard}>
           <div className={styles.reportHead}>
             <h2 id={previewId} className={styles.cardTitle}>
-              Preview
+              {t('Preview')}
             </h2>
-            <span className={styles.muted}>As it looks when pasted</span>
+            <span className={styles.muted}>{t('As it looks when pasted')}</span>
           </div>
           <div className={styles.reportPreview}>
-            {empty ? <p className={styles.muted}>Generate a draft from the week’s time, or write your update.</p> : <MarkdownPreview source={draft} />}
+            {empty ? <p className={styles.muted}>{t('Generate a draft from the week’s time, or write your update.')}</p> : <MarkdownPreview source={draft} />}
             <p className={styles.reportFootnote}>
-              {weekly.message ?? 'Edits are saved locally as you type. Nothing is sent automatically.'}
+              {weekly.message ?? t('Edits are saved locally as you type. Nothing is sent automatically.')}
             </p>
           </div>
         </Card>
       </div>
       {weekly.summary ? (
-        <Extras id="weekSoFar" title="Week so far" summary="The total, tickets and days the draft is based on">
+        <Extras id="weekSoFar" title={t('Week so far')} summary={t('The total, tickets and days the draft is based on')}>
           <WeekSoFar summary={weekly.summary} />
         </Extras>
       ) : null}

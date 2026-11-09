@@ -3,6 +3,7 @@ import { seriesColor } from '../../charts/palette';
 import { cx } from '../../utils/cx';
 import { displayedMinute } from '../../utils/minutes';
 import styles from './activity.module.css';
+import { dateFormat } from '../../i18n';
 
 export interface DayStripBlock {
   id: string;
@@ -43,7 +44,7 @@ export interface DayStripProps {
 const HOUR = 3_600_000;
 
 function hourLabel(time: number): string {
-  return new Date(time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  return dateFormat({ hour: '2-digit', minute: '2-digit' }).format(new Date(time));
 }
 
 /** At most this many hour labels, so they never run into each other. */

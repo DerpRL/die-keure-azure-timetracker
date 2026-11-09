@@ -22,6 +22,7 @@ import { TrackingCommands } from '../tracking/TrackingCommands';
 import { PanelTrackingFlow } from '../tracking/TrackingFlow';
 import { UpdateNotice } from '../updates/UpdateNotice';
 import styles from './panel.module.css';
+import { t, tn } from '../../i18n';
 
 const NEXT_ACTION_PRIMARY = '[data-next-action] [data-prompt-primary]:not([disabled])';
 const FLOW_PRIMARY = '[data-tracking-flow] [data-prompt-primary]:not([disabled])';
@@ -42,14 +43,14 @@ function SetupCallToAction() {
       <SetupIcon className={styles.setupIcon} />
       <div className={styles.setupText}>
         <h2 id="panel-setup-title" className={styles.setupTitle}>
-          A little setup. A lot less forgotten time.
+          {t('A little setup. A lot less forgotten time.')}
         </h2>
         <p className={styles.caption}>
-          Connect 7pace, add your Azure PAT, and your branches will bring the right ticket to you.
+          {t('Connect 7pace, add your Azure PAT, and your branches will bring the right ticket to you.')}
         </p>
       </div>
       <Button variant="primary" data-prompt-primary="" onPress={() => openMainPage('settings')}>
-        Set up accounts
+        {t('Set up accounts')}
       </Button>
     </section>
   );
@@ -67,20 +68,20 @@ function PickUpAgain() {
   return (
     <section aria-labelledby="panel-pickup-title" className={styles.today}>
       <h2 id="panel-pickup-title" className={styles.eyebrow}>
-        Pick up again
+        {t('Pick up again')}
       </h2>
       <ul role="list" className={styles.pickList}>
         {tickets.map((ticket) => (
           <li key={ticket.ticketId} className={styles.pickRow}>
             <div className={styles.pickText}>
-              <p className={styles.pickTitle}>{ticket.title ?? `Azure ticket #${ticket.ticketId}`}</p>
-              <p className={styles.pickMeta}>{`#${ticket.ticketId}${ticket.favorite ? ' · Favourite' : ''}`}</p>
+              <p className={styles.pickTitle}>{ticket.title ?? t('Azure ticket #{id}', { id: ticket.ticketId })}</p>
+              <p className={styles.pickMeta}>{`#${ticket.ticketId}${ticket.favorite ? ` · ${t('Favourite')}` : ''}`}</p>
             </div>
             <IconButton
               variant="secondary"
               size="small"
               icon={PlayIcon}
-              label={`Start timer on #${ticket.ticketId}`}
+              label={t('Start timer on #{id}', { id: ticket.ticketId })}
               tooltip={false}
               isDisabled={busy || !connected}
               isPending={actions.isPending(`pick-${ticket.ticketId}`)}
@@ -109,13 +110,13 @@ function DraftsButton() {
     <Button
       size="small"
       className={styles.draftsButton}
-      aria-label={`${count} offline ${count === 1 ? 'draft' : 'drafts'}, open in Timesheet`}
+      aria-label={tn(count, '{count} offline draft, open in Timesheet', '{count} offline drafts, open in Timesheet')}
       onPress={() => openMainPage('timesheet/drafts')}
     >
       <span className={styles.draftsCount} aria-hidden="true">
         {count}
       </span>
-      {count === 1 ? 'Offline draft' : 'Offline drafts'}
+      {count === 1 ? t('Offline draft') : t('Offline drafts')}
     </Button>
   );
 }
@@ -147,7 +148,7 @@ export function PanelView() {
 
   useCommand({
     id: 'panel.escape',
-    label: flowActive ? 'Cancel the tracking choice' : 'Hide the panel',
+    label: flowActive ? t('Cancel the tracking choice') : t('Hide the panel'),
     group: 'General',
     shortcut: { key: 'Escape' },
     allowInInputs: true,
@@ -224,7 +225,7 @@ export function PanelView() {
     nextAction = (
       <div aria-busy="true" className={styles.loading}>
         <span role="status" className="visually-hidden">
-          Loading
+          {t('Loading')}
         </span>
         <Skeleton shape="rect" height="5rem" />
         <Skeleton lines={2} />
@@ -236,8 +237,8 @@ export function PanelView() {
     nextAction = <SetupCallToAction />;
   } else if (next) {
     nextAction = (
-      <section aria-label="Next action" data-next-action="">
-        <PromptList items={[next]} surface="panel" headingLevel={2} label="Most urgent suggestion" />
+      <section aria-label={t('Next action')} data-next-action="">
+        <PromptList items={[next]} surface="panel" headingLevel={2} label={t('Most urgent suggestion')} />
       </section>
     );
   }
@@ -248,20 +249,20 @@ export function PanelView() {
         status={
           <TrackingStatusLabel
             status={status}
-            label={local ? 'Local tracking' : undefined}
+            label={local ? t('Local tracking') : undefined}
             icon={local ? OfflineDraftsIcon : undefined}
           />
         }
         footer={
           <PanelNav
             items={[
-              { id: 'today', label: 'Today', icon: CalendarIcon, onPress: () => openMainPage('today') },
-              { id: 'timesheet', label: 'Timesheet', icon: TableIcon, onPress: () => openMainPage('timesheet') },
-              { id: 'insights', label: 'Insights', icon: StatisticsIcon, onPress: () => openMainPage('insights') },
-              { id: 'settings', label: 'Settings', icon: SettingsIcon, onPress: () => openMainPage('settings') },
-              { id: 'quit', label: 'Quit', icon: PowerIcon, onPress: quitApp, title: 'Quit app. The 7pace timer keeps running.' },
+              { id: 'today', label: t('Today'), icon: CalendarIcon, onPress: () => openMainPage('today') },
+              { id: 'timesheet', label: t('Timesheet'), icon: TableIcon, onPress: () => openMainPage('timesheet') },
+              { id: 'insights', label: t('Insights'), icon: StatisticsIcon, onPress: () => openMainPage('insights') },
+              { id: 'settings', label: t('Settings'), icon: SettingsIcon, onPress: () => openMainPage('settings') },
+              { id: 'quit', label: t('Quit'), icon: PowerIcon, onPress: quitApp, title: t('Quit app. The 7pace timer keeps running.') },
             ]}
-            note="Quitting keeps the 7pace timer running."
+            note={t('Quitting keeps the 7pace timer running.')}
           />
         }
       >
@@ -272,7 +273,7 @@ export function PanelView() {
         {!loading && !flowActive ? (
           <>
             {tracking.showsRemoteTimer ? (
-              <section aria-label="Current tracking">
+              <section aria-label={t('Current tracking')}>
                 <CurrentTracking surface="panel" />
               </section>
             ) : null}
@@ -284,12 +285,12 @@ export function PanelView() {
             {connection.health !== 'unconfigured' ? nextAction : null}
             {rest.length > 0 ? (
               <PanelSection
-                title="More suggestions"
+                title={t('More suggestions')}
                 collapsible
                 defaultExpanded={false}
-                summary={`${rest.length} waiting`}
+                summary={t('{count} waiting', { count: rest.length })}
               >
-                <PromptList items={rest} surface="panel" headingLevel={3} label="More suggestions" />
+                <PromptList items={rest} surface="panel" headingLevel={3} label={t('More suggestions')} />
               </PanelSection>
             ) : null}
             <PickUpAgain />
@@ -300,12 +301,12 @@ export function PanelView() {
             tone="error"
             live="polite"
             onDismiss={() => void dismiss.run({ type: 'app.dismissError' })}
-            dismissLabel="Dismiss error"
+            dismissLabel={t('Dismiss error')}
           >
             {error}
           </Banner>
         ) : null}
-        <section aria-label="Connection" className={styles.statusRow}>
+        <section aria-label={t('Connection')} className={styles.statusRow}>
           <ConnectionHealth />
           {!loading && !flowActive ? <DraftsButton /> : null}
         </section>

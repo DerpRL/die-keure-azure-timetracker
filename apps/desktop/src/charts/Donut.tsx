@@ -4,6 +4,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { ToggleButton, Toolbar } from 'react-aria-components';
 import type { HeadingLevel } from '../components/Card';
 import { FilterIcon } from '../components/icons';
+import { t } from '../i18n';
 import { cx } from '../utils/cx';
 import { ChartFrame } from './ChartFrame';
 import { ChartTooltip } from './ChartTooltip';
@@ -52,9 +53,9 @@ export function Donut({
   selectedId = null,
   onSelect,
   formatValue = defaultFormatValue,
-  totalLabel = 'recorded',
+  totalLabel = t('recorded'),
   patterns: patternsProp,
-  emptyMessage = 'No recorded time in this selection.',
+  emptyMessage = t('No recorded time in this selection.'),
 }: DonutProps) {
   const increasedContrast = useIncreasedContrast();
   const patterns = patternsProp ?? increasedContrast;
@@ -90,9 +91,9 @@ export function Donut({
     <DataTable
       caption={title}
       columns={[
-        { id: 'name', header: 'Activity' },
-        { id: 'value', header: 'Recorded', align: 'end' },
-        { id: 'share', header: 'Share', align: 'end' },
+        { id: 'name', header: t('Activity') },
+        { id: 'value', header: t('Recorded'), align: 'end' },
+        { id: 'share', header: t('Share'), align: 'end' },
       ]}
       rows={visible.map((slice) => ({
         id: slice.id,
@@ -109,7 +110,7 @@ export function Donut({
       ) : (
         <div className={styles.donutLayout}>
           <div className={styles.donutChart}>
-            <svg viewBox={`0 0 ${SIZE} ${SIZE}`} width="100%" height="100%" role="group" aria-label={`${title}, doughnut chart`}>
+            <svg viewBox={`0 0 ${SIZE} ${SIZE}`} width="100%" height="100%" role="group" aria-label={t('{title}, doughnut chart', { title })}>
               <SeriesPatternDefs prefix={patternId} count={8} />
               <g transform={`translate(${radius},${radius})`}>
                 {arcs.map((entry) => {
@@ -119,7 +120,11 @@ export function Donut({
                     <path
                       key={slice.id}
                       role="img"
-                      aria-label={`${slice.name}: ${formatValue(slice.value)}, ${percent(slice.value, total)}${selected ? ', filtered' : ''}`}
+                      aria-label={
+                        selected
+                          ? t('{name}: {value}, {share}, filtered', { name: slice.name, value: formatValue(slice.value), share: percent(slice.value, total) })
+                          : t('{name}: {value}, {share}', { name: slice.name, value: formatValue(slice.value), share: percent(slice.value, total) })
+                      }
                       d={(selected ? selectedShape(entry) : shape(entry)) ?? ''}
                       fill={seriesFill(patternId, colorIndex(slice), patterns)}
                       className={cx(styles.slice, selected && styles.sliceSelected, onSelect && styles.clickable)}
@@ -148,14 +153,14 @@ export function Donut({
               />
             ) : null}
           </div>
-          <Toolbar aria-label={`Filter by ${title.toLowerCase()}`} orientation="vertical" className={styles.filters}>
+          <Toolbar aria-label={t('Filter by {name}', { name: title.toLowerCase() })} orientation="vertical" className={styles.filters}>
             {visible.map((slice) => (
               <ToggleButton
                 key={slice.id}
                 isSelected={slice.id === selectedId}
                 onChange={() => toggle(slice.id)}
                 isDisabled={!onSelect}
-                aria-label={`Filter by ${slice.name}, ${formatValue(slice.value)}, ${percent(slice.value, total)}`}
+                aria-label={t('Filter by {name}, {value}, {share}', { name: slice.name, value: formatValue(slice.value), share: percent(slice.value, total) })}
                 className={styles.filterButton}
                 onHoverChange={(hovering) => setHovered(hovering ? slice.id : null)}
               >

@@ -17,11 +17,12 @@ import { deviceName, formatClockTime, parseInstant, secondsBetween } from '../..
 import { useCommands } from '../../../shortcuts/hooks';
 import { useAction, useLiveSeconds, useSlice } from '../../../state/hooks';
 import { cx } from '../../../utils/cx';
+import { dateFormat, t } from '../../../i18n';
 import { formatClock, formatShortDuration, formatSpokenDuration } from '../../../utils/duration';
 import { OfflineIcon } from '../icons';
 import { TimesheetHeader } from '../TimesheetHeader';
 import { DraftEditor, StartLocalSheet } from './DraftSheets';
-import { draftHeading, draftTitleParts, isRunning, newPastDraft, STATUS_TONES } from './labels';
+import { draftHeading, draftTitleParts, isRunning, newPastDraft, STATUS_LABELS, STATUS_TONES } from './labels';
 import { ReviewCard } from './ReviewCard';
 import styles from './OfflineDrafts.module.css';
 import shared from '../timesheet.module.css';
@@ -60,7 +61,7 @@ function LocalTimer({
   const seconds = useLiveSeconds(0, active.start, true);
   const otherWorkspace = active.workspace !== offline.workspace;
   const { ticket, name } = draftTitleParts(active, otherWorkspace ? undefined : items);
-  const meta = [ticket, activityName, `since ${formatClockTime(parseInstant(active.start))}`].filter(Boolean).join(' · ');
+  const meta = [ticket, activityName, t('since {time}', { time: formatClockTime(parseInstant(active.start)) })].filter(Boolean).join(' · ');
   return (
     <>
       <div className={styles.timerText}>
@@ -71,31 +72,31 @@ function LocalTimer({
         <p className={styles.caption}>{meta}</p>
       </div>
       {/* A timer region: read on request, never announced every second. */}
-      <p role="timer" aria-label={`Elapsed ${formatSpokenDuration(seconds)}`} className={styles.clock}>
+      <p role="timer" aria-label={t('Elapsed {duration}', { duration: formatSpokenDuration(seconds) })} className={styles.clock}>
         {formatClock(seconds)}
       </p>
-      {active.ticketId && active.comment ? <p className={styles.caption}>{`Comment: ${active.comment}`}</p> : null}
+      {active.ticketId && active.comment ? <p className={styles.caption}>{t('Comment: {comment}', { comment: active.comment })}</p> : null}
       <div className={styles.timerButtons}>
-        {onAddPast ? <Button onPress={onAddPast}>Add past time…</Button> : null}
+        {onAddPast ? <Button onPress={onAddPast}>{t('Add past time…')}</Button> : null}
         <Button
           variant="primary"
           isDisabled={offline.working}
           isPending={stop.pending}
           onPress={() =>
             void stop.run({ type: 'offline.stopLocal' }).then((result) => {
-              if (result.ok) announce('Local timer stopped.');
+              if (result.ok) announce(t('Local timer stopped.'));
             })
           }
         >
-          Stop local timer
+          {t('Stop local timer')}
         </Button>
       </div>
-      <p className={styles.caption}>Time continues through sleep and restarts. A 7pace timer may still be running on the server.</p>
+      <p className={styles.caption}>{t('Time continues through sleep and restarts. A 7pace timer may still be running on the server.')}</p>
       <DeleteLocalTimer draftId={active.id} isDisabled={offline.working || stop.pending} size="small" />
       {otherWorkspace ? (
         <p className={styles.warningLine}>
           <WarningIcon className={styles.warningIcon} />
-          {`This timer belongs to ${active.workspace}. Stop it here, then switch workspace to upload it.`}
+          {t('This timer belongs to {workspace}. Stop it here, then switch workspace to upload it.', { workspace: active.workspace })}
         </p>
       ) : null}
       {stop.error ? <Banner tone="error">{stop.error.message}</Banner> : null}
@@ -137,21 +138,21 @@ function DraftRow({
         <p className={styles.meta}>
           <span className={styles.mono}>{draftRange(draft)}</span>
           {running ? (
-            <Badge tone="success">Running locally</Badge>
+            <Badge tone="success">{t('Running locally')}</Badge>
           ) : draft.status === 'Local draft' && activityName ? (
             <ActivityChip name={activityName} colorIndex={colorIndex} />
           ) : (
-            <Badge tone={STATUS_TONES[draft.status]}>{draft.status === 'Local draft' ? 'Local draft' : draft.status}</Badge>
+            <Badge tone={STATUS_TONES[draft.status]}>{t(STATUS_LABELS[draft.status] ?? draft.status)}</Badge>
           )}
         </p>
-        {draft.remoteId ? <p className={styles.selectable}>{`7pace entry: ${draft.remoteId}`}</p> : null}
+        {draft.remoteId ? <p className={styles.selectable}>{t('7pace entry: {id}', { id: draft.remoteId })}</p> : null}
         {review.error ? <Banner tone="error">{review.error.message}</Banner> : null}
       </div>
       <span className={styles.duration}>{draft.end ? formatShortDuration(secondsBetween(draft.start, draft.end)) : ''}</span>
       <div className={cx(styles.rowActions, shared.noWrap)}>
         {draft.status === 'Local draft' ? (
-          <Button size="small" isDisabled={disabled} onPress={() => onEdit(draft)} aria-label={`Edit, ${title}`}>
-            Edit
+          <Button size="small" isDisabled={disabled} onPress={() => onEdit(draft)} aria-label={t('Edit, {title}', { title })}>
+            {t('Edit')}
           </Button>
         ) : null}
         {!running && !synced ? (
@@ -161,12 +162,12 @@ function DraftRow({
             isDisabled={disabled || !canReview}
             isPending={review.pending}
             onPress={() => void review.run({ type: 'offline.review', draftId: draft.id })}
-            aria-label={`Review, ${title}`}
+            aria-label={t('Review, {title}', { title })}
           >
-            Review
+            {t('Review')}
           </Button>
         ) : null}
-        <DeleteDraftButton draft={draft} name={title} label="Delete…" isDisabled={disabled} onDeleted={onDeleted} />
+        <DeleteDraftButton draft={draft} name={title} label={t('Delete…')} isDisabled={disabled} onDeleted={onDeleted} />
       </div>
     </li>
   );
@@ -176,9 +177,9 @@ function DraftRow({
 function draftRange(draft: OfflineDraftView): string {
   const start = parseInstant(draft.start);
   if (!start) return draft.start;
-  const day = start.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  const day = dateFormat({ weekday: 'short', day: 'numeric', month: 'short' }).format(start);
   const end = parseInstant(draft.end);
-  return `${day} · ${formatClockTime(start)} – ${end ? formatClockTime(end) : 'running'}`;
+  return `${day} · ${formatClockTime(start)} – ${end ? formatClockTime(end) : t('running')}`;
 }
 
 /**
@@ -208,23 +209,23 @@ export function DraftsView() {
   const stopLocal = useAction();
 
   useCommands([
-    { id: 'offline.start', icon: PlayIcon, label: 'Start local timer…', group: 'Tracking', keywords: ['offline', 'local'], isDisabled: !canStart, onAction: () => setStarting(true) },
+    { id: 'offline.start', icon: PlayIcon, label: t('Start local timer…'), group: 'Tracking', keywords: ['offline', 'local'], isDisabled: !canStart, onAction: () => setStarting(true) },
     {
       id: 'offline.stop',
       icon: StopIcon,
-      label: 'Stop local timer',
+      label: t('Stop local timer'),
       group: 'Tracking',
       keywords: ['offline', 'local'],
       isDisabled: !offline?.active || offline.working,
       onAction: () =>
         void stopLocal.run({ type: 'offline.stopLocal' }).then((result) => {
-          if (result.ok) announce('Local timer stopped.');
+          if (result.ok) announce(t('Local timer stopped.'));
         }),
     },
     {
       id: 'offline.addPast',
       icon: PlusIcon,
-      label: 'Add past time…',
+      label: t('Add past time…'),
       group: 'Actions',
       keywords: ['offline', 'draft'],
       isDisabled: !canAdd,
@@ -237,10 +238,10 @@ export function DraftsView() {
   if (!offline) {
     return (
       <>
-        <TimesheetHeader view="drafts" title="Offline drafts" />
+        <TimesheetHeader view="drafts" title={t('Offline drafts')} />
         <div className={styles.page} aria-busy="true">
           <span role="status" className="visually-hidden">
-            Loading offline drafts
+            {t('Loading offline drafts')}
           </span>
           <Skeleton lines={2} />
           <Skeleton shape="rect" height="12rem" />
@@ -268,25 +269,25 @@ export function DraftsView() {
         <div role="status" className={styles.offlineBanner}>
           <span className={styles.offlineText}>
             <OfflineIcon className={styles.offlineIcon} />
-            {`You’re offline. 7pace can’t be reached, so new time is saved on ${device} as drafts.`}
+            {t('You’re offline. 7pace can’t be reached, so new time is saved on {device} as drafts.', { device })}
           </span>
           <Button size="small" isDisabled={busy || offline.working} isPending={reconnect.pending} onPress={() => void reconnect.run({ type: 'connection.retry' })}>
-            Try to reconnect
+            {t('Try to reconnect')}
           </Button>
         </div>
       ) : null}
-      <TimesheetHeader view="drafts" title="Offline drafts" subtitle="Drafts are left out of totals and Insights until you upload them." />
+      <TimesheetHeader view="drafts" title={t('Offline drafts')} subtitle={t('Drafts are left out of totals and Insights until you upload them.')} />
 
       {offline.issue ? <Banner tone="warning">{offline.issue}</Banner> : null}
       {offline.message ? <Banner tone="info">{offline.message}</Banner> : null}
       {reconnect.error ?? showSynced.error ? (
         <Banner tone="error">{(reconnect.error ?? showSynced.error)?.message}</Banner>
       ) : null}
-      {offline.working ? <ProgressBar label="Checking with 7pace…" isIndeterminate /> : null}
+      {offline.working ? <ProgressBar label={t('Checking with 7pace…')} isIndeterminate /> : null}
       {offline.review ? (
         <ReviewCard
           review={offline.review}
-          title={offline.drafts.find((entry) => entry.id === offline.review?.draft.id)?.title ?? 'draft'}
+          title={offline.drafts.find((entry) => entry.id === offline.review?.draft.id)?.title ?? t('draft')}
           activities={offline.activities}
           disabled={rowsDisabled || preview}
           onDeleted={focusList}
@@ -297,14 +298,14 @@ export function DraftsView() {
         <Card as="section" aria-labelledby={timerId} className={cx(styles.localCard, shared.noWrap)}>
           <div className={styles.cardHead}>
             <Heading level={2} id={timerId} className={styles.sectionTitle}>
-              Local timer
+              {t('Local timer')}
             </Heading>
-            {offline.active ? <Badge tone="success">{`Running on ${device}`}</Badge> : null}
+            {offline.active ? <Badge tone="success">{t('Running on {device}', { device })}</Badge> : null}
           </div>
           {!offline.workspace ? (
             <p className={styles.warningLine}>
               <WarningIcon className={styles.warningIcon} />
-              Save your 7pace workspace URL in Settings first. Credentials are only needed for uploading.
+              {t('Save your 7pace workspace URL in Settings first. Credentials are only needed for uploading.')}
             </p>
           ) : null}
           {offline.active ? (
@@ -318,13 +319,13 @@ export function DraftsView() {
             />
           ) : (
             <>
-              <p className={styles.caption}>{`Track on ${device} while 7pace can’t be reached, or add time you worked while disconnected. Drafts stay on ${device} until you upload them.`}</p>
+              <p className={styles.caption}>{t('Track on {device} while 7pace can’t be reached, or add time you worked while disconnected. Drafts stay on {device} until you upload them.', { device })}</p>
               <div className={styles.timerButtons}>
                 <Button isDisabled={!canAdd} onPress={() => setEditing(newPastDraft(offline.workspace))}>
-                  Add past time…
+                  {t('Add past time…')}
                 </Button>
                 <Button variant="primary" isDisabled={!canStart} onPress={() => setStarting(true)}>
-                  Start local timer…
+                  {t('Start local timer…')}
                 </Button>
               </div>
             </>
@@ -334,7 +335,7 @@ export function DraftsView() {
         <Card as="section" padding="none" aria-labelledby={headingId} className={styles.listCard}>
           <div className={styles.listHeader}>
             <Heading level={2} id={headingId} tabIndex={-1} className={styles.sectionTitle}>
-              {`Waiting for review · ${offline.readyCount}`}
+              {t('Waiting for review · {count}', { count: offline.readyCount })}
             </Heading>
             <Switch
               isSelected={synced}
@@ -343,14 +344,14 @@ export function DraftsView() {
                 void showSynced.run({ type: 'offline.setShowSynced', show });
               }}
             >
-              Show uploaded
+              {t('Show uploaded')}
             </Switch>
           </div>
           {offline.drafts.length === 0 ? (
             <EmptyState
               icon={OfflineDraftsIcon}
-              title="No offline drafts"
-              description="Start a local timer or add time you worked while disconnected."
+              title={t('No offline drafts')}
+              description={t('Start a local timer or add time you worked while disconnected.')}
             />
           ) : (
             <ul role="list" className={styles.drafts}>
@@ -371,12 +372,12 @@ export function DraftsView() {
           )}
           {offline.drafts.length > shown.length ? (
             <div className={styles.more}>
-              <span className={styles.caption}>{`Showing ${shown.length} of ${offline.drafts.length} drafts`}</span>
-              <Button onPress={() => setVisible((count) => count + DRAFT_PAGE_SIZE)}>Show more drafts</Button>
+              <span className={styles.caption}>{t('Showing {shown} of {total} drafts', { shown: shown.length, total: offline.drafts.length })}</span>
+              <Button onPress={() => setVisible((count) => count + DRAFT_PAGE_SIZE)}>{t('Show more drafts')}</Button>
             </div>
           ) : null}
           <div className={styles.listFooter}>
-            <span className={styles.caption}>Review compares a draft with 7pace before it is uploaded. Nothing reaches 7pace without your confirmation.</span>
+            <span className={styles.caption}>{t('Review compares a draft with 7pace before it is uploaded. Nothing reaches 7pace without your confirmation.')}</span>
           </div>
         </Card>
       </div>
@@ -389,7 +390,7 @@ export function DraftsView() {
           working={offline.working}
           device={device}
           onClose={() => setStarting(false)}
-          onStarted={() => announce('Local timer started.')}
+          onStarted={() => announce(t('Local timer started.'))}
         />
       ) : null}
       {editing ? (

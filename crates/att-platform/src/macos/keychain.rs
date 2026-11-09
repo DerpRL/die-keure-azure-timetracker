@@ -29,6 +29,7 @@ use objc2_security::{
     kSecMatchLimitOne, kSecReturnData, kSecValueData,
 };
 
+use crate::nl::trf;
 use crate::{CREDENTIAL_SERVICE, Credentials, PlatformError, Result};
 
 /// Keychain-backed [`Credentials`] for one service name.
@@ -88,8 +89,9 @@ impl Credentials for KeychainCredentials {
         match data {
             // Swift `String(data:encoding: .utf8)`: bytes that are not UTF-8 read as no secret.
             Some(data) if status == errSecSuccess => Ok(String::from_utf8(data.to_vec()).ok()),
-            _ => Err(PlatformError::Failed(format!(
-                "Keychain could not read the saved credential ({status})."
+            _ => Err(PlatformError::Failed(trf(
+                "Keychain could not read the saved credential ({status}).",
+                &[("status", &status)],
             ))),
         }
     }
@@ -115,8 +117,9 @@ impl Credentials for KeychainCredentials {
         if status == errSecSuccess {
             Ok(())
         } else {
-            Err(PlatformError::Failed(format!(
-                "Keychain could not save the credential ({status})."
+            Err(PlatformError::Failed(trf(
+                "Keychain could not save the credential ({status}).",
+                &[("status", &status)],
             )))
         }
     }
@@ -127,8 +130,9 @@ impl Credentials for KeychainCredentials {
         if status == errSecSuccess || status == errSecItemNotFound {
             Ok(())
         } else {
-            Err(PlatformError::Failed(format!(
-                "Keychain could not remove this credential ({status})."
+            Err(PlatformError::Failed(trf(
+                "Keychain could not remove this credential ({status}).",
+                &[("status", &status)],
             )))
         }
     }

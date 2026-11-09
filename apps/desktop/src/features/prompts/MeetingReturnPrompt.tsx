@@ -4,6 +4,7 @@ import { useWorkItem } from '../../state/hooks';
 import { useIntents, useWriteGuards } from '../tracking/actions';
 import { ReturnIcon } from '../tracking/icons';
 import { PromptCard, promptStyles as styles } from './PromptCard';
+import { t } from '../../i18n';
 
 /**
  * "Meeting ended", or "Microphone use stopped" after a microphone session (1.14
@@ -18,7 +19,7 @@ export function MeetingReturnPrompt({ view }: { view: MeetingReturnView }) {
     <PromptCard
       kind="meetingReturn"
       icon={ReturnIcon}
-      title={view.fromMicrophone ? 'Microphone use stopped' : 'Meeting ended'}
+      title={view.fromMicrophone ? t('Microphone use stopped') : t('Meeting ended')}
       runner={actions}
       actions={
         <>
@@ -27,7 +28,7 @@ export function MeetingReturnPrompt({ view }: { view: MeetingReturnView }) {
             isPending={actions.isPending('dismiss')}
             onPress={() => void actions.run('dismiss', { type: 'meeting.returnDismiss' })}
           >
-            Keep current
+            {t('Keep current')}
           </Button>
           <span className={styles.spacer} />
           <Button
@@ -37,20 +38,20 @@ export function MeetingReturnPrompt({ view }: { view: MeetingReturnView }) {
             isPending={actions.isPending('resume')}
             onPress={() => void actions.run('resume', { type: 'meeting.returnResume' })}
           >
-            Resume previous…
+            {t('Resume previous…')}
           </Button>
         </>
       }
     >
       {view.fromMicrophone ? (
         <p className={styles.caption}>
-          You may have ended the call or muted your microphone. Keep tracking if the meeting is continuing.
+          {t('You may have ended the call or muted your microphone. Keep tracking if the meeting is continuing.')}
         </p>
       ) : null}
-      <p className={styles.strong}>{`Return to #${view.ticketId}?`}</p>
+      <p className={styles.strong}>{t('Return to #{id}?', { id: view.ticketId })}</p>
       {title ? <p className={styles.text}>{title}</p> : null}
       {view.activityName ? <p className={styles.caption}>{view.activityName}</p> : null}
-      <p className={styles.caption}>Confirm the activity to resume your previous work.</p>
+      <p className={styles.caption}>{t('Confirm the activity to resume your previous work.')}</p>
     </PromptCard>
   );
 }

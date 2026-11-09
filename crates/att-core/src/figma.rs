@@ -15,6 +15,7 @@ use uuid::Uuid;
 use crate::error::{AppError, Result};
 use crate::meetings::percent_decode;
 use crate::model::{ActivityType, HostOs};
+use crate::nl::tr;
 use crate::text::NonEmpty;
 use crate::time::{add_secs, diff_secs};
 
@@ -454,9 +455,9 @@ impl FigmaLedger {
             })
             .cloned()
             .ok_or_else(|| {
-                AppError::message(
+                AppError::message(tr(
                     "This Figma suggestion is outdated or its ticket link changed. Review the latest suggestion.",
-                )
+                ))
             })
     }
 
@@ -474,7 +475,7 @@ impl FigmaLedger {
     pub fn link(&mut self, key: &str, ticket: Option<i64>) -> Result<()> {
         let valid_ticket = ticket.is_none_or(|id| id > 0 && id <= i32::MAX as i64);
         if !FigmaDocument::known_key(key) || !valid_ticket {
-            return Err(AppError::message("Choose a valid file and Azure ticket number."));
+            return Err(AppError::message(tr("Choose a valid file and Azure ticket number.")));
         }
         self.files.entry(key.to_string()).or_insert_with(|| FigmaFile::placeholder(key));
         match ticket {

@@ -10,6 +10,7 @@ use jiff::Timestamp;
 use serde::{Deserialize, Deserializer, Serialize};
 use uuid::Uuid;
 
+use crate::nl::tr;
 use crate::time::diff_secs;
 
 /// App categories the user can watch. Persisted by display name (`"Microsoft Teams"`).
@@ -66,7 +67,11 @@ impl MicrophoneApp {
     }
 
     pub fn label(self) -> &'static str {
-        if self == Self::Browsers { "Google Meet / web browsers" } else { self.raw() }
+        match self {
+            Self::Browsers => tr("Google Meet / web browsers"),
+            Self::Other => tr("Other apps"),
+            _ => self.raw(),
+        }
     }
 
     /// The category of an owner id. macOS bundle IDs match a known ID or one of its children
@@ -193,10 +198,10 @@ impl MicrophoneOwner {
     /// runtime on Windows. Probes use it instead of the process name.
     pub fn web_view_name(id: &str) -> Option<&'static str> {
         if id.to_lowercase().starts_with("com.apple.webkit.") {
-            return Some("WebKit (browser or web view)");
+            return Some(tr("WebKit (browser or web view)"));
         }
         (windows_executable(id).as_deref() == Some(WEBVIEW2_EXECUTABLE))
-            .then_some("WebView2 (browser or web view)")
+            .then(|| tr("WebView2 (browser or web view)"))
     }
 }
 

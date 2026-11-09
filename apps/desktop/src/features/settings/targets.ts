@@ -3,20 +3,17 @@
  * the draft is shaped exactly as Rust writes it. Display only: the engine computes progress.
  */
 import type { TargetException, TargetExceptionKind, WorkTargets } from '../../ipc/contract';
+import { dateFormat, mark } from '../../i18n';
 import { formatMinutes } from '../../utils/duration';
 
 /** Swift weekday numbers (1 = Sunday … 7 = Saturday) in the Monday-first order Settings shows. */
 export const WEEKDAYS_MONDAY_FIRST = [2, 3, 4, 5, 6, 7, 1] as const;
 
-export const WEEKDAY_NAMES: Record<number, string> = {
-  1: 'Sunday',
-  2: 'Monday',
-  3: 'Tuesday',
-  4: 'Wednesday',
-  5: 'Thursday',
-  6: 'Friday',
-  7: 'Saturday',
-};
+/** "Monday" for a Swift weekday (1 = Sunday) in the interface language; `short`: "Mon". */
+export function weekdayName(weekday: number, style: 'long' | 'short' = 'long'): string {
+  // 1 January 2023 was a Sunday.
+  return dateFormat({ weekday: style, timeZone: 'UTC' }).format(new Date(Date.UTC(2023, 0, weekday)));
+}
 
 export const EXCEPTION_KINDS: readonly TargetExceptionKind[] = [
   'Full-day leave',
@@ -24,6 +21,14 @@ export const EXCEPTION_KINDS: readonly TargetExceptionKind[] = [
   'Replacement holiday',
   'Custom target',
 ];
+
+/** The exception kinds (serialized values) as shown; translate with `t`. */
+export const EXCEPTION_KIND_LABELS: Record<TargetExceptionKind, string> = {
+  'Full-day leave': mark('Full-day leave'),
+  'Half-day leave': mark('Half-day leave'),
+  'Replacement holiday': mark('Replacement holiday'),
+  'Custom target': mark('Custom target'),
+};
 
 /** `MAX_DAILY_MINUTES`: a day's target is 0 to 24 hours. */
 export const MAX_DAILY_MINUTES = 24 * 60;
@@ -52,15 +57,20 @@ export function weeklyTargetMinutes(targets: WorkTargets): number {
 
 export interface TargetPreset {
   id: string;
-  label: string;
+  /** "Mon–Thu 8h, Fri 6h", in the interface language. */
+  label: () => string;
   /** Minutes per weekday, Sunday first (`minutesByWeekday`). */
   minutesByWeekday: readonly number[];
 }
 
 /** Schedules Settings fills in with one press: the 1.14 preset and the 2.x default. */
 export const TARGET_PRESETS: readonly TargetPreset[] = [
-  { id: 'fourDays', label: 'Mon–Thu 8h, Fri 6h', minutesByWeekday: [0, 480, 480, 480, 480, 360, 0] },
-  { id: 'fiveDays', label: '5 × 7h 36m', minutesByWeekday: [0, 456, 456, 456, 456, 456, 0] },
+  {
+    id: 'fourDays',
+    label: () => `${weekdayName(2, 'short')}–${weekdayName(5, 'short')} ${formatMinutes(480)}, ${weekdayName(6, 'short')} ${formatMinutes(360)}`,
+    minutesByWeekday: [0, 480, 480, 480, 480, 360, 0],
+  },
+  { id: 'fiveDays', label: () => `5 × ${formatMinutes(456)}`, minutesByWeekday: [0, 456, 456, 456, 456, 456, 0] },
 ];
 
 export function applyPreset(targets: WorkTargets, preset: TargetPreset): WorkTargets {
@@ -114,6 +124,7 @@ export function weekdayOf(date: CivilDate): number {
 
 export interface BelgianHoliday {
   date: CivilDate;
+  /** English; translate with `t` where shown. */
   name: string;
 }
 
@@ -139,28 +150,24 @@ export function belgianHolidays(year: number): BelgianHoliday[] {
   };
   const day = (month: number, dayOfMonth: number): CivilDate => ({ year, month, day: dayOfMonth });
   const holidays: BelgianHoliday[] = [
-    { date: day(1, 1), name: 'New Year’s Day' },
-    { date: day(5, 1), name: 'Labour Day' },
-    { date: day(7, 21), name: 'Belgian National Day' },
-    { date: day(8, 15), name: 'Assumption' },
-    { date: day(11, 1), name: 'All Saints’ Day' },
-    { date: day(11, 11), name: 'Armistice Day' },
-    { date: day(12, 25), name: 'Christmas Day' },
-    { date: addDays(easter, 1), name: 'Easter Monday' },
-    { date: addDays(easter, 39), name: 'Ascension Day' },
-    { date: addDays(easter, 50), name: 'Whit Monday' },
+    { date: day(1, 1), name: mark('New Year’s Day') },
+    { date: day(5, 1), name: mark('Labour Day') },
+    { date: day(7, 21), name: mark('Belgian National Day') },
+    { date: day(8, 15), name: mark('Assumption') },
+    { date: day(11, 1), name: mark('All Saints’ Day') },
+    { date: day(11, 11), name: mark('Armistice Day') },
+    { date: day(12, 25), name: mark('Christmas Day') },
+    { date: addDays(easter, 1), name: mark('Easter Monday') },
+    { date: addDays(easter, 39), name: mark('Ascension Day') },
+    { date: addDays(easter, 50), name: mark('Whit Monday') },
   ];
   // Stable sort, so a fixed holiday stays before a movable one on the same date.
   return holidays.sort((x, y) => dateKey(x.date).localeCompare(dateKey(y.date)));
 }
 
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-const SHORT_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-/** "Mon 1 January", as the 1.14 holiday list; `short`: "Mon 1 Jan". */
+/** "Mon 1 January", as the 1.14 holiday list; `short`: "Mon 1 Jan" (Dutch "ma 1 januari"). */
 export function formatHolidayDate(date: CivilDate, style: 'long' | 'short' = 'long'): string {
-  const month = MONTHS[date.month - 1] ?? '';
-  return `${SHORT_WEEKDAYS[weekdayOf(date) - 1] ?? ''} ${date.day} ${style === 'short' ? month.slice(0, 3) : month}`;
+  return dateFormat({ weekday: 'short', day: 'numeric', month: style, timeZone: 'UTC' }).format(toUtc(date));
 }
 
 /** Every day from `start` through `end` (inclusive), at most 367 days, like 1.14. */

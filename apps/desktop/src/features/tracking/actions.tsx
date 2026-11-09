@@ -4,6 +4,7 @@ import type { IpcError } from '../../ipc';
 import type { Intent } from '../../ipc/contract';
 import { ipcErrorKind, useAction, useSlice } from '../../state/hooks';
 import styles from './tracking.module.css';
+import { t } from '../../i18n';
 
 /** What the tracking controls need to know before they write (Swift `busy`, `connected`, `preview`). */
 export interface WriteGuards {
@@ -119,9 +120,9 @@ export function useIntents(): IntentRunner {
       }}
       role="alertdialog"
       size="small"
-      title="Confirm this change"
+      title={t('Confirm this change')}
       description={ask?.message}
-      primaryAction={{ label: 'Continue', onAction: confirm }}
+      primaryAction={{ label: t('Continue'), onAction: confirm }}
     />
   );
 

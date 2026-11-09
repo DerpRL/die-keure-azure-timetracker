@@ -4,6 +4,7 @@ import { Card } from '../../components/Card';
 import { DataTable } from '../../charts/DataTable';
 import { seriesColor } from '../../charts/palette';
 import { ActivityLegend } from '../../features/activity';
+import { mark, t } from '../../i18n';
 import type { AnalysisView, ExplorerBucket, ExplorerResolution, Interval, StatisticsSlice } from '../../ipc/contract';
 import { bucketLabel, bucketLongLabel, date, duration, seconds } from './explore/format';
 import { activitySeries, MIN_WINDOW_SECONDS } from './explore/model';
@@ -13,12 +14,12 @@ import styles from './insights.module.css';
 /** Above this many columns the totals and every other label are left out (a month, a day of hours). */
 const DENSE = 14;
 
-const UNIT: Record<ExplorerResolution, string> = {
-  Monthly: 'month',
-  Daily: 'day',
-  Hourly: 'hour',
-  '15 minutes': '15 minutes',
-  '5 minutes': '5 minutes',
+const TITLES: Record<ExplorerResolution, string> = {
+  Monthly: mark('Per month, by activity'),
+  Daily: mark('Per day, by activity'),
+  Hourly: mark('Per hour, by activity'),
+  '15 minutes': mark('Per 15 minutes, by activity'),
+  '5 minutes': mark('Per 5 minutes, by activity'),
 };
 
 export function bucketTotal(bucket: ExplorerBucket): number {
@@ -37,7 +38,7 @@ interface Column {
 
 /** "Per day, by activity", "Per hour, by activity", … after the analysis' resolution. */
 export function dayBarsTitle(resolution: ExplorerResolution): string {
-  return `Per ${UNIT[resolution]}, by activity`;
+  return t(TITLES[resolution]);
 }
 
 /** A round top for the scale: whole hours (or quarter hours below an hour). */
@@ -101,9 +102,9 @@ export function DayBars({ slice, analysis, colors, onZoom }: DayBarsProps) {
   const describe = (column: Column) => {
     const parts = column.bucket.segments.map((segment) => `${name(segment.activityId, segment.name)} ${duration(segment.top - segment.bottom)}`);
     return [
-      `${column.longLabel}: ${column.total > 0 ? duration(column.total) : 'no time'}`,
+      `${column.longLabel}: ${column.total > 0 ? duration(column.total) : t('no time')}`,
       parts.length > 0 ? parts.join(', ') : null,
-      column.target ? `target ${duration(column.target)}` : null,
+      column.target ? t('target {time}', { time: duration(column.target) }) : null,
     ]
       .filter(Boolean)
       .join('; ');
@@ -118,20 +119,20 @@ export function DayBars({ slice, analysis, colors, onZoom }: DayBarsProps) {
         <div className={styles.cardTools}>
           <ActivityLegend items={series.map((entry) => ({ id: entry.id, name: entry.name, colorIndex: entry.colorIndex ?? 0 }))} />
           <Button size="small" aria-pressed={asTable} onPress={() => setAsTable((value) => !value)}>
-            {asTable ? 'Show as chart' : 'Show as table'}
+            {asTable ? t('Show as chart') : t('Show as table')}
           </Button>
         </div>
       </div>
       {empty ? (
-        <p className={styles.muted}>No recorded time in this window.</p>
+        <p className={styles.muted}>{t('No recorded time in this window.')}</p>
       ) : asTable ? (
         <DataTable
           caption={title}
           columns={[
-            { id: 'bucket', header: UNIT[analysis.resolution] === 'day' ? 'Day' : 'Interval' },
-            { id: 'total', header: 'Recorded', align: 'end' },
+            { id: 'bucket', header: analysis.resolution === 'Daily' ? t('Day') : t('Interval') },
+            { id: 'total', header: t('Recorded'), align: 'end' },
             ...series.map((entry) => ({ id: `a:${entry.id}`, header: entry.name, align: 'end' as const })),
-            ...(targets.size > 0 ? [{ id: 'target', header: 'Target', align: 'end' as const }] : []),
+            ...(targets.size > 0 ? [{ id: 'target', header: t('Target'), align: 'end' as const }] : []),
           ]}
           rows={columns.map((column) => ({
             id: column.bucket.start,
@@ -153,11 +154,11 @@ export function DayBars({ slice, analysis, colors, onZoom }: DayBarsProps) {
           <div className={styles.barsArea} aria-hidden="true">
             {sharedTarget ? (
               <div className={styles.targetLine} style={{ bottom: `${(sharedTarget / maximum) * 100}%` }}>
-                <span className={styles.targetLabel}>{`Target ${duration(sharedTarget)}`}</span>
+                <span className={styles.targetLabel}>{t('Target {value}', { value: duration(sharedTarget) })}</span>
               </div>
             ) : null}
           </div>
-          <ul role="list" aria-label={`${title}. Choose a bar to zoom into it.`} className={styles.barColumns} style={{ '--columns': columns.length } as CSSProperties}>
+          <ul role="list" aria-label={t('{title}. Choose a bar to zoom into it.', { title })} className={styles.barColumns} style={{ '--columns': columns.length } as CSSProperties}>
             {columns.map((column, index) => {
               const zoomable = seconds(column.bucket) > MIN_WINDOW_SECONDS;
               const showLabel = index % labelEvery === 0;

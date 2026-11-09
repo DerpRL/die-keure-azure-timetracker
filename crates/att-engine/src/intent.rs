@@ -50,10 +50,16 @@ pub fn parse(value: Value) -> Result<Intent, IpcError> {
     let kind = value
         .get("type")
         .and_then(Value::as_str)
-        .ok_or_else(|| IpcError::new("invalidIntent", "The request has no type."))?
+        .ok_or_else(|| IpcError::new("invalidIntent", crate::nl::tr("The request has no type.")))?
         .to_string();
     let invalid = |error: serde_json::Error| {
-        IpcError::new("invalidIntent", format!("The request {kind} is not valid: {error}"))
+        IpcError::new(
+            "invalidIntent",
+            crate::nl::trf(
+                "The request {kind} is not valid: {error}",
+                &[("kind", &kind), ("error", &error)],
+            ),
+        )
     };
     if matches!(kind.as_str(), "app.snapshot" | "app.setVisiblePage") {
         return serde_json::from_value(value).map(Intent::Generic).map_err(invalid);

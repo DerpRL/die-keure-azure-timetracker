@@ -15,6 +15,7 @@ import {
   type TextFieldProps as AriaTextFieldProps,
   type ValidationResult,
 } from 'react-aria-components';
+import { t } from '../i18n';
 import { cx } from '../utils/cx';
 import { stepDuration } from '../utils/duration';
 import { ChevronDownIcon, ChevronUpIcon, CloseIcon, SearchIcon } from './icons';
@@ -227,7 +228,7 @@ export function DurationField({
       inputMode="numeric"
       autoComplete="off"
       spellCheck={false}
-      aria-label={`${label} ${unit}`}
+      aria-label={unit === 'hours' ? t('{label} hours', { label }) : t('{label} minutes', { label })}
       aria-invalid={problem ? true : undefined}
       aria-describedby={describedBy}
       value={text[unit]}
@@ -251,11 +252,11 @@ export function DurationField({
       <span className={cx(styles.duration, problem !== undefined && styles.durationInvalid)}>
         {box('hours')}
         <span className={styles.durationUnit} aria-hidden="true">
-          h
+          {t('h')}
         </span>
         {box('minutes')}
         <span className={styles.durationUnit} aria-hidden="true">
-          m
+          {t('m')}
         </span>
       </span>
       {description ? (
@@ -293,7 +294,7 @@ export function SearchField({
       <div className={styles.searchBox}>
         <SearchIcon className={styles.searchIcon} />
         <Input placeholder={placeholder} className={cx(styles.input, styles.searchInput)} />
-        <AriaButton className={styles.clearButton} aria-label="Clear search">
+        <AriaButton className={styles.clearButton} aria-label={t('Clear search')}>
           <CloseIcon />
         </AriaButton>
       </div>

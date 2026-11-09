@@ -1,7 +1,8 @@
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SAMPLE_NOW, sampleSlices } from '../../ipc/fixtures';
-import { sampleLogs, timeEditorEditing } from '../../ipc/fixtures/slices/timeEditor';
+import { MockEngineError } from '../../ipc/mockEngine';
+import { sampleLogs, timeEditorEditing, timeEditorNeedsReview } from '../../ipc/fixtures/slices/timeEditor';
 import type { Route } from '../../layout/navigation';
 import { expectNoA11yViolations } from '../../test/axe';
 import { renderTimesheet } from './testing';
@@ -189,6 +190,75 @@ describe('Timesheet · Week', () => {
     const { user } = renderTimesheet('week');
     await user.click(screen.getByRole('button', { name: 'Add time' }));
     expect(await screen.findByRole('dialog', { name: 'Edit offline time' })).toBeInTheDocument();
+  });
+
+  it('drags across an empty slot to add an entry to 7pace', async () => {
+    const { engine, user } = renderTimesheet('week');
+    const monday = within(calendar()).getAllByRole('group')[0]!;
+    // The column shows 08:00–20:00 local; 100 px per hour.
+    vi.spyOn(monday, 'getBoundingClientRect').mockReturnValue({ top: 0, height: 1200, bottom: 1200, left: 0, right: 100, width: 100, x: 0, y: 0, toJSON: () => ({}) });
+    fireEvent.pointerDown(monday, { button: 0, pointerId: 1, clientY: 100 });
+    fireEvent.pointerMove(monday, { pointerId: 1, clientY: 230 });
+    fireEvent.pointerUp(monday, { pointerId: 1, clientY: 230 });
+
+    const dialog = await screen.findByRole('dialog', { name: 'Add time to 7pace' });
+    await user.type(within(dialog).getByRole('textbox', { name: 'Azure ticket number (optional)' }), '4821');
+    await user.click(within(dialog).getByRole('button', { name: 'Add entry' }));
+    await waitFor(() => expect(engine.dispatched('timeEditor.create')).toHaveLength(1));
+    const [intent] = engine.dispatched('timeEditor.create');
+    // 09:00–10:30 in Brussels (UTC+2), the saved default activity.
+    expect(Date.parse(intent!.start)).toBe(Date.parse('2026-10-05T07:00:00Z'));
+    expect(Date.parse(intent!.end)).toBe(Date.parse('2026-10-05T08:30:00Z'));
+    expect(intent).toMatchObject({ ticketId: 4821, comment: '', activityId: 'dev', billable: false });
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add time to 7pace' })).toBeNull());
+  });
+
+  it('keeps a click on an empty slot and clicks on blocks from creating anything', async () => {
+    const { user } = renderTimesheet('week');
+    const monday = within(calendar()).getAllByRole('group')[0]!;
+    fireEvent.pointerDown(monday, { button: 0, pointerId: 1, clientY: 100 });
+    fireEvent.pointerUp(monday, { pointerId: 1, clientY: 101 });
+    await user.click(within(monday).getByRole('button', { name: CARD_RETRY }));
+    expect(screen.queryByRole('dialog', { name: 'Add time to 7pace' })).toBeNull();
+  });
+
+  it('shows a refused entry in the dialog and keeps it open', async () => {
+    const { engine, user } = renderTimesheet('week');
+    engine.handle('timeEditor.create', () => {
+      throw new MockEngineError('message', 'Choose valid times with no time in the future.');
+    });
+    const monday = within(calendar()).getAllByRole('group')[0]!;
+    vi.spyOn(monday, 'getBoundingClientRect').mockReturnValue({ top: 0, height: 1200, bottom: 1200, left: 0, right: 100, width: 100, x: 0, y: 0, toJSON: () => ({}) });
+    fireEvent.pointerDown(monday, { button: 0, pointerId: 1, clientY: 100 });
+    fireEvent.pointerMove(monday, { pointerId: 1, clientY: 200 });
+    fireEvent.pointerUp(monday, { pointerId: 1, clientY: 200 });
+    const dialog = await screen.findByRole('dialog', { name: 'Add time to 7pace' });
+    await user.type(within(dialog).getByRole('textbox', { name: 'Comment (required without a ticket)' }), 'Support call');
+    await user.click(within(dialog).getByRole('button', { name: 'Add entry' }));
+    expect(await within(dialog).findByText('Choose valid times with no time in the future.')).toBeInTheDocument();
+  });
+
+  it('says why dragging is off while an earlier change needs review', async () => {
+    const onNavigate = vi.fn();
+    const { user } = renderTimesheet('week', { with: { timeEditor: timeEditorNeedsReview }, onNavigate });
+    const monday = within(calendar()).getAllByRole('group')[0]!;
+    vi.spyOn(monday, 'getBoundingClientRect').mockReturnValue({ top: 0, height: 1200, bottom: 1200, left: 0, right: 100, width: 100, x: 0, y: 0, toJSON: () => ({}) });
+    fireEvent.pointerDown(monday, { button: 0, pointerId: 1, clientY: 100 });
+    fireEvent.pointerMove(monday, { pointerId: 1, clientY: 200 });
+    fireEvent.pointerUp(monday, { pointerId: 1, clientY: 200 });
+    expect(screen.queryByRole('dialog', { name: 'Add time to 7pace' })).toBeNull();
+    expect(screen.getByText('An earlier change needs review')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Review in Day' }));
+    expect(onNavigate).toHaveBeenCalledWith({ place: 'timesheet', view: 'day' });
+  });
+
+  it('explains that 7pace takes no future time when a drag starts after now', async () => {
+    const { user } = renderTimesheet('week');
+    const wednesday = within(calendar()).getAllByRole('group')[2]!;
+    fireEvent.pointerDown(wednesday, { button: 0, pointerId: 1, clientY: 100 });
+    expect(await screen.findByText(/7pace only takes time that has already passed/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }));
+    expect(screen.queryByText(/7pace only takes time that has already passed/)).toBeNull();
   });
 
   it('shows a skeleton until the week is loaded', () => {

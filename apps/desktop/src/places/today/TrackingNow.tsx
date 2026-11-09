@@ -12,6 +12,7 @@ import { useTrackingSeconds } from '../../features/tracking/status';
 import type { TrackingSlice } from '../../ipc/contract';
 import { useSlice, useWorkItem } from '../../state/hooks';
 import { formatClock, formatShortDuration } from '../../utils/duration';
+import { t } from '../../i18n';
 import styles from './today.module.css';
 
 /** When the running session started: the confirmed elapsed time back from its confirmation. */
@@ -45,11 +46,11 @@ export function TrackingNow() {
     return (
       <Card as="section" aria-labelledby={headingId} className={styles.cardStack}>
         <h2 id={headingId} className={styles.eyebrow}>
-          Tracking now
+          {t('Tracking now')}
         </h2>
         <div aria-busy="true">
           <span role="status" className="visually-hidden">
-            Loading the current timer
+            {t('Loading the current timer')}
           </span>
           <Skeleton shape="rect" height="3rem" />
         </div>
@@ -65,17 +66,17 @@ export function TrackingNow() {
   const activityName = running ? tracking.activityName : (paused?.activityName ?? null);
   const started = sessionStart(tracking);
   const startedToday = started ? started.toDateString() === new Date().toDateString() : false;
-  const since = started ? `since ${(startedToday ? clock : clockWithDay).format(started)}` : null;
+  const since = started ? t('since {time}', { time: (startedToday ? clock : clockWithDay).format(started) }) : null;
   const showRemote = tracking.showsRemoteTimer !== false;
 
   const eyebrow = running
     ? connection.connected
-      ? 'Tracking now'
-      : 'Last known timer'
+      ? t('Tracking now')
+      : t('Last known timer')
     : paused
-      ? 'Paused · no time logged'
-      : 'Not tracking';
-  const title = running ? tracking.title : paused ? (pausedItem?.title ?? paused.title ?? 'Paused tracking') : 'Ready when you are';
+      ? t('Paused · no time logged')
+      : t('Not tracking');
+  const title = running ? tracking.title : paused ? (pausedItem?.title ?? paused.title ?? t('Paused tracking')) : t('Ready when you are');
   const remark = running ? tracking.remark : (paused?.remark ?? null);
 
   return (
@@ -96,11 +97,11 @@ export function TrackingNow() {
               {ticketId !== null ? <TicketLink ticketId={ticketId} compact /> : null}
               {ticketId !== null && since ? ' · ' : null}
               {since}
-              {!running && !paused ? `Today ${formatShortDuration(tracking.todaySeconds)}` : null}
+              {!running && !paused ? t('Today {duration}', { duration: formatShortDuration(tracking.todaySeconds) }) : null}
             </p>
-            {(running || paused) && ticketId === null && remark ? <p className={styles.caption}>{`No Azure ticket · ${remark}`}</p> : null}
+            {(running || paused) && ticketId === null && remark ? <p className={styles.caption}>{`${t('No Azure ticket')} · ${remark}`}</p> : null}
           </div>
-          <span className={styles.bigClock}>{paused ? 'Paused' : formatClock(running ? seconds : 0)}</span>
+          <span className={styles.bigClock}>{paused ? t('Paused') : formatClock(running ? seconds : 0)}</span>
           {running ? (
             <div className={styles.threeButtons}>
               <Button
@@ -108,24 +109,24 @@ export function TrackingNow() {
                 isPending={actions.isPending('pause')}
                 onPress={() => void actions.run('pause', { type: 'tracking.pause' })}
               >
-                Pause
+                {t('Pause')}
               </Button>
               <Button
                 isDisabled={writeDisabled}
                 isPending={actions.isPending('stop')}
                 onPress={() => void actions.run('stop', { type: 'tracking.stop' })}
               >
-                Stop
+                {t('Stop')}
               </Button>
               <Button
                 variant="primary"
                 data-current-primary=""
                 isDisabled={writeDisabled}
                 isPending={actions.isPending('switch')}
-                aria-label="Switch ticket…"
+                aria-label={t('Switch ticket…')}
                 onPress={() => void actions.run('switch', openFlow('main'))}
               >
-                Switch…
+                {t('Switch…')}
               </Button>
             </div>
           ) : paused ? (
@@ -137,14 +138,14 @@ export function TrackingNow() {
                 isPending={actions.isPending('resume')}
                 onPress={() => void actions.run('resume', { type: 'tracking.resume', surface: flowSurface('main') })}
               >
-                Resume…
+                {t('Resume…')}
               </Button>
               <Button
                 isDisabled={guards.busy}
                 isPending={actions.isPending('discard')}
                 onPress={() => void actions.run('discard', { type: 'tracking.discardPause' })}
               >
-                Clear pause
+                {t('Clear pause')}
               </Button>
             </div>
           ) : (
@@ -157,7 +158,7 @@ export function TrackingNow() {
               isPending={actions.isPending('switch')}
               onPress={() => void actions.run('switch', openFlow('main'))}
             >
-              Start tracking…
+              {t('Start tracking…')}
             </Button>
           )}
           <ActionError error={actions.error} />
@@ -165,7 +166,7 @@ export function TrackingNow() {
         </>
       ) : (
         <h2 id={headingId} className={styles.eyebrow}>
-          Tracking now
+          {t('Tracking now')}
         </h2>
       )}
       {tracking.local ? (

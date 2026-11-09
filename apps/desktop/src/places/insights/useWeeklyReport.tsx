@@ -2,6 +2,7 @@ import { useCallback, useState, type ReactNode } from 'react';
 import { Dialog } from '../../components/Dialog';
 import { useToast } from '../../components/Toast';
 import { instantToDay, localToday } from '../../features/ticketContext/format';
+import { t } from '../../i18n';
 import { chooseSavePath, copyToClipboard } from '../../features/ticketContext/native';
 import type { IpcError } from '../../ipc';
 import type { WeeklySlice } from '../../ipc/contract';
@@ -102,9 +103,9 @@ export function useWeeklyReport({ commands = false }: { commands?: boolean } = {
   const copy = async () => {
     try {
       await copyToClipboard(draft);
-      toast.show({ title: 'Draft copied.', tone: 'success' });
+      toast.show({ title: t('Draft copied.'), tone: 'success' });
     } catch (error) {
-      toast.show({ title: 'Could not copy the draft', description: error instanceof Error ? error.message : String(error), tone: 'error' });
+      toast.show({ title: t('Could not copy the draft'), description: error instanceof Error ? error.message : String(error), tone: 'error' });
     }
   };
   const exportMarkdown = async () => {
@@ -114,16 +115,16 @@ export function useWeeklyReport({ commands = false }: { commands?: boolean } = {
       path = await chooseSavePath({
         defaultPath: weekly?.exportFileName || `weekly-status-${instantToDay(weekly?.range.start)?.toString() ?? 'draft'}.md`,
         filters: [{ name: 'Markdown', extensions: ['md'] }],
-        title: 'Export weekly report',
+        title: t('Export weekly report'),
       });
     } catch (error) {
-      toast.show({ title: 'Could not open the save dialog', description: error instanceof Error ? error.message : String(error), tone: 'error' });
+      toast.show({ title: t('Could not open the save dialog'), description: error instanceof Error ? error.message : String(error), tone: 'error' });
     } finally {
       setChoosing(false);
     }
     if (!path) return;
     const result = await exporter.run({ type: 'weekly.exportMarkdown', path });
-    if (result.ok) toast.show({ title: 'Draft exported.', description: path, tone: 'success' });
+    if (result.ok) toast.show({ title: t('Draft exported.'), description: path, tone: 'success' });
   };
   const edit = (value: string) => {
     setDraft(value);
@@ -140,24 +141,24 @@ export function useWeeklyReport({ commands = false }: { commands?: boolean } = {
           {
             id: 'weekly.generate',
             icon: WeeklyReportIcon,
-            label: empty ? 'Generate weekly report draft' : 'Regenerate weekly report draft…',
+            label: empty ? t('Generate weekly report draft') : t('Regenerate weekly report draft…'),
             group: 'Actions',
             keywords: ['weekly report', 'generate'],
             isDisabled: !hasData || loading,
             onAction: () => void generate(),
           },
-          { id: 'weekly.copy', icon: CopyIcon, label: 'Copy weekly report', group: 'Actions', keywords: ['weekly report', 'clipboard'], isDisabled: empty, onAction: () => void copy() },
+          { id: 'weekly.copy', icon: CopyIcon, label: t('Copy weekly report'), group: 'Actions', keywords: ['weekly report', 'clipboard'], isDisabled: empty, onAction: () => void copy() },
           {
             id: 'weekly.export',
             icon: DownloadIcon,
-            label: 'Export weekly report as Markdown…',
+            label: t('Export weekly report as Markdown…'),
             group: 'Actions',
             keywords: ['weekly report', 'markdown', 'export'],
             isDisabled: empty || choosing,
             onAction: () => void exportMarkdown(),
           },
-          { id: 'weekly.previous', icon: ChevronLeftIcon, label: 'Previous week', group: 'Actions', keywords: ['weekly report'], isDisabled: !weekly, onAction: () => move(-1) },
-          { id: 'weekly.next', icon: ChevronRightIcon, label: 'Next week', group: 'Actions', keywords: ['weekly report'], isDisabled: !weekly || isFuture, onAction: () => move(1) },
+          { id: 'weekly.previous', icon: ChevronLeftIcon, label: t('Previous week'), group: 'Actions', keywords: ['weekly report'], isDisabled: !weekly, onAction: () => move(-1) },
+          { id: 'weekly.next', icon: ChevronRightIcon, label: t('Next week'), group: 'Actions', keywords: ['weekly report'], isDisabled: !weekly || isFuture, onAction: () => move(1) },
         ]
       : [],
   );
@@ -182,10 +183,10 @@ export function useWeeklyReport({ commands = false }: { commands?: boolean } = {
         onOpenChange={setConfirmReplace}
         role="alertdialog"
         size="small"
-        title="Replace this week’s draft?"
-        description="This replaces your local draft with a fresh summary of the loaded time."
-        cancelLabel="Keep draft"
-        primaryAction={{ label: 'Replace draft', variant: 'destructive', onAction: () => void replace(), isPending: generator.pending }}
+        title={t('Replace this week’s draft?')}
+        description={t('This replaces your local draft with a fresh summary of the loaded time.')}
+        cancelLabel={t('Keep draft')}
+        primaryAction={{ label: t('Replace draft'), variant: 'destructive', onAction: () => void replace(), isPending: generator.pending }}
       />
     ),
   };

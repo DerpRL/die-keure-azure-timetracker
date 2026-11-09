@@ -134,6 +134,10 @@ pub enum SessionIntent {
     RestartOnboarding,
     #[serde(rename = "app.setInterface")]
     SetInterface { preferences: InterfacePreferences },
+    /// The window's system language as a BCP 47 tag (`navigator.language`, such as `nl-BE`),
+    /// for the `system` interface language. Sent at start-up and when it changes.
+    #[serde(rename = "app.setSystemLanguage")]
+    SetSystemLanguage { tag: String },
     /// Refuses while a write is in flight; persists before an update restarts the app.
     #[serde(rename = "app.prepareForRestart")]
     PrepareForRestart,
@@ -414,6 +418,7 @@ async fn route(engine: &Engine, intent: SessionIntent) -> Result<Value, IpcError
         I::FinishOnboarding => settings::finish_onboarding(engine).await,
         I::RestartOnboarding => settings::restart_onboarding(engine)?,
         I::SetInterface { preferences } => settings::set_interface(engine, preferences),
+        I::SetSystemLanguage { tag } => settings::set_system_language(engine, &tag),
         I::PrepareForRestart => return settings::prepare_for_restart(engine),
         I::DismissError => engine.update(|state| state.session.error = None),
         I::DismissNotice => engine.update(|state| state.session.notice = None),

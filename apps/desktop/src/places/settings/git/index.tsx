@@ -13,9 +13,10 @@ import { chooseRepositoryFolder } from './folderDialog';
 import { FolderPlusIcon } from './icons';
 import { RepositoryRow } from './RepositoryRow';
 import { ScanSheet } from './ScanSheet';
+import { mark, t, tn } from '../../../i18n';
 import styles from './repositories.module.css';
 
-const ADD_LABEL = 'Add repositories…';
+const ADD_LABEL = mark('Add repositories…');
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -25,7 +26,7 @@ function messageOf(error: unknown): string {
  * Branch watching on or off (`repositories.toggleWatching`); pausing also pauses Figma
  * observations. Renders nothing until the repositories slice arrives.
  */
-export function WatchSwitch({ label = 'Watch branches', compact = false }: { label?: string; compact?: boolean }) {
+export function WatchSwitch({ label = t('Watch branches'), compact = false }: { label?: string; compact?: boolean }) {
   const repositories = useSlice('repositories');
   const toggle = useAction();
   if (!repositories) return null;
@@ -39,7 +40,7 @@ export function WatchSwitch({ label = 'Watch branches', compact = false }: { lab
           if (next !== watching) void toggle.run({ type: 'repositories.toggleWatching' });
         }}
         aria-label={compact ? label : undefined}
-        description={compact ? undefined : 'Pausing also pauses Figma observations.'}
+        description={compact ? undefined : t('Pausing also pauses Figma observations.')}
       >
         {compact ? null : label}
       </Switch>
@@ -107,7 +108,7 @@ export function RepositoriesPanel({ variant = 'full', onOpenGit }: RepositoriesP
     {
       id: 'repositories.add',
       icon: PlusIcon,
-      label: ADD_LABEL,
+      label: t(ADD_LABEL),
       group: 'Actions',
       keywords: ['scan', 'folder', 'git'],
       isDisabled: !repositories,
@@ -116,7 +117,7 @@ export function RepositoriesPanel({ variant = 'full', onOpenGit }: RepositoriesP
     {
       id: 'repositories.toggleWatching',
       icon: watching ? PauseIcon : PlayIcon,
-      label: watching ? 'Pause branch watching' : 'Resume branch watching',
+      label: watching ? t('Pause branch watching') : t('Resume branch watching'),
       group: 'Actions',
       keywords: ['git', 'observations'],
       isDisabled: !repositories,
@@ -136,7 +137,7 @@ export function RepositoriesPanel({ variant = 'full', onOpenGit }: RepositoriesP
 
   if (!repositories) {
     return (
-      <LoadingRegion label="Loading repositories" isLoading placeholder={<Skeleton lines={full ? 6 : 3} />}>
+      <LoadingRegion label={t('Loading repositories')} isLoading placeholder={<Skeleton lines={full ? 6 : 3} />}>
         {null}
       </LoadingRegion>
     );
@@ -164,19 +165,19 @@ export function RepositoriesPanel({ variant = 'full', onOpenGit }: RepositoriesP
   const count = repositories.repositories.length;
   const addButton = (
     <Button variant={full ? 'primary' : 'secondary'} size="small" icon={full ? FolderPlusIcon : PlusIcon} onPress={() => void chooseFolder()}>
-      {full ? ADD_LABEL : 'Add repository'}
+      {full ? t(ADD_LABEL) : t('Add repository')}
     </Button>
   );
   const banners =
     dialogError || other.error ? (
       <div className={styles.banners}>
         {dialogError ? (
-          <Banner tone="error" title="The folder chooser could not open" onDismiss={() => setDialogError(null)}>
+          <Banner tone="error" title={t('The folder chooser could not open')} onDismiss={() => setDialogError(null)}>
             {dialogError}
           </Banner>
         ) : null}
         {other.error ? (
-          <Banner tone="error" onDismiss={other.clearError} dismissLabel="Dismiss error">
+          <Banner tone="error" onDismiss={other.clearError} dismissLabel={t('Dismiss error')}>
             {other.error.message}
           </Banner>
         ) : null}
@@ -187,13 +188,13 @@ export function RepositoriesPanel({ variant = 'full', onOpenGit }: RepositoriesP
       <div className={styles.empty}>
         <EmptyState
           icon={FolderPlusIcon}
-          title="Choose your repositories"
-          description="Choose a parent folder, scan its subfolders and select the repositories you want to watch."
+          title={t('Choose your repositories')}
+          description={t('Choose a parent folder, scan its subfolders and select the repositories you want to watch.')}
           headingLevel={4}
         />
       </div>
     ) : (
-      <ul role="list" aria-labelledby={full ? listTitleId : undefined} aria-label={full ? undefined : 'Watched repositories'} className={styles.list}>
+      <ul role="list" aria-labelledby={full ? listTitleId : undefined} aria-label={full ? undefined : t('Watched repositories')} className={styles.list}>
         {repositories.repositories.map((repository) => (
           <RepositoryRow key={repository.id} repository={repository} onRemove={setRemoving} compact={!full} />
         ))}
@@ -225,9 +226,9 @@ export function RepositoriesPanel({ variant = 'full', onOpenGit }: RepositoriesP
         }}
         role="alertdialog"
         size="small"
-        title={removing ? `Remove ${removing.name} from the watch list?` : 'Remove repository?'}
-        description="Azure timetracker stops watching it and clears its pending branch suggestions. The repository and its files stay on disk."
-        primaryAction={{ label: 'Remove', variant: 'destructive', onAction: () => void confirmRemove(), isPending: remove.pending }}
+        title={removing ? t('Remove {name} from the watch list?', { name: removing.name }) : t('Remove repository?')}
+        description={t('Azure timetracker stops watching it and clears its pending branch suggestions. The repository and its files stay on disk.')}
+        primaryAction={{ label: t('Remove'), variant: 'destructive', onAction: () => void confirmRemove(), isPending: remove.pending }}
       >
         {remove.error ? (
           <p role="alert" className={styles.error}>
@@ -243,14 +244,14 @@ export function RepositoriesPanel({ variant = 'full', onOpenGit }: RepositoriesP
       <div className={styles.compact}>
         {banners}
         <div className={styles.listHeader}>
-          <span className={styles.text}>{count === 0 ? 'No repositories yet' : `${count} watched ${count === 1 ? 'repository' : 'repositories'}`}</span>
+          <span className={styles.text}>{count === 0 ? t('No repositories yet') : tn(count, '{count} watched repository', '{count} watched repositories')}</span>
           {addButton}
         </div>
         {list}
         <p className={styles.footer}>
-          Ticket pattern and branch rules are under{' '}
+          {t('Ticket pattern and branch rules are under')}{' '}
           <Button variant="plain" size="small" className={styles.linkButton} onPress={onOpenGit}>
-            Git repositories
+            {t('Git repositories')}
           </Button>
           .
         </p>
@@ -265,7 +266,7 @@ export function RepositoriesPanel({ variant = 'full', onOpenGit }: RepositoriesP
       <Card as="section" aria-labelledby={listTitleId} padding="none" className={styles.listCard}>
         <div className={styles.listHeader}>
           <h3 id={listTitleId} ref={listHeading} tabIndex={-1} className={styles.listHeading}>
-            {`Watched repositories · ${count}`}
+            {t('Watched repositories · {count}', { count })}
           </h3>
           {addButton}
         </div>

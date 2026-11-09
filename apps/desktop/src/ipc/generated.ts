@@ -95,7 +95,18 @@ export type AttentionView = {
 };
 
 /** One row of the App activity log. Persisted in `state.json` as `audit`, newest first. */
-export type AuditEntry = { id: string; date: string; title: string; detail: string };
+export type AuditEntry = {
+  id: string;
+  date: string;
+  title: string;
+  detail: string;
+  /**
+   * The entry asks the user to check something (2.6). The UI marks it; it used to look for
+   * "attention" in the English title, which a translated title no longer contains. Left out
+   * when false, so stored entries keep their 1.14.x shape.
+   */
+  attention?: boolean;
+};
 
 /**
  * A confirmed branch switch waiting for the user's decision. Persisted in `state.json` as
@@ -306,6 +317,15 @@ export type ControllerIntent =
       boundary?: string | null;
     }
   | { type: "timeEditor.setSeparateIdle"; separate: boolean }
+  | {
+      type: "timeEditor.create";
+      start: string;
+      end: string;
+      ticketId: number | null;
+      comment: string;
+      activityId: string | null;
+      billable: boolean;
+    }
   | { type: "dayReview.setDay"; day: string }
   | { type: "dayReview.refresh" }
   | { type: "weekly.move"; amount: number }
@@ -724,6 +744,12 @@ export type IdleTrackingSession = {
 export type InterfaceContrast = "system" | "standard" | "increased";
 
 /**
+ * The interface language: the system's (Dutch for a Dutch system, otherwise English), or a
+ * fixed one.
+ */
+export type InterfaceLanguage = "system" | "en" | "nl";
+
+/**
  * Appearance settings. Persisted as `Configuration.interfacePreferences`.
  *
  * Decoding never fails: unsupported future values, wrong types and non-objects fall back to
@@ -734,6 +760,11 @@ export type InterfacePreferences = {
   /** Percent, serialized as the raw number (`InterfaceScale::ALL`). */
   scale: 90 | 100 | 110 | 125 | 150;
   contrast: InterfaceContrast;
+  /**
+   * Added in 2.6; configurations without it follow the system language. Left out while it is
+   * `system`, so the stored shape stays the one 1.14.x and 2.5 write.
+   */
+  language?: InterfaceLanguage;
 };
 
 export type InterfaceTheme = "system" | "light" | "dark";
@@ -1118,6 +1149,7 @@ export type SessionIntent =
   | { type: "app.finishOnboarding" }
   | { type: "app.restartOnboarding" }
   | { type: "app.setInterface"; preferences: InterfacePreferences }
+  | { type: "app.setSystemLanguage"; tag: string }
   | { type: "app.prepareForRestart" }
   | { type: "app.dismissError" }
   | { type: "app.dismissNotice" }

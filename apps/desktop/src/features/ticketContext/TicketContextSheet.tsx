@@ -14,11 +14,12 @@ import { formatShortDuration } from '../../utils/duration';
 import { activityColor, useActivityColors } from '../activity';
 import { isOpenableUrl, openExternalUrl } from './native';
 import styles from './TicketContextSheet.module.css';
+import { mark, t } from '../../i18n';
 
 const FIELDS: ReadonlyArray<{ label: string; key: keyof Pick<TicketContext, 'assignedTo' | 'iteration' | 'tags' | 'project'> }> = [
-  { label: 'Assigned to', key: 'assignedTo' },
-  { label: 'Iteration', key: 'iteration' },
-  { label: 'Tags', key: 'tags' },
+  { label: mark('Assigned to'), key: 'assignedTo' },
+  { label: mark('Iteration'), key: 'iteration' },
+  { label: mark('Tags'), key: 'tags' },
 ];
 
 /** Azure work item states that mean "being worked on" or "done", for the state chip's tone. */
@@ -36,7 +37,7 @@ function TextSection({ title, text }: { title: string; text: string }) {
       <Heading level={3} className={styles.sectionTitle}>
         {title}
       </Heading>
-      <p className={value ? styles.prose : styles.muted}>{value || 'No details provided.'}</p>
+      <p className={value ? styles.prose : styles.muted}>{value || t('No details provided.')}</p>
     </section>
   );
 }
@@ -48,7 +49,7 @@ function RelatedLinks({ links }: { links: readonly TicketLinkData[] }) {
   return (
     <section className={styles.section}>
       <Heading level={3} className={styles.sectionTitle}>
-        Links
+        {t('Links')}
       </Heading>
       <ul role="list" className={styles.links}>
         {links.map((link) => {
@@ -59,7 +60,7 @@ function RelatedLinks({ links }: { links: readonly TicketLinkData[] }) {
                 <button
                   type="button"
                   className={styles.link}
-                  aria-label={`${name}, opens in your browser`}
+                  aria-label={t('{name}, opens in your browser', { name })}
                   onClick={() => {
                     setFailure(null);
                     openExternalUrl(link.url).catch((error: unknown) =>
@@ -74,18 +75,18 @@ function RelatedLinks({ links }: { links: readonly TicketLinkData[] }) {
                 <div className={styles.unopenable}>
                   <span className={styles.unopenableText}>
                     <span className={styles.linkName}>{name}</span>
-                    <span className={styles.unopenableNote}>{`${link.url} · only https links open from the app`}</span>
+                    <span className={styles.unopenableNote}>{t('{url} · only https links open from the app', { url: link.url })}</span>
                   </span>
                   {navigator.clipboard ? (
                     <Button
                       size="small"
                       icon={CopyIcon}
-                      aria-label={`Copy link ${name}`}
+                      aria-label={t('Copy link {name}', { name })}
                       onPress={() => {
                         void navigator.clipboard.writeText(link.url).then(() => setCopied(link.url));
                       }}
                     >
-                      {copied === link.url ? 'Copied' : 'Copy link'}
+                      {copied === link.url ? t('Copied') : t('Copy link')}
                     </Button>
                   ) : null}
                 </div>
@@ -144,7 +145,7 @@ function YourTime({ ticketId }: { ticketId: number }) {
     <section className={styles.yourTime} aria-labelledby={`your-time-${ticketId}`}>
       <div className={styles.yourTimeHead}>
         <Heading level={3} id={`your-time-${ticketId}`} className={styles.sectionTitle}>
-          Your time on this ticket
+          {t('Your time on this ticket')}
         </Heading>
         <span className={styles.total}>{formatShortDuration(total)}</span>
       </div>
@@ -173,8 +174,8 @@ function Facts({ details }: { details: TicketContext }) {
     <dl className={styles.facts}>
       {FIELDS.map(({ label, key }) => (
         <div key={key} className={styles.fact}>
-          <dt>{label}</dt>
-          <dd className={details[key].trim() ? undefined : styles.muted}>{details[key].trim() || 'Not set'}</dd>
+          <dt>{t(label)}</dt>
+          <dd className={details[key].trim() ? undefined : styles.muted}>{details[key].trim() || t('Not set')}</dd>
         </div>
       ))}
     </dl>
@@ -206,7 +207,7 @@ export function TicketContextSheet() {
       isOpen
       onOpenChange={() => {}}
       onCancel={closeContext}
-      title={details?.title || `Ticket #${ticketId}`}
+      title={details?.title || t('Ticket #{id}', { id: ticketId })}
       titleSize="large"
       presentation="drawer"
       showCloseButton
@@ -225,10 +226,10 @@ export function TicketContextSheet() {
           isPending={azure.pending}
           onPress={() => void azure.run({ type: 'ticket.openInAzure', ticketId })}
         >
-          Open in Azure DevOps
+          {t('Open in Azure DevOps')}
         </Button>
       }
-      primaryAction={{ label: 'Done', onAction: closeContext }}
+      primaryAction={{ label: t('Done'), onAction: closeContext }}
       footerExtra={
         showEntries ? (
           <Button
@@ -237,7 +238,7 @@ export function TicketContextSheet() {
               navigation?.navigate({ place: 'timesheet', view: 'list' });
             }}
           >
-            All entries
+            {t('All entries')}
           </Button>
         ) : null
       }
@@ -251,14 +252,14 @@ export function TicketContextSheet() {
         {issue ? (
           <Banner
             tone="warning"
-            title="Ticket details are unavailable"
+            title={t('Ticket details are unavailable')}
             actions={
               <Button
                 size="small"
                 isPending={reload.pending}
                 onPress={() => void reload.run({ type: 'ticket.showContext', ticketId })}
               >
-                Retry
+                {t('Retry')}
               </Button>
             }
           >
@@ -267,7 +268,7 @@ export function TicketContextSheet() {
         ) : null}
         <YourTime ticketId={ticketId} />
         <LoadingRegion
-          label="Loading ticket details…"
+          label={t('Loading ticket details…')}
           isLoading={context.loading && !details}
           placeholder={
             <div className={styles.details}>
@@ -278,8 +279,8 @@ export function TicketContextSheet() {
         >
           {details ? (
             <div className={styles.details}>
-              <TextSection title="Description" text={details.description} />
-              <TextSection title="Acceptance criteria" text={details.acceptanceCriteria} />
+              <TextSection title={t('Description')} text={details.description} />
+              <TextSection title={t('Acceptance criteria')} text={details.acceptanceCriteria} />
               <RelatedLinks links={details.links} />
             </div>
           ) : null}

@@ -22,6 +22,7 @@ use jiff::Timestamp;
 
 use crate::error::{AppError, Result};
 use crate::model::{TrackingState, WorkLog};
+use crate::nl::tr;
 use crate::service::WorkLogMutationService;
 use crate::text::NonEmpty;
 use crate::time::{Cal, add_secs, floor_to_second};
@@ -203,9 +204,9 @@ where
     rounded.validate(now, cal)?;
     let saved = service.replace_work_log_time(log_id, &rounded).await?;
     if !rounded.edit().matches(&saved, cal) {
-        return Err(AppError::message(
+        return Err(AppError::message(tr(
             "7pace did not confirm the rounded time. Check the entry in the Timesheet.",
-        ));
+        )));
     }
     Ok(Some(saved))
 }

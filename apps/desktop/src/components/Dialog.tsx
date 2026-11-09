@@ -1,6 +1,7 @@
 import { useId, type ReactNode } from 'react';
 import { useKeyboard, type KeyboardEvents } from 'react-aria';
 import { Dialog as AriaDialog, Modal, ModalOverlay } from 'react-aria-components';
+import { t } from '../i18n';
 import { cx } from '../utils/cx';
 import { Button, IconButton } from './Button';
 import { CloseIcon } from './icons';
@@ -83,7 +84,7 @@ export function Dialog({
   primaryAction,
   secondaryActions,
   footerExtra,
-  cancelLabel = 'Cancel',
+  cancelLabel = t('Cancel'),
   onCancel,
   isDismissable = false,
   presentation = 'dialog',
@@ -123,7 +124,7 @@ export function Dialog({
   const hasFooter = Boolean(primaryAction || secondaryActions || footerExtra || cancelLabel);
 
   const closeButton = showCloseButton ? (
-    <IconButton label="Close" icon={CloseIcon} size="small" variant="secondary" tooltip={false} onPress={cancel} />
+    <IconButton label={t('Close')} icon={CloseIcon} size="small" variant="secondary" tooltip={false} onPress={cancel} />
   ) : null;
   const titleBlock = (
     <>

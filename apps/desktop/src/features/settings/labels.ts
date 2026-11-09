@@ -1,5 +1,6 @@
 /** User-facing strings and small display mappings for Settings (1.14 wording where it exists). */
 import type { CalendarAccess, HostOs, Interruption, MicrophoneApp } from '../../ipc/contract';
+import { dateFormat, mark, t } from '../../i18n';
 
 export interface OsWords {
   /** "macOS" / "Windows". */
@@ -14,32 +15,34 @@ export interface OsWords {
 
 export function osWords(os: HostOs | undefined): OsWords {
   if (os === 'windows') {
-    return { name: 'Windows', device: 'PC', credentials: 'Windows Credential Manager', trayPlace: 'notification area' };
+    return { name: 'Windows', device: 'PC', credentials: 'Windows Credential Manager', trayPlace: t('notification area') };
   }
-  return { name: 'macOS', device: 'Mac', credentials: 'Keychain', trayPlace: 'menu bar' };
+  return { name: 'macOS', device: 'Mac', credentials: t('Keychain'), trayPlace: t('menu bar') };
 }
 
+/** English (`mark`): show `label` and `description` with `t`. */
 export const INTERRUPTION_LEVELS: ReadonlyArray<{ id: Interruption; label: string; description: string }> = [
-  { id: 'off', label: 'Off', description: 'Listed in the panel and on Today only.' },
-  { id: 'notifyOnly', label: 'Notify only', description: 'Shows a notification without opening the panel.' },
-  { id: 'openPanel', label: 'Open panel', description: 'Opens the panel without taking keyboard focus. The default.' },
+  { id: 'off', label: mark('Off'), description: mark('Listed in the panel and on Today only.') },
+  { id: 'notifyOnly', label: mark('Notify only'), description: mark('Shows a notification without opening the panel.') },
+  { id: 'openPanel', label: mark('Open panel'), description: mark('Opens the panel without taking keyboard focus. The default.') },
   {
     id: 'openAndFocus',
-    label: 'Open and focus',
-    description: 'Opens the panel and moves keyboard focus to it, as Azure timetracker 1.x did.',
+    label: mark('Open and focus'),
+    description: mark('Opens the panel and moves keyboard focus to it, as Azure timetracker 1.x did.'),
   },
 ];
 
 export function interruptionLabel(level: Interruption): string {
-  return INTERRUPTION_LEVELS.find((entry) => entry.id === level)?.label ?? level;
+  const label = INTERRUPTION_LEVELS.find((entry) => entry.id === level)?.label;
+  return label ? t(label) : level;
 }
 
-/** 1.14 "Refresh 7pace" picker. */
+/** 1.14 "Refresh 7pace" picker. English (`mark`): show with `t`. */
 export const POLL_LABELS: Record<number, string> = {
-  30: 'Every 30 seconds',
-  60: 'Every minute',
-  120: 'Every 2 minutes',
-  300: 'Every 5 minutes',
+  30: mark('Every 30 seconds'),
+  60: mark('Every minute'),
+  120: mark('Every 2 minutes'),
+  300: mark('Every 5 minutes'),
 };
 
 /** `MicrophoneApp::ALL` in settings order. */
@@ -56,7 +59,8 @@ export const MICROPHONE_APPS: readonly MicrophoneApp[] = [
 
 /** `MicrophoneApp::label`. */
 export function microphoneAppLabel(app: MicrophoneApp): string {
-  return app === 'Web browsers' ? 'Google Meet / web browsers' : app;
+  if (app === 'Web browsers') return t('Google Meet / web browsers');
+  return app === 'Other apps' ? t('Other apps') : app;
 }
 
 /** Names for the default work apps (1.14 `WorkAwarenessSettings.appName` plus the Windows defaults). */
@@ -83,15 +87,15 @@ export function workAppName(id: string): string {
 export function calendarAccessText(access: CalendarAccess): string {
   switch (access) {
     case 'authorized':
-      return 'Calendar access is allowed.';
+      return t('Calendar access is allowed.');
     case 'notDetermined':
-      return 'Calendar access has not been requested yet.';
+      return t('Calendar access has not been requested yet.');
     case 'denied':
-      return 'Calendar access is turned off. Allow Azure timetracker in System Settings → Privacy & Security → Calendars.';
+      return t('Calendar access is turned off. Allow Azure timetracker in System Settings → Privacy & Security → Calendars.');
     case 'restricted':
-      return 'Calendar access is restricted on this Mac.';
+      return t('Calendar access is restricted on this Mac.');
     case 'unsupported':
-      return 'Calendars are not available on this system.';
+      return t('Calendars are not available on this system.');
   }
 }
 
@@ -102,24 +106,24 @@ export function formatMinutes(minutes: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-const DATE_TIME = new Intl.DateTimeFormat('en-GB', {
+const DATE_TIME: Intl.DateTimeFormatOptions = {
   day: 'numeric',
   month: 'short',
   year: 'numeric',
   hour: '2-digit',
   minute: '2-digit',
   second: '2-digit',
-});
-const TIME = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+};
+const TIME: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
 
 /** "6 Oct 2026, 10:00:00" (1.14 `.formatted(date: .abbreviated, time: .standard)`). */
 export function formatDateTime(iso: string): string {
   const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? iso : DATE_TIME.format(date);
+  return Number.isNaN(date.getTime()) ? iso : dateFormat(DATE_TIME).format(date);
 }
 
 /** "10:01:00". */
 export function formatTime(iso: string): string {
   const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? iso : TIME.format(date);
+  return Number.isNaN(date.getTime()) ? iso : dateFormat(TIME).format(date);
 }

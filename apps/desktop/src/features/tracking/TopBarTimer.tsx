@@ -9,6 +9,7 @@ import { ActionError, useIntents, useWriteGuards } from './actions';
 import { flowSurface, openFlow } from './CurrentTracking';
 import { useTrackingSeconds } from './status';
 import styles from './TopBarTimer.module.css';
+import { t } from '../../i18n';
 
 type Tint = CSSProperties & { '--activity-color': string };
 
@@ -41,7 +42,7 @@ export function TopBarTimer() {
           shortcut={{ key: 'n', mod: true }}
           onPress={() => void actions.run('start', openFlow('main'))}
         >
-          Start tracking…
+          {t('Start tracking…')}
         </Button>
         <ActionError error={actions.error} className={styles.error} />
         {actions.confirmation}
@@ -50,7 +51,7 @@ export function TopBarTimer() {
   }
 
   const ticketId = running ? tracking.ticketId : paused!.ticketId;
-  const title = running ? tracking.title : (pausedItem?.title ?? paused!.title ?? 'Paused tracking');
+  const title = running ? tracking.title : (pausedItem?.title ?? paused!.title ?? t('Paused tracking'));
   const label = `${ticketId !== null ? `#${ticketId} ` : ''}${title}`;
   const activityId = running ? tracking.activityId : paused!.activityId;
   const tint: Tint = { '--activity-color': activityColor(colors, activityId) };
@@ -59,7 +60,7 @@ export function TopBarTimer() {
     <div className={styles.slot}>
       <div
         role="group"
-        aria-label={running ? 'Running timer' : 'Paused timer'}
+        aria-label={running ? t('Running timer') : t('Paused timer')}
         className={cx(styles.timer, paused && styles.paused)}
         style={tint}
       >
@@ -67,11 +68,11 @@ export function TopBarTimer() {
         <span className={styles.title} title={label}>
           {label}
         </span>
-        <span className={styles.clock}>{running ? formatClock(seconds) : 'Paused'}</span>
+        <span className={styles.clock}>{running ? formatClock(seconds) : t('Paused')}</span>
         {running ? (
           <>
             <IconButton
-              label="Pause timer"
+              label={t('Pause timer')}
               icon={PauseIcon}
               variant="secondary"
               size="small"
@@ -81,7 +82,7 @@ export function TopBarTimer() {
               onPress={() => void actions.run('pause', { type: 'tracking.pause' })}
             />
             <IconButton
-              label="Stop timer"
+              label={t('Stop timer')}
               icon={StopIcon}
               variant="secondary"
               size="small"
@@ -93,7 +94,7 @@ export function TopBarTimer() {
           </>
         ) : (
           <IconButton
-            label="Resume tracking…"
+            label={t('Resume tracking…')}
             icon={PlayIcon}
             variant="secondary"
             size="small"

@@ -17,6 +17,7 @@ import {
   type SelectProps as AriaSelectProps,
   type ValidationResult,
 } from 'react-aria-components';
+import { t } from '../i18n';
 import { cx } from '../utils/cx';
 import { FieldDescription, FieldErrorMessage, FieldLabel } from './Fields';
 import { CheckIcon, ChevronDownIcon, SpinnerIcon } from './icons';
@@ -77,7 +78,7 @@ export function Select<T extends PickerOption>({
   errorMessage,
   width = 'full',
   items,
-  placeholder = 'Choose…',
+  placeholder = t('Choose…'),
   className,
   ...props
 }: SelectProps<T>) {
@@ -123,7 +124,7 @@ export function ComboBox<T extends object>({
   width = 'full',
   children,
   placeholder,
-  emptyMessage = 'No matches',
+  emptyMessage = t('No matches'),
   isLoading = false,
   className,
   ...props
@@ -135,7 +136,7 @@ export function ComboBox<T extends object>({
       <Group className={styles.comboGroup}>
         <Input placeholder={placeholder} className={styles.comboInput} />
         {isLoading ? <SpinnerIcon className={styles.spinner} /> : null}
-        <AriaButton className={styles.comboButton} aria-label="Show suggestions">
+        <AriaButton className={styles.comboButton} aria-label={t('Show suggestions')}>
           <ChevronDownIcon />
         </AriaButton>
       </Group>
@@ -144,7 +145,7 @@ export function ComboBox<T extends object>({
       <AriaPopover className={cx(popoverClassNames.popover, popoverClassNames.listPopover)}>
         <ListBox
           className={styles.listBox}
-          renderEmptyState={() => <p className={styles.empty}>{isLoading ? 'Searching…' : emptyMessage}</p>}
+          renderEmptyState={() => <p className={styles.empty}>{isLoading ? t('Searching…') : emptyMessage}</p>}
         >
           {children}
         </ListBox>
@@ -200,8 +201,8 @@ export function AsyncComboBox<T extends { id: Key }>({
   selectedKey,
   onSelectionChange,
   debounceMs = 200,
-  emptyMessage = 'No matching results',
-  errorText = 'Search failed. Try again.',
+  emptyMessage = t('No matching results'),
+  errorText = t('Search failed. Try again.'),
   menuTrigger = 'input',
   ...props
 }: AsyncComboBoxProps<T>) {

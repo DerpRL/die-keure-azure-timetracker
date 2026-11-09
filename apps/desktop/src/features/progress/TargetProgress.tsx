@@ -4,6 +4,7 @@ import { useSlice } from '../../state/hooks';
 import { formatShortDuration } from '../../utils/duration';
 import { totalsConfirmed, useProgressSeconds } from '../tracking/status';
 import styles from './progress.module.css';
+import { t } from '../../i18n';
 
 interface RowProps {
   label: string;
@@ -19,15 +20,15 @@ function ProgressRow({ label, seconds, target, compact, stale }: RowProps) {
     return (
       <div className={styles.row}>
         <span className={styles.label}>{label}</span>
-        <span className={styles.value}>{`${formatShortDuration(seconds)} · no target`}</span>
+        <span className={styles.value}>{t('{duration} · no target', { duration: formatShortDuration(seconds) })}</span>
       </div>
     );
   }
   const detail = compact
     ? undefined
     : seconds >= target
-      ? `Target reached · ${formatShortDuration(seconds - target)} over`
-      : `${formatShortDuration(target - seconds)} remaining`;
+      ? t('Target reached · {duration} over', { duration: formatShortDuration(seconds - target) })
+      : t('{duration} remaining', { duration: formatShortDuration(target - seconds) });
   return (
     <Meter
       label={label}
@@ -60,7 +61,7 @@ export function TargetProgress({ compact = false }: { compact?: boolean }) {
     return (
       <div aria-busy="true" className={styles.progress}>
         <span role="status" className="visually-hidden">
-          Loading your time totals
+          {t('Loading your time totals')}
         </span>
         <Skeleton lines={3} />
       </div>
@@ -71,9 +72,9 @@ export function TargetProgress({ compact = false }: { compact?: boolean }) {
     return (
       <div className={styles.progress}>
         <p role="status" className={styles.caption}>
-          {progress.loading ? 'Loading your time totals…' : 'Time totals are unavailable until worklogs sync.'}
+          {progress.loading ? t('Loading your time totals…') : t('Time totals are unavailable until worklogs sync.')}
         </p>
-        {progress.issue ? <p className={styles.warning}>{`Time totals: ${progress.issue}`}</p> : null}
+        {progress.issue ? <p className={styles.warning}>{t('Time totals: {issue}', { issue: progress.issue })}</p> : null}
       </div>
     );
   }
@@ -81,16 +82,16 @@ export function TargetProgress({ compact = false }: { compact?: boolean }) {
   const confirmed = totalsConfirmed(connection, progress);
   return (
     <div className={styles.progress}>
-      <ProgressRow label="Today" seconds={totals.today} target={progress.todayTarget} compact={compact} stale={!confirmed} />
+      <ProgressRow label={t('Today')} seconds={totals.today} target={progress.todayTarget} compact={compact} stale={!confirmed} />
       {progress.todayReason ? <p className={styles.caption}>{progress.todayReason}</p> : null}
-      <ProgressRow label="This week" seconds={totals.week} target={progress.weekTarget} compact={compact} stale={!confirmed} />
+      <ProgressRow label={t('This week')} seconds={totals.week} target={progress.weekTarget} compact={compact} stale={!confirmed} />
       {!compact ? (
         <p className={styles.caption}>
-          Monday–Sunday · daily targets from Settings · includes the identified current timer once
+          {t('Monday–Sunday · daily targets from Settings · includes the identified current timer once')}
         </p>
       ) : null}
-      {!confirmed ? <p className={styles.warning}>Last known totals · refresh to confirm</p> : null}
-      {progress.issue ? <p className={styles.warning}>{`Time totals: ${progress.issue}`}</p> : null}
+      {!confirmed ? <p className={styles.warning}>{t('Last known totals · refresh to confirm')}</p> : null}
+      {progress.issue ? <p className={styles.warning}>{t('Time totals: {issue}', { issue: progress.issue })}</p> : null}
     </div>
   );
 }
@@ -100,8 +101,8 @@ export function useProgressSummary(): string | null {
   const progress = useSlice('progress');
   const totals = useProgressSeconds(progress);
   if (!progress) return null;
-  if (!totals) return progress.loading ? 'Loading…' : 'Unavailable';
+  if (!totals) return progress.loading ? t('Loading…') : t('Unavailable');
   return progress.todayTarget > 0
-    ? `Today ${formatShortDuration(totals.today)} / ${formatShortDuration(progress.todayTarget)}`
-    : `Today ${formatShortDuration(totals.today)}`;
+    ? t('Today {today} / {target}', { today: formatShortDuration(totals.today), target: formatShortDuration(progress.todayTarget) })
+    : t('Today {today}', { today: formatShortDuration(totals.today) });
 }

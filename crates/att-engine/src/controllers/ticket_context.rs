@@ -10,10 +10,6 @@ use super::{detached, done, internal, still_current};
 use crate::engine::Engine;
 use crate::ipc::IpcError;
 
-/// Swift's text when no Azure PAT is configured.
-pub(crate) const NOT_CONFIGURED: &str =
-    "Add your Azure organization and PAT in Settings to load ticket details.";
-
 #[derive(Default)]
 pub(crate) struct TicketContextState {
     /// The ticket whose panel is open (Swift `AppModel.contextRequest`).
@@ -64,7 +60,13 @@ pub(crate) async fn show(engine: &Engine, ticket_id: i64) -> Result<Value, IpcEr
             let context = &mut state.controllers.ticket_context;
             if context.generation == request {
                 context.loading = false;
-                context.issue = Some(NOT_CONFIGURED.into());
+                // Swift's text when no Azure PAT is configured.
+                context.issue = Some(
+                    crate::nl::tr(
+                        "Add your Azure organization and PAT in Settings to load ticket details.",
+                    )
+                    .into(),
+                );
             }
         });
         return done();

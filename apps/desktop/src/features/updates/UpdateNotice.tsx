@@ -6,6 +6,7 @@ import { useSlice } from '../../state/hooks';
 import { downloadPercent, hasUpdate } from './model';
 import { useUpdateActions, useUpdateStatus } from './useUpdateStatus';
 import styles from './updates.module.css';
+import { t } from '../../i18n';
 
 /**
  * One compact update line for the tray panel (1.14 compact `AppUpdateBanner`): "Version 2.0.1 is
@@ -29,19 +30,19 @@ export function UpdateNotice() {
   let text: string;
   switch (status.phase) {
     case 'available':
-      text = `Version ${status.version ?? ''} is available`;
+      text = t('Version {version} is available', { version: status.version ?? '' });
       break;
     case 'downloading':
-      text = percent === null ? 'Downloading update…' : `Downloading update… ${percent}%`;
+      text = percent === null ? t('Downloading update…') : t('Downloading update… {percent}%', { percent });
       break;
     case 'ready':
-      text = status.error ? 'Update ready · waiting to restart' : 'Update ready to install';
+      text = status.error ? t('Update ready · waiting to restart') : t('Update ready to install');
       break;
     case 'installing':
-      text = 'Installing update…';
+      text = t('Installing update…');
       break;
     default:
-      text = 'Update needs attention';
+      text = t('Update needs attention');
   }
 
   return (
@@ -59,11 +60,11 @@ export function UpdateNotice() {
           isDisabled={app?.busy ?? false}
           isPending={actions.pending === 'install'}
         >
-          Restart to update
+          {t('Restart to update')}
         </Button>
       ) : status.phase === 'available' || status.phase === 'failed' ? (
-        <Button size="small" onPress={view} aria-label="View update in Settings">
-          View update
+        <Button size="small" onPress={view} aria-label={t('View update in Settings')}>
+          {t('View update')}
         </Button>
       ) : null}
     </div>

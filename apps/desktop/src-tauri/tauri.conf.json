@@ -81,7 +81,10 @@
       "bundleVersion": "31",
       "infoPlist": "Info.plist",
       "entitlements": "App.entitlements",
-      "hardenedRuntime": true
+      "hardenedRuntime": true,
+      "files": {
+        "Resources/nl.lproj/InfoPlist.strings": "./macos/nl.lproj/InfoPlist.strings"
+      }
     },
     "windows": {
       "nsis": {

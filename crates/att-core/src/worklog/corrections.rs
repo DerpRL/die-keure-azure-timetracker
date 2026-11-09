@@ -14,6 +14,7 @@ use super::ops::WorkLogPlan;
 use super::{WorkLogDraft, WorkLogTimeEdit};
 use crate::error::{AppError, Result};
 use crate::model::WorkLog;
+use crate::nl::tr;
 use crate::time::{Cal, Interval, add_secs, diff_secs, floor_to_minute, secs, spans_minute};
 
 /// Swift `TimeCorrectionIssue.Kind`.
@@ -101,9 +102,9 @@ impl TimeCorrections {
             let readable =
                 log.length.is_finite() && (0.0..=f64::from(i32::MAX)).contains(&log.length);
             let Some(start) = log.date(cal.tz()).filter(|_| readable) else {
-                return Err(AppError::message(
+                return Err(AppError::message(tr(
                     "An entry has unreadable times. Refresh or correct it before reviewing gaps.",
-                ));
+                )));
             };
             if log.length <= 0.0 {
                 continue;
@@ -173,7 +174,7 @@ impl TimeCorrections {
     ) -> Result<WorkLogPlan> {
         let neighbour = if using_earlier { issue.earlier.as_ref() } else { issue.later.as_ref() };
         let Some(log) = neighbour.filter(|_| issue.kind == TimeCorrectionKind::Gap) else {
-            return Err(AppError::message("Choose a neighboring entry to fill this gap."));
+            return Err(AppError::message(tr("Choose a neighboring entry to fill this gap.")));
         };
         let original = WorkLogDraft::from_log(log, true, cal)?;
         let edit = WorkLogTimeEdit::new(
@@ -181,7 +182,7 @@ impl TimeCorrections {
             original.edit().end.max(issue.end),
         );
         let mut plan = WorkLogPlan::edit(log, edit, now, cal)?;
-        plan.title = "Fill gap with neighboring task".into();
+        plan.title = tr("Fill gap with neighboring task").into();
         Ok(plan)
     }
 
@@ -204,9 +205,9 @@ impl TimeCorrections {
         let left = source.start.max(interval.start);
         let right = source_end.min(interval.end);
         if right <= left {
-            return Err(AppError::message(
+            return Err(AppError::message(tr(
                 "The selected interval is outside this entry. Refresh the recorded time.",
-            ));
+            )));
         }
         // (start, end, is the separated interval)
         let mut ranges: Vec<(Timestamp, Timestamp, bool)> = Vec::new();
@@ -220,9 +221,9 @@ impl TimeCorrections {
             ranges.push((right, source_end, false));
         }
         if ranges.is_empty() {
-            return Err(AppError::message(
+            return Err(AppError::message(tr(
                 "This would remove the entire entry. Use a narrower interval, or separate the time into its own entry.",
-            ));
+            )));
         }
         let last = ranges.len() - 1;
         let mut allocated = 0;
@@ -249,9 +250,9 @@ impl TimeCorrections {
             desired.push(draft);
         }
         let title = if separate.is_none() {
-            "Remove interval from entry"
+            tr("Remove interval from entry")
         } else {
-            "Separate idle interval"
+            tr("Separate idle interval")
         };
         Ok(WorkLogPlan { title: title.into(), before: vec![log.clone()], desired, undo_of: None })
     }
@@ -266,18 +267,18 @@ impl TimeCorrections {
         cal: &Cal,
     ) -> Result<WorkLogPlan> {
         let (Some(a), Some(b)) = (issue.earlier.as_ref(), issue.later.as_ref()) else {
-            return Err(AppError::message("Select two overlapping entries."));
+            return Err(AppError::message(tr("Select two overlapping entries.")));
         };
         if issue.kind != TimeCorrectionKind::Overlap {
-            return Err(AppError::message("Select two overlapping entries."));
+            return Err(AppError::message(tr("Select two overlapping entries.")));
         }
         let first = WorkLogDraft::from_log(a, true, cal)?;
         let second = WorkLogDraft::from_log(b, true, cal)?;
         let staggered = first.start < second.start && first.edit().end < second.edit().end;
         if !staggered || boundary < issue.start || boundary > issue.end {
-            return Err(AppError::message(
+            return Err(AppError::message(tr(
                 "Choose a boundary inside the overlap between two staggered entries.",
-            ));
+            )));
         }
         let left = WorkLogPlan::edit(a, WorkLogTimeEdit::new(first.start, boundary), now, cal)?;
         let right =
@@ -291,7 +292,7 @@ impl TimeCorrections {
                 prorate(source.billable_seconds, draft.seconds, source.seconds);
         }
         Ok(WorkLogPlan {
-            title: "Correct overlapping boundary".into(),
+            title: tr("Correct overlapping boundary").into(),
             before: vec![a.clone(), b.clone()],
             desired,
             undo_of: None,

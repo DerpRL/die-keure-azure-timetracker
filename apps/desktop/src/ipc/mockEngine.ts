@@ -69,6 +69,7 @@ const DEFAULT_RESULTS: {
     const file = path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
     return { id: file.toLowerCase(), name: file.replace(/\.(app|exe)$/i, ''), path };
   },
+  'timeEditor.create': () => ({ id: crypto.randomUUID() }),
 };
 
 /** The notice the engine shows after `app.resetLocalData`. */

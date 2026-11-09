@@ -26,6 +26,7 @@ import { NotificationsView } from './views/NotificationsView';
 import { RemindersView } from './views/RemindersView';
 import { ScheduleView } from './views/ScheduleView';
 import { SourcesView } from './views/SourcesView';
+import { t } from '../../i18n';
 import styles from './settings.module.css';
 
 const VIEWS: Record<SettingsView, ComponentType> = {
@@ -55,8 +56,8 @@ function GitWatchHeader() {
   const { draft } = useSettingsForm();
   return (
     <>
-      <span className={styles.headerMeta}>{`Checks every ${draft.cadences.probeSeconds} s`}</span>
-      <WatchSwitch label="Watch repositories" compact />
+      <span className={styles.headerMeta}>{t('Checks every {count} s', { count: draft.cadences.probeSeconds })}</span>
+      <WatchSwitch label={t('Watch repositories')} compact />
     </>
   );
 }
@@ -68,9 +69,9 @@ function ViewIntro({ view }: { view: SettingsView }) {
     <div className={styles.sectionHead}>
       <div className={styles.sectionHeadText}>
         <h2 id={VIEW_TITLE_ID} tabIndex={-1} className={styles.sectionTitle}>
-          {intro.title}
+          {t(intro.title)}
         </h2>
-        <p className={styles.sectionLead}>{intro.lead}</p>
+        <p className={styles.sectionLead}>{t(intro.lead)}</p>
       </div>
       {actions ? <div className={styles.sectionHeadActions}>{actions}</div> : null}
     </div>
@@ -122,7 +123,7 @@ function useSavedToast(saved: boolean) {
   const previous = useRef(saved);
   useEffect(() => {
     if (saved && !previous.current) {
-      toast.show({ title: connected ? 'Settings saved · connection verified' : 'Settings saved', tone: 'success' });
+      toast.show({ title: connected ? t('Settings saved · connection verified') : t('Settings saved'), tone: 'success' });
     }
     previous.current = saved;
   }, [saved, connected, toast]);
@@ -181,12 +182,12 @@ export default function SettingsPlace() {
       {status === 'failed' ? (
         <EmptyState
           icon={ErrorIcon}
-          title="Settings are unavailable"
-          description="Azure timetracker could not reach its engine, so your settings cannot be shown or saved. Quit and reopen the app."
+          title={t('Settings are unavailable')}
+          description={t('Azure timetracker could not reach its engine, so your settings cannot be shown or saved. Quit and reopen the app.')}
           headingLevel={2}
         />
       ) : (
-        <LoadingRegion label="Loading settings" isLoading placeholder={<SettingsSkeleton />}>
+        <LoadingRegion label={t('Loading settings')} isLoading placeholder={<SettingsSkeleton />}>
           {null}
         </LoadingRegion>
       )}

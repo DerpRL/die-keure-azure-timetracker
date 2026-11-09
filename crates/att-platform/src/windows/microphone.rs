@@ -22,6 +22,7 @@ use super::apps::{self, ProcessHandle};
 use super::com::ComScope;
 use super::registry::RegKey;
 use super::system::os_version;
+use crate::nl::trf;
 use crate::unsupported::MICROPHONE_DETECTION;
 use crate::windows_parse::{
     CaptureSession, ConsentApp, ConsentUse, MICROPHONE_CONSENT_KEY, NON_PACKAGED_KEY, SessionView,
@@ -61,9 +62,9 @@ impl WindowsMicrophone {
             return Err(PlatformError::Unsupported(MICROPHONE_DETECTION));
         }
         let candidates = consent_candidates().map_err(|error| {
-            PlatformError::Failed(format!(
-                "Windows microphone status is temporarily unavailable ({}). Retrying automatically.",
-                error_code_label(error.to_hresult().0)
+            PlatformError::Failed(trf(
+                "Windows microphone status is temporarily unavailable ({code}). Retrying automatically.",
+                &[("code", &error_code_label(error.to_hresult().0))],
             ))
         })?;
         let sessions = if candidates.is_empty() && !always_query_sessions {

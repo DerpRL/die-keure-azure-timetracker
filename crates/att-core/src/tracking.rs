@@ -9,6 +9,7 @@
 use crate::attention::TrackingAttention;
 use crate::error::{AppError, Result};
 use crate::model::{Track, TrackingState};
+use crate::nl::tr;
 use crate::service::TrackingService;
 use crate::text::NonEmpty;
 
@@ -52,7 +53,7 @@ where
         None => remark.non_empty().is_some(),
     };
     if !valid_request {
-        return Err(AppError::message("Choose a valid ticket or supply a tracking comment."));
+        return Err(AppError::message(tr("Choose a valid ticket or supply a tracking comment.")));
     }
     let actual = service.current().await?.checked()?;
     if actual.identity() != expected_identity {
@@ -76,39 +77,39 @@ where
     if actual.track_settings.as_ref().and_then(|settings| settings.is_tracking_start_allowed)
         == Some(false)
     {
-        return Err(AppError::message(
+        return Err(AppError::message(tr(
             "7pace does not currently allow starting a timer. Check your tracking settings.",
-        ));
+        )));
     }
     if actual.running() {
         let stopped = service.stop().await?.checked()?;
         if stopped.running() {
-            return Err(AppError::message(
+            return Err(AppError::message(tr(
                 "7pace did not confirm that the current timer stopped. The new timer was not started.",
-            ));
+            )));
         }
     }
     validate_context().await?;
     let started = service.start(ticket_id, activity_type, remark).await?.checked()?;
     let track = started.track.as_ref();
     if !started.running() || track.and_then(Track::ticket_id) != ticket_id {
-        return Err(AppError::message(
+        return Err(AppError::message(tr(
             "7pace did not confirm the requested timer. Refresh before trying again.",
-        ));
+        )));
     }
     if let Some(activity) = activity_type
         && activity_of(track) != Some(activity)
     {
-        return Err(AppError::message(
+        return Err(AppError::message(tr(
             "7pace did not confirm the selected activity type. Refresh and check the running timer before trying again.",
-        ));
+        )));
     }
     if let Some(remark) = remark
         && remark_of(track) != Some(remark)
     {
-        return Err(AppError::message(
+        return Err(AppError::message(tr(
             "7pace did not confirm the tracking comment. Refresh and check the running timer before trying again.",
-        ));
+        )));
     }
     Ok(started)
 }
@@ -128,7 +129,7 @@ where
     }
     let stopped = service.stop().await?.checked()?;
     if stopped.running() {
-        return Err(AppError::message("7pace did not confirm that tracking stopped."));
+        return Err(AppError::message(tr("7pace did not confirm that tracking stopped.")));
     }
     Ok(stopped)
 }

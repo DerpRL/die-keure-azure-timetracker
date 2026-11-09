@@ -13,6 +13,7 @@ use windows::core::PWSTR;
 use super::apps;
 use super::events;
 use super::system::os_version;
+use crate::nl::tr;
 use crate::windows_parse::{idle_millis, is_exe_path, lock_flags_inverted, session_locked};
 use crate::{
     AppIdentity, AppLookup, PlatformError, PresenceProbe, PresenceSample, Result, SystemEventSink,
@@ -48,15 +49,15 @@ impl PresenceProbe for WindowsPresence {
     fn app_identity(&self, path: &Path) -> Result<AppIdentity> {
         let Some(text) = path.to_str() else {
             return Err(PlatformError::Failed(
-                "The selected program could not be read.".to_string(),
+                tr("The selected program could not be read.").to_string(),
             ));
         };
         if !is_exe_path(text) {
-            return Err(PlatformError::Failed("Choose a program file (.exe).".to_string()));
+            return Err(PlatformError::Failed(tr("Choose a program file (.exe).").to_string()));
         }
         if !path.is_file() {
             return Err(PlatformError::Failed(
-                "The selected program could not be found.".to_string(),
+                tr("The selected program could not be found.").to_string(),
             ));
         }
         Ok(apps::identity_for_path(text))

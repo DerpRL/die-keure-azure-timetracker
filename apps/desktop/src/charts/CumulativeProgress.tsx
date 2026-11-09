@@ -4,6 +4,7 @@ import { area, curveStepAfter, line } from 'd3-shape';
 import { useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import { useFocusVisible } from 'react-aria';
 import type { HeadingLevel } from '../components/Card';
+import { t } from '../i18n';
 import { ChartFrame } from './ChartFrame';
 import { ChartTooltip } from './ChartTooltip';
 import { DataTable } from './DataTable';
@@ -101,7 +102,10 @@ export function CumulativeProgress({
     const point = points[index];
     if (!point) return '';
     const goal = targetAt(point.date);
-    return `${formatDate(point.date)}: ${formatValue(point.value)} recorded${goal === null ? '' : `, target ${formatValue(goal)}`}`;
+    const vars = { date: formatDate(point.date), value: formatValue(point.value) };
+    return goal === null
+      ? t('{date}: {value} recorded', vars)
+      : t('{date}: {value} recorded, target {target}', { ...vars, target: formatValue(goal) });
   };
 
   const activeIndex = points.length === 0 ? -1 : Math.min(active, points.length - 1);
@@ -141,9 +145,9 @@ export function CumulativeProgress({
     <DataTable
       caption={title}
       columns={[
-        { id: 'date', header: 'Time' },
-        { id: 'recorded', header: 'Recorded', align: 'end' },
-        ...(target ? [{ id: 'target', header: 'Scheduled target', align: 'end' as const }] : []),
+        { id: 'date', header: t('Time') },
+        { id: 'recorded', header: t('Recorded'), align: 'end' },
+        ...(target ? [{ id: 'target', header: t('Scheduled target'), align: 'end' as const }] : []),
       ]}
       rows={points.map((point, index) => {
         const goal = targetAt(point.date);
@@ -160,19 +164,19 @@ export function CumulativeProgress({
   );
 
   const legend = (
-    <ul role="list" aria-label="Legend" className={styles.legend}>
+    <ul role="list" aria-label={t('Legend')} className={styles.legend}>
       <li className={styles.legendItem}>
         <svg className={styles.swatch} viewBox="0 0 16 12" aria-hidden="true">
           <line x1={0} x2={16} y1={6} y2={6} className={styles.recordedLine} />
         </svg>
-        <span>Recorded</span>
+        <span>{t('Recorded')}</span>
       </li>
       {target ? (
         <li className={styles.legendItem}>
           <svg className={styles.swatch} viewBox="0 0 16 12" aria-hidden="true">
             <line x1={0} x2={16} y1={6} y2={6} className={styles.targetLine} />
           </svg>
-          <span>Scheduled target (dashed)</span>
+          <span>{t('Scheduled target (dashed)')}</span>
         </li>
       ) : null}
     </ul>
@@ -187,7 +191,7 @@ export function CumulativeProgress({
             width={size.width}
             height={size.height}
             role="group"
-            aria-label={`${title}, cumulative line chart`}
+            aria-label={t('{title}, cumulative line chart', { title })}
             className={styles.svg}
             onPointerMove={onPointerMove}
             onPointerLeave={() => setHovered(null)}
@@ -212,7 +216,7 @@ export function CumulativeProgress({
                 <path d={recordedPath} className={styles.recordedLine} />
                 <line x1={0} x2={plotWidth} y1={plotHeight} y2={plotHeight} className={styles.axisLine} />
               </g>
-              <g role="listbox" aria-label={`${title}: points`} aria-orientation="horizontal" aria-describedby={instructionsId}>
+              <g role="listbox" aria-label={t('{title}: points', { title })} aria-orientation="horizontal" aria-describedby={instructionsId}>
                 {points.map((point, index) => (
                   <circle
                     key={`${point.date.getTime()}-${index}`}
@@ -257,7 +261,7 @@ export function CumulativeProgress({
             </g>
           </svg>
         ) : null}
-        {points.length === 0 && size.width > 0 ? <p className={styles.emptyOverlay}>No recorded time in this window.</p> : null}
+        {points.length === 0 && size.width > 0 ? <p className={styles.emptyOverlay}>{t('No recorded time in this window.')}</p> : null}
         {inspectedPoint && inspected !== null && !tooltipHidden ? (
           <ChartTooltip
             x={margin.left + x(inspectedPoint.date)}
@@ -265,13 +269,13 @@ export function CumulativeProgress({
             containerWidth={size.width}
             title={formatDate(inspectedPoint.date)}
             lines={[
-              `Recorded ${formatValue(inspectedPoint.value)}`,
-              ...(target ? [`Target ${formatValue(targetAt(inspectedPoint.date) ?? 0)}`] : []),
+              t('Recorded {value}', { value: formatValue(inspectedPoint.value) }),
+              ...(target ? [t('Target {value}', { value: formatValue(targetAt(inspectedPoint.date) ?? 0) })] : []),
             ]}
           />
         ) : null}
         <p id={instructionsId} className="visually-hidden">
-          Use the Left and Right Arrow keys to move between points.
+          {t('Use the Left and Right Arrow keys to move between points.')}
         </p>
       </div>
     </ChartFrame>

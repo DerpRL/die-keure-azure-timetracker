@@ -12,6 +12,7 @@ import { dayToDate, formatClockTime, logEnd, logStart, logTicket } from '../../.
 import type { TimeCorrectionIssue, WorkLog } from '../../../ipc/contract';
 import { useNow } from '../../../state/hooks';
 import { formatShortDuration } from '../../../utils/duration';
+import { t, tn } from '../../../i18n';
 import { correctionGaps, type EntryOverlap } from './dayModel';
 import styles from './TimeEditor.module.css';
 
@@ -23,10 +24,6 @@ export interface DayOverviewProps {
   runningLogId: string | null;
   overlaps: readonly EntryOverlap[];
   issues: readonly TimeCorrectionIssue[];
-}
-
-function plural(count: number, word: string): string {
-  return `${count} ${word}${count === 1 ? '' : 's'}`;
 }
 
 function range(start: number, end: number): string {
@@ -58,10 +55,10 @@ export function DayOverview({ day, today, logs, runningLogId, overlaps, issues }
         start,
         end: Math.max(end, start),
         colorIndex,
-        label: `${ticket !== null ? `#${ticket}` : (log.activityType?.name ?? 'Entry')} · ${range(start, Math.max(end, start))}`,
+        label: `${ticket !== null ? `#${ticket}` : (log.activityType?.name ?? t('Entry'))} · ${range(start, Math.max(end, start))}`,
         running: log.id === runningLogId,
       });
-      const name = log.activityType?.name ?? 'Default activity';
+      const name = log.activityType?.name ?? t('Default activity');
       if (!legend.has(activityId)) legend.set(activityId, { id: activityId || 'none', name, colorIndex });
     }
     return {
@@ -78,9 +75,9 @@ export function DayOverview({ day, today, logs, runningLogId, overlaps, issues }
   const gapSeconds = gaps.reduce((total, gap) => total + (gap.end - gap.start) / 1000, 0);
 
   const description = [
-    `Day timeline with ${blocks.length === 1 ? '1 entry' : `${blocks.length} entries`}`,
-    overlaps.length > 0 ? plural(overlaps.length, 'overlap') : null,
-    gaps.length > 0 ? plural(gaps.length, 'gap') : null,
+    tn(blocks.length, 'Day timeline with {count} entry', 'Day timeline with {count} entries'),
+    overlaps.length > 0 ? tn(overlaps.length, '{count} overlap', '{count} overlaps') : null,
+    gaps.length > 0 ? tn(gaps.length, '{count} gap', '{count} gaps') : null,
   ]
     .filter(Boolean)
     .join(', ');
@@ -91,20 +88,20 @@ export function DayOverview({ day, today, logs, runningLogId, overlaps, issues }
       <div className={styles.legendRow}>
         <ActivityLegend items={legend} />
         {overlaps.length > 0 ? (
-          <ul role="list" aria-label="Overlaps" className={styles.flags}>
+          <ul role="list" aria-label={t('Overlaps')} className={styles.flags}>
             {overlaps.slice(0, 3).map((overlap) => (
               <li key={`${overlap.earlierId}-${overlap.laterId}`} className={styles.flag}>
                 <span className={styles.overlapSwatch} aria-hidden="true" />
-                {`Overlap ${range(overlap.start, overlap.end)}`}
+                {t('Overlap {range}', { range: range(overlap.start, overlap.end) })}
               </li>
             ))}
-            {overlaps.length > 3 ? <li className={styles.flag}>{`+${overlaps.length - 3} more`}</li> : null}
+            {overlaps.length > 3 ? <li className={styles.flag}>{t('+{count} more', { count: overlaps.length - 3 })}</li> : null}
           </ul>
         ) : null}
         {gaps.length > 0 ? (
           <p className={styles.flag}>
             <span className={styles.gapSwatch} aria-hidden="true" />
-            {`${plural(gaps.length, 'gap')} · ${formatShortDuration(gapSeconds)}`}
+            {`${tn(gaps.length, '{count} gap', '{count} gaps')} · ${formatShortDuration(gapSeconds)}`}
           </p>
         ) : null}
       </div>

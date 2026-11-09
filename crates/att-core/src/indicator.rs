@@ -8,6 +8,7 @@ use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 
 use crate::model::TrackingState;
+use crate::nl::{tr, trf};
 
 /// The tracking status shown by the tray, the panel and the timer (Swift `TrackingIndicator`).
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
@@ -56,12 +57,12 @@ impl TrackingIndicator {
     /// The status text of the tray tooltip, the panel and the timer's accessibility value.
     pub fn label(self) -> &'static str {
         match self {
-            Self::Running => "Tracking",
-            Self::Stopped => "Stopped",
-            Self::Paused => "Paused",
-            Self::Disconnected => "Disconnected",
-            Self::Connecting => "Connecting",
-            Self::Attention => "Check activity",
+            Self::Running => tr("Tracking"),
+            Self::Stopped => tr("Stopped"),
+            Self::Paused => tr("Paused"),
+            Self::Disconnected => tr("Disconnected"),
+            Self::Connecting => tr("Connecting"),
+            Self::Attention => tr("Check activity"),
         }
     }
 
@@ -156,19 +157,20 @@ pub fn status_description(
             Some(id) => {
                 format!(
                     "#{id} · {}",
-                    ticket_title(id).unwrap_or_else(|| "Paused ticket".to_string())
+                    ticket_title(id).unwrap_or_else(|| tr("Paused ticket").to_string())
                 )
             }
-            None => paused.remark.clone().unwrap_or_else(|| "Paused tracking".to_string()),
+            None => paused.remark.clone().unwrap_or_else(|| tr("Paused tracking").to_string()),
         }),
     };
     let mut text = format!("Azure timetracker — {} · {health_label}", indicator.label());
     if let Some(detail) = detail {
         text.push('\n');
         if indicator == TrackingIndicator::Disconnected {
-            text.push_str("Last known: ");
+            text.push_str(&trf("Last known: {detail}", &[("detail", &detail)]));
+        } else {
+            text.push_str(&detail);
         }
-        text.push_str(&detail);
     }
     text
 }
@@ -237,8 +239,9 @@ impl PausedSession {
     /// The paused task's title (AppModel `pausedTicketTitle`), given the cached Azure title.
     pub fn title(&self, ticket_title: Option<&str>) -> String {
         match self.ticket_id {
-            Some(id) => ticket_title.map_or_else(|| format!("Azure ticket #{id}"), str::to_string),
-            None => self.remark.clone().unwrap_or_else(|| "Paused tracking".to_string()),
+            Some(id) => ticket_title
+                .map_or_else(|| trf("Azure ticket #{id}", &[("id", &id)]), str::to_string),
+            None => self.remark.clone().unwrap_or_else(|| tr("Paused tracking").to_string()),
         }
     }
 }

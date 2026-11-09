@@ -9,6 +9,7 @@
 //! Tray icon, windows, global shortcut, notifications, autostart, dialogs, clipboard and opening
 //! URLs are handled by Tauri plugins in the app crate, not here.
 
+mod nl;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -30,15 +31,34 @@ pub mod windows_parse;
 
 pub mod paths;
 
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+/// The capability names are the English constants in [`unsupported`]; `Failed` carries text that
+/// was already translated where it was built.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PlatformError {
-    #[error("{0} is not available on this system.")]
     Unsupported(&'static str),
-    #[error("Access to {0} was denied. Allow it in system settings.")]
     Denied(&'static str),
-    #[error("{0}")]
     Failed(String),
 }
+
+/// The message in the interface language.
+impl std::fmt::Display for PlatformError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let text = match self {
+            Self::Unsupported(name) => nl::trf(
+                "{capability} is not available on this system.",
+                &[("capability", &unsupported::capability_label(name))],
+            ),
+            Self::Denied(name) => nl::trf(
+                "Access to {capability} was denied. Allow it in system settings.",
+                &[("capability", &unsupported::capability_label(name))],
+            ),
+            Self::Failed(text) => return f.write_str(text),
+        };
+        f.write_str(&text)
+    }
+}
+
+impl std::error::Error for PlatformError {}
 
 pub type Result<T, E = PlatformError> = std::result::Result<T, E>;
 

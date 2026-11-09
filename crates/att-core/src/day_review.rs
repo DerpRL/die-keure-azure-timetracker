@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::model::TrackingState;
 use crate::model::WorkLog;
+use crate::nl::tr;
 use crate::text::NonEmpty;
 use crate::time::{Cal, add_secs, diff_secs};
 
@@ -328,12 +329,12 @@ impl DayReviewSummary {
                 start: start.max(interval.start),
                 end: end.min(end_of_data),
                 ticket_id: log.ticket_id(),
-                title: log.comment.non_empty().unwrap_or("Work session").to_string(),
+                title: log.comment.non_empty().unwrap_or(tr("Work session")).to_string(),
                 activity: log
                     .activity_type
                     .as_ref()
                     .and_then(|a| a.name.non_empty())
-                    .unwrap_or("Unspecified activity")
+                    .unwrap_or(tr("Unspecified activity"))
                     .to_string(),
                 is_running: false,
                 is_long: log.length >= long_session,
@@ -352,7 +353,7 @@ impl DayReviewSummary {
                         end,
                         ticket_id: track.ticket_id(),
                         title: track.title(),
-                        activity: "Current activity".into(),
+                        activity: tr("Current activity").into(),
                         is_running: true,
                         is_long: duration >= long_session,
                     });

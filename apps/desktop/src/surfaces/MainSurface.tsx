@@ -22,6 +22,7 @@ import {
 import { PageFallback } from '../places/PageFallback';
 import { PLACE_COMPONENTS } from '../places/registry';
 import { useAction, useSlice } from '../state/hooks';
+import { takeLanguageRemount } from '../i18n';
 
 /**
  * Tells the engine what the view shows (`null` while the main window is hidden): the view's
@@ -44,11 +45,19 @@ function useVisiblePages(page: string, also: readonly string[]) {
   }, [page, alsoKey, run]);
 }
 
+/**
+ * The view shown last in this window. A language change remounts the window's content
+ * (`LanguageBoundary`); it comes back on the same view instead of on the engine's page.
+ */
+let lastRoute: Route | null = null;
+
 /** Main window: the top bar, banners, the current place and the global sheets. */
 export function MainSurface() {
   const app = useSlice('app');
   // Reopening the window shows the view the engine last saw (a 1.14 page id), else Today.
-  const [route, setRoute] = useState<Route>(() => parseNavTarget(app?.visiblePage) ?? { place: 'today' });
+  const [route, setRoute] = useState<Route>(
+    () => (takeLanguageRemount() ? lastRoute : null) ?? parseNavTarget(app?.visiblePage) ?? { place: 'today' },
+  );
 
   const platform = app ? (app.os === 'windows' ? 'windows' : 'macos') : undefined;
   const pages = app?.pages;
@@ -63,6 +72,9 @@ export function MainSurface() {
 
   // A view the user just hid is no longer reachable: its place's first view, or Today.
   const current = resolveRoute(route, isPageVisible);
+  useEffect(() => {
+    lastRoute = current;
+  }, [current]);
   const { page, also } = enginePages(current, isPageVisible);
   useVisiblePages(page, also);
 

@@ -63,6 +63,7 @@ fn preferences_and_completion_survive_restart() {
             theme: InterfaceTheme::Dark,
             scale,
             contrast: InterfaceContrast::Increased,
+            ..InterfacePreferences::default()
         };
         let restored: InterfacePreferences =
             serde_json::from_str(&serde_json::to_string(&preferences).unwrap()).unwrap();
@@ -108,6 +109,7 @@ fn swift_interface_preferences_decode_and_write_raw_values() {
             theme: InterfaceTheme::Dark,
             scale: InterfaceScale::Larger,
             contrast: InterfaceContrast::Increased,
+            ..InterfacePreferences::default()
         }
     );
     assert_eq!(serde_json::to_string(&preferences).unwrap(), swift_json);
@@ -151,4 +153,19 @@ fn labels_raw_values_and_factors_match_swift() {
     for scale in InterfaceScale::ALL {
         assert_eq!(InterfaceScale::from_raw(scale.raw()), Some(scale));
     }
+}
+
+#[test]
+fn the_language_round_trips_and_system_is_not_written() {
+    use att_core::i18n::Language;
+    use att_core::interface_prefs::InterfaceLanguage;
+    let dutch: InterfacePreferences =
+        serde_json::from_str(r#"{"theme":"dark","scale":100,"contrast":"system","language":"nl"}"#)
+            .unwrap();
+    assert_eq!(dutch.language, InterfaceLanguage::Nl);
+    assert!(serde_json::to_string(&dutch).unwrap().ends_with(r#","language":"nl"}"#));
+    let unknown: InterfacePreferences = serde_json::from_str(r#"{"language":"fr"}"#).unwrap();
+    assert_eq!(unknown.language, InterfaceLanguage::System);
+    assert_eq!(InterfaceLanguage::System.resolve(Language::Nl), Language::Nl);
+    assert_eq!(InterfaceLanguage::En.resolve(Language::Nl), Language::En);
 }

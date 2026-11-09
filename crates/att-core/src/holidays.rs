@@ -6,6 +6,7 @@
 use jiff::{Span, Timestamp, civil::Date};
 use serde::{Deserialize, Serialize};
 
+use crate::nl::tr;
 use crate::targets::WorkTargets;
 use crate::time::{Cal, Interval, diff_secs};
 
@@ -37,19 +38,20 @@ impl BelgianHoliday {
         let m = (a + 11 * h + 22 * l) / 451;
         let easter = day((h + l - 7 * m + 114) / 31, (h + l - 7 * m + 114) % 31 + 1);
         let fixed = [
-            (day(1, 1), "New Year’s Day"),
-            (day(5, 1), "Labour Day"),
-            (day(7, 21), "Belgian National Day"),
-            (day(8, 15), "Assumption"),
-            (day(11, 1), "All Saints’ Day"),
-            (day(11, 11), "Armistice Day"),
-            (day(12, 25), "Christmas Day"),
+            (day(1, 1), tr("New Year’s Day")),
+            (day(5, 1), tr("Labour Day")),
+            (day(7, 21), tr("Belgian National Day")),
+            (day(8, 15), tr("Assumption")),
+            (day(11, 1), tr("All Saints’ Day")),
+            (day(11, 11), tr("Armistice Day")),
+            (day(12, 25), tr("Christmas Day")),
         ];
-        let movable = [(1, "Easter Monday"), (39, "Ascension Day"), (50, "Whit Monday")].map(
-            |(offset, name)| {
-                (easter.and_then(|e| e.checked_add(Span::new().days(offset)).ok()), name)
-            },
-        );
+        let movable =
+            [(1, tr("Easter Monday")), (39, tr("Ascension Day")), (50, tr("Whit Monday"))].map(
+                |(offset, name)| {
+                    (easter.and_then(|e| e.checked_add(Span::new().days(offset)).ok()), name)
+                },
+            );
         let mut days: Vec<Self> = fixed
             .into_iter()
             .chain(movable)
@@ -83,13 +85,24 @@ pub enum TargetExceptionKind {
 impl TargetExceptionKind {
     pub const ALL: [Self; 4] = [Self::Leave, Self::HalfDay, Self::Replacement, Self::Custom];
 
-    /// The Swift raw value, also the user-facing label.
+    /// The persisted Swift raw value (English in every language); [`label`](Self::label) is
+    /// the text shown.
     pub fn raw(&self) -> &'static str {
         match self {
             Self::Leave => "Full-day leave",
             Self::HalfDay => "Half-day leave",
             Self::Replacement => "Replacement holiday",
             Self::Custom => "Custom target",
+        }
+    }
+
+    /// The label in the interface language.
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Leave => tr("Full-day leave"),
+            Self::HalfDay => tr("Half-day leave"),
+            Self::Replacement => tr("Replacement holiday"),
+            Self::Custom => tr("Custom target"),
         }
     }
 }
@@ -185,7 +198,7 @@ impl WorkTargets {
         if let Some(item) = self.exception_on(date) {
             let note =
                 if item.note.is_empty() { String::new() } else { format!(" · {}", item.note) };
-            return Some(format!("{}{note}", item.kind.raw()));
+            return Some(format!("{}{note}", item.kind.label()));
         }
         if !self.uses_belgian_holidays() {
             return None;

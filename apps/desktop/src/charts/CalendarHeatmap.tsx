@@ -11,6 +11,7 @@ import {
 } from 'react';
 import { useFocusVisible } from 'react-aria';
 import type { HeadingLevel } from '../components/Card';
+import { dateFormat, t } from '../i18n';
 import { cx } from '../utils/cx';
 import { ChartFrame } from './ChartFrame';
 import { ChartTooltip } from './ChartTooltip';
@@ -51,11 +52,16 @@ export interface CalendarHeatmapProps {
   weekdayLabels?: readonly string[];
 }
 
-const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const DAY = 86_400_000;
-const longFormat = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
-const shortFormat = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
-const monthFormat = new Intl.DateTimeFormat('en-GB', { month: 'short', timeZone: 'UTC' });
+const LONG: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' };
+const SHORT: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', timeZone: 'UTC' };
+const MONTH: Intl.DateTimeFormatOptions = { month: 'short', timeZone: 'UTC' };
+
+/** Short weekday names, Monday first ("Mon", Dutch "ma"). 5 January 1970 was a Monday. */
+function weekdayNames(): string[] {
+  const format = dateFormat({ weekday: 'short', timeZone: 'UTC' });
+  return Array.from({ length: 7 }, (_, index) => format.format(new Date((4 + index) * DAY)));
+}
 
 function utc(date: string): number {
   const [y = 1970, m = 1, d = 1] = date.split('-').map(Number);
@@ -88,7 +94,7 @@ export function CalendarHeatmap({
   selectedDate = null,
   onSelectDay,
   formatValue = defaultFormatValue,
-  weekdayLabels = WEEKDAYS,
+  weekdayLabels = weekdayNames(),
 }: CalendarHeatmapProps) {
   const gridRef = useRef<HTMLDivElement>(null);
   const instructionsId = useId();
@@ -109,8 +115,8 @@ export function CalendarHeatmap({
         index,
         week: Math.floor(position / 7),
         weekday: position % 7,
-        label: day.label ?? longFormat.format(new Date(utc(day.date))),
-        shortLabel: day.shortLabel ?? shortFormat.format(new Date(utc(day.date))),
+        label: day.label ?? dateFormat(LONG).format(new Date(utc(day.date))),
+        shortLabel: day.shortLabel ?? dateFormat(SHORT).format(new Date(utc(day.date))),
       };
     });
     const weeks = cells.length ? (cells[cells.length - 1]?.week ?? 0) + 1 : 0;
@@ -120,8 +126,8 @@ export function CalendarHeatmap({
   const describe = (index: number) => {
     const cell = model.cells[index];
     if (!cell) return '';
-    const value = cell.day.future && cell.day.value === 0 ? 'future date' : formatValue(cell.day.value);
-    return [`${cell.label}: ${value}`, cell.day.detail].filter(Boolean).join(', ');
+    const value = cell.day.future && cell.day.value === 0 ? t('future date') : formatValue(cell.day.value);
+    return [t('{label}: {value}', { label: cell.label, value }), cell.day.detail].filter(Boolean).join(', ');
   };
 
   const activeIndex = days.length === 0 ? -1 : Math.min(active, days.length - 1);
@@ -203,7 +209,7 @@ export function CalendarHeatmap({
         {year ? null : (
           <span aria-hidden="true" className={styles.dayCellText}>
             <span className={styles.dayCellDate}>{cell.shortLabel}</span>
-            <span>{cell.day.future && cell.day.value === 0 ? 'Future' : formatValue(cell.day.value)}</span>
+            <span>{cell.day.future && cell.day.value === 0 ? t('Future') : formatValue(cell.day.value)}</span>
           </span>
         )}
       </div>
@@ -216,15 +222,15 @@ export function CalendarHeatmap({
     <DataTable
       caption={title}
       columns={[
-        { id: 'date', header: 'Date' },
-        { id: 'value', header: 'Recorded', align: 'end' },
-        { id: 'detail', header: 'Details' },
+        { id: 'date', header: t('Date') },
+        { id: 'value', header: t('Recorded'), align: 'end' },
+        { id: 'detail', header: t('Details') },
       ]}
       rows={model.cells.map((cell) => ({
         id: cell.day.date,
         cells: {
           date: cell.label,
-          value: cell.day.future && cell.day.value === 0 ? 'Future' : formatValue(cell.day.value),
+          value: cell.day.future && cell.day.value === 0 ? t('Future') : formatValue(cell.day.value),
           detail: cell.day.detail ?? '',
         },
       }))}
@@ -239,7 +245,7 @@ export function CalendarHeatmap({
       headingLevel={headingLevel}
       description={description}
       table={table}
-      legend={<HeatLegend maximum={maximum} unit="per day" formatValue={formatValue} showFuture={days.some((day) => day.future)} />}
+      legend={<HeatLegend maximum={maximum} unit={t('per day')} formatValue={formatValue} showFuture={days.some((day) => day.future)} />}
     >
       <div className={styles.heatContainer}>
         <div
@@ -260,7 +266,7 @@ export function CalendarHeatmap({
                   );
                   return (
                     <span key={week} className={styles.monthLabel}>
-                      {starter ? monthFormat.format(new Date(utc(starter.day.date))) : ''}
+                      {starter ? dateFormat(MONTH).format(new Date(utc(starter.day.date))) : ''}
                     </span>
                   );
                 })}
@@ -308,16 +314,16 @@ export function CalendarHeatmap({
             containerWidth={hover.width}
             title={hovered.label}
             lines={[
-              hovered.day.future && hovered.day.value === 0 ? 'Future date' : formatValue(hovered.day.value),
+              hovered.day.future && hovered.day.value === 0 ? t('Future date') : formatValue(hovered.day.value),
               ...(hovered.day.detail ? [hovered.day.detail] : []),
             ]}
           />
         ) : null}
         <p id={instructionsId} className="visually-hidden">
           {year
-            ? 'Use Up and Down Arrow to move by day and Left and Right Arrow to move by week.'
-            : 'Use the Arrow keys to move by day and week.'}{' '}
-          {onSelectDay ? 'Press Return to open the day.' : ''}
+            ? t('Use Up and Down Arrow to move by day and Left and Right Arrow to move by week.')
+            : t('Use the Arrow keys to move by day and week.')}{' '}
+          {onSelectDay ? t('Press Return to open the day.') : ''}
         </p>
       </div>
     </ChartFrame>

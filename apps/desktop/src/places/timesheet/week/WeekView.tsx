@@ -16,13 +16,16 @@ import { newPastDraft } from '../drafts/labels';
 import { StepButtons, TimesheetHeader } from '../TimesheetHeader';
 import { useCsvExport } from '../useCsvExport';
 import { ExportIcon } from '../icons';
+import { OverlapNotice } from '../day/PlanPreview';
 import { NeedsLook } from './NeedsLook';
+import { NewEntryDialog } from './NewEntryDialog';
 import { SelectedEntry } from './SelectedEntry';
 import { WeekCalendar } from './WeekCalendar';
 import { blockLanes, buildWeek, dayToLookAt, formatWeekTitle, mondayOf, visibleHours, weekRange, type WeekBlock } from './weekModel';
 import styles from './week.module.css';
 import shared from '../timesheet.module.css';
 import { cx } from '../../../utils/cx';
+import { t, tn } from '../../../i18n';
 
 /**
  * Timesheet · Week (2.2 "S2 · Timesheet"): the week's 7pace worklogs, offline drafts and the
@@ -57,6 +60,8 @@ export function WeekView() {
   const [lookDay, setLookDay] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [creating, setCreating] = useState<{ start: number; end: number } | null>(null);
+  const [futureDrag, setFutureDrag] = useState(false);
 
   // Load the week through the history range when it changes.
   const range = weekRange(weekStart, today);
@@ -75,7 +80,7 @@ export function WeekView() {
   }, [range.from, range.to, historyFrom, historyTo, runRange, runLoad]);
 
   const activityNames = useMemo(
-    () => new Map((offline?.activities ?? []).map((activity) => [activity.id, activity.name ?? 'Activity'])),
+    () => new Map((offline?.activities ?? []).map((activity) => [activity.id, activity.name ?? t('Activity')])),
     [offline?.activities],
   );
   // The calendar follows the clock to the minute (the running block, the now line).
@@ -162,14 +167,16 @@ export function WeekView() {
   const draftCount = days.reduce((sum, day) => sum + day.drafts.length, 0);
   const target = isCurrentWeek && progress?.available && progress.weekTarget > 0 ? progress.weekTarget : 0;
   const subtitle = [
-    target ? `${formatShortDuration(total)} of ${formatShortDuration(target)}` : formatShortDuration(total),
-    draftCount > 0 ? `${draftCount} ${draftCount === 1 ? 'draft' : 'drafts'} not uploaded` : null,
+    target ? t('{done} of {target}', { done: formatShortDuration(total), target: formatShortDuration(target) }) : formatShortDuration(total),
+    draftCount > 0 ? tn(draftCount, '{count} draft not uploaded', '{count} drafts not uploaded') : null,
   ]
     .filter(Boolean)
     .join(' · ');
   const first = days[0]?.date ?? weekStart;
   const last = days.at(-1)?.date ?? weekStart.add({ days: 4 });
   const canAdd = !!offline?.canCreate;
+  // Dragging writes to 7pace directly: it needs a connection and an editor that is free.
+  const canCreate = !!editor?.configured && !editor.requiresReview;
   const canExport = !!history && history.logs.length > 0 && !exporting;
   const busy = app?.busy ?? false;
   const failure = setRange.error ?? load.error ?? select.error ?? prepare.error ?? null;
@@ -178,7 +185,7 @@ export function WeekView() {
     {
       id: 'timesheet.previousWeek',
       icon: ChevronLeftIcon,
-      label: 'Previous week',
+      label: t('Previous week'),
       group: 'Actions',
       keywords: ['timesheet', 'week'],
       onAction: () => setWeekStart((week) => week.subtract({ weeks: 1 })),
@@ -186,7 +193,7 @@ export function WeekView() {
     {
       id: 'timesheet.nextWeek',
       icon: ChevronRightIcon,
-      label: 'Next week',
+      label: t('Next week'),
       group: 'Actions',
       keywords: ['timesheet', 'week'],
       isDisabled: isCurrentWeek,
@@ -211,19 +218,19 @@ export function WeekView() {
         controls={
           <>
             <SearchField
-              label="Filter entries"
+              label={t('Filter entries')}
               hideLabel
-              placeholder="Filter by ticket or comment"
+              placeholder={t('Filter by ticket or comment')}
               value={filter}
               onChange={setFilter}
               width="auto"
               className={shared.weekFilter}
             />
             <Button icon={ExportIcon} isDisabled={!canExport} isPending={exporting} onPress={() => void exportCsv()}>
-              Export CSV
+              {t('Export CSV')}
             </Button>
             <Button variant="primary" icon={PlusIcon} isDisabled={!canAdd} onPress={() => setAdding(true)}>
-              Add time
+              {t('Add time')}
             </Button>
           </>
         }
@@ -231,10 +238,10 @@ export function WeekView() {
       {history?.issue ? (
         <Banner
           tone="error"
-          title="Worklogs could not be loaded"
+          title={t('Worklogs could not be loaded')}
           actions={
             <Button size="small" isPending={load.pending} onPress={() => void load.run({ type: 'history.load' })}>
-              Retry
+              {t('Retry')}
             </Button>
           }
         >
@@ -243,9 +250,32 @@ export function WeekView() {
       ) : null}
       {failure ? <Banner tone="error">{failure.message}</Banner> : null}
       {exportError ? <Banner tone="error">{exportError}</Banner> : null}
+      {editor?.requiresReview ? (
+        <Banner
+          tone="warning"
+          title={t('An earlier change needs review')}
+          actions={
+            <Button size="small" onPress={() => navigation?.navigate({ place: 'timesheet', view: 'day' })}>
+              {t('Review in Day')}
+            </Button>
+          }
+        >
+          {t('A change to your time may not have been saved completely. Check it in Recent edits (Day view) before you drag to add time.')}
+        </Banner>
+      ) : null}
+      {futureDrag && canCreate ? (
+        <Banner tone="info" onDismiss={() => setFutureDrag(false)}>
+          {t('7pace only takes time that has already passed. Drag over earlier time, or use Add time for a draft.')}
+        </Banner>
+      ) : null}
       {editor?.message && !selectedId ? <Banner tone="success">{editor.message}</Banner> : null}
+      {editor?.message && !selectedId && (editor.savedConflicts.length > 0 || editor.savedOverlapIssue) ? (
+        <Banner tone="warning" title={editor.savedConflicts.length === 0 ? t('Overlap check incomplete') : t('Saved with overlapping time')}>
+          <OverlapNotice conflicts={editor.savedConflicts} issue={editor.savedOverlapIssue} saved />
+        </Banner>
+      ) : null}
       <LoadingRegion
-        label="Loading the week…"
+        label={t('Loading the week…')}
         isLoading={!history || (history.loading && !history.loaded)}
         placeholder={<Skeleton shape="rect" height="24rem" />}
       >
@@ -259,9 +289,18 @@ export function WeekView() {
             now={now}
             onSelect={choose}
             legend={legend}
+            onCreate={
+              canCreate
+                ? (span) => {
+                    setFutureDrag(false);
+                    setCreating(span);
+                  }
+                : undefined
+            }
+            onFutureDrag={() => setFutureDrag(true)}
           />
           {selected || look ? (
-            <aside aria-label="Entry details" className={cx(styles.side, shared.noWrap)}>
+            <aside aria-label={t('Entry details')} className={cx(styles.side, shared.noWrap)}>
               {selected ? (
                 <SelectedEntry
                   block={selected}
@@ -289,6 +328,16 @@ export function WeekView() {
           activities={flow?.activityTypes ?? []}
           busy={busy}
           preview={app?.preview ?? false}
+        />
+      ) : null}
+      {creating ? (
+        <NewEntryDialog
+          start={creating.start}
+          end={creating.end}
+          activities={flow?.activityTypes.length ? flow.activityTypes : (offline?.activities ?? [])}
+          defaultActivityId={flow?.defaultActivityId || null}
+          busy={busy || !!editor?.working}
+          onClose={() => setCreating(null)}
         />
       ) : null}
       {adding && offline ? (

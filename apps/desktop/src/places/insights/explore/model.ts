@@ -3,6 +3,7 @@
  * decides what is analysed; the engine filters, clips and totals, the page only presents.
  */
 import type { ChartSeries } from '../../../charts/palette';
+import { t } from '../../../i18n';
 import type { AnalysisView, ExplorerActivity, ExplorerFilter, ExplorerRecord, ExplorerTask, StatisticsSlice } from '../../../ipc/contract';
 import { lengthBandName, weekdayName } from './format';
 
@@ -59,7 +60,7 @@ export function activitySeries(analysis: AnalysisView, colors: ReadonlyMap<strin
 
 /** `ExplorerRecord.fallbackTitle`. */
 export function fallbackTitle(record: ExplorerRecord): string {
-  if (record.ticketId) return `Azure ticket #${record.ticketId}`;
+  if (record.ticketId) return t('Azure ticket #{id}', { id: record.ticketId });
   return record.log.comment?.trim() || record.activityName;
 }
 
@@ -94,21 +95,21 @@ export function taskLabel(task: ExplorerTask): string {
 export function filterChips(filter: ExplorerFilter, tasks: readonly ExplorerTask[], available: readonly ExplorerActivity[]): FilterChip[] {
   const chips: FilterChip[] = [];
   const query = filter.query.trim();
-  if (query) chips.push({ id: 'query', label: `Search: “${query}”`, without: { ...filter, query: '' } });
+  if (query) chips.push({ id: 'query', label: t('Search: “{query}”', { query }), without: { ...filter, query: '' } });
   if (filter.activityId !== null) {
-    const name = available.find((activity) => activity.id === filter.activityId)?.name ?? 'Selected activity (no entries)';
-    chips.push({ id: 'activityId', label: `Activity: ${name}`, without: { ...filter, activityId: null } });
+    const name = available.find((activity) => activity.id === filter.activityId)?.name ?? t('Selected activity (no entries)');
+    chips.push({ id: 'activityId', label: t('Activity: {name}', { name }), without: { ...filter, activityId: null } });
   }
   if (filter.taskId !== null) {
     const task = tasks.find((item) => item.id === filter.taskId);
-    const title = task ? taskLabel(task) : 'Selected task';
-    chips.push({ id: 'taskId', label: `Task: ${title}`, without: { ...filter, taskId: null } });
+    const title = task ? taskLabel(task) : t('Selected task');
+    chips.push({ id: 'taskId', label: t('Task: {title}', { title }), without: { ...filter, taskId: null } });
   }
   if (filter.weekday !== null) {
-    chips.push({ id: 'weekday', label: `Weekday: ${weekdayName(filter.weekday)}`, without: { ...filter, weekday: null } });
+    chips.push({ id: 'weekday', label: t('Weekday: {name}', { name: weekdayName(filter.weekday) }), without: { ...filter, weekday: null } });
   }
   if (filter.lengthBand !== null) {
-    chips.push({ id: 'lengthBand', label: `Entries: ${lengthBandName(filter.lengthBand)}`, without: { ...filter, lengthBand: null } });
+    chips.push({ id: 'lengthBand', label: t('Entries: {band}', { band: lengthBandName(filter.lengthBand) }), without: { ...filter, lengthBand: null } });
   }
   return chips;
 }

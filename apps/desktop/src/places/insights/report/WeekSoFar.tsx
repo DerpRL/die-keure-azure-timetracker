@@ -2,6 +2,7 @@ import { useId, type CSSProperties } from 'react';
 import { Card } from '../../../components/Card';
 import { ActivityLegend, ActivitySwatch, activityColor, activityColorIndex, useActivityColors } from '../../../features/activity';
 import { TicketLink } from '../../../features/ticketContext/TicketLink';
+import { dateFormat, t } from '../../../i18n';
 import type { WeeklySummary, WeeklySummaryDay } from '../../../ipc/contract';
 import { formatShortDuration } from '../../../utils/duration';
 import styles from './WeeklyReport.module.css';
@@ -18,7 +19,7 @@ export function dayLevel(day: WeeklySummaryDay): 0 | 1 | 2 | 3 | 4 {
 
 function weekday(iso: string, style: 'short' | 'long'): string {
   const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('en-GB', { weekday: style });
+  return Number.isNaN(date.getTime()) ? '' : dateFormat({ weekday: style }).format(date);
 }
 
 /**
@@ -34,7 +35,7 @@ export function WeekSoFar({ summary }: { summary: WeeklySummary }) {
   const parts = summary.activities.filter((activity) => activity.seconds > 0);
   const barLabel = [
     targetSeconds > 0
-      ? `${formatShortDuration(totalSeconds)} of ${formatShortDuration(targetSeconds)}`
+      ? t('{total} of {target}', { total: formatShortDuration(totalSeconds), target: formatShortDuration(targetSeconds) })
       : formatShortDuration(totalSeconds),
     ...parts.map((activity) => `${activity.name} ${formatShortDuration(activity.seconds)}`),
   ].join(', ');
@@ -43,15 +44,15 @@ export function WeekSoFar({ summary }: { summary: WeeklySummary }) {
     <Card as="aside" aria-labelledby={headingId} className={styles.summary}>
       <div>
         <h2 id={headingId} className={styles.summaryTitle}>
-          Week so far
+          {t('Week so far')}
         </h2>
-        <p className={styles.caption}>What the draft is based on.</p>
+        <p className={styles.caption}>{t('What the draft is based on.')}</p>
       </div>
 
       <div className={styles.summaryTotal}>
         <p className={styles.totalLine}>
           <span className={styles.total}>{formatShortDuration(totalSeconds)}</span>
-          {targetSeconds > 0 ? <span className={styles.caption}>{`of ${formatShortDuration(targetSeconds)}`}</span> : null}
+          {targetSeconds > 0 ? <span className={styles.caption}>{t('of {target}', { target: formatShortDuration(targetSeconds) })}</span> : null}
         </p>
         <div className={styles.bar} role="img" aria-label={barLabel}>
           {parts.map((activity) => (
@@ -71,7 +72,7 @@ export function WeekSoFar({ summary }: { summary: WeeklySummary }) {
       </div>
 
       {summary.tickets.length > 0 ? (
-        <ul role="list" aria-label="Time per ticket" className={styles.tickets}>
+        <ul role="list" aria-label={t('Time per ticket')} className={styles.tickets}>
           {summary.tickets.map((ticket) => (
             <li key={ticket.ticketId ?? 'none'} className={styles.ticketRow}>
               <ActivitySwatch colorIndex={activityColorIndex(colors, ticket.activityId)} />
@@ -79,12 +80,12 @@ export function WeekSoFar({ summary }: { summary: WeeklySummary }) {
                 {ticket.ticketId !== null ? (
                   <>
                     <TicketLink ticketId={ticket.ticketId} compact />
-                    {` ${ticket.title ?? 'Azure ticket'}`}
+                    {` ${ticket.title ?? t('Azure ticket')}`}
                   </>
                 ) : (
                   <>
-                    {ticket.title ?? 'Work without an Azure ticket'}
-                    <span className={styles.noTicket}> · no ticket</span>
+                    {ticket.title ?? t('Work without an Azure ticket')}
+                    <span className={styles.noTicket}>{` · ${t('no ticket')}`}</span>
                   </>
                 )}
               </span>
@@ -93,12 +94,12 @@ export function WeekSoFar({ summary }: { summary: WeeklySummary }) {
           ))}
         </ul>
       ) : (
-        <p className={styles.caption}>No recorded time in this week yet.</p>
+        <p className={styles.caption}>{t('No recorded time in this week yet.')}</p>
       )}
 
-      <ul role="list" aria-label="Time per day" className={styles.days}>
+      <ul role="list" aria-label={t('Time per day')} className={styles.days}>
         {summary.days.map((day) => (
-          <li key={day.date} className={styles.day} aria-label={`${weekday(day.date, 'long')} ${day.seconds > 0 ? formatShortDuration(day.seconds) : 'no time'}`}>
+          <li key={day.date} className={styles.day} aria-label={`${weekday(day.date, 'long')} ${day.seconds > 0 ? formatShortDuration(day.seconds) : t('no time')}`}>
             <span className={styles.dayName} aria-hidden="true">
               {weekday(day.date, 'short')}
             </span>

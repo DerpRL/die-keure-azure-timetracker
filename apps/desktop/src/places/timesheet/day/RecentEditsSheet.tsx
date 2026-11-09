@@ -10,6 +10,7 @@ import { formatDateTime, formatInstant, parseInstant, ticketPrefix } from '../..
 import { isOpenableUrl, openExternalUrl } from '../../../features/ticketContext/native';
 import { useAction } from '../../../state/hooks';
 import { formatShortDuration } from '../../../utils/duration';
+import { t } from '../../../i18n';
 import { STATUS_LABELS } from './labels';
 import styles from './TimeEditor.module.css';
 
@@ -43,12 +44,12 @@ function ChangeCard({
       </div>
       <div>
         <Badge tone={status.tone} icon={needsReview ? WarningIcon : change.status === 'complete' ? SuccessIcon : undefined}>
-          {status.label}
+          {t(status.label)}
         </Badge>
       </div>
       {change.detail ? <p className={styles.selectable}>{change.detail}</p> : null}
       <details className={styles.disclosure}>
-        <summary>Affected entries</summary>
+        <summary>{t('Affected entries')}</summary>
         <ul role="list" className={styles.disclosureList}>
           {change.before.map((entry) => (
             <li key={entry.id} className={styles.selectable}>
@@ -59,40 +60,40 @@ function ChangeCard({
           ))}
           {created.map((entry) => (
             <li key={`created-${entry.id}`} className={styles.selectable}>
-              {`Created: ${entry.id}`}
+              {t('Created: {id}', { id: entry.id })}
             </li>
           ))}
-          {change.before.length === 0 && created.length === 0 ? <li className={styles.caption}>No entries recorded.</li> : null}
+          {change.before.length === 0 && created.length === 0 ? <li className={styles.caption}>{t('No entries recorded.')}</li> : null}
         </ul>
       </details>
       <details className={styles.disclosure}>
-        <summary>Planned result</summary>
+        <summary>{t('Planned result')}</summary>
         <ul role="list" className={styles.disclosureList}>
           {change.desired.map((draft, index) => {
             const start = parseInstant(draft.start);
             const end = start ? new Date(start.getTime() + draft.seconds * 1000) : null;
             return (
               <li key={`${draft.existingId ?? 'new'}-${index}`} className={styles.selectable}>
-                {`${draft.ticketId ? `#${draft.ticketId} · ` : 'No Azure ticket · '}${formatDateTime(start)} → ${formatDateTime(end)}${
+                {`${draft.ticketId ? `#${draft.ticketId}` : t('No Azure ticket')} · ${formatDateTime(start)} → ${formatDateTime(end)}${
                   draft.comment ? ` · ${draft.comment}` : ''
                 }`}
               </li>
             );
           })}
-          {change.desired.length === 0 ? <li className={styles.caption}>No planned entries recorded.</li> : null}
+          {change.desired.length === 0 ? <li className={styles.caption}>{t('No planned entries recorded.')}</li> : null}
         </ul>
       </details>
       {change.status === 'complete' ? (
         <div className={styles.actions}>
           <Button isDisabled={requiresReview || disabled} onPress={() => onUndo(change)}>
-            Undo…
+            {t('Undo…')}
           </Button>
         </div>
       ) : null}
       {needsReview ? (
         <>
           <p className={styles.caption}>
-            Compare the affected entries in 7pace before acknowledging. This acknowledgment does not undo or retry anything.
+            {t('Compare the affected entries in 7pace before acknowledging. This acknowledgment does not undo or retry anything.')}
           </p>
           <div className={styles.actions}>
             {workspaceUrl && isOpenableUrl(workspaceUrl) ? (
@@ -104,7 +105,7 @@ function ChangeCard({
                   openExternalUrl(workspaceUrl).catch((error: unknown) => setOpenFailure(error instanceof Error ? error.message : String(error)));
                 }}
               >
-                Open 7pace
+                {t('Open 7pace')}
               </Button>
             ) : null}
             <Button
@@ -113,7 +114,7 @@ function ChangeCard({
               isPending={acknowledge.pending}
               onPress={() => void acknowledge.run({ type: 'timeEditor.acknowledge', changeId: change.id })}
             >
-              I checked the entries in 7pace
+              {t('I checked the entries in 7pace')}
             </Button>
           </div>
           {acknowledge.error ? <Banner tone="error">{acknowledge.error.message}</Banner> : null}
@@ -146,15 +147,15 @@ export function RecentEditsSheet({ isOpen, onClose, changes, requiresReview, jou
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
-      title="Recent edits"
-      description={`Changes made on ${device}, for this 7pace workspace.`}
+      title={t('Recent edits')}
+      description={t('Changes made on {device}, for this 7pace workspace.', { device })}
       size="large"
-      cancelLabel="Done"
+      cancelLabel={t('Done')}
     >
       <div className={styles.sheetBody}>
         {requiresReview ? (
-          <Banner tone="warning" title="A change needs review" live="off">
-            Check the entries of the change marked “Needs review” in 7pace, then acknowledge it. Other edits are blocked until then.
+          <Banner tone="warning" title={t('A change needs review')} live="off">
+            {t('Check the entries of the change marked “Needs review” in 7pace, then acknowledge it. Other edits are blocked until then.')}
           </Banner>
         ) : null}
         {journalIssue ? (
@@ -164,7 +165,7 @@ export function RecentEditsSheet({ isOpen, onClose, changes, requiresReview, jou
         ) : null}
         {undo.error ? <Banner tone="error">{undo.error.message}</Banner> : null}
         {changes.length === 0 ? (
-          <p className={styles.caption}>Your confirmed edits, splits and merges will appear here.</p>
+          <p className={styles.caption}>{t('Your confirmed edits, splits and merges will appear here.')}</p>
         ) : (
           <ol role="list" className={styles.changeList}>
             {shown.map((change) => (
@@ -185,8 +186,8 @@ export function RecentEditsSheet({ isOpen, onClose, changes, requiresReview, jou
         )}
         {changes.length > shown.length ? (
           <div className={styles.actions}>
-            <span className={styles.caption}>{`Showing ${shown.length} of ${changes.length} changes`}</span>
-            <Button onPress={() => setVisible((count) => count + PAGE_SIZE)}>Show more</Button>
+            <span className={styles.caption}>{t('Showing {shown} of {total} changes', { shown: shown.length, total: changes.length })}</span>
+            <Button onPress={() => setVisible((count) => count + PAGE_SIZE)}>{t('Show more')}</Button>
           </div>
         ) : null}
       </div>

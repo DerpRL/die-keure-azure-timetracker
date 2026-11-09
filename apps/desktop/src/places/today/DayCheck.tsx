@@ -13,7 +13,8 @@ import { useNavigation } from '../../layout/NavigationContext';
 import { useAction, useSlice } from '../../state/hooks';
 import { cx } from '../../utils/cx';
 import { formatShortDuration } from '../../utils/duration';
-import { findOverlaps, formatTime, formatWeekday, plural, sessionSeconds, type Overlap } from './model';
+import { capitalize, findOverlaps, formatTime, formatWeekday, sessionSeconds, type Overlap } from './model';
+import { dateFormat, t, tn } from '../../i18n';
 import styles from './today.module.css';
 
 export type LoadedReview = DayReviewSlice & { summary: NonNullable<DayReviewSlice['summary']> };
@@ -90,7 +91,7 @@ function MarkReviewed({ review, label, large = false }: { review: DayReviewSlice
     return (
       <p role="status" className={styles.reviewed}>
         <SuccessIcon className={cx(styles.checkIcon, styles['check-ok'])} />
-        {`Reviewed ${formatInstant(reviewedAt)}`}
+        {t('Reviewed {time}', { time: formatInstant(reviewedAt) })}
       </p>
     );
   }
@@ -120,10 +121,10 @@ function Unconfigured({ headingId, title }: { headingId: string; title: string }
       <h2 id={headingId} className={styles.cardTitle}>
         {title}
       </h2>
-      <p className={styles.caption}>Your day check uses your own 7pace worklogs. Connect your account to get started.</p>
+      <p className={styles.caption}>{t('Your day check uses your own 7pace worklogs. Connect your account to get started.')}</p>
       {navigation ? (
         <Button size="small" className={styles.alignStart} onPress={() => navigation.navigate({ place: 'settings', view: 'accounts' })}>
-          Open Settings
+          {t('Open Settings')}
         </Button>
       ) : null}
     </Card>
@@ -142,16 +143,16 @@ export function TodayCheck({ review, today }: { review: DayReviewSlice | undefin
   const openDay = useOpenDayInTimesheet();
   const app = useSlice('app');
 
-  if (review && !review.configured) return <Unconfigured headingId={headingId} title="Day check" />;
+  if (review && !review.configured) return <Unconfigured headingId={headingId} title={t('Day check')} />;
   if (!review || review.selectedDay !== today || (!review.summary && review.loading)) {
     return (
       <Card as="section" aria-labelledby={headingId} className={styles.cardStack}>
         <h2 id={headingId} className={styles.cardTitle}>
-          Day check
+          {t('Day check')}
         </h2>
         <div aria-busy="true">
           <span role="status" className="visually-hidden">
-            Checking today’s worklogs
+            {t('Checking today’s worklogs')}
           </span>
           <Skeleton lines={3} />
         </div>
@@ -167,20 +168,20 @@ export function TodayCheck({ review, today }: { review: DayReviewSlice | undefin
     if (summary.gapsUnavailable) {
       lines.push(
         <CheckLine key="gaps" tone="info">
-          A gap estimate isn’t available right now
+          {t('A gap estimate isn’t available right now')}
         </CheckLine>,
       );
     } else if (summary.gaps.length === 0) {
       lines.push(
         <CheckLine key="gaps" tone="ok">
-          No gaps so far today
+          {t('No gaps so far today')}
         </CheckLine>,
       );
     } else {
       hasIssues = true;
       lines.push(
         <CheckLine key="gaps" tone="warn">
-          {`${plural(summary.gaps.length, 'possible gap', 'possible gaps')} · ${formatShortDuration(gapSeconds(loaded))}`}
+          {`${tn(summary.gaps.length, '{count} possible gap', '{count} possible gaps')} · ${formatShortDuration(gapSeconds(loaded))}`}
         </CheckLine>,
       );
     }
@@ -188,14 +189,14 @@ export function TodayCheck({ review, today }: { review: DayReviewSlice | undefin
     if (overlaps.length === 0) {
       lines.push(
         <CheckLine key="overlaps" tone="ok">
-          No overlaps
+          {t('No overlaps')}
         </CheckLine>,
       );
     } else {
       hasIssues = true;
       lines.push(
         <CheckLine key="overlaps" tone="warn">
-          {`${plural(overlaps.length, 'overlap', 'overlaps')} · ${formatShortDuration(overlapSeconds(overlaps))}`}
+          {`${tn(overlaps.length, '{count} overlap', '{count} overlaps')} · ${formatShortDuration(overlapSeconds(overlaps))}`}
         </CheckLine>,
       );
     }
@@ -206,27 +207,27 @@ export function TodayCheck({ review, today }: { review: DayReviewSlice | undefin
       for (const session of long) {
         lines.push(
           <CheckLine key={`long-${session.id}`} tone="warn">
-            {`Long entry · ${session.ticketId !== null ? `#${session.ticketId}` : session.title} · ${formatShortDuration(sessionSeconds(session))}`}
+            {`${t('Long entry')} · ${session.ticketId !== null ? `#${session.ticketId}` : session.title} · ${formatShortDuration(sessionSeconds(session))}`}
           </CheckLine>,
         );
       }
     } else if (runningSession && tracking?.running) {
       lines.push(
         <CheckLine key="long" tone="info">
-          {`Timer at ${formatShortDuration(sessionSeconds(runningSession))}. You’ll get a long-entry check at ${formatShortDuration(review.longEntryMinutes * 60)}.`}
+          {t('Timer at {elapsed}. You’ll get a long-entry check at {limit}.', { elapsed: formatShortDuration(sessionSeconds(runningSession)), limit: formatShortDuration(review.longEntryMinutes * 60) })}
         </CheckLine>,
       );
     } else {
       lines.push(
         <CheckLine key="long" tone="ok">
-          No long entries
+          {t('No long entries')}
         </CheckLine>,
       );
     }
     if (summary.timerUnconfirmed) {
       lines.push(
         <CheckLine key="unconfirmed" tone="info">
-          The timer status is unconfirmed. Refresh before you finish.
+          {t('The timer status is unconfirmed. Refresh before you finish.')}
         </CheckLine>,
       );
     }
@@ -236,10 +237,10 @@ export function TodayCheck({ review, today }: { review: DayReviewSlice | undefin
   return (
     <Card as="section" aria-labelledby={headingId} className={styles.cardStack}>
       <h2 id={headingId} className={styles.cardTitle}>
-        Day check
+        {t('Day check')}
       </h2>
       {review.issue ? (
-        <Banner tone="warning" title="Could not refresh worklogs" live="off">
+        <Banner tone="warning" title={t('Could not refresh worklogs')} live="off">
           {review.issue}
         </Banner>
       ) : null}
@@ -250,10 +251,10 @@ export function TodayCheck({ review, today }: { review: DayReviewSlice | undefin
       ) : null}
       {hasIssues && openDay ? (
         <Button variant="plain" size="small" className={styles.alignStart} onPress={() => openDay(today, { corrections: true })}>
-          Review gaps & overlaps…
+          {t('Review gaps & overlaps…')}
         </Button>
       ) : null}
-      <MarkReviewed review={review} label="Mark day reviewed" />
+      <MarkReviewed review={review} label={t('Mark day reviewed')} />
       {canSnooze ? (
         <Button
           size="small"
@@ -261,7 +262,7 @@ export function TodayCheck({ review, today }: { review: DayReviewSlice | undefin
           isPending={snooze.pending}
           onPress={() => void snooze.run({ type: 'dayReview.snooze' })}
         >
-          Remind me in 30 minutes
+          {t('Remind me in 30 minutes')}
         </Button>
       ) : null}
     </Card>
@@ -275,11 +276,11 @@ export function PreviousDayCard({ day, onReview }: { day: string; onReview: () =
   return (
     <Card as="section" aria-labelledby={headingId} className={cx(styles.cardStack, styles.warnCard)}>
       <h2 id={headingId} className={styles.cardTitle}>
-        {`${weekday} isn’t reviewed`}
+        {capitalize(t('{weekday} isn’t reviewed', { weekday }))}
       </h2>
-      <p className={styles.small}>Check its gaps, overlaps and long entries before you mark it reviewed.</p>
+      <p className={styles.small}>{t('Check its gaps, overlaps and long entries before you mark it reviewed.')}</p>
       <Button size="small" className={styles.alignStart} onPress={onReview}>
-        {`Review ${weekday}`}
+        {t('Review {weekday}', { weekday })}
       </Button>
     </Card>
   );
@@ -296,7 +297,7 @@ export function draftLine(draft: OfflineDraftView): string {
 
 function formatDayShortish(instant: string): string {
   const date = new Date(instant);
-  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('en-GB', { weekday: 'short' });
+  return Number.isNaN(date.getTime()) ? '' : dateFormat({ weekday: 'short' }).format(date);
 }
 
 /**
@@ -315,19 +316,19 @@ export function OfflineDraftsCard() {
     <Card as="section" aria-labelledby={headingId} className={styles.cardStack}>
       <div className={styles.cardHeadRow}>
         <h2 id={headingId} className={styles.cardTitle}>
-          Offline drafts
+          {t('Offline drafts')}
         </h2>
-        <Badge tone="accent" accessibleLabel={plural(drafts.length, 'draft', 'drafts')}>
+        <Badge tone="accent" accessibleLabel={tn(drafts.length, '{count} draft', '{count} drafts')}>
           {String(drafts.length)}
         </Badge>
       </div>
       <p className={cx(styles.small, styles.muted)}>
-        {drafts.length === 1 ? `${draftLine(drafts[0]!)} isn’t in 7pace yet.` : `${drafts.length} drafts aren’t in 7pace yet.`}
+        {drafts.length === 1 ? t('{draft} isn’t in 7pace yet.', { draft: draftLine(drafts[0]!) }) : t('{count} drafts aren’t in 7pace yet.', { count: drafts.length })}
       </p>
       <div className={styles.buttonRow}>
         {navigation?.canNavigate(target) ? (
           <Button size="small" onPress={() => navigation.navigate(target)}>
-            Open in Timesheet
+            {t('Open in Timesheet')}
           </Button>
         ) : null}
         {drafts.length === 1 ? (
@@ -373,7 +374,7 @@ export function ReviewCheck({ review, isToday }: { review: LoadedReview; isToday
   const openDay = useOpenDayInTimesheet();
   const { summary } = review;
   const day = review.selectedDay;
-  const weekday = isToday ? 'day' : formatWeekday(day);
+  const weekday = formatWeekday(day);
   const busy = app?.busy ?? false;
   const timerControlsDisabled = busy || connection?.health !== 'confirmed';
   const afterTracking = () => void reload.run({ type: 'dayReview.refresh' });
@@ -387,27 +388,27 @@ export function ReviewCheck({ review, isToday }: { review: LoadedReview; isToday
   });
   const draftsTarget = { place: 'timesheet', view: 'drafts' } as const;
   const shortName = (session: ReviewSession | undefined) =>
-    session ? (session.ticketId !== null ? `#${session.ticketId}` : session.title) : 'An entry';
+    session ? (session.ticketId !== null ? `#${session.ticketId}` : session.title) : t('An entry');
 
   return (
     <Card as="section" aria-labelledby={headingId} className={cx(styles.cardStack, styles.reviewCheck)}>
       <div>
         <h2 id={headingId} tabIndex={-1} className={styles.cardTitle}>
-          Day check
+          {t('Day check')}
         </h2>
-        <p className={styles.caption}>Suggestions, not automatic corrections.</p>
+        <p className={styles.caption}>{t('Suggestions, not automatic corrections.')}</p>
       </div>
       {review.issue ? (
-        <Banner tone="warning" title="Could not refresh worklogs" live="off">
+        <Banner tone="warning" title={t('Could not refresh worklogs')} live="off">
           <p>{review.issue}</p>
-          <p>The entries shown are from the last successful sync.</p>
+          <p>{t('The entries shown are from the last successful sync.')}</p>
         </Banner>
       ) : null}
       <ul role="list" className={styles.issues}>
         {summary.timerRunning ? (
           <IssueBox
             tone="warn"
-            title="Your timer is still running"
+            title={t('Your timer is still running')}
             actions={
               <>
                 <Button
@@ -417,7 +418,7 @@ export function ReviewCheck({ review, isToday }: { review: LoadedReview; isToday
                   isPending={pause.pending}
                   onPress={() => void pause.run({ type: 'tracking.pause' }).then(afterTracking)}
                 >
-                  Pause tracking
+                  {t('Pause tracking')}
                 </Button>
                 <Button
                   size="small"
@@ -426,79 +427,79 @@ export function ReviewCheck({ review, isToday }: { review: LoadedReview; isToday
                   isPending={stop.pending}
                   onPress={() => void stop.run({ type: 'tracking.stop' }).then(afterTracking)}
                 >
-                  Stop tracking
+                  {t('Stop tracking')}
                 </Button>
               </>
             }
           >
-            <p className={styles.xs}>{`${tracking?.title ?? summary.sessions.find((session) => session.isRunning)?.title ?? ''}. Marking the day reviewed leaves it running.`}</p>
+            <p className={styles.xs}>{t('{title}. Marking the day reviewed leaves it running.', { title: tracking?.title ?? summary.sessions.find((session) => session.isRunning)?.title ?? '' })}</p>
             {(pause.error ?? stop.error) ? <p role="alert" className={styles.xs}>{(pause.error ?? stop.error)?.message}</p> : null}
           </IssueBox>
         ) : null}
         {summary.timerUnconfirmed ? (
-          <IssueBox tone="neutral" title="Timer status unconfirmed">
-            <p className={styles.xs}>Reconnect or refresh before finishing.</p>
+          <IssueBox tone="neutral" title={t('Timer status unconfirmed')}>
+            <p className={styles.xs}>{t('Reconnect or refresh before finishing.')}</p>
           </IssueBox>
         ) : null}
         {long.map((session) => (
           <IssueBox
             key={session.id}
             tone="warn"
-            title={`Long entry · ${formatShortDuration(sessionSeconds(session))}`}
+            title={`${t('Long entry')} · ${formatShortDuration(sessionSeconds(session))}`}
             actions={
               openDay ? (
                 <Button
                   size="small"
                   onPress={() => openDay(day, { filter: session.ticketId !== null ? String(session.ticketId) : session.title })}
                 >
-                  Split in Timesheet…
+                  {t('Split in Timesheet…')}
                 </Button>
               ) : null
             }
           >
-            <p className={styles.xs}>{`${shortName(session)} from ${formatTime(session.start)} to ${formatTime(session.end)}. A forgotten timer, or one long session?`}</p>
+            <p className={styles.xs}>{t('{entry} from {start} to {end}. A forgotten timer, or one long session?', { entry: shortName(session), start: formatTime(session.start), end: formatTime(session.end) })}</p>
           </IssueBox>
         ))}
         <IssueBox
           tone="neutral"
           title={
             summary.gapsUnavailable
-              ? 'Possible gaps'
+              ? t('Possible gaps')
               : summary.gaps.length === 0
-                ? 'No possible gaps'
-                : `${plural(summary.gaps.length, 'possible gap', 'possible gaps')} · ${formatShortDuration(gapSeconds(review))}`
+                ? t('No possible gaps')
+                : `${tn(summary.gaps.length, '{count} possible gap', '{count} possible gaps')} · ${formatShortDuration(gapSeconds(review))}`
           }
           actions={
             !summary.gapsUnavailable && summary.gaps.length > 0 && openDay ? (
               <Button size="small" onPress={() => openDay(day, { corrections: true })}>
-                Fill in Timesheet…
+                {t('Fill in Timesheet…')}
               </Button>
             ) : null
           }
         >
           <p className={cx(styles.xs, styles.muted)}>
             {summary.gapsUnavailable
-              ? 'A reliable gap estimate is unavailable for this day. Refresh if the connection is out of date.'
+              ? t('A reliable gap estimate is unavailable for this day. Refresh if the connection is out of date.')
               : summary.gaps.length === 0
-                ? `No gaps of ${review.gapMinutes} minutes or longer in your workday.`
-                : summary.gaps.map((gap) => `${formatTime(gap.start)} – ${formatTime(gap.end)}`).join(' and ')}
+                ? t('No gaps of {minutes} minutes or longer in your workday.', { minutes: review.gapMinutes })
+                : summary.gaps.map((gap) => `${formatTime(gap.start)} – ${formatTime(gap.end)}`).join(` ${t('and')} `)}
           </p>
         </IssueBox>
         {overlaps.length > 0 ? (
           <IssueBox
             tone="danger"
-            title={`${overlaps.length === 1 ? 'Overlap' : plural(overlaps.length, 'overlap', 'overlaps')} · ${formatShortDuration(overlapSeconds(overlaps))}`}
+            title={`${overlaps.length === 1 ? t('Overlap') : tn(overlaps.length, '{count} overlap', '{count} overlaps')} · ${formatShortDuration(overlapSeconds(overlaps))}`}
             actions={
               openDay ? (
                 <Button size="small" onPress={() => openDay(day, { corrections: true })}>
-                  Fix overlap…
+                  {t('Fix overlap…')}
                 </Button>
               ) : null
             }
           >
             {overlaps.map((overlap) => (
               <p key={`${overlap.first}-${overlap.second}`} className={styles.xs}>
-                {`${shortName(byId.get(overlap.first))} and ${shortName(byId.get(overlap.second))} both cover ${formatTime(overlap.start)} – ${formatTime(overlap.end)}.`}
+                {t('{first} and {second} both cover {start} – {end}.', { first: shortName(byId.get(overlap.first)), second: shortName(byId.get(overlap.second)), start: formatTime(overlap.start), end: formatTime(overlap.end) })}
               </p>
             ))}
           </IssueBox>
@@ -506,22 +507,22 @@ export function ReviewCheck({ review, isToday }: { review: LoadedReview; isToday
         {drafts.length > 0 ? (
           <IssueBox
             tone="accent"
-            title={plural(drafts.length, 'offline draft', 'offline drafts')}
+            title={tn(drafts.length, '{count} offline draft', '{count} offline drafts')}
             actions={
               navigation?.canNavigate(draftsTarget) ? (
                 <Button size="small" onPress={() => navigation.navigate(draftsTarget)}>
-                  Review drafts
+                  {t('Review drafts')}
                 </Button>
               ) : null
             }
           >
             {drafts.map((draft) => (
               <div key={draft.id} className={styles.draftLine}>
-                <p className={styles.xs}>{`${draftLine(draft)} isn’t in 7pace yet.`}</p>
+                <p className={styles.xs}>{t('{draft} isn’t in 7pace yet.', { draft: draftLine(draft) })}</p>
                 <DeleteDraftButton
                   draft={draft}
                   name={draftLine(draft)}
-                  label="Delete…"
+                  label={t('Delete…')}
                   isDisabled={(offline?.working ?? false) || busy}
                   onDeleted={() => focusAfterDelete(() => document.getElementById(headingId))}
                 />
@@ -530,16 +531,18 @@ export function ReviewCheck({ review, isToday }: { review: LoadedReview; isToday
           </IssueBox>
         ) : null}
       </ul>
-      <MarkReviewed review={review} label={isToday ? 'Mark day reviewed' : `Mark ${weekday} reviewed`} large />
-      <p className={cx(styles.xs, styles.muted)}>{`Saves a review status on ${deviceName(app?.os)}. It doesn’t submit a timesheet.`}</p>
+      <MarkReviewed review={review} label={isToday ? t('Mark day reviewed') : t('Mark {weekday} reviewed', { weekday })} large />
+      <p className={cx(styles.xs, styles.muted)}>{t('Saves a review status on {device}. It doesn’t submit a timesheet.', { device: deviceName(app?.os) })}</p>
       <div className={styles.notes}>
-        {review.syncedAt ? <p>{`Worklogs synced ${formatInstant(review.syncedAt)}`}</p> : null}
+        {review.syncedAt ? <p>{t('Worklogs synced {time}', { time: formatInstant(review.syncedAt) })}</p> : null}
         {summary.omittedLogs > 0 ? (
           <p className={styles.warningText}>
             <WarningIcon className={styles.inlineIcon} />
-            {summary.omittedLogs === 1
-              ? '1 entry has an invalid date or duration and needs checking in 7pace.'
-              : `${summary.omittedLogs} entries have an invalid date or duration and need checking in 7pace.`}
+            {tn(
+              summary.omittedLogs,
+              '{count} entry has an invalid date or duration and needs checking in 7pace.',
+              '{count} entries have an invalid date or duration and need checking in 7pace.',
+            )}
           </p>
         ) : null}
       </div>

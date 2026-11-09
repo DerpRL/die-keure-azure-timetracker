@@ -21,6 +21,7 @@ import {
   belgianHolidays,
   dateKey,
   daysBetween,
+  EXCEPTION_KIND_LABELS,
   EXCEPTION_KINDS,
   formatHolidayDate,
   formatHours,
@@ -31,11 +32,12 @@ import {
   targetMinutes,
   usesBelgianHolidays,
   weekdayOf,
-  WEEKDAY_NAMES,
+  weekdayName,
   WEEKDAYS_MONDAY_FIRST,
   weeklyTargetMinutes,
 } from './targets';
 import { issueFor, TARGET_MINUTES, targetsValid } from './validation';
+import { t, tn } from '../../i18n';
 import styles from './settings.module.css';
 
 const HOLIDAY_RULES_URL =
@@ -44,12 +46,9 @@ const HOLIDAY_RULES_URL =
 /** Exceptions shown per page: a long leave range can add hundreds of dates. */
 export const EXCEPTIONS_PAGE_SIZE = 20;
 
-/** Monday-first short day names for the target grid ("Mon"). */
-const SHORT_DAY = (weekday: number) => (WEEKDAY_NAMES[weekday] ?? '').slice(0, 3);
-
 /** What a target field says about text it cannot use (short: the day columns are narrow). */
-const TARGET_FORMAT_MESSAGE = 'Use whole hours and 0–59 minutes';
-const TARGET_RANGE_MESSAGE = 'Use 0 to 24h';
+const targetFormatMessage = () => t('Use whole hours and 0–59 minutes');
+const targetRangeMessage = () => t('Use 0 to 24h');
 
 /** Settings → Schedule & holidays → Weekly target: hours and minutes per weekday, and presets. */
 export function DailyTargetsSection() {
@@ -61,11 +60,13 @@ export function DailyTargetsSection() {
   return (
     <SettingsSection
       id="targets"
-      subtitle="Hours and minutes you aim to log each day, for example 7h 36m."
+      subtitle={t('Hours and minutes you aim to log each day, for example 7h 36m.')}
       actions={
         <Badge tone="accent" className={styles.totalChip}>
-          <span className="visually-hidden">Weekly total: </span>
-          {valid ? `${formatShortDuration(weeklyTargetMinutes(targets) * 60).replace(/ 0m$/, '')} a week` : 'Check daily targets'}
+          <span className="visually-hidden">{t('Weekly total:')} </span>
+          {valid
+            ? t('{total} a week', { total: formatShortDuration(weeklyTargetMinutes(targets) * 60).replace(/ 0m$/, '') })
+            : t('Check daily targets')}
         </Badge>
       }
     >
@@ -77,15 +78,15 @@ export function DailyTargetsSection() {
             return (
               <DurationField
                 key={weekday}
-                label={SHORT_DAY(weekday)}
+                label={weekdayName(weekday, 'short')}
                 minValue={0}
                 maxValue={MAX_DAILY_MINUTES}
                 step={TARGET_STEP_MINUTES}
                 value={minutes}
                 onChange={(value) => update((current) => ({ ...current, targets: setTargetMinutes(current.targets, value, weekday) }))}
                 isInvalid={invalid}
-                formatMessage={TARGET_FORMAT_MESSAGE}
-                rangeMessage={TARGET_RANGE_MESSAGE}
+                formatMessage={targetFormatMessage()}
+                rangeMessage={targetRangeMessage()}
                 width="full"
                 className={minutes === 0 ? styles.weekend : undefined}
               />
@@ -93,13 +94,13 @@ export function DailyTargetsSection() {
           })}
         </div>
         {issue ? <InlineIssue>{issue}</InlineIssue> : null}
-        <Hint>Use 0 for a day off. In a box, the arrow keys step by an hour or a quarter hour.</Hint>
+        <Hint>{t('Use 0 for a day off. In a box, the arrow keys step by an hour or a quarter hour.')}</Hint>
       </SectionBody>
-      <SettingRow title="Presets" help="Fills in the days above. You can still change each day.">
+      <SettingRow title={t('Presets')} help={t('Fills in the days above. You can still change each day.')}>
         <ChoiceButtons
-          label="Presets"
+          label={t('Presets')}
           selectionMode="single"
-          items={TARGET_PRESETS.map(({ id, label }) => ({ id, label }))}
+          items={TARGET_PRESETS.map(({ id, label }) => ({ id, label: label() }))}
           selected={new Set(preset ? [preset.id] : [])}
           onChange={(keys) => {
             const chosen = TARGET_PRESETS.find((entry) => keys.has(entry.id));
@@ -114,7 +115,7 @@ export function DailyTargetsSection() {
 /** Settings → Schedule & holidays → Workday: when gaps can happen and the day review comes. */
 export function WorkdaySection() {
   return (
-    <SettingsSection id="workday" subtitle="Gaps are only looked for inside these hours.">
+    <SettingsSection id="workday" subtitle={t('Gaps are only looked for inside these hours.')}>
       <WorkdayTimes />
     </SettingsSection>
   );
@@ -138,10 +139,10 @@ function AddException() {
   const hours = minutes / 60;
   return (
     <SectionBody tone="sunken">
-      <p className="visually-hidden">Add a date exception</p>
+      <p className="visually-hidden">{t('Add a date exception')}</p>
       <div className={styles.addForm}>
         <DatePicker
-          label={range ? 'From' : 'Date'}
+          label={range ? t('From') : t('Date')}
           value={from}
           onChange={(value) => {
             if (value) setFrom(value);
@@ -149,18 +150,18 @@ function AddException() {
         />
         {range ? (
           <DatePicker
-            label="Through"
+            label={t('Through')}
             value={through}
             onChange={(value) => {
               if (value) setThrough(value);
             }}
             isInvalid={days.length === 0}
-            errorMessage="Choose an end date on or after the start date, within a year."
+            errorMessage={t('Choose an end date on or after the start date, within a year.')}
           />
         ) : null}
         <Select
-          label="Type"
-          items={EXCEPTION_KINDS.map((id) => ({ id, label: id }))}
+          label={t('Type')}
+          items={EXCEPTION_KINDS.map((id) => ({ id, label: t(EXCEPTION_KIND_LABELS[id]) }))}
           selectedKey={kind}
           onSelectionChange={(key) => {
             if (typeof key !== 'string') return;
@@ -171,18 +172,18 @@ function AddException() {
         />
         {kind === 'Custom target' ? (
           <DurationField
-            label="Target"
+            label={t('Target')}
             minValue={0}
             maxValue={MAX_DAILY_MINUTES}
             step={TARGET_STEP_MINUTES}
             value={minutes}
             onChange={setMinutes}
             onTextValidChange={setMinutesTyped}
-            formatMessage={TARGET_FORMAT_MESSAGE}
-            rangeMessage={TARGET_RANGE_MESSAGE}
+            formatMessage={targetFormatMessage()}
+            rangeMessage={targetRangeMessage()}
           />
         ) : null}
-        <TextField label="Note (optional)" value={note} onChange={setNote} />
+        <TextField label={t('Note (optional)')} value={note} onChange={setNote} />
         <Button
           variant="primary"
           isDisabled={days.length === 0 || (kind === 'Custom target' && !minutesTyped)}
@@ -196,15 +197,16 @@ function AddException() {
             }))
           }
         >
-          {range ? 'Add / replace dates' : 'Add exception'}
+          {range ? t('Add / replace dates') : t('Add exception')}
         </Button>
       </div>
       <Checkbox isSelected={range} onChange={setRange}>
-        A range of dates
+        {t('A range of dates')}
       </Checkbox>
       <Hint>
-        Half-day leave halves your normal weekday target. Custom targets override holidays too. Exceptions take priority over the weekly
-        schedule. Save changes to apply.
+        {t(
+          'Half-day leave halves your normal weekday target. Custom targets override holidays too. Exceptions take priority over the weekly schedule. Save changes to apply.',
+        )}
       </Hint>
     </SectionBody>
   );
@@ -220,8 +222,8 @@ function ExceptionList() {
   if (exceptions.length === 0) {
     return (
       <FullRow className={styles.emptyRow}>
-        <p className={styles.rowTitle}>No exceptions yet</p>
-        <Hint>Add your leave so the day review does not flag those days as empty.</Hint>
+        <p className={styles.rowTitle}>{t('No exceptions yet')}</p>
+        <Hint>{t('Add your leave so the day review does not flag those days as empty.')}</Hint>
       </FullRow>
     );
   }
@@ -229,13 +231,13 @@ function ExceptionList() {
   const rest = exceptions.length - shown.length;
   return (
     <>
-      <ul role="list" aria-label={`Date exceptions (${exceptions.length})`} className={styles.rowList}>
+      <ul role="list" aria-label={t('Date exceptions ({count})', { count: exceptions.length })} className={styles.rowList}>
         {shown.map((item) => (
           <li key={item.id} className={styles.listRow}>
             <span className={styles.listDate}>{item.id}</span>
             <span className={styles.listText}>
               <span>
-                {item.kind}
+                {t(EXCEPTION_KIND_LABELS[item.kind])}
                 {item.kind === 'Custom target' ? ` · ${formatHours(item.hours)}` : ''}
               </span>
               {item.note ? <span className={styles.listMeta}>{item.note}</span> : null}
@@ -243,10 +245,10 @@ function ExceptionList() {
             <Button
               size="small"
               variant="plain"
-              aria-label={`Remove exception on ${item.id}`}
+              aria-label={t('Remove exception on {date}', { date: item.id })}
               onPress={() => update((current) => ({ ...current, targets: removeException(current.targets, item.id) }))}
             >
-              Remove
+              {t('Remove')}
             </Button>
           </li>
         ))}
@@ -255,9 +257,9 @@ function ExceptionList() {
         <FullRow>
           <div className={styles.buttonRow}>
             <Button size="small" onPress={() => setVisible((count) => count + EXCEPTIONS_PAGE_SIZE)}>
-              {`Show ${Math.min(rest, EXCEPTIONS_PAGE_SIZE)} more`}
+              {t('Show {count} more', { count: Math.min(rest, EXCEPTIONS_PAGE_SIZE) })}
             </Button>
-            <Hint>{`${rest} more not shown`}</Hint>
+            <Hint>{t('{count} more not shown', { count: rest })}</Hint>
           </div>
         </FullRow>
       ) : null}
@@ -289,10 +291,10 @@ export function HolidaysSection() {
   return (
     <SettingsSection
       id="holidays"
-      subtitle="Holidays set the target for that day to 0h. Nothing is created or changed in 7pace."
+      subtitle={t('Holidays set the target for that day to 0h. Nothing is created or changed in 7pace.')}
       actions={
         <NumberField
-          label="Holiday year"
+          label={t('Holiday year')}
           hideLabel
           minValue={1900}
           maxValue={2200}
@@ -306,18 +308,18 @@ export function HolidaysSection() {
       }
     >
       <ToggleRow
-        title="Lower my target on Belgian public holidays"
+        title={t('Lower my target on Belgian public holidays')}
         help={
           <>
-            {'Replacement days follow your employer’s arrangements: add them under Days off & exceptions. '}
-            <ExternalLink href={HOLIDAY_RULES_URL}>Belgian public holiday rules</ExternalLink>
+            {t('Replacement days follow your employer’s arrangements: add them under Days off & exceptions.')}{' '}
+            <ExternalLink href={HOLIDAY_RULES_URL}>{t('Belgian public holiday rules')}</ExternalLink>
           </>
         }
         isSelected={enabled}
         onChange={(belgianHolidaysEnabled) => update((current) => ({ ...current, targets: { ...current.targets, belgianHolidaysEnabled } }))}
       />
       {holidays.length > 0 ? (
-        <ul role="list" aria-label={`Belgian public holidays ${year}`} className={styles.holidayGrid}>
+        <ul role="list" aria-label={t('Belgian public holidays {year}', { year })} className={styles.holidayGrid}>
           {holidays.map((holiday) => {
             const days = daysUntil(todayCivil, holiday.date);
             const past = days < 0;
@@ -325,11 +327,11 @@ export function HolidaysSection() {
             return (
               <li key={`${dateKey(holiday.date)}-${holiday.name}`} className={past || !enabled ? styles.holidayPast : styles.holiday}>
                 <span className={styles.holidayDate}>{formatHolidayDate(holiday.date, 'short')}</span>
-                <span className={styles.holidayName}>{holiday.name}</span>
+                <span className={styles.holidayName}>{t(holiday.name)}</span>
                 {dayOff ? (
-                  <Badge tone="warning">Day off · no effect</Badge>
+                  <Badge tone="warning">{t('Day off · no effect')}</Badge>
                 ) : holiday === upcoming && enabled ? (
-                  <Badge tone="accent">{days === 0 ? 'Today' : `Next · in ${days} ${days === 1 ? 'day' : 'days'}`}</Badge>
+                  <Badge tone="accent">{days === 0 ? t('Today') : tn(days, 'Next · in {count} day', 'Next · in {count} days')}</Badge>
                 ) : null}
               </li>
             );
@@ -337,10 +339,10 @@ export function HolidaysSection() {
         </ul>
       ) : (
         <FullRow>
-          <Hint>Holidays are calculated for 1583 and later.</Hint>
+          <Hint>{t('Holidays are calculated for 1583 and later.')}</Hint>
         </FullRow>
       )}
-      {holidays.length > 0 ? <SectionFooter>{`${onWorkdays} of ${holidays.length} fall on a workday in ${year}`}</SectionFooter> : null}
+      {holidays.length > 0 ? <SectionFooter>{t('{count} of {total} fall on a workday in {year}', { count: onWorkdays, total: holidays.length, year })}</SectionFooter> : null}
     </SettingsSection>
   );
 }
@@ -348,7 +350,7 @@ export function HolidaysSection() {
 /** Settings → Schedule & holidays → Days off & exceptions: leave, half days, other targets. */
 export function ExceptionsSection() {
   return (
-    <SettingsSection id="exceptions" subtitle="Leave, half days or a different target for one date.">
+    <SettingsSection id="exceptions" subtitle={t('Leave, half days or a different target for one date.')}>
       <ExceptionList />
       <AddException />
     </SettingsSection>

@@ -23,13 +23,10 @@ use crate::controllers::hooks as controllers;
 use crate::engine::Engine;
 use crate::intent::done;
 use crate::ipc::IpcError;
+use crate::nl::{tr, trf};
 use crate::state::AppState;
 
 use super::{announce, busy, connection, figma, history, update_with};
-
-/// The notice after a reset.
-pub(crate) const RESET_NOTICE: &str =
-    "Local data was reset. Settings, accounts and unsent offline drafts were kept.";
 
 /// `app.resetLocalData`. Refused while a write or an offline upload runs.
 pub(crate) fn reset_local_data(engine: &Engine) -> Result<Value, IpcError> {
@@ -44,10 +41,17 @@ pub(crate) fn reset_local_data(engine: &Engine) -> Result<Value, IpcError> {
         review.prompt_day = None;
         effects.remove_notification(announce::DAY_REVIEW_ID);
         effects.record(
-            "Local data reset",
-            format!("Day review status, Figma history and {removed} synced offline drafts cleared"),
+            tr("Local data reset"),
+            trf(
+                "Day review status, Figma history and {removed} synced offline drafts cleared",
+                &[("removed", &removed)],
+            ),
         );
-        state.session.notice = Some(RESET_NOTICE.to_string());
+        // The notice after a reset.
+        state.session.notice = Some(
+            tr("Local data was reset. Settings, accounts and unsent offline drafts were kept.")
+                .to_string(),
+        );
         // The Figma file history of every workspace; links to tickets stay.
         for ledger in state.session.figma.store.workspaces.values_mut() {
             ledger.history.clear();

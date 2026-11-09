@@ -3,6 +3,7 @@ import { Card } from '../../components/Card';
 import { CheckIcon } from '../../components/icons';
 import { cx } from '../../utils/cx';
 import styles from './onboarding.module.css';
+import { mark, t } from '../../i18n';
 
 export type SetupStep = 'appearance' | 'accounts' | 'sources' | 'calendars';
 
@@ -17,10 +18,10 @@ export interface SetupStepDefinition {
  * (`setupSteps`).
  */
 export const SETUP_STEPS: readonly SetupStepDefinition[] = [
-  { id: 'appearance', label: 'Appearance' },
-  { id: 'accounts', label: 'Azure & 7pace' },
-  { id: 'sources', label: 'Git & Figma' },
-  { id: 'calendars', label: 'Calendars' },
+  { id: 'appearance', label: mark('Appearance') },
+  { id: 'accounts', label: mark('Azure & 7pace') },
+  { id: 'sources', label: mark('Git & Figma') },
+  { id: 'calendars', label: mark('Calendars') },
 ];
 
 export function setupSteps(calendar: boolean): readonly SetupStepDefinition[] {
@@ -34,7 +35,7 @@ export function setupSteps(calendar: boolean): readonly SetupStepDefinition[] {
 export function SetupSteps({ steps, current }: { steps: readonly SetupStepDefinition[]; current: SetupStep }) {
   const index = steps.findIndex((step) => step.id === current);
   return (
-    <ol aria-label="Setup steps" className={styles.steps}>
+    <ol aria-label={t('Setup steps')} className={styles.steps}>
       {steps.map((step, position) => {
         const done = position < index;
         const active = position === index;
@@ -43,8 +44,8 @@ export function SetupSteps({ steps, current }: { steps: readonly SetupStepDefini
             <span className={styles.stepMark} aria-hidden="true">
               {done ? <CheckIcon /> : position + 1}
             </span>
-            {step.label}
-            {done ? <span className="visually-hidden"> (done)</span> : null}
+            {t(step.label)}
+            {done ? <span className="visually-hidden">{` ${t('(done)')}`}</span> : null}
           </li>
         );
       })}
@@ -61,10 +62,12 @@ export function FirstRunSteps({ os }: { os: 'macos' | 'windows' }) {
   return (
     <Card as="section" aria-labelledby={titleId} padding="large" className={styles.firstRun}>
       <h3 id={titleId} className={styles.firstRunTitle}>
-        Connect your accounts to start tracking
+        {t('Connect your accounts to start tracking')}
       </h3>
       <p className={styles.subtitle}>
-        {`Azure DevOps shows your tickets. 7pace stores your time. Both tokens are kept in ${os === 'windows' ? 'Windows Credential Manager' : 'your Mac’s Keychain'}. Save changes when both are filled in.`}
+        {t('Azure DevOps shows your tickets. 7pace stores your time. Both tokens are kept in {store}. Save changes when both are filled in.', {
+          store: os === 'windows' ? 'Windows Credential Manager' : t('your Mac’s Keychain'),
+        })}
       </p>
     </Card>
   );

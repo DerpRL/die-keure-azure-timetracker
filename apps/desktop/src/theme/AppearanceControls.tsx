@@ -1,4 +1,5 @@
 import { SegmentedControl } from '../components/Segmented';
+import { t } from '../i18n';
 import {
   CONTRAST_LABELS,
   CONTRAST_PREFERENCES,
@@ -27,25 +28,25 @@ export function AppearanceControls({ preferences: given, onChange, layout = 'sta
   return (
     <div className={layout === 'inline' ? styles.inline : styles.stacked}>
       <SegmentedControl
-        label="Appearance"
+        label={t('Appearance')}
         size={size}
         selectedKey={preferences.theme}
         onSelectionChange={(value) => update({ ...preferences, theme: value })}
-        options={THEME_PREFERENCES.map((id) => ({ id, label: THEME_LABELS[id] }))}
+        options={THEME_PREFERENCES.map((id) => ({ id, label: t(THEME_LABELS[id]) }))}
       />
       <SegmentedControl
-        label="UI scale"
+        label={t('UI scale')}
         size={size}
         selectedKey={String(preferences.scale)}
         onSelectionChange={(value) => update({ ...preferences, scale: Number(value) as InterfacePreferences['scale'] })}
         options={SCALE_PREFERENCES.map((scale) => ({ id: String(scale), label: scaleLabel(scale) }))}
       />
       <SegmentedControl
-        label="UI contrast"
+        label={t('UI contrast')}
         size={size}
         selectedKey={preferences.contrast}
         onSelectionChange={(value) => update({ ...preferences, contrast: value })}
-        options={CONTRAST_PREFERENCES.map((id) => ({ id, label: CONTRAST_LABELS[id] }))}
+        options={CONTRAST_PREFERENCES.map((id) => ({ id, label: t(CONTRAST_LABELS[id]) }))}
       />
     </div>
   );

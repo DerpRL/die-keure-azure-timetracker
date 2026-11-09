@@ -17,6 +17,7 @@ import { useCommand, useCommands, useSaveShortcut } from '../../shortcuts/hooks'
 import { useSlice } from '../../state/hooks';
 import { useReducedMotion } from '../../theme/ThemeProvider';
 import { ResetIcon } from '../../components/icons';
+import { t } from '../../i18n';
 
 /** Whether a section is shown on this system and with these views. */
 export function useSectionVisible(): (section: SettingsSectionId, isViewShown: (view: SettingsView) => boolean) => boolean {
@@ -122,11 +123,11 @@ export function SettingsFormProvider({ settings, view, navigation, children }: S
   const preview = app?.preview ?? false;
   const value: SettingsFormValue = { ...draft, settings, app, os, busy, preview, goTo };
 
-  useSaveShortcut(() => void draft.save(), { isDisabled: busy || preview || draft.saving, label: 'Save settings' });
+  useSaveShortcut(() => void draft.save(), { isDisabled: busy || preview || draft.saving, label: t('Save settings') });
   useCommand({
     id: 'settings.revert',
     icon: ResetIcon,
-    label: 'Revert settings changes',
+    label: t('Revert settings changes'),
     group: 'Actions',
     isDisabled: !draft.dirty,
     onAction: draft.revert,
@@ -135,7 +136,7 @@ export function SettingsFormProvider({ settings, view, navigation, children }: S
     () =>
       SETTINGS_SECTIONS.filter((section) => sectionVisible(section.id, isViewShown)).map((section) => ({
         id: `settings.section.${section.id}`,
-        label: `Settings: ${section.title}`,
+        label: t('Settings: {section}', { section: t(section.title) }),
         group: 'Pages' as const,
         // The Settings place's colour (AppShell's `PLACE_SWATCHES`).
         swatch: 'var(--chart-4)',

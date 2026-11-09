@@ -10,6 +10,7 @@ import { chooseApplications } from './platform';
 import { FullRow, Hint, InlineIssue, IssueRow, SectionFooter, SettingRow, SettingsSection, ToggleRow } from './SettingsSection';
 import { useSettingsForm } from './SettingsForm';
 import { AWARENESS_MINUTES, issueFor } from './validation';
+import { t } from '../../i18n';
 import styles from './settings.module.css';
 
 /** The executable name Windows matches work apps by (lower case, no folders). */
@@ -73,19 +74,19 @@ export function WorkAppsSection() {
   return (
     <SettingsSection
       id="workApps"
-      subtitle="Using one of these without a running timer starts the reminder above."
+      subtitle={t('Using one of these without a running timer starts the reminder above.')}
       actions={
         <Button size="small" icon={PlusIcon} onPress={() => void choose()} isPending={choosing}>
-          Add app…
+          {t('Add app…')}
         </Button>
       }
     >
       {apps.length === 0 ? (
         <FullRow>
-          <Hint>No work applications. Forgotten-timer reminders need at least one.</Hint>
+          <Hint>{t('No work applications. Forgotten-timer reminders need at least one.')}</Hint>
         </FullRow>
       ) : (
-        <ul role="list" aria-label="Work applications" className={styles.appGrid}>
+        <ul role="list" aria-label={t('Work applications')} className={styles.appGrid}>
           {apps.map((id) => (
             <li key={id} className={styles.appRow}>
               <span className={styles.listText}>
@@ -93,26 +94,26 @@ export function WorkAppsSection() {
                 {nameOf(id) !== id ? <span className={styles.listMeta}>{id}</span> : null}
               </span>
               <span className={styles.appActions}>
-                {notInstalled(id) ? <Badge tone="neutral">Not installed</Badge> : null}
+                {notInstalled(id) ? <Badge tone="neutral">{t('Not installed')}</Badge> : null}
                 <Button
                   size="small"
                   variant="plain"
                   icon={MinusIcon}
-                  aria-label={`Remove ${nameOf(id)} from work apps`}
+                  aria-label={t('Remove {app} from work apps', { app: nameOf(id) })}
                   onPress={() => setApps(apps.filter((app) => app !== id))}
                 >
-                  Remove
+                  {t('Remove')}
                 </Button>
               </span>
             </li>
           ))}
         </ul>
       )}
-      <SettingRow title={windows ? 'Add by executable name' : 'Add by bundle identifier'} help={windows ? 'For example code.exe.' : 'For example com.microsoft.VSCode.'}>
+      <SettingRow title={windows ? t('Add by executable name') : t('Add by bundle identifier')} help={windows ? t('For example code.exe.') : t('For example com.microsoft.VSCode.')}>
         {({ helpId }) => (
           <>
             <TextField
-              label={windows ? 'Executable name' : 'Bundle identifier'}
+              label={windows ? t('Executable name') : t('Bundle identifier')}
               hideLabel
               aria-describedby={helpId}
               value={entry}
@@ -129,7 +130,7 @@ export function WorkAppsSection() {
                 setEntry('');
               }}
             >
-              Add
+              {t('Add')}
             </Button>
           </>
         )}
@@ -150,18 +151,18 @@ export function AwarenessSection() {
   const idleInvalid = outOfRange(preferences.idleMinutes);
   const forgottenInvalid = outOfRange(preferences.forgottenMinutes);
   return (
-    <SettingsSection id="awareness" subtitle="Suggestions to review; your timer and recorded time only change when you confirm.">
+    <SettingsSection id="awareness" subtitle={t('Suggestions to review; your timer and recorded time only change when you confirm.')}>
       <ToggleRow
-        title="Ask what I did after being away"
-        help="Lets you keep, drop or move the idle time."
+        title={t('Ask what I did after being away')}
+        help={t('Lets you keep, drop or move the idle time.')}
         isSelected={preferences.idleEnabled}
         onChange={(idleEnabled) => set({ idleEnabled })}
       />
-      <SettingRow sub title="After" dimmed={!preferences.idleEnabled} below={idleInvalid && issue ? <InlineIssue>{issue}</InlineIssue> : null}>
+      <SettingRow sub title={t('After')} dimmed={!preferences.idleEnabled} below={idleInvalid && issue ? <InlineIssue>{issue}</InlineIssue> : null}>
         <NumberField
-          label="Away minutes"
+          label={t('Away minutes')}
           hideLabel
-          unit="min"
+          unit={t('min')}
           minValue={AWARENESS_MINUTES.min}
           maxValue={AWARENESS_MINUTES.max}
           value={preferences.idleMinutes}
@@ -175,30 +176,30 @@ export function AwarenessSection() {
         />
       </SettingRow>
       <ToggleRow
-        title="Treat a locked screen as away"
-        help="Locking, sleep and inactive sessions count as away right away. A prompt appears when you return."
+        title={t('Treat a locked screen as away')}
+        help={t('Locking, sleep and inactive sessions count as away right away. A prompt appears when you return.')}
         isSelected={preferences.lockEnabled}
         onChange={(lockEnabled) => set({ lockEnabled })}
       />
       <ToggleRow
-        title="Remind me to start a timer"
-        help="When you use a work app without a timer, inside your workday. Paused tracking, meetings and offline drafts suppress it."
+        title={t('Remind me to start a timer')}
+        help={t('When you use a work app without a timer, inside your workday. Paused tracking, meetings and offline drafts suppress it.')}
         isSelected={preferences.forgottenEnabled}
         onChange={(forgottenEnabled) => set({ forgottenEnabled })}
       />
       <SettingRow
         sub
-        title="After"
-        help="Counts only minutes in which you use a work app."
+        title={t('After')}
+        help={t('Counts only minutes in which you use a work app.')}
         dimmed={!preferences.forgottenEnabled}
         below={forgottenInvalid && issue ? <InlineIssue>{issue}</InlineIssue> : null}
       >
         {({ helpId }) => (
           <NumberField
-            label="Active minutes"
+            label={t('Active minutes')}
             hideLabel
             aria-describedby={helpId}
-            unit="min"
+            unit={t('min')}
             minValue={AWARENESS_MINUTES.min}
             maxValue={AWARENESS_MINUTES.max}
             value={preferences.forgottenMinutes}
@@ -212,7 +213,7 @@ export function AwarenessSection() {
           />
         )}
       </SettingRow>
-      <SectionFooter>Only input inactivity and the foreground app’s identity are read. No keystrokes, window titles, documents or screenshots.</SectionFooter>
+      <SectionFooter>{t('Only input inactivity and the foreground app’s identity are read. No keystrokes, window titles, documents or screenshots.')}</SectionFooter>
     </SettingsSection>
   );
 }

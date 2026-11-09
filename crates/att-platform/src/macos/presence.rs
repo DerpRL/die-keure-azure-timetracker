@@ -43,6 +43,7 @@ use objc2_foundation::{
 };
 
 use super::bundle::read_bundle;
+use crate::nl::tr;
 use crate::{
     AppIdentity, AppLookup, PlatformError, PresenceProbe, PresenceSample, Result, SystemEvent,
     SystemEventSink,
@@ -133,7 +134,8 @@ impl PresenceProbe for MacPresence {
     }
 
     fn app_identity(&self, path: &Path) -> Result<AppIdentity> {
-        let missing = || PlatformError::Failed("An application has no bundle identifier.".into());
+        let missing =
+            || PlatformError::Failed(tr("An application has no bundle identifier.").into());
         let path = path.to_str().ok_or_else(missing)?;
         let bundle = read_bundle(path).ok_or_else(missing)?;
         let id = bundle.id.ok_or_else(missing)?;

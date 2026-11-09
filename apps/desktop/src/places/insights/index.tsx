@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import { usePlaceView } from '../../layout/NavigationContext';
 import { visibleViews, type InsightsView } from '../../layout/navigation';
 import { PlaceBody, ViewTabs } from '../../layout/Place';
@@ -15,8 +16,8 @@ export default function InsightsPlace() {
   const tabs =
     views.length > 1 ? (
       <ViewTabs
-        label="Insights views"
-        tabs={views.map((entry) => ({ id: entry.id as InsightsView, title: entry.title }))}
+        label={t('Insights views')}
+        tabs={views.map((entry) => ({ id: entry.id as InsightsView, title: t(entry.title) }))}
         current={view}
         onSelect={(next) => navigation.navigate({ place: 'insights', view: next })}
       />

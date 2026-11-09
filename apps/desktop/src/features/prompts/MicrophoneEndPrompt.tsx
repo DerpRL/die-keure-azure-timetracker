@@ -4,6 +4,7 @@ import { useSlice } from '../../state/hooks';
 import { useIntents, useWriteGuards } from '../tracking/actions';
 import { MicrophoneOffIcon } from '../tracking/icons';
 import { PromptCard, promptStyles as styles } from './PromptCard';
+import { t } from '../../i18n';
 
 /**
  * "Microphone use stopped" (1.14 `MicrophoneEndPromptView`): has the meeting finished? Keep,
@@ -18,7 +19,7 @@ export function MicrophoneEndPrompt({ prompt, canReturn }: { prompt: MicrophoneE
     <PromptCard
       kind="microphoneEnd"
       icon={MicrophoneOffIcon}
-      title="Microphone use stopped"
+      title={t('Microphone use stopped')}
       runner={actions}
       actions={
         <>
@@ -28,7 +29,7 @@ export function MicrophoneEndPrompt({ prompt, canReturn }: { prompt: MicrophoneE
             isPending={actions.isPending('keep')}
             onPress={() => void actions.run('keep', { type: 'microphone.endKeep' })}
           >
-            Keep tracking
+            {t('Keep tracking')}
           </Button>
           <span className={styles.spacer} />
           <Button
@@ -36,14 +37,14 @@ export function MicrophoneEndPrompt({ prompt, canReturn }: { prompt: MicrophoneE
             isPending={actions.isPending('pause')}
             onPress={() => void actions.run('pause', { type: 'microphone.endPause' })}
           >
-            Pause
+            {t('Pause')}
           </Button>
           <Button
             isDisabled={writeDisabled}
             isPending={actions.isPending('stop')}
             onPress={() => void actions.run('stop', { type: 'microphone.endStop' })}
           >
-            Stop
+            {t('Stop')}
           </Button>
           {canReturn ? (
             <Button
@@ -52,18 +53,18 @@ export function MicrophoneEndPrompt({ prompt, canReturn }: { prompt: MicrophoneE
               isPending={actions.isPending('return')}
               onPress={() => void actions.run('return', { type: 'meeting.returnResume' })}
             >
-              Resume previous ticket…
+              {t('Resume previous ticket…')}
             </Button>
           ) : null}
         </>
       }
     >
       <p className={styles.text}>
-        {`${prompt.appNames.join(', ')} has not used the microphone for at least a minute. Has your meeting finished?`}
+        {t('{apps} has not used the microphone for at least a minute. Has your meeting finished?', { apps: prompt.appNames.join(', ') })}
       </p>
-      <p className={styles.strong}>{`Your timer is still running: ${tracking?.title ?? 'Tracking'}`}</p>
+      <p className={styles.strong}>{t('Your timer is still running: {title}', { title: tracking?.title ?? t('Tracking') })}</p>
       <p className={styles.caption}>
-        If you only muted, keep tracking. Pause saves this task for resuming; Stop finishes tracking.
+        {t('If you only muted, keep tracking. Pause saves this task for resuming; Stop finishes tracking.')}
       </p>
     </PromptCard>
   );

@@ -86,7 +86,7 @@ pub fn version_translations(raw: &[u16]) -> Vec<(u16, u16)> {
 pub fn error_code_label(hresult: i32) -> String {
     let code = hresult as u32;
     if code & 0xFFFF_0000 == 0x8007_0000 {
-        format!("error {}", code & 0xFFFF)
+        crate::nl::trf("error {code}", &[("code", &(code & 0xFFFF))])
     } else {
         format!("0x{code:08X}")
     }

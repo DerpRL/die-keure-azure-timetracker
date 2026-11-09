@@ -8,6 +8,7 @@ import { PALETTE_SHORTCUT } from '../shortcuts/ShortcutProvider';
 import { formatKeyCombo, type KeyCombo } from '../shortcuts/keys';
 import { usePlatform, type Platform } from '../shortcuts/platform';
 import type { Command } from '../shortcuts/store';
+import { mark, t } from '../i18n';
 import { cx } from '../utils/cx';
 import {
   LEGACY_ROUTES,
@@ -35,16 +36,16 @@ const PLACE_SWATCHES: Readonly<Record<PlaceId, string>> = {
   settings: 'var(--chart-4)',
 };
 
-/** Views that get their own "Go to" entry in the palette besides the places. */
+/** Views that get their own "Go to" entry in the palette besides the places (labels: `t`). */
 const PALETTE_VIEWS: ReadonlyArray<{ route: Route; label: string; keywords: readonly string[] }> = [
-  { route: { place: 'insights', view: 'report' }, label: 'Weekly report', keywords: ['status', 'markdown'] },
-  { route: { place: 'insights', view: 'patterns' }, label: 'Patterns', keywords: ['heatmap', 'statistics'] },
-  { route: { place: 'timesheet', view: 'day' }, label: 'Day in Timesheet', keywords: ['time editor', 'edit', 'split'] },
-  { route: { place: 'timesheet', view: 'list' }, label: 'Worklog list', keywords: ['history', 'csv', 'export'] },
-  { route: { place: 'timesheet', view: 'drafts' }, label: 'Offline drafts', keywords: ['offline', 'upload'] },
-  { route: { place: 'settings', view: 'git' }, label: 'Git repositories', keywords: ['branches', 'repositories'] },
-  { route: { place: 'settings', view: 'figma' }, label: 'Figma', keywords: ['design', 'sources'] },
-  { route: { place: 'settings', view: 'appearance' }, label: 'Appearance', keywords: ['theme', 'dark', 'size'] },
+  { route: { place: 'insights', view: 'report' }, label: mark('Weekly report'), keywords: ['status', 'markdown'] },
+  { route: { place: 'insights', view: 'patterns' }, label: mark('Patterns'), keywords: ['heatmap', 'statistics'] },
+  { route: { place: 'timesheet', view: 'day' }, label: mark('Day in Timesheet'), keywords: ['time editor', 'edit', 'split'] },
+  { route: { place: 'timesheet', view: 'list' }, label: mark('Worklog list'), keywords: ['history', 'csv', 'export'] },
+  { route: { place: 'timesheet', view: 'drafts' }, label: mark('Offline drafts'), keywords: ['offline', 'upload'] },
+  { route: { place: 'settings', view: 'git' }, label: mark('Git repositories'), keywords: ['branches', 'repositories'] },
+  { route: { place: 'settings', view: 'figma' }, label: mark('Figma'), keywords: ['design', 'sources'] },
+  { route: { place: 'settings', view: 'appearance' }, label: mark('Appearance'), keywords: ['theme', 'dark', 'size'] },
 ];
 
 export interface AppShellProps {
@@ -90,7 +91,7 @@ export function AppShell({
       const digit = place.inTopBar ? pageShortcutDigit(tabs.indexOf(place)) : null;
       return {
         id: `place.${place.id}`,
-        label: place.title,
+        label: t(place.title),
         group: 'Pages',
         swatch: PLACE_SWATCHES[place.id],
         keywords: ['go to', 'open'],
@@ -102,7 +103,7 @@ export function AppShell({
     const viewCommands = PALETTE_VIEWS.filter((entry) => routesEqual(resolveRoute(entry.route, isPageVisible), entry.route)).map(
       (entry): Command => ({
         id: `view.${entry.route.place}.${'view' in entry.route ? entry.route.view : ''}`,
-        label: entry.label,
+        label: t(entry.label),
         group: 'Pages',
         swatch: PLACE_SWATCHES[entry.route.place],
         keywords: ['go to', 'open', ...entry.keywords],
@@ -148,7 +149,7 @@ export function AppShell({
   return (
     <div className={styles.shell} data-surface="main">
       <a href="#main-content" className={styles.skipLink}>
-        Skip to content
+        {t('Skip to content')}
       </a>
       <header ref={measureTopBar} className={styles.topBar}>
         <div className={styles.topLeft}>
@@ -156,7 +157,7 @@ export function AppShell({
             <AppLogo />
             <span className={styles.brandName}>Azure timetracker</span>
           </div>
-          <nav aria-label="Main" className={styles.tabs}>
+          <nav aria-label={t('Main')} className={styles.tabs}>
             {tabs.map((place) => {
               const selected = place.id === route.place;
               return (
@@ -168,7 +169,7 @@ export function AppShell({
                   aria-keyshortcuts={shortcutAria(place.id)}
                   onClick={() => onNavigate(placeRoute(place.id))}
                 >
-                  {place.title}
+                  {t(place.title)}
                 </button>
               );
             })}
@@ -183,13 +184,13 @@ export function AppShell({
           >
             <span className={styles.searchLabel}>
               <SearchIcon className={styles.searchIcon} />
-              Search or jump to…
+              {t('Search or jump to…')}
             </span>
             <KeyboardShortcut shortcut={PALETTE_SHORTCUT} decorative />
           </button>
           {timer}
           <IconButton
-            label="Settings"
+            label={t('Settings')}
             icon={SettingsIcon}
             variant="secondary"
             shortcut={SETTINGS_SHORTCUT}

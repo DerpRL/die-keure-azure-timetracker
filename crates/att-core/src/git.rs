@@ -18,6 +18,7 @@ use uuid::Uuid;
 
 use crate::error::{AppError, Result};
 use crate::model::{Repository, last_path_component};
+use crate::nl::{tr, trf};
 
 /// The default ticket pattern (Swift `Configuration.branchPattern`).
 ///
@@ -72,9 +73,9 @@ impl BranchTicket {
     /// The live tester text beside Settings → Tracking → Ticket pattern (Pages.swift).
     pub fn tester_result(branch: &str, pattern: &str) -> String {
         match Self::extract(branch, pattern) {
-            Ok(Some(id)) => format!("Ticket #{id}"),
-            Ok(None) => "No unique ticket found".to_string(),
-            Err(error) => format!("Invalid pattern: {error}"),
+            Ok(Some(id)) => trf("Ticket #{id}", &[("id", &id)]),
+            Ok(None) => tr("No unique ticket found").to_string(),
+            Err(error) => trf("Invalid pattern: {error}", &[("error", &error)]),
         }
     }
 }
@@ -94,12 +95,17 @@ impl BranchPattern {
             .delegate_size_limit(PATTERN_SIZE_LIMIT)
             .build()
             // NSRegularExpression's wording, which 1.14.x showed in Settings.
-            .map_err(|_| AppError::Message(format!("The value “{pattern}” is invalid.")))?;
+            .map_err(|_| {
+                AppError::Message(trf(
+                    "The value “{pattern}” is invalid.",
+                    &[("pattern", &pattern)],
+                ))
+            })?;
         // `captures_len` counts the implicit whole-match group 0.
         if regex.captures_len() < 2 {
-            return Err(AppError::message(
+            return Err(AppError::message(tr(
                 "The branch pattern needs a capture group for the ticket number, such as ([0-9]+).",
-            ));
+            )));
         }
         Ok(Self { regex })
     }
@@ -117,9 +123,9 @@ impl BranchPattern {
         let mut ids = BTreeSet::new();
         for captures in self.regex.captures_iter(branch) {
             let captures = captures.map_err(|_| {
-                AppError::message(
+                AppError::message(tr(
                     "The branch pattern is too complex to check this branch. Simplify the pattern.",
-                )
+                ))
             })?;
             let id = captures.get(1).and_then(|group| group.as_str().parse::<i64>().ok());
             if let Some(id) = id.filter(|id| (1..=MAX_TICKET).contains(id)) {
@@ -147,7 +153,7 @@ impl GitSnapshot {
     }
 
     pub fn label(&self) -> &str {
-        self.branch.as_deref().unwrap_or("Detached HEAD")
+        self.branch.as_deref().unwrap_or(tr("Detached HEAD"))
     }
 }
 
@@ -179,8 +185,9 @@ impl GitProbe {
         let dot_git = root.join(".git");
         // Swift `fileExists(atPath:isDirectory:)` follows links and treats any failure as absent.
         let Ok(metadata) = fs::metadata(&dot_git) else {
-            return Err(AppError::Message(format!(
-                "No Git repository at {name}. Choose its root folder."
+            return Err(AppError::Message(trf(
+                "No Git repository at {name}. Choose its root folder.",
+                &[("name", &name)],
             )));
         };
         let git_dir = if metadata.is_dir() {
@@ -188,12 +195,15 @@ impl GitProbe {
         } else {
             let bytes = fs::read(&dot_git).map_err(|error| file_error(".git", &error))?;
             let pointer = decode_utf8(bytes).ok_or_else(|| {
-                AppError::message(
+                AppError::message(tr(
                     "The file couldn’t be opened because it isn’t in the correct format.",
-                )
+                ))
             })?;
             let Some(location) = pointer.trim().strip_prefix("gitdir: ") else {
-                return Err(AppError::Message(format!("Invalid .git file in {name}.")));
+                return Err(AppError::Message(trf(
+                    "Invalid .git file in {name}.",
+                    &[("name", &name)],
+                )));
             };
             resolve_gitdir(root, location)
         };
@@ -223,16 +233,21 @@ pub fn resolve_gitdir(root: &Path, location: &str) -> PathBuf {
 /// probe and scan failures. Other failures, such as a file where a folder is expected, get the
 /// generic sentence, as in Foundation.
 pub(crate) fn file_error(name: &str, error: &io::Error) -> AppError {
-    let reason = match error.kind() {
-        io::ErrorKind::NotFound => " because there is no such file",
-        io::ErrorKind::PermissionDenied => " because you don’t have permission to view it",
-        _ => "",
-    };
-    AppError::Message(format!("The file “{name}” couldn’t be opened{reason}."))
+    let args: &[(&str, &dyn std::fmt::Display)] = &[("name", &name)];
+    AppError::Message(match error.kind() {
+        io::ErrorKind::NotFound => {
+            trf("The file “{name}” couldn’t be opened because there is no such file.", args)
+        }
+        io::ErrorKind::PermissionDenied => trf(
+            "The file “{name}” couldn’t be opened because you don’t have permission to view it.",
+            args,
+        ),
+        _ => trf("The file “{name}” couldn’t be opened.", args),
+    })
 }
 
 fn head_unreadable() -> AppError {
-    AppError::message("Git HEAD is temporarily unreadable.")
+    AppError::message(tr("Git HEAD is temporarily unreadable."))
 }
 
 /// UTF-8 text without a leading byte-order mark, which Foundation's UTF-8 decoding drops.
@@ -364,11 +379,23 @@ pub struct AuditEntry {
     pub date: Timestamp,
     pub title: String,
     pub detail: String,
+    /// The entry asks the user to check something (2.6). The UI marks it; it used to look for
+    /// "attention" in the English title, which a translated title no longer contains. Left out
+    /// when false, so stored entries keep their 1.14.x shape.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[cfg_attr(feature = "ts", ts(optional, as = "Option<bool>"))]
+    pub attention: bool,
 }
 
 impl AuditEntry {
     pub fn new(title: impl Into<String>, detail: impl Into<String>, date: Timestamp) -> Self {
-        Self { id: Uuid::new_v4(), date, title: title.into(), detail: detail.into() }
+        Self {
+            id: Uuid::new_v4(),
+            date,
+            title: title.into(),
+            detail: detail.into(),
+            attention: false,
+        }
     }
 }
 

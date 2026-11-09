@@ -5,6 +5,7 @@ import { useIntents, useWriteGuards } from '../tracking/actions';
 import { flowSurface } from '../tracking/CurrentTracking';
 import { BranchIcon } from '../tracking/icons';
 import { PromptCard, promptStyles as styles, usePromptContext } from './PromptCard';
+import { t } from '../../i18n';
 
 /**
  * "Branch changed" (1.14 `BranchPrompt` + `BranchBreakActions`): switch to the branch's ticket,
@@ -33,7 +34,7 @@ export function BranchPrompt({ view }: { view: BranchPromptView }) {
       data-prompt-primary={view.suggestsBreak && !running ? '' : undefined}
       onPress={() => void actions.run('keep', { type: 'branch.keep', id: change.id })}
     >
-      {running ? (view.suggestsBreak ? 'Keep current' : 'Keep tracking') : 'Dismiss'}
+      {running ? (view.suggestsBreak ? t('Keep current') : t('Keep tracking')) : t('Dismiss')}
     </Button>
   );
 
@@ -48,7 +49,7 @@ export function BranchPrompt({ view }: { view: BranchPromptView }) {
             isPending={actions.isPending('pause')}
             onPress={() => void actions.run('pause', { type: 'branch.pause', id: change.id })}
           >
-            Pause
+            {t('Pause')}
           </Button>
           <Button
             variant="primary"
@@ -57,11 +58,11 @@ export function BranchPrompt({ view }: { view: BranchPromptView }) {
             isPending={actions.isPending('stop')}
             onPress={() => void actions.run('stop', { type: 'branch.stop', id: change.id })}
           >
-            Stop
+            {t('Stop')}
           </Button>
         </>
       ) : (
-        <span className={styles.caption}>No active timer</span>
+        <span className={styles.caption}>{t('No active timer')}</span>
       )}
     </>
   ) : (
@@ -74,7 +75,7 @@ export function BranchPrompt({ view }: { view: BranchPromptView }) {
         isPending={actions.isPending('track')}
         onPress={() => void actions.run('track', track)}
       >
-        {ticketId !== null ? `Track #${ticketId}…` : 'Choose activity…'}
+        {ticketId !== null ? t('Track #{id}…', { id: ticketId }) : t('Choose activity…')}
       </Button>
       {ticketId !== null ? (
         <Button
@@ -84,7 +85,7 @@ export function BranchPrompt({ view }: { view: BranchPromptView }) {
           isPending={actions.isPending('another')}
           onPress={() => void actions.run('another', another)}
         >
-          Choose another ticket…
+          {t('Choose another ticket…')}
         </Button>
       ) : null}
     </>
@@ -95,31 +96,31 @@ export function BranchPrompt({ view }: { view: BranchPromptView }) {
       kind="branch"
       icon={BranchIcon}
       tone="warning"
-      title="Branch changed"
+      title={t('Branch changed')}
       subtitle={change.repositoryName}
-      badge="Needs review"
+      badge={t('Needs review')}
       actions={buttons}
       runner={actions}
     >
       <dl className={styles.branchLines}>
         {change.previousBranch ? (
           <>
-            <dt className={styles.branchLabel}>From</dt>
+            <dt className={styles.branchLabel}>{t('From')}</dt>
             <dd className={styles.branchName}>{change.previousBranch}</dd>
           </>
         ) : null}
-        <dt className={styles.branchLabel}>To</dt>
+        <dt className={styles.branchLabel}>{t('To')}</dt>
         <dd className={`${styles.branchName} ${styles.branchCurrent}`}>{change.branch}</dd>
       </dl>
       {view.suggestsBreak ? (
-        <p className={styles.caption}>This is an integration branch. Pause, stop or keep your timer.</p>
+        <p className={styles.caption}>{t('This is an integration branch. Pause, stop or keep your timer.')}</p>
       ) : ticketId !== null ? (
         <>
-          <p className={styles.strong}>{`Suggested: #${ticketId}${title ? ` · ${title}` : ''}`}</p>
-          <p className={styles.caption}>Choose an activity to switch. Your timer stays unchanged until you confirm.</p>
+          <p className={styles.strong}>{`${t('Suggested: #{id}', { id: ticketId })}${title ? ` · ${title}` : ''}`}</p>
+          <p className={styles.caption}>{t('Choose an activity to switch. Your timer stays unchanged until you confirm.')}</p>
         </>
       ) : (
-        <p className={styles.caption}>No ticket number found. Track an activity without a ticket, or keep your timer.</p>
+        <p className={styles.caption}>{t('No ticket number found. Track an activity without a ticket, or keep your timer.')}</p>
       )}
     </PromptCard>
   );

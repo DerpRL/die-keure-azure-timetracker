@@ -21,6 +21,7 @@ use att_core::worklog::{WorkLogDraft, WorkLogTimeEdit};
 use att_core::{AppError, Cal, Result};
 
 use crate::auth::{Authorizer, BearerToken};
+use crate::nl::tr;
 use crate::oauth::SevenPaceTokenProvider;
 use crate::transport::HttpTransport;
 use crate::wire;
@@ -129,9 +130,9 @@ impl SevenPaceApi {
         let confirmed = checked.running()
             && checked.track.as_ref().map(|track| track.needs_activity_check()) != Some(true);
         if !confirmed {
-            return Err(AppError::message(
+            return Err(AppError::message(tr(
                 "7pace did not confirm continued tracking. Refresh your timer before trying again.",
-            ));
+            )));
         }
         Ok(checked)
     }
@@ -197,9 +198,9 @@ impl SevenPaceApi {
             }
             skip += PAGE_SIZE;
             if skip > MAX_SKIP {
-                return Err(AppError::message(
+                return Err(AppError::message(tr(
                     "Select a shorter history range to load these worklogs.",
-                ));
+                )));
             }
         }
         let mut seen = HashSet::new();
@@ -243,9 +244,9 @@ impl SevenPaceApi {
         let mut pairs = vec![("api-version", API_VERSION)];
         pairs.extend_from_slice(query);
         let url = wire::url(&self.base_url, path.split('/'), &pairs).ok_or_else(|| {
-            AppError::message(
+            AppError::message(tr(
                 "Use your 7pace workspace URL: https://your-organization.timehub.7pace.com",
-            )
+            ))
         })?;
         // Swift checked for cancellation here; a dropped future stops at this await instead.
         let authorization = wire::secret_header(&self.authorizer.authorization().await?)?;
@@ -269,7 +270,11 @@ fn check_id(id: &str, message: &'static str) -> Result<()> {
     if id.len() == 36 && Uuid::try_parse(id).is_ok() {
         Ok(())
     } else {
-        Err(AppError::message(message))
+        Err(AppError::message(match message {
+            INVALID_LOG_ID => tr("This entry has an invalid 7pace worklog ID."),
+            INVALID_ID => tr("Invalid worklog ID."),
+            other => other,
+        }))
     }
 }
 

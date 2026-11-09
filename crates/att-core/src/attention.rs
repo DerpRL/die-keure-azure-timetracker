@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::model::TrackingState;
+use crate::nl::tr;
 
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -74,17 +75,21 @@ impl TrackingAttention {
 
     pub fn heading(&self) -> &'static str {
         match self.reason {
-            AttentionReason::ActivityCheck => "Still working on this task?",
-            AttentionReason::TimeLimit => "7pace stopped your timer at its time limit",
-            AttentionReason::ActivityTimeout => "7pace stopped after an unanswered activity check",
+            AttentionReason::ActivityCheck => tr("Still working on this task?"),
+            AttentionReason::TimeLimit => tr("7pace stopped your timer at its time limit"),
+            AttentionReason::ActivityTimeout => {
+                tr("7pace stopped after an unanswered activity check")
+            }
         }
     }
 
     pub fn detail(&self) -> &'static str {
         if self.stopped() {
-            "Continue with a new session, or keep this task stopped. Time since the stop will not be added automatically."
+            tr(
+                "Continue with a new session, or keep this task stopped. Time since the stop will not be added automatically.",
+            )
         } else {
-            "7pace needs your response. Continue tracking or stop this session."
+            tr("7pace needs your response. Continue tracking or stop this session.")
         }
     }
 }

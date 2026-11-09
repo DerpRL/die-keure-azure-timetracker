@@ -24,6 +24,7 @@ import {
   useTrackingSeconds,
 } from './status';
 import styles from './tracking.module.css';
+import { t } from '../../i18n';
 
 export type TrackingSurface = 'panel' | 'main';
 
@@ -39,7 +40,7 @@ export function flowSurface(surface: TrackingSurface): FlowSurface {
 
 /** The paused session's title as 1.14 showed it ("#4790 · Title" in the panel). */
 function pausedTitle(tracking: TrackingSlice): string {
-  return tracking.paused?.title || 'Paused tracking';
+  return tracking.paused?.title || t('Paused tracking');
 }
 
 export interface CurrentTrackingProps {
@@ -76,7 +77,7 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
     return (
       <div aria-busy="true" className={styles.stack}>
         <span role="status" className="visually-hidden">
-          Loading the current timer
+          {t('Loading the current timer')}
         </span>
         <Skeleton shape="rect" height="4rem" />
         <Skeleton lines={2} />
@@ -113,7 +114,7 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
   const started = sessionStart(tracking);
   // A session that began before today names its day: "since 6 Oct, 08:36".
   const startedToday = started ? started.toDateString() === new Date().toDateString() : false;
-  const since = started ? `since ${(startedToday ? clock : clockWithDay).format(started)}` : null;
+  const since = started ? t('since {time}', { time: (startedToday ? clock : clockWithDay).format(started) }) : null;
 
   const pauseStop = running ? (
     <>
@@ -123,7 +124,7 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
         isPending={actions.isPending('pause')}
         onPress={() => void actions.run('pause', { type: 'tracking.pause' })}
       >
-        Pause
+        {t('Pause')}
       </Button>
       <Button
         icon={StopIcon}
@@ -131,7 +132,7 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
         isPending={actions.isPending('stop')}
         onPress={() => void actions.run('stop', { type: 'tracking.stop' })}
       >
-        Stop
+        {t('Stop')}
       </Button>
     </>
   ) : null;
@@ -146,14 +147,14 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
         isPending={actions.isPending('resume')}
         onPress={() => void actions.run('resume', { type: 'tracking.resume', surface: flowSurface(surface) })}
       >
-        {panel ? 'Resume…' : 'Resume tracking…'}
+        {panel ? t('Resume…') : t('Resume tracking…')}
       </Button>
       <Button
         isDisabled={guards.busy}
         isPending={actions.isPending('discard')}
         onPress={() => void actions.run('discard', { type: 'tracking.discardPause' })}
       >
-        Clear pause
+        {t('Clear pause')}
       </Button>
     </>
   ) : null;
@@ -165,10 +166,10 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
       isDisabled={writeDisabled}
       isPending={actions.isPending('switch')}
       // The narrow panel says "Switch…" so the three buttons share one row (the name stays complete).
-      aria-label={running && panel ? 'Switch ticket…' : undefined}
+      aria-label={running && panel ? t('Switch ticket…') : undefined}
       onPress={() => void actions.run('switch', openFlow(surface))}
     >
-      {running ? (panel ? 'Switch…' : 'Switch ticket…') : 'Start tracking…'}
+      {running ? (panel ? t('Switch…') : t('Switch ticket…')) : t('Start tracking…')}
     </Button>
   ) : null;
 
@@ -178,10 +179,12 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
     const fraction = today !== null && target > 0 ? Math.min(1, today / target) : 0;
     const stale = !totalsConfirmed(connection, progress);
     const todayText = today !== null ? formatShortDuration(today) : '–';
-    const barLabel =
-      `${activityName ? `${activityName}. ` : ''}Today ${todayText}` +
-      (target > 0 ? ` of ${formatShortDuration(target)}` : '') +
-      (stale ? ', last known' : '');
+    let barLabel =
+      target > 0
+        ? t('Today {today} of {target}', { today: todayText, target: formatShortDuration(target) })
+        : t('Today {today}', { today: todayText });
+    if (stale) barLabel = t('{label}, last known', { label: barLabel });
+    if (activityName) barLabel = `${activityName}. ${barLabel}`;
     const small = { size: 'small' as const };
     return (
       <div className={cx(styles.stack, styles.panelBox)}>
@@ -194,7 +197,7 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
                 size="small"
                 trailingIcon={OpenExternalIcon}
                 className={styles.panelTicket}
-                aria-label={`#${ticketId}, open in Azure DevOps`}
+                aria-label={t('#{id}, open in Azure DevOps', { id: ticketId })}
                 onPress={() => openExternal(tracking.ticketUrl!)}
               >
                 {`#${ticketId}`}
@@ -208,7 +211,7 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
             <p className={styles.panelTitle}>
               {(paused.ticketId !== null ? `#${paused.ticketId} · ` : '') + (pausedItem?.title ?? pausedTitle(tracking))}
             </p>
-            <p className={styles.caption}>Paused · no new time is logged</p>
+            <p className={styles.caption}>{t('Paused · no new time is logged')}</p>
           </div>
         ) : null}
         <div className={styles.panelClockRow}>
@@ -221,7 +224,7 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
             className={cx(styles.panelClock, !running && styles.panelClockIdle)}
           />
           <span className={styles.panelToday}>
-            <span className={styles.panelTodayLabel}>Today</span>
+            <span className={styles.panelTodayLabel}>{t('Today')}</span>
             <span className={styles.panelTodayValue}>
               {todayText}
               {target > 0 ? <span className={styles.panelTodayTarget}>{` / ${formatShortDuration(target)}`}</span> : null}
@@ -245,7 +248,7 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
                 isPending={actions.isPending('pause')}
                 onPress={() => void actions.run('pause', { type: 'tracking.pause' })}
               >
-                Pause
+                {t('Pause')}
               </Button>
               <Button
                 {...small}
@@ -253,7 +256,7 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
                 isPending={actions.isPending('stop')}
                 onPress={() => void actions.run('stop', { type: 'tracking.stop' })}
               >
-                Stop
+                {t('Stop')}
               </Button>
             </>
           ) : null}
@@ -266,10 +269,10 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
               isDisabled={writeDisabled}
               isPending={actions.isPending('switch')}
               // "Switch…" fits three buttons on one row; the name stays complete.
-              aria-label={running ? 'Switch ticket…' : undefined}
+              aria-label={running ? t('Switch ticket…') : undefined}
               onPress={() => void actions.run('switch', openFlow(surface))}
             >
-              {running ? 'Switch…' : 'Start tracking…'}
+              {running ? t('Switch…') : t('Start tracking…')}
             </Button>
           )}
         </div>
@@ -281,12 +284,12 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
 
   const eyebrow = running
     ? connection.connected
-      ? 'Currently tracking'
-      : 'Last known timer'
+      ? t('Currently tracking')
+      : t('Last known timer')
     : paused
-      ? 'Paused · no time logged'
-      : 'Ready when you are';
-  const title = running ? tracking.title : paused ? (pausedItem?.title ?? pausedTitle(tracking)) : 'Your next focus starts here.';
+      ? t('Paused · no time logged')
+      : t('Ready when you are');
+  const title = running ? tracking.title : paused ? (pausedItem?.title ?? pausedTitle(tracking)) : t('Your next focus starts here.');
   const remark = running ? tracking.remark : (paused?.remark ?? null);
 
   return (
@@ -302,15 +305,15 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
         {ticketId === null ? (
           <p className={styles.caption}>
             {running || paused
-              ? `No Azure ticket · ${remark ?? ''}`
-              : 'Choose a ticket, or switch branches to get a suggestion.'}
+              ? t('No Azure ticket · {remark}', { remark: remark ?? '' })
+              : t('Choose a ticket, or switch branches to get a suggestion.')}
           </p>
         ) : null}
       </div>
       <div className={styles.timerSide}>
         {timer}
         {!running && !paused ? (
-          <p className={styles.eyebrow}>{`Today ${formatShortDuration(tracking.todaySeconds)}`}</p>
+          <p className={styles.eyebrow}>{t('Today {today}', { today: formatShortDuration(tracking.todaySeconds) })}</p>
         ) : null}
         <div className={styles.actions}>
           {resume}
@@ -345,16 +348,16 @@ export function LocalTimer({ surface }: { surface: TrackingSurface }) {
         todaySeconds={null}
         dailyTargetSeconds={0}
         totalsConfirmed={false}
-        detail="Not uploaded to 7pace"
+        detail={t('Not uploaded to 7pace')}
         size={panel ? 'medium' : 'large'}
-        label="Local timer"
+        label={t('Local timer')}
       />
       <p className={styles.trackingTitle}>{local.title}</p>
-      {local.otherWorkspace ? <p className={styles.warning}>{`Workspace: ${local.otherWorkspace}`}</p> : null}
+      {local.otherWorkspace ? <p className={styles.warning}>{t('Workspace: {name}', { name: local.otherWorkspace })}</p> : null}
       {local.ticketId !== null && local.comment ? <p className={styles.caption}>{local.comment}</p> : null}
       {local.activityName ? <p className={styles.caption}>{local.activityName}</p> : null}
       <div className={styles.actions}>
-        <Button onPress={() => openMainPage('offlineDrafts')}>Review drafts</Button>
+        <Button onPress={() => openMainPage('offlineDrafts')}>{t('Review drafts')}</Button>
         <Button
           variant="primary"
           icon={StopIcon}
@@ -362,7 +365,7 @@ export function LocalTimer({ surface }: { surface: TrackingSurface }) {
           isPending={actions.isPending('stopLocal')}
           onPress={() => void actions.run('stopLocal', { type: 'offline.stopLocal' })}
         >
-          Stop local timer
+          {t('Stop local timer')}
         </Button>
         <DeleteLocalTimer
           draftId={local.draftId}
@@ -382,5 +385,5 @@ export function LocalTimer({ surface }: { surface: TrackingSurface }) {
 /** "Local tracking · saved on this Mac" (or "this computer" on Windows). */
 export function useLocalTimerTitle(): string {
   const app = useSlice('app');
-  return `Local tracking · saved on ${deviceName(app?.os)}`;
+  return t('Local tracking · saved on {device}', { device: deviceName(app?.os) });
 }

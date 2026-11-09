@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { IpcError } from '../../ipc';
 import type { Configuration } from '../../ipc/contract';
+import { t } from '../../i18n';
 import { useAction, type ActionResult } from '../../state/hooks';
 import { configurationToSave, deepEqual, draftChanges, draftFields, hasDraftChanges, rebaseDraft, type DraftState } from './configDraft';
 import { validateConfiguration, type SettingsIssue } from './validation';
@@ -87,8 +88,8 @@ export function useSettingsDraft(
   const dirty = hasDraftChanges(current.draft, current.base) || azurePat.trim() !== '' || sevenPaceToken.trim() !== '';
   const changes = [
     ...draftChanges(current.draft, current.base),
-    ...(azurePat.trim() !== '' ? ['Azure token'] : []),
-    ...(sevenPaceToken.trim() !== '' ? ['7pace token'] : []),
+    ...(azurePat.trim() !== '' ? [t('Azure token')] : []),
+    ...(sevenPaceToken.trim() !== '' ? [t('7pace token')] : []),
   ];
   const { run, clearError } = action;
   const draft = current.draft;

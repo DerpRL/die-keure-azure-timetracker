@@ -167,6 +167,18 @@ pub enum ControllerIntent {
     },
     #[serde(rename = "timeEditor.setSeparateIdle")]
     SetSeparateIdle { separate: bool },
+    /// One new entry from chosen times (the week calendar's drag to create), written to 7pace at
+    /// once and journalled so Recent edits can undo it. Returns `{ id }` of the confirmed entry;
+    /// fails with the reason when nothing or not everything was saved. Never retried.
+    #[serde(rename = "timeEditor.create")]
+    CreateWorkLog {
+        start: Timestamp,
+        end: Timestamp,
+        ticket_id: Option<i64>,
+        comment: String,
+        activity_id: Option<String>,
+        billable: bool,
+    },
 
     #[serde(rename = "dayReview.setDay")]
     SetDayReviewDay { day: Date },
@@ -261,6 +273,11 @@ pub async fn handle(engine: &Engine, intent: ControllerIntent) -> Result<Value, 
             time_editor::prepare_correction(engine, issue_id, option, boundary).await
         }
         SetSeparateIdle { separate } => time_editor::set_separate_idle(engine, separate),
+        CreateWorkLog { start, end, ticket_id, comment, activity_id, billable } => {
+            let entry =
+                time_editor::NewEntry { start, end, ticket_id, comment, activity_id, billable };
+            time_editor::create_entry(engine, entry).await
+        }
 
         SetDayReviewDay { day } => day_review::set_day(engine, day).await,
         RefreshDayReview => day_review::refresh(engine).await,
@@ -399,7 +416,10 @@ pub(crate) fn done() -> Result<Value, IpcError> {
 
 /// The error a detached task reports when it panicked.
 pub(crate) fn internal() -> IpcError {
-    IpcError::new("internal", "The operation stopped unexpectedly. Refresh and try again.")
+    IpcError::new(
+        "internal",
+        crate::nl::tr("The operation stopped unexpectedly. Refresh and try again."),
+    )
 }
 
 /// Workspace identities compare without a trailing slash or the default port: 1.14.x stored the

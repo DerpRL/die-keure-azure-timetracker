@@ -13,6 +13,7 @@ import { useAction, useSlice } from '../../../state/hooks';
 import { cx } from '../../../utils/cx';
 import { BrowserIcon, DesktopAppIcon } from './icons';
 import { formatSeen, parseTicketNumber } from './model';
+import { t, tn } from '../../../i18n';
 import styles from './figma.module.css';
 
 /** Files rendered at once; "Show more" adds the next page. */
@@ -42,18 +43,18 @@ function LinkDialog({ file, onClose }: { file: FigmaFileView | null; onClose: ()
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
-      title="Link Figma file"
+      title={t('Link Figma file')}
       description={file?.name}
       size="small"
       primaryAction={{
-        label: 'Save link',
+        label: t('Save link'),
         onAction: () => void save(),
         isDisabled: ticketId === null || busy,
         isPending: link.pending,
       }}
     >
       <TextField
-        label="Azure ticket number"
+        label={t('Azure ticket number')}
         value={text}
         onChange={(value) => {
           setText(value);
@@ -63,8 +64,8 @@ function LinkDialog({ file, onClose }: { file: FigmaFileView | null; onClose: ()
         autoComplete="off"
         autoFocus
         isInvalid={touched && text.trim() !== '' && ticketId === null}
-        errorMessage="Enter a valid ticket number."
-        description="The ticket is verified before saving. This only links the file; no timer or tracked entry changes."
+        errorMessage={t('Enter a valid ticket number.')}
+        description={t('The ticket is verified before saving. This only links the file; no timer or tracked entry changes.')}
       />
       {link.error ? (
         <p role="alert" className={styles.error}>
@@ -94,12 +95,12 @@ function FileRow({ file, titleOnly, onLink }: { file: FigmaFileView; titleOnly: 
         <h4 className={styles.fileTitle}>{file.name}</h4>
         <div className={styles.meta}>
           {!titleOnly ? <span className={styles.fileKey}>{file.key}</span> : null}
-          {seen ? <span>Last seen: {seen}</span> : null}
-          {file.ticketId === null ? <Badge tone="neutral">Not linked to a ticket</Badge> : null}
+          {seen ? <span>{t('Last seen: {time}', { time: seen })}</span> : null}
+          {file.ticketId === null ? <Badge tone="neutral">{t('Not linked to a ticket')}</Badge> : null}
         </div>
         {file.ticketId !== null ? (
           <p className={styles.ticket}>
-            <TicketLink ticketId={file.ticketId} title={file.ticketTitle ?? 'Azure ticket'} />
+            <TicketLink ticketId={file.ticketId} title={file.ticketTitle ?? t('Azure ticket')} />
           </p>
         ) : null}
         {error ? (
@@ -110,12 +111,12 @@ function FileRow({ file, titleOnly, onLink }: { file: FigmaFileView; titleOnly: 
       </div>
       <div className={styles.fileActions}>
         <MenuTrigger>
-          <Button size="small" trailingIcon={ChevronDownIcon} isDisabled={!canDesktop && !canBrowser} aria-label={`Open ${file.name}`}>
-            Open
+          <Button size="small" trailingIcon={ChevronDownIcon} isDisabled={!canDesktop && !canBrowser} aria-label={t('Open {name}', { name: file.name })}>
+            {t('Open')}
           </Button>
           <MenuPopover placement="bottom end">
             <Menu
-              aria-label={`Open ${file.name} in`}
+              aria-label={t('Open {name} in', { name: file.name })}
               disabledKeys={[...(canDesktop ? [] : ['desktop']), ...(canBrowser ? [] : ['browser'])]}
               onAction={(key) => void open.run({ type: 'figma.open', fileKey: file.key, desktop: key === 'desktop' })}
             >
@@ -123,7 +124,7 @@ function FileRow({ file, titleOnly, onLink }: { file: FigmaFileView; titleOnly: 
                 Figma Desktop
               </MenuItem>
               <MenuItem id="browser" icon={BrowserIcon}>
-                Browser
+                {t('Browser')}
               </MenuItem>
             </Menu>
           </MenuPopover>
@@ -132,9 +133,9 @@ function FileRow({ file, titleOnly, onLink }: { file: FigmaFileView; titleOnly: 
           size="small"
           isDisabled={busy || offline}
           onPress={() => onLink(file)}
-          aria-label={file.ticketId !== null ? `Change ticket for ${file.name}` : `Link ticket to ${file.name}`}
+          aria-label={file.ticketId !== null ? t('Change ticket for {name}', { name: file.name }) : t('Link ticket to {name}', { name: file.name })}
         >
-          {file.ticketId !== null ? 'Change ticket…' : 'Link ticket…'}
+          {file.ticketId !== null ? t('Change ticket…') : t('Link ticket…')}
         </Button>
         {file.ticketId !== null ? (
           <Button
@@ -143,9 +144,9 @@ function FileRow({ file, titleOnly, onLink }: { file: FigmaFileView; titleOnly: 
             className={styles.danger}
             isDisabled={busy || unlink.pending}
             onPress={() => void unlink.run({ type: 'figma.unlink', fileKey: file.key })}
-            aria-label={`Unlink ${file.name}`}
+            aria-label={t('Unlink {name}', { name: file.name })}
           >
-            Unlink
+            {t('Unlink')}
           </Button>
         ) : null}
       </div>
@@ -185,11 +186,11 @@ export function FileRegister({ figma, titleOnly }: { figma: FigmaSlice; titleOnl
   const filtered = figma.search.trim() !== '';
 
   return (
-    <Section headingLevel={3} title="File register" subtitle="Link or unlink files without changing any tracked time." className={styles.register}>
+    <Section headingLevel={3} title={t('File register')} subtitle={t('Link or unlink files without changing any tracked time.')} className={styles.register}>
       <SearchField
-        label="Search file, key or linked ticket"
+        label={t('Search file, key or linked ticket')}
         hideLabel
-        placeholder="Search file, key or linked ticket"
+        placeholder={t('Search file, key or linked ticket')}
         value={query}
         onChange={(value) => {
           setQuery(value);
@@ -205,33 +206,33 @@ export function FileRegister({ figma, titleOnly }: { figma: FigmaSlice; titleOnl
       <p className="visually-hidden" role="status">
         {filtered
           ? figma.files.length === 0
-            ? 'No matching files'
-            : `${figma.files.length} ${figma.files.length === 1 ? 'file matches' : 'files match'}`
+            ? t('No matching files')
+            : tn(figma.files.length, '{count} file matches', '{count} files match')
           : ''}
       </p>
       {figma.files.length === 0 ? (
         <EmptyState
           icon={FigmaIcon}
           size="compact"
-          title="No matching files"
+          title={t('No matching files')}
           description={
             filtered
-              ? `No file, key or linked ticket matches “${figma.search.trim()}”.`
+              ? t('No file, key or linked ticket matches “{query}”.', { query: figma.search.trim() })
               : titleOnly
-                ? 'Enable observation and focus a file in Figma Desktop for a few seconds.'
-                : 'Enable observation, allow Accessibility and focus a file in Figma Desktop for a few seconds.'
+                ? t('Enable observation and focus a file in Figma Desktop for a few seconds.')
+                : t('Enable observation, allow Accessibility and focus a file in Figma Desktop for a few seconds.')
           }
         />
       ) : (
         <>
-          <ul role="list" aria-label="Figma files" className={styles.list}>
+          <ul role="list" aria-label={t('Figma files')} className={styles.list}>
             {shown.map((file) => (
               <FileRow key={file.key} file={file} titleOnly={titleOnly} onLink={setLinking} />
             ))}
           </ul>
           {remaining > 0 ? (
             <Button size="small" className={styles.more} onPress={() => setLimit((current) => current + FILE_PAGE_SIZE)}>
-              {`Show ${Math.min(FILE_PAGE_SIZE, remaining)} more of ${remaining}`}
+              {t('Show {count} more of {total}', { count: Math.min(FILE_PAGE_SIZE, remaining), total: remaining })}
             </Button>
           ) : null}
         </>

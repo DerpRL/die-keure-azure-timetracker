@@ -12,6 +12,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use jiff::Timestamp;
 
+use crate::nl::tr;
 use crate::{
     AppIdentity, CalendarAccess, CalendarEvent, CalendarInfo, CalendarSource, Credentials,
     FigmaObserver, InputOwner, MicrophoneProbe, Platform, PlatformError, PresenceProbe,
@@ -23,6 +24,19 @@ pub const CALENDAR: &str = "Calendar";
 pub const CREDENTIAL_STORAGE: &str = "Secure credential storage";
 pub const MICROPHONE_DETECTION: &str = "Microphone app detection";
 pub const APP_DETAILS: &str = "Reading application details";
+
+/// The capability `name` (one of the constants above, or the name of a macOS worker such as
+/// `"Calendar"`) in the interface language.
+pub(crate) fn capability_label(name: &'static str) -> &'static str {
+    match name {
+        CALENDAR => tr("Calendar"),
+        CREDENTIAL_STORAGE => tr("Secure credential storage"),
+        MICROPHONE_DETECTION => tr("Microphone app detection"),
+        APP_DETAILS => tr("Reading application details"),
+        "Microphone detection" => tr("Microphone detection"),
+        other => other,
+    }
+}
 
 /// No secret store: reads and writes fail, deleting succeeds because nothing can be stored.
 #[derive(Debug, Default, Clone, Copy)]

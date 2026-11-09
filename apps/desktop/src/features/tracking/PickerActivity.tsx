@@ -14,6 +14,7 @@ import { ReturnIcon } from './icons';
 import { useTrackingSeconds } from './status';
 import styles from './ticketPicker.module.css';
 import tracking from './tracking.module.css';
+import { t } from '../../i18n';
 
 /** The activity shown before a draft exists: the user's choice, else the saved default. */
 export function activityBeforeDraft(flow: FlowSlice, chosen: string | null): string {
@@ -38,7 +39,7 @@ function ActivityRows({
   return (
     <div className={styles.section}>
       <span id={labelId} className={styles.sectionLabel}>
-        Activity
+        {t('Activity')}
       </span>
       <RadioGroup
         aria-labelledby={labelId}
@@ -67,11 +68,14 @@ function StartNote({ draft, label }: { draft: DraftView | null; label: string })
   const slice = useSlice('tracking');
   const seconds = useTrackingSeconds(slice);
   let note: string;
-  if (draft && (draft.resume || draft.source === 'meetingReturn')) note = 'Resume starts a new session. Paused time is not logged.';
-  else if (!slice?.running) note = `The timer starts when you press ${label}.`;
+  if (draft && (draft.resume || draft.source === 'meetingReturn')) note = t('Resume starts a new session. Paused time is not logged.');
+  else if (!slice?.running) note = t('The timer starts when you press {button}.', { button: label });
   else {
-    const current = slice.ticketId !== null ? `Your timer on #${slice.ticketId}` : 'Your current timer';
-    note = `${current} stops when you press ${label} and is saved as ${formatShortDuration(seconds)}.`;
+    const duration = formatShortDuration(seconds);
+    note =
+      slice.ticketId !== null
+        ? t('Your timer on #{id} stops when you press {button} and is saved as {duration}.', { id: slice.ticketId, button: label, duration })
+        : t('Your current timer stops when you press {button} and is saved as {duration}.', { button: label, duration });
   }
   return <p className={styles.note}>{note}</p>;
 }
@@ -111,7 +115,7 @@ export function PickerActivity({ flow, form, choice, label, switching, commentAp
   if (flow.loadingActivities) {
     activityField = (
       <p role="status" className={styles.placeholder}>
-        Loading 7pace activities…
+        {t('Loading 7pace activities…')}
       </p>
     );
   } else if (flow.activityError) {
@@ -127,14 +131,14 @@ export function PickerActivity({ flow, form, choice, label, switching, commentAp
             isPending={actions.isPending('reload')}
             onPress={() => void actions.run('reload', { type: 'tracking.reloadActivities' })}
           >
-            Reload activity types
+            {t('Reload activity types')}
           </Button>
         </div>
       </div>
     );
   } else if (flow.activityTypes.length === 0 && flow.activitiesLoaded) {
     activityField = (
-      <p className={styles.placeholder}>No activity types are configured in 7pace. Its workspace default will be used.</p>
+      <p className={styles.placeholder}>{t('No activity types are configured in 7pace. Its workspace default will be used.')}</p>
     );
   } else {
     activityField = (
@@ -149,15 +153,15 @@ export function PickerActivity({ flow, form, choice, label, switching, commentAp
 
   const manual = draft?.manual ?? null;
   let commentHint: string;
-  if (manual) commentHint = COMMENT_HINT[manual];
-  else if (commentApplies) commentHint = 'Saved with work without a ticket.';
-  else commentHint = 'Comments apply only to work without a ticket.';
+  if (manual) commentHint = t(COMMENT_HINT[manual]);
+  else if (commentApplies) commentHint = t('Saved with work without a ticket.');
+  else commentHint = t('Comments apply only to work without a ticket.');
 
   return (
     <div className={styles.chooser}>
       {draft?.source === 'meetingReturn' ? (
         <p className={tracking.caption}>
-          <ReturnIcon className={tracking.inlineIcon} /> Return to your previous work
+          <ReturnIcon className={tracking.inlineIcon} /> {t('Return to your previous work')}
         </p>
       ) : null}
       {draft?.meetingTitle ? (
@@ -165,8 +169,8 @@ export function PickerActivity({ flow, form, choice, label, switching, commentAp
           <CalendarIcon className={tracking.inlineIcon} /> {draft.meetingTitle}
         </p>
       ) : null}
-      {draft && !form!.includeTicket && draft.item ? <p className={tracking.caption}>No Azure ticket</p> : null}
-      {draft && !draft.manual && trackingComment ? <p className={tracking.caption}>Comment: {trackingComment}</p> : null}
+      {draft && !form!.includeTicket && draft.item ? <p className={tracking.caption}>{t('No Azure ticket')}</p> : null}
+      {draft && !draft.manual && trackingComment ? <p className={tracking.caption}>{t('Comment: {comment}', { comment: trackingComment })}</p> : null}
 
       {draft?.allowsNoTicket ? (
         <div className={tracking.stack}>
@@ -175,9 +179,9 @@ export function PickerActivity({ flow, form, choice, label, switching, commentAp
               isSelected={form!.includeTicket}
               onChange={form!.setIncludeTicket}
               isDisabled={locked}
-              description="Optional. Turn off to track only the activity and comment."
+              description={t('Optional. Turn off to track only the activity and comment.')}
             >
-              {`Use Azure ticket #${draft.item.id}`}
+              {t('Use Azure ticket #{id}', { id: draft.item.id })}
             </Switch>
           ) : null}
           {draft.canChooseTicket ? (
@@ -189,7 +193,7 @@ export function PickerActivity({ flow, form, choice, label, switching, commentAp
                 isPending={actions.isPending('another')}
                 onPress={() => void actions.run('another', { type: 'tracking.chooseSuggestionTicket', draftId: draft.id })}
               >
-                {draft.item ? 'Choose another ticket…' : 'Choose a ticket instead…'}
+                {draft.item ? t('Choose another ticket…') : t('Choose a ticket instead…')}
               </Button>
             </div>
           ) : null}
@@ -213,18 +217,18 @@ export function PickerActivity({ flow, form, choice, label, switching, commentAp
               isPending={actions.isPending('different')}
               onPress={() => void actions.run('different', { type: 'tracking.chooseDifferentWork' })}
             >
-              Choose different work…
+              {t('Choose different work…')}
             </Button>
           </div>
-          <p className={tracking.caption}>The Figma file name is saved as the 7pace comment.</p>
+          <p className={tracking.caption}>{t('The Figma file name is saved as the 7pace comment.')}</p>
         </div>
       ) : null}
 
       <TextField
-        label="Comment (optional)"
+        label={t('Comment (optional)')}
         value={form && manual ? form.comment : (choice.comment ?? '')}
         onChange={choice.setComment}
-        placeholder={manual ? COMMENT_PLACEHOLDER[manual] : 'What are you working on?'}
+        placeholder={manual ? t(COMMENT_PLACEHOLDER[manual]) : t('What are you working on?')}
         description={commentHint}
         isDisabled={locked || !commentApplies}
         multiline
@@ -234,7 +238,7 @@ export function PickerActivity({ flow, form, choice, label, switching, commentAp
       <StartNote draft={draft} label={label} />
       {form?.actions.isPending('start') ? (
         <p role="status" className={tracking.caption}>
-          Starting tracking…
+          {t('Starting tracking…')}
         </p>
       ) : null}
       <ActionError error={form?.actions.error ?? actions.error} />

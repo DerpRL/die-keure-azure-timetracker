@@ -106,9 +106,9 @@ fn commit(
     next: OfflineLedger,
 ) -> att_core::Result<()> {
     if offline.unreadable {
-        return Err(AppError::message(
+        return Err(AppError::message(crate::nl::tr(
             "The saved drafts are unreadable; the original file has been preserved.",
-        ));
+        )));
     }
     if !services.preview {
         persist::write_ledger(services, &next)
@@ -148,7 +148,10 @@ pub(crate) fn cache_activities(engine: &Engine, workspace: &str, types: &[Activi
         let mut next = offline.ledger.clone();
         next.cache_activities(workspace, types.to_vec());
         if let Err(error) = commit(services, offline, next) {
-            offline.issue = Some(format!("Could not save activities for offline use: {error}"));
+            offline.issue = Some(crate::nl::trf(
+                "Could not save activities for offline use: {error}",
+                &[("error", &error)],
+            ));
         }
     });
 }
@@ -176,19 +179,19 @@ fn save_draft(
     if offline.working {
         return Err(Refusal::Guard(IpcError::new(
             "busy",
-            "Wait for the current check with 7pace to finish, then try again.",
+            crate::nl::tr("Wait for the current check with 7pace to finish, then try again."),
         )));
     }
     if !same_workspace(&draft.workspace, &workspace) {
         return Err(Refusal::Guard(IpcError::new(
             "refused",
-            "This draft belongs to another 7pace workspace.",
+            crate::nl::tr("This draft belongs to another 7pace workspace."),
         )));
     }
     if draft.status != OfflineDraftStatus::Draft {
         return Err(Refusal::Guard(IpcError::new(
             "refused",
-            "An uploaded or unconfirmed draft cannot be edited.",
+            crate::nl::tr("An uploaded or unconfirmed draft cannot be edited."),
         )));
     }
     let running = draft.running();
@@ -200,9 +203,9 @@ fn save_draft(
             offline.issue = None;
             offline.message = Some(
                 if running {
-                    "Local timer saved. This does not change the 7pace timer."
+                    crate::nl::tr("Local timer saved. This does not change the 7pace timer.")
                 } else {
-                    "Draft saved on this Mac."
+                    crate::nl::tr("Draft saved on this Mac.")
                 }
                 .into(),
             );
@@ -227,17 +230,23 @@ fn validate(
         .iter()
         .any(|old| old.id == draft.id && old.status != OfflineDraftStatus::Draft)
     {
-        return Err(AppError::message("An uploaded or unconfirmed draft cannot be edited."));
+        return Err(AppError::message(crate::nl::tr(
+            "An uploaded or unconfirmed draft cannot be edited.",
+        )));
     }
     let target = match draft.ticket_id {
         Some(id) => (1..=i64::from(i32::MAX)).contains(&id),
         None => !draft.comment.trim().is_empty(),
     };
     if !target {
-        return Err(AppError::message("Choose a ticket or add a comment for ticket-free work."));
+        return Err(AppError::message(crate::nl::tr(
+            "Choose a ticket or add a comment for ticket-free work.",
+        )));
     }
     if draft.start > now {
-        return Err(AppError::message("The local timer cannot start in the future."));
+        return Err(AppError::message(crate::nl::tr(
+            "The local timer cannot start in the future.",
+        )));
     }
     if draft.end.is_some() {
         draft.proposal(Rounding::Exact, &[], now, cal)?;
@@ -292,8 +301,9 @@ pub(crate) fn stop(engine: &Engine) -> Result<Value, IpcError> {
             Ok(()) => {
                 offline.review = None;
                 offline.issue = None;
-                offline.message =
-                    Some("Local timer stopped. Review the draft before uploading.".into());
+                offline.message = Some(
+                    crate::nl::tr("Local timer stopped. Review the draft before uploading.").into(),
+                );
             }
             Err(error) => offline.issue = Some(error.to_string()),
         }
@@ -452,7 +462,7 @@ async fn send(engine: &Engine, clients: &Arc<Clients>, review: OfflineReview) ->
         offline.review = None;
         match result {
             Ok(_) => {
-                offline.message = Some("Draft confirmed by 7pace.".into());
+                offline.message = Some(crate::nl::tr("Draft confirmed by 7pace.").into());
                 Upload::Synced
             }
             Err(error) => {
@@ -460,8 +470,9 @@ async fn send(engine: &Engine, clients: &Arc<Clients>, review: OfflineReview) ->
                     draft.id == review.draft.id && draft.status == OfflineDraftStatus::Sending
                 });
                 offline.issue = Some(if sending {
-                    format!(
-                        "Upload outcome is unconfirmed. Review this draft and check 7pace before retrying. {error}"
+                    crate::nl::trf(
+                        "Upload outcome is unconfirmed. Review this draft and check 7pace before retrying. {error}",
+                        &[("error", &error)],
                     )
                 } else {
                     error.to_string()
@@ -495,7 +506,9 @@ pub(crate) async fn link(engine: &Engine, log_id: String) -> Result<Value, IpcEr
         let result: att_core::Result<()> = async {
             let fresh = clients.seven_pace.work_log(&log_id).await?;
             if !review.proposal.matches(&fresh, &cal) {
-                return Err(AppError::message("This entry changed. Refresh the review."));
+                return Err(AppError::message(crate::nl::tr(
+                    "This entry changed. Refresh the review.",
+                )));
             }
             let mut draft = review.draft.clone();
             draft.status = OfflineDraftStatus::Synced;
@@ -510,8 +523,10 @@ pub(crate) async fn link(engine: &Engine, log_id: String) -> Result<Value, IpcEr
                 Ok(()) => {
                     offline.review = None;
                     offline.issue = None;
-                    offline.message =
-                        Some("Linked to the existing 7pace entry. No time was added.".into());
+                    offline.message = Some(
+                        crate::nl::tr("Linked to the existing 7pace entry. No time was added.")
+                            .into(),
+                    );
                 }
                 Err(error) => offline.issue = Some(error.to_string()),
             }
@@ -546,8 +561,12 @@ pub(crate) fn allow_retry_after_manual_check(engine: &Engine) -> Result<Value, I
             Ok(()) => {
                 offline.review = None;
                 offline.issue = None;
-                offline.message =
-                    Some("Draft unlocked after your check. Review again before uploading.".into());
+                offline.message = Some(
+                    crate::nl::tr(
+                        "Draft unlocked after your check. Review again before uploading.",
+                    )
+                    .into(),
+                );
             }
             Err(error) => offline.issue = Some(error.to_string()),
         }
