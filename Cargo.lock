@@ -311,7 +311,7 @@ checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
 name = "att-core"
-version = "2.5.0"
+version = "2.6.0"
 dependencies = [
  "async-trait",
  "fancy-regex",
@@ -328,7 +328,7 @@ dependencies = [
 
 [[package]]
 name = "att-desktop"
-version = "2.5.0"
+version = "2.6.0"
 dependencies = [
  "att-core",
  "att-engine",
@@ -360,7 +360,7 @@ dependencies = [
 
 [[package]]
 name = "att-engine"
-version = "2.5.0"
+version = "2.6.0"
 dependencies = [
  "async-trait",
  "att-core",
@@ -382,7 +382,7 @@ dependencies = [
 
 [[package]]
 name = "att-net"
-version = "2.5.0"
+version = "2.6.0"
 dependencies = [
  "async-trait",
  "att-core",
@@ -399,7 +399,7 @@ dependencies = [
 
 [[package]]
 name = "att-platform"
-version = "2.5.0"
+version = "2.6.0"
 dependencies = [
  "async-trait",
  "att-core",
@@ -429,7 +429,7 @@ dependencies = [
 
 [[package]]
 name = "att-release"
-version = "2.5.0"
+version = "2.6.0"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
@@ -451,7 +451,7 @@ dependencies = [
 
 [[package]]
 name = "att-store"
-version = "2.5.0"
+version = "2.6.0"
 dependencies = [
  "att-core",
  "jiff",
