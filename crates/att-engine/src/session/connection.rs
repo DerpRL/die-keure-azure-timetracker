@@ -458,7 +458,8 @@ pub(crate) async fn refresh_activities(engine: &Engine) {
             return None;
         }
         match result {
-            Ok(types) => {
+            Ok(mut types) => {
+                att_core::model::common_first(&mut types);
                 connection.activity_types = types.clone();
                 connection.activities_loaded = true;
                 connection.activity_error = None;

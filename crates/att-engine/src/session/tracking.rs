@@ -18,7 +18,7 @@ use att_core::indicator::PausedSession;
 use att_core::manual::{ManualTrackingKind, StandupActivity};
 use att_core::meetings::{MeetingEvent, meeting_activity};
 use att_core::microphone::MicrophoneSession;
-use att_core::model::{ActivityType, TrackingState, WorkItem, resolve_activity};
+use att_core::model::{ActivityType, Track, TrackingState, WorkItem, resolve_activity};
 use att_core::productivity::MeetingReturn;
 use att_core::rounding::{Rounding, round_stopped_entry, stopped_entry};
 use att_core::text::NonEmpty;
@@ -784,7 +784,9 @@ pub(crate) async fn start(
     match run_start(engine, &clients, &draft, activity_id, comment, include_ticket).await {
         Ok(started) => {
             // `switch_to` confirmed 7pace still showed `expected_identity` before stopping it.
-            let switched = (started.previous.identity() == draft.expected_identity)
+            let switched = started
+                .previous
+                .matches_identity(&draft.expected_identity)
                 .then(|| (started.previous.clone(), started.next.clone()));
             finish_start(engine, &draft, started);
             if let Some((previous, next)) = switched {
@@ -898,6 +900,17 @@ async fn run_start(
         },
     )
     .await?;
+    // 7pace's start response can name the session differently from its later reads (no work log
+    // ID yet, another time format). Keep a fresh read instead, so a stop, pause or prompt right
+    // after starting sees the same session rather than "Your timer changed in 7pace".
+    let next = match clients.seven_pace.current().await.and_then(TrackingState::checked) {
+        Ok(fresh)
+            if fresh.running() && fresh.track.as_ref().and_then(Track::ticket_id) == ticket =>
+        {
+            fresh
+        }
+        _ => next,
+    };
     Ok(Started { next, previous, previous_return, ticket, remark, activity })
 }
 

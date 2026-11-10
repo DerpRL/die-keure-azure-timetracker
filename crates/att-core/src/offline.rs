@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::error::{AppError, Result};
-use crate::model::{ActivityType, TrackingState, WorkLog, resolve_activity};
+use crate::model::{ActivityType, TrackingState, WorkLog, common_first, resolve_activity};
 use crate::nl::tr;
 use crate::rounding::{QUARTER_HOUR_SECONDS, Rounding, previous_end};
 use crate::service::OfflineDraftService;
@@ -196,7 +196,8 @@ impl OfflineLedger {
     }
 
     /// Replaces the cached activity types for a workspace identity.
-    pub fn cache_activities(&mut self, workspace: impl Into<String>, types: Vec<ActivityType>) {
+    pub fn cache_activities(&mut self, workspace: impl Into<String>, mut types: Vec<ActivityType>) {
+        common_first(&mut types);
         self.activities.insert(workspace.into(), types);
     }
 }

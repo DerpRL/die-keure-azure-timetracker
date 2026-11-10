@@ -54,6 +54,7 @@ export function TopBarTimer() {
   const title = running ? tracking.title : (pausedItem?.title ?? paused!.title ?? t('Paused tracking'));
   const label = `${ticketId !== null ? `#${ticketId} ` : ''}${title}`;
   const activityId = running ? tracking.activityId : paused!.activityId;
+  const activityName = running ? tracking.activityName : paused!.activityName;
   const tint: Tint = { '--activity-color': activityColor(colors, activityId) };
 
   return (
@@ -68,6 +69,11 @@ export function TopBarTimer() {
         <span className={styles.title} title={label}>
           {label}
         </span>
+        {activityName ? (
+          <span className={styles.activity} title={activityName}>
+            {activityName}
+          </span>
+        ) : null}
         <span className={styles.clock}>{running ? formatClock(seconds) : t('Paused')}</span>
         {running ? (
           <>

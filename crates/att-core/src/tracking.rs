@@ -56,7 +56,7 @@ where
         return Err(AppError::message(tr("Choose a valid ticket or supply a tracking comment.")));
     }
     let actual = service.current().await?.checked()?;
-    if actual.identity() != expected_identity {
+    if !actual.matches_identity(expected_identity) {
         return Err(AppError::RemoteChanged);
     }
     if let Some(expected) = expected_attention
@@ -121,7 +121,7 @@ where
     S: TrackingService + ?Sized,
 {
     let actual = service.current().await?.checked()?;
-    if actual.identity() != expected_identity {
+    if !actual.matches_identity(expected_identity) {
         return Err(AppError::RemoteChanged);
     }
     if !actual.running() {

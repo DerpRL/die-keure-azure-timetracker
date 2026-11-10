@@ -260,6 +260,40 @@ impl TrackingState {
         self.track.as_ref().is_some_and(Track::is_running)
     }
 
+    /// Whether this state still shows the session `expected` (an [`identity`](Self::identity)).
+    ///
+    /// 7pace's start response can name a session differently from the reads that follow it: the
+    /// work log ID may be missing and the start time formatted differently. So a running session
+    /// also matches when the ticket is the same and either both work log IDs are present and
+    /// equal, or one is missing and the start times are at most a minute apart.
+    pub fn matches_identity(&self, expected: &str) -> bool {
+        if self.identity() == expected {
+            return true;
+        }
+        let Some(track) = self.track.as_ref().filter(|track| track.is_running()) else {
+            return false;
+        };
+        let mut parts = expected.splitn(3, '|');
+        let (Some(log), Some(ticket), Some(started)) = (parts.next(), parts.next(), parts.next())
+        else {
+            return false;
+        };
+        if ticket != track.tfs_id.unwrap_or(0).to_string() {
+            return false;
+        }
+        let actual_log = track.work_log_id.as_deref().unwrap_or("");
+        if !log.is_empty() && !actual_log.is_empty() {
+            return log.eq_ignore_ascii_case(actual_log);
+        }
+        let actual_started = track.current_track_started_date_time.as_deref().unwrap_or("");
+        match (wire_date::parse(started, None), wire_date::parse(actual_started, None)) {
+            (Some(expected), Some(actual)) => {
+                (expected.as_second() - actual.as_second()).abs() <= 60
+            }
+            _ => false,
+        }
+    }
+
     /// Rejects HTTP 200 responses that carry an error state, and unknown tracking states.
     pub fn checked(self) -> Result<Self> {
         if let Some(settings) = self.track_settings.as_ref().filter(|s| s.has_error()) {
@@ -293,6 +327,31 @@ impl ActivityType {
     pub fn new(id: impl Into<String>, name: impl Into<String>) -> Self {
         Self { id: id.into(), name: Some(name.into()), color: None }
     }
+
+    /// 0 for Development, 1 for Review, 2 for every other activity (see [`common_first`]).
+    fn usage_rank(&self) -> u8 {
+        let name: String = self
+            .name
+            .as_deref()
+            .unwrap_or("")
+            .to_lowercase()
+            .chars()
+            .filter(|c| c.is_alphanumeric())
+            .collect();
+        if name.starts_with("develop") || name.starts_with("ontwikkel") {
+            0
+        } else if name.contains("review") {
+            1
+        } else {
+            2
+        }
+    }
+}
+
+/// Puts the activities used most, Development and then Review (or Code review), first and keeps
+/// 7pace's order for the rest. Only the order changes: what is preselected stays the same.
+pub fn common_first(types: &mut [ActivityType]) {
+    types.sort_by_key(ActivityType::usage_rank);
 }
 
 /// Ported from `ActivityChoice.resolve`.
@@ -384,6 +443,38 @@ mod tests {
         assert!(idle.clone().checked().is_ok());
         let unknown: TrackingState = serde_json::from_str(r#"{}"#).unwrap();
         assert!(unknown.checked().is_err());
+    }
+
+    #[test]
+    fn development_and_review_come_first() {
+        let mut types = vec![
+            ActivityType::new("1", "Analysis"),
+            ActivityType::new("2", "Code review"),
+            ActivityType::new("3", "Meeting"),
+            ActivityType::new("4", "Development"),
+            ActivityType::new("5", "Design"),
+        ];
+        common_first(&mut types);
+        let ids: Vec<_> = types.iter().map(|t| t.id.as_str()).collect();
+        assert_eq!(ids, ["4", "2", "1", "3", "5"]);
+    }
+
+    #[test]
+    fn a_session_matches_its_start_response() {
+        let state = |json: &str| -> TrackingState { serde_json::from_str(json).unwrap() };
+        let read = state(
+            r#"{"track":{"tfsId":4790,"trackingState":"Tracking","workLogId":"abc","currentTrackStartedDateTime":"2026-11-10T10:02:54.1234567"}}"#,
+        );
+        // The start response left out the work log ID and formatted the time differently.
+        assert!(read.matches_identity("|4790|2026-11-10T10:02:54"));
+        assert!(read.matches_identity("ABC|4790|2026-11-10T09:00:00"));
+        assert!(!read.matches_identity("other|4790|2026-11-10T10:02:54"));
+        assert!(!read.matches_identity("|4791|2026-11-10T10:02:54"));
+        assert!(!read.matches_identity("|4790|2026-11-10T10:12:54"));
+        assert!(!read.matches_identity("idle"));
+        let idle = state(r#"{"track":{"trackingState":"Idle"}}"#);
+        assert!(idle.matches_identity("idle"));
+        assert!(!idle.matches_identity("|4790|2026-11-10T10:02:54"));
     }
 
     #[test]

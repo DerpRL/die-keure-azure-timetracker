@@ -47,6 +47,18 @@
   white-space: nowrap;
 }
 
+/* The running activity (Development, Review…): short, so it keeps its place beside the title. */
+.activity {
+  flex: none;
+  max-width: 8rem;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-footnote);
+  font-weight: var(--font-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .clock {
   flex: none;
   font-family: var(--font-family-mono);

@@ -407,6 +407,22 @@ async fn track_again_from_history_opens_the_picker_chooser() {
 }
 
 #[tokio::test]
+async fn a_timer_can_be_stopped_right_after_it_started() {
+    let h = Harness::new(configuration(vec![]));
+    h.seven_pace.server.lock().unwrap().sparse_start_response = true;
+    h.start().await;
+    h.ok(json!({"type": "tracking.chooseTicket", "ticketId": 4821})).await;
+    let id = draft_id(&h);
+    h.ok(json!({"type": "tracking.start", "draftId": id, "activityId": "dev", "comment": "", "includeTicket": true})).await;
+    h.seven_pace.take_calls();
+    h.ok(json!({"type": "tracking.stop"})).await;
+    assert_eq!(h.seven_pace.writes(), vec!["stop".to_string()]);
+    assert_eq!(h.slice("app")["error"], Value::Null);
+    assert_eq!(h.slice("tracking")["running"], false);
+    assert_eq!(audit_titles(&h)[0], "Tracking stopped");
+}
+
+#[tokio::test]
 async fn writes_are_refused_while_another_is_in_flight() {
     let h = std::sync::Arc::new(Harness::new(configuration(vec![])));
     h.seven_pace.set_current(running(Some(4821), Some("dev"), None));

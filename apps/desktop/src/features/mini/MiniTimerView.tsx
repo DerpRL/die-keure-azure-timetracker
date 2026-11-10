@@ -13,14 +13,26 @@ import styles from './mini.module.css';
 import { t } from '../../i18n';
 
 /** The status symbol and, for screen readers, its word, before the caption text. */
-function Caption({ status, text, local }: { status: TrackingStatus; text: string; local: boolean }) {
+function Caption({
+  status,
+  text,
+  activity,
+  local,
+}: {
+  status: TrackingStatus;
+  text: string;
+  /** The running activity (Development, Review…), kept visible when the title is cut off. */
+  activity: string | null;
+  local: boolean;
+}) {
   const info = TRACKING_STATUS[status];
   const Icon = local ? OfflineDraftsIcon : info.icon;
   return (
-    <span className={styles.caption} title={text}>
+    <span className={styles.caption} title={activity ? `${text} · ${activity}` : text}>
       <Icon className={styles.captionIcon} />
       <span className="visually-hidden">{local ? `${t('Local tracking')}: ` : `${t(info.label)}: `}</span>
       <span className={styles.captionText}>{text}</span>
+      {activity ? <span className={styles.captionActivity}>{`· ${activity}`}</span> : null}
     </span>
   );
 }
@@ -77,8 +89,10 @@ export function MiniTimerView() {
         ? t('Paused · {title}', { title: paused.title })
         : t('No timer running');
 
+  const activity = local ? local.activityName : tracking.running ? tracking.activityName : (paused?.activityName ?? null);
+
   return (
-    <MiniTimerShell actions={openPanel} caption={<Caption status={status} text={text} local={local !== null} />}>
+    <MiniTimerShell actions={openPanel} caption={<Caption status={status} text={text} activity={activity} local={local !== null} />}>
       <div data-tauri-drag-region="deep" className={styles.readout}>
         {idle ? (
           <p className={styles.idle}>{t('No timer running')}</p>

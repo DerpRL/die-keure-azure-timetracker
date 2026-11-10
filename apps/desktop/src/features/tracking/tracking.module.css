@@ -310,6 +310,12 @@
   white-space: normal;
 }
 
+.panelActivity {
+  display: flex;
+  min-width: 0;
+  margin-top: calc(-1 * var(--space-1));
+}
+
 .panelTicket {
   min-height: 1.5rem;
   padding: 0 0.25rem;

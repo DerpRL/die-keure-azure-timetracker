@@ -1,5 +1,9 @@
+/* `position: relative` keeps React Aria's visually hidden input inside its row. Without it the
+   input is placed against the dialog overlay, does not scroll with a scrolled list, and focusing
+   it (any click) scrolls the overlay instead: a dialog jumped up after ticking the 5th row. */
 .switch,
 .checkbox {
+  position: relative;
   display: inline-flex;
   align-items: flex-start;
   gap: var(--space-3);

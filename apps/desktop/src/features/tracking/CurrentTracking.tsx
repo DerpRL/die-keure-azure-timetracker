@@ -214,6 +214,7 @@ export function CurrentTracking({ surface }: CurrentTrackingProps) {
             <p className={styles.caption}>{t('Paused · no new time is logged')}</p>
           </div>
         ) : null}
+        {activityChip ? <div className={styles.panelActivity}>{activityChip}</div> : null}
         <div className={styles.panelClockRow}>
           <TimerDisplay
             seconds={seconds}

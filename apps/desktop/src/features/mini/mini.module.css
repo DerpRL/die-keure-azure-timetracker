@@ -33,3 +33,12 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Activity names are short: the title gives way first. */
+.captionActivity {
+  flex: none;
+  max-width: 65%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

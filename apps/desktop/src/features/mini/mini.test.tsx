@@ -22,7 +22,7 @@ describe('MiniTimerView', () => {
     render();
     const timer = screen.getByRole('timer', { name: 'Elapsed time' });
     expect(timer).toHaveTextContent('1 hour 23 minutes 20 seconds');
-    expect(screen.getByRole('main', { name: 'Mini timer' })).toHaveTextContent('Tracking: Checkout: retry failed card payments');
+    expect(screen.getByRole('main', { name: 'Mini timer' })).toHaveTextContent('Tracking: Checkout: retry failed card payments· Development');
     act(() => {
       vi.advanceTimersByTime(2010);
     });
@@ -38,7 +38,7 @@ describe('MiniTimerView', () => {
     // Started at 07:15: 45 minutes.
     expect(screen.getByRole('timer', { name: 'Local timer' })).toHaveTextContent('45 minutes');
     expect(screen.getByText('Local tracking:', { exact: false })).toBeInTheDocument();
-    expect(screen.getByTitle('Design system: date picker tokens')).toBeInTheDocument();
+    expect(screen.getByTitle('Design system: date picker tokens · Design')).toBeInTheDocument();
   });
 
   it('says when no timer runs and when one is paused', () => {
@@ -47,7 +47,7 @@ describe('MiniTimerView', () => {
     expect(screen.queryByRole('timer')).not.toBeInTheDocument();
     first.unmount();
     render({ with: { tracking: pausedTracking } });
-    expect(screen.getByTitle('Paused · Invoice PDF shows the wrong VAT number')).toBeInTheDocument();
+    expect(screen.getByTitle('Paused · Invoice PDF shows the wrong VAT number · Development')).toBeInTheDocument();
   });
 
   it('keeps a disconnected timer still', () => {

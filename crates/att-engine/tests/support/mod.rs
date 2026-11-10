@@ -96,6 +96,9 @@ pub struct Server {
     pub activity_types: Vec<ActivityType>,
     pub logs: Vec<WorkLog>,
     pub search: BTreeMap<String, Vec<WorkItem>>,
+    /// The start response leaves out the work log ID and formats the start time differently
+    /// from later reads, as 7pace does.
+    pub sparse_start_response: bool,
 }
 
 pub struct FakeSevenPace {
@@ -120,6 +123,7 @@ impl Default for FakeSevenPace {
                 activity_types: activities(),
                 logs: Vec::new(),
                 search: BTreeMap::new(),
+                sparse_start_response: false,
             }),
             gate: Mutex::new(None),
             search_gates: Mutex::new(BTreeMap::new()),
@@ -194,7 +198,14 @@ impl TrackingService for FakeSevenPace {
         let mut started_track = track(ticket_id, activity_type, remark, &log, &started);
         started_track.current_track_length = Some(0.0);
         server.current = TrackingState::with_track(started_track);
-        Ok(server.current.clone())
+        let mut response = server.current.clone();
+        if server.sparse_start_response
+            && let Some(track) = response.track.as_mut()
+        {
+            track.work_log_id = None;
+            track.current_track_started_date_time = Some(format!("{started}.0000000"));
+        }
+        Ok(response)
     }
 
     async fn stop(&self) -> Result<TrackingState> {
